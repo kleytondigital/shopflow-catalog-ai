@@ -1,9 +1,6 @@
 
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
 import SuperadminDashboard from '@/components/dashboard/SuperadminDashboard';
 import StoreDashboard from '@/components/dashboard/StoreDashboard';
 import ProductList from '@/components/products/ProductList';
@@ -17,7 +14,6 @@ import { LogOut } from 'lucide-react';
 
 const Index = () => {
   const { profile, signOut } = useAuth();
-  const [activePage, setActivePage] = useState('dashboard');
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { toast } = useToast();
@@ -102,113 +98,19 @@ const Index = () => {
     });
   };
 
-  const renderPageContent = () => {
-    switch (activePage) {
-      case 'dashboard':
-        // Renderizar dashboard específico baseado no papel do usuário
-        if (profile?.role === 'superadmin') {
-          return <SuperadminDashboard />;
-        } else {
-          return <StoreDashboard />;
-        }
-      
-      case 'products':
-        return (
-          <div className="space-y-6">
-            <ProductList
-              products={mockProducts}
-              onEdit={handleProductEdit}
-              onDelete={handleProductDelete}
-              onGenerateDescription={handleGenerateDescription}
-            />
-          </div>
-        );
-      
-      case 'stores':
-        // Apenas para superadmin
-        if (profile?.role === 'superadmin') {
-          return <SuperadminDashboard />;
-        }
-        return null;
-      
-      case 'catalogs':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="card-modern">
-                <h3 className="text-lg font-semibold mb-4">Catálogo Varejo</h3>
-                <p className="text-muted-foreground mb-4">Catálogo público para vendas ao consumidor final</p>
-                <div className="space-y-2">
-                  <p className="text-sm"><strong>Produtos ativos:</strong> 156</p>
-                  <p className="text-sm"><strong>Última atualização:</strong> Hoje, 14:30</p>
-                  <p className="text-sm"><strong>Visualizações hoje:</strong> 1.247</p>
-                </div>
-              </div>
-              
-              <div className="card-modern">
-                <h3 className="text-lg font-semibold mb-4">Catálogo Atacado</h3>
-                <p className="text-muted-foreground mb-4">Catálogo para vendas em grande quantidade</p>
-                <div className="space-y-2">
-                  <p className="text-sm"><strong>Produtos ativos:</strong> 98</p>
-                  <p className="text-sm"><strong>Última atualização:</strong> Ontem, 16:45</p>
-                  <p className="text-sm"><strong>Pedidos hoje:</strong> 12</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      
-      default:
-        return (
-          <div className="card-modern text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">Página em Desenvolvimento</h3>
-            <p className="text-muted-foreground">Esta funcionalidade será implementada em breve.</p>
-          </div>
-        );
-    }
-  };
-
-  const getPageTitle = () => {
-    const titles = {
-      dashboard: profile?.role === 'superadmin' ? 'Dashboard Superadmin' : 'Dashboard da Loja',
-      products: 'Produtos',
-      catalogs: 'Catálogos',
-      orders: 'Pedidos',
-      coupons: 'Cupons',
-      whatsapp: 'WhatsApp',
-      reports: 'Relatórios',
-      settings: 'Configurações',
-      stores: 'Lojas',
-      users: 'Usuários'
-    };
-    return titles[activePage as keyof typeof titles] || 'Dashboard';
-  };
-
-  return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-background flex">
-        <Sidebar 
-          userRole={profile?.role || 'store_admin'} 
-          activePage={activePage} 
-          onPageChange={setActivePage} 
-        />
-        
-        <div className="flex-1">
-          <Header 
-            title={getPageTitle()}
-            showAddButton={activePage === 'products'}
-            onAddClick={handleAddProduct}
-            addButtonText="Adicionar Produto"
-          />
-          
-          <main className="p-6">
+  // Renderizar dashboard específico baseado no papel do usuário
+  if (profile?.role === 'superadmin') {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background">
+          <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-3xl font-bold">
                   Bem-vindo, {profile?.full_name || profile?.email}
                 </h2>
                 <p className="text-muted-foreground">
-                  {profile?.role === 'superadmin' ? 'Superadministrador' : 'Administrador da Loja'}
+                  Superadministrador
                 </p>
               </div>
               <Button 
@@ -221,36 +123,64 @@ const Index = () => {
               </Button>
             </div>
             
-            {renderPageContent()}
-          </main>
+            <SuperadminDashboard />
+          </div>
         </div>
+      </ProtectedRoute>
+    );
+  } else {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-3xl font-bold">
+                  Bem-vindo, {profile?.full_name || profile?.email}
+                </h2>
+                <p className="text-muted-foreground">
+                  Administrador da Loja
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut size={16} />
+                Sair
+              </Button>
+            </div>
+            
+            <StoreDashboard />
+          </div>
 
-        <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Gerar Descrição com IA</DialogTitle>
-            </DialogHeader>
-            {selectedProduct && (
-              <AIDescriptionGenerator
-                productName={selectedProduct.name}
-                category={selectedProduct.category}
-                onDescriptionGenerated={(description, seo) => {
-                  console.log('Descrição gerada:', description);
-                  console.log('SEO gerado:', seo);
-                  setShowAIDialog(false);
-                  toast({
-                    title: "Sucesso!",
-                    description: "Descrição e SEO aplicados ao produto",
-                  });
-                }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </ProtectedRoute>
-  );
+          <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Gerar Descrição com IA</DialogTitle>
+              </DialogHeader>
+              {selectedProduct && (
+                <AIDescriptionGenerator
+                  productName={selectedProduct.name}
+                  category={selectedProduct.category}
+                  onDescriptionGenerated={(description, seo) => {
+                    console.log('Descrição gerada:', description);
+                    console.log('SEO gerado:', seo);
+                    setShowAIDialog(false);
+                    toast({
+                      title: "Sucesso!",
+                      description: "Descrição e SEO aplicados ao produto",
+                    });
+                  }}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 };
 
 export default Index;
-
