@@ -1,19 +1,24 @@
-
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import ProductList from '@/components/products/ProductList';
 import AIDescriptionGenerator from '@/components/ai/AIDescriptionGenerator';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { LogOut } from 'lucide-react';
 
 const Index = () => {
-  const [userRole] = useState<'superadmin' | 'admin'>('admin'); // Pode ser controlado por autenticação
+  const { profile, signOut } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Mock data para produtos
   const mockProducts = [
@@ -47,6 +52,23 @@ const Index = () => {
       image: '/placeholder.svg'
     }
   ];
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso",
+      });
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        title: "Erro ao sair",
+        description: "Ocorreu um erro ao fazer logout",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleProductEdit = (product: any) => {
     toast({
@@ -82,7 +104,7 @@ const Index = () => {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <DashboardCards userRole={userRole} />
+            <DashboardCards userRole={profile?.role || 'store_admin'} />
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="card-modern">
@@ -184,49 +206,70 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar 
-        userRole={userRole} 
-        activePage={activePage} 
-        onPageChange={setActivePage} 
-      />
-      
-      <div className="flex-1">
-        <Header 
-          title={getPageTitle()}
-          showAddButton={activePage === 'products'}
-          onAddClick={handleAddProduct}
-          addButtonText="Adicionar Produto"
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background flex">
+        <Sidebar 
+          userRole={profile?.role || 'store_admin'} 
+          activePage={activePage} 
+          onPageChange={setActivePage} 
         />
         
-        <main className="p-6">
-          {renderPageContent()}
-        </main>
-      </div>
+        <div className="flex-1">
+          <Header 
+            title={getPageTitle()}
+            showAddButton={activePage === 'products'}
+            onAddClick={handleAddProduct}
+            addButtonText="Adicionar Produto"
+          />
+          
+          <main className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Bem-vindo, {profile?.full_name || profile?.email}
+                </h2>
+                <p className="text-muted-foreground">
+                  {profile?.role === 'superadmin' ? 'Superadministrador' : 'Administrador da Loja'}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut size={16} />
+                Sair
+              </Button>
+            </div>
+            
+            {renderPageContent()}
+          </main>
+        </div>
 
-      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Gerar Descrição com IA</DialogTitle>
-          </DialogHeader>
-          {selectedProduct && (
-            <AIDescriptionGenerator
-              productName={selectedProduct.name}
-              category={selectedProduct.category}
-              onDescriptionGenerated={(description, seo) => {
-                console.log('Descrição gerada:', description);
-                console.log('SEO gerado:', seo);
-                setShowAIDialog(false);
-                toast({
-                  title: "Sucesso!",
-                  description: "Descrição e SEO aplicados ao produto",
-                });
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Gerar Descrição com IA</DialogTitle>
+            </DialogHeader>
+            {selectedProduct && (
+              <AIDescriptionGenerator
+                productName={selectedProduct.name}
+                category={selectedProduct.category}
+                onDescriptionGenerated={(description, seo) => {
+                  console.log('Descrição gerada:', description);
+                  console.log('SEO gerado:', seo);
+                  setShowAIDialog(false);
+                  toast({
+                    title: "Sucesso!",
+                    description: "Descrição e SEO aplicados ao produto",
+                  });
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ProtectedRoute>
   );
 };
 
