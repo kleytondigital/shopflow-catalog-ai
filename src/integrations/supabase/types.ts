@@ -9,6 +9,212 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      catalogs: {
+        Row: {
+          created_at: string
+          custom_settings: Json | null
+          id: string
+          is_active: boolean
+          store_id: string
+          template_name: string | null
+          type: Database["public"]["Enums"]["catalog_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_settings?: Json | null
+          id?: string
+          is_active?: boolean
+          store_id: string
+          template_name?: string | null
+          type: Database["public"]["Enums"]["catalog_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_settings?: Json | null
+          id?: string
+          is_active?: boolean
+          store_id?: string
+          template_name?: string | null
+          type?: Database["public"]["Enums"]["catalog_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_order_amount: number | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          items: Json
+          order_type: Database["public"]["Enums"]["catalog_type"]
+          shipping_address: Json | null
+          status: Database["public"]["Enums"]["order_status"]
+          store_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          order_type?: Database["public"]["Enums"]["catalog_type"]
+          shipping_address?: Json | null
+          status?: Database["public"]["Enums"]["order_status"]
+          store_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          order_type?: Database["public"]["Enums"]["catalog_type"]
+          shipping_address?: Json | null
+          status?: Database["public"]["Enums"]["order_status"]
+          store_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          min_wholesale_qty: number | null
+          name: string
+          retail_price: number
+          stock: number
+          store_id: string
+          updated_at: string
+          wholesale_price: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_wholesale_qty?: number | null
+          name: string
+          retail_price?: number
+          stock?: number
+          store_id: string
+          updated_at?: string
+          wholesale_price?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_wholesale_qty?: number | null
+          name?: string
+          retail_price?: number
+          stock?: number
+          store_id?: string
+          updated_at?: string
+          wholesale_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -40,7 +246,103 @@ export type Database = {
           store_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_profiles_store_id"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_settings: {
+        Row: {
+          business_hours: Json | null
+          created_at: string
+          id: string
+          payment_methods: Json | null
+          shipping_options: Json | null
+          store_id: string
+          updated_at: string
+          whatsapp_integration_active: boolean | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          business_hours?: Json | null
+          created_at?: string
+          id?: string
+          payment_methods?: Json | null
+          shipping_options?: Json | null
+          store_id: string
+          updated_at?: string
+          whatsapp_integration_active?: boolean | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          business_hours?: Json | null
+          created_at?: string
+          id?: string
+          payment_methods?: Json | null
+          shipping_options?: Json | null
+          store_id?: string
+          updated_at?: string
+          whatsapp_integration_active?: boolean | null
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          monthly_fee: number | null
+          name: string
+          owner_id: string
+          plan_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_fee?: number | null
+          name: string
+          owner_id: string
+          plan_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_fee?: number | null
+          name?: string
+          owner_id?: string
+          plan_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -56,6 +358,14 @@ export type Database = {
       }
     }
     Enums: {
+      catalog_type: "retail" | "wholesale"
+      order_status:
+        | "pending"
+        | "confirmed"
+        | "preparing"
+        | "shipping"
+        | "delivered"
+        | "cancelled"
       user_role: "superadmin" | "store_admin"
     }
     CompositeTypes: {
@@ -172,6 +482,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      catalog_type: ["retail", "wholesale"],
+      order_status: [
+        "pending",
+        "confirmed",
+        "preparing",
+        "shipping",
+        "delivered",
+        "cancelled",
+      ],
       user_role: ["superadmin", "store_admin"],
     },
   },

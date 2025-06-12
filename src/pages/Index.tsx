@@ -1,9 +1,11 @@
 
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import DashboardCards from '@/components/dashboard/DashboardCards';
+import SuperadminDashboard from '@/components/dashboard/SuperadminDashboard';
+import StoreDashboard from '@/components/dashboard/StoreDashboard';
 import ProductList from '@/components/products/ProductList';
 import AIDescriptionGenerator from '@/components/ai/AIDescriptionGenerator';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -21,7 +23,7 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Mock data para produtos
+  // Mock data para produtos - será substituído pelos dados reais do hook useProducts
   const mockProducts = [
     {
       id: '1',
@@ -103,43 +105,12 @@ const Index = () => {
   const renderPageContent = () => {
     switch (activePage) {
       case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <DashboardCards userRole={profile?.role === 'superadmin' ? 'superadmin' : 'admin'} />
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="card-modern">
-                <h3 className="text-lg font-semibold mb-4">Vendas Recentes</h3>
-                <div className="space-y-3">
-                  {[1, 2, 3].map((item) => (
-                    <div key={item} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">Pedido #{1000 + item}</p>
-                        <p className="text-sm text-muted-foreground">Cliente Exemplo {item}</p>
-                      </div>
-                      <span className="font-semibold text-primary">R$ {(Math.random() * 200 + 50).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card-modern">
-                <h3 className="text-lg font-semibold mb-4">Produtos em Baixo Estoque</h3>
-                <div className="space-y-3">
-                  {mockProducts.filter(p => p.stock <= 5).map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.category}</p>
-                      </div>
-                      <span className="font-semibold text-destructive">{product.stock} unidades</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        // Renderizar dashboard específico baseado no papel do usuário
+        if (profile?.role === 'superadmin') {
+          return <SuperadminDashboard />;
+        } else {
+          return <StoreDashboard />;
+        }
       
       case 'products':
         return (
@@ -152,6 +123,13 @@ const Index = () => {
             />
           </div>
         );
+      
+      case 'stores':
+        // Apenas para superadmin
+        if (profile?.role === 'superadmin') {
+          return <SuperadminDashboard />;
+        }
+        return null;
       
       case 'catalogs':
         return (
@@ -192,7 +170,7 @@ const Index = () => {
 
   const getPageTitle = () => {
     const titles = {
-      dashboard: 'Dashboard',
+      dashboard: profile?.role === 'superadmin' ? 'Dashboard Superadmin' : 'Dashboard da Loja',
       products: 'Produtos',
       catalogs: 'Catálogos',
       orders: 'Pedidos',
@@ -275,3 +253,4 @@ const Index = () => {
 };
 
 export default Index;
+
