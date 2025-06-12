@@ -15,6 +15,23 @@ export interface Store {
   updated_at: string;
 }
 
+export interface CreateStoreData {
+  name: string;
+  description?: string;
+  owner_id: string;
+  is_active?: boolean;
+  plan_type?: string;
+  monthly_fee?: number;
+}
+
+export interface UpdateStoreData {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+  plan_type?: string;
+  monthly_fee?: number;
+}
+
 export const useStores = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +54,7 @@ export const useStores = () => {
     }
   };
 
-  const createStore = async (storeData: Partial<Store>) => {
+  const createStore = async (storeData: CreateStoreData) => {
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -54,7 +71,7 @@ export const useStores = () => {
     }
   };
 
-  const updateStore = async (id: string, updates: Partial<Store>) => {
+  const updateStore = async (id: string, updates: UpdateStoreData) => {
     try {
       const { data, error } = await supabase
         .from('stores')

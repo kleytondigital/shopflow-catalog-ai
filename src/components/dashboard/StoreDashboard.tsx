@@ -4,7 +4,7 @@ import { Package, ShoppingCart, Users, DollarSign, Plus, Settings } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, CreateProductData } from '@/hooks/useProducts';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import ProductForm from '@/components/products/ProductForm';
@@ -16,11 +16,22 @@ const StoreDashboard = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const { toast } = useToast();
 
-  const handleCreateProduct = async (productData: any) => {
-    const { error } = await createProduct({
+  const handleCreateProduct = async (productData: CreateProductData) => {
+    if (!profile?.store_id) {
+      toast({
+        title: "Erro",
+        description: "Loja não identificada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dataWithStore: CreateProductData = {
       ...productData,
-      store_id: profile?.store_id
-    });
+      store_id: profile.store_id
+    };
+
+    const { error } = await createProduct(dataWithStore);
     
     if (error) {
       toast({

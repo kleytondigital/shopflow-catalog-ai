@@ -19,6 +19,19 @@ export interface Product {
   updated_at: string;
 }
 
+export interface CreateProductData {
+  store_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  retail_price: number;
+  wholesale_price?: number;
+  stock: number;
+  min_wholesale_qty?: number;
+  image_url?: string;
+  is_active?: boolean;
+}
+
 export const useProducts = (storeId?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +57,7 @@ export const useProducts = (storeId?: string) => {
     }
   };
 
-  const createProduct = async (productData: Partial<Product>) => {
+  const createProduct = async (productData: CreateProductData) => {
     try {
       const { data, error } = await supabase
         .from('products')

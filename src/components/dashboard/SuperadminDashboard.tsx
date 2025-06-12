@@ -4,18 +4,34 @@ import { Store, Building2, Users, DollarSign, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useStores } from '@/hooks/useStores';
+import { useStores, CreateStoreData } from '@/hooks/useStores';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import StoreForm from '@/components/stores/StoreForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const SuperadminDashboard = () => {
   const { stores, loading, createStore } = useStores();
+  const { profile } = useAuth();
   const [showStoreForm, setShowStoreForm] = useState(false);
   const { toast } = useToast();
 
-  const handleCreateStore = async (storeData: any) => {
-    const { error } = await createStore(storeData);
+  const handleCreateStore = async (storeData: CreateStoreData) => {
+    if (!profile?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dataWithOwner: CreateStoreData = {
+      ...storeData,
+      owner_id: profile.id
+    };
+
+    const { error } = await createStore(dataWithOwner);
     if (error) {
       toast({
         title: "Erro",

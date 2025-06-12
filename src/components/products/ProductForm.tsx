@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { CreateProductData } from '@/hooks/useProducts';
 
 interface ProductFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateProductData) => void;
   onCancel: () => void;
   initialData?: any;
 }
@@ -25,9 +26,16 @@ const ProductForm = ({ onSubmit, onCancel, initialData }: ProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const productData = {
-      ...formData,
-      wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price.toString()) : null
+    const productData: CreateProductData = {
+      name: formData.name,
+      description: formData.description || undefined,
+      category: formData.category || undefined,
+      retail_price: formData.retail_price,
+      wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price.toString()) : undefined,
+      stock: formData.stock,
+      min_wholesale_qty: formData.min_wholesale_qty || undefined,
+      is_active: formData.is_active,
+      store_id: '' // Será preenchido pelo componente pai
     };
     onSubmit(productData);
   };
