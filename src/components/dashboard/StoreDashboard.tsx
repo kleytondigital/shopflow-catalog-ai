@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import { Package, ShoppingCart, Users, DollarSign, Plus, Settings } from 'lucide-react';
+import { Package, ShoppingCart, Users, DollarSign, Plus, Settings, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useProducts, CreateProductData } from '@/hooks/useProducts';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import ProductForm from '@/components/products/ProductForm';
+import ProductFormAdvanced from '@/components/products/ProductFormAdvanced';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import DashboardCard from './DashboardCard';
 
 const StoreDashboard = () => {
   const { profile } = useAuth();
@@ -16,7 +17,7 @@ const StoreDashboard = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const { toast } = useToast();
 
-  const handleCreateProduct = async (productData: CreateProductData) => {
+  const handleCreateProduct = async (productData: CreateProductData, variations: any[], images: string[]) => {
     if (!profile?.store_id) {
       toast({
         title: "Erro",
@@ -54,161 +55,208 @@ const StoreDashboard = () => {
   const totalValue = products.reduce((sum, product) => sum + (product.retail_price * product.stock), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fadeInUp">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold gradient-text">Dashboard da Loja</h1>
+          <p className="text-gray-600 mt-2">Gerencie seus produtos e vendas</p>
+        </div>
+        <Button onClick={() => setShowProductForm(true)} className="btn-primary">
+          <Plus className="mr-2 h-5 w-5" />
+          Novo Produto
+        </Button>
+      </div>
+
       {/* Cards de Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Produtos</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              {activeProducts} ativos
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <DashboardCard
+          title="Total de Produtos"
+          value={totalProducts}
+          subtitle={`${activeProducts} ativos`}
+          icon={Package}
+          variant="primary"
+          trend={{ value: 15.3, isPositive: true }}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor do Estoque</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ {totalValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              Valor total do inventário
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardCard
+          title="Valor do Estoque"
+          value={`R$ ${totalValue.toFixed(2)}`}
+          subtitle="Inventário total"
+          icon={DollarSign}
+          variant="success"
+          trend={{ value: 8.7, isPositive: true }}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
-            <Package className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{lowStockProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              Produtos com ≤ 5 unidades
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardCard
+          title="Estoque Baixo"
+          value={lowStockProducts}
+          subtitle="Produtos com ≤ 5 unidades"
+          icon={AlertTriangle}
+          variant="warning"
+          trend={{ value: -12.1, isPositive: false }}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pedidos Hoje</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Nenhum pedido ainda
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardCard
+          title="Pedidos Hoje"
+          value={0}
+          subtitle="Vendas do dia"
+          icon={ShoppingCart}
+          variant="secondary"
+          trend={{ value: 0, isPositive: true }}
+        />
       </div>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowProductForm(true)}>
-          <CardContent className="flex items-center justify-center p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="card-modern cursor-pointer hover:shadow-xl transition-all duration-300" onClick={() => setShowProductForm(true)}>
+          <CardContent className="flex items-center justify-center p-8">
             <div className="text-center">
-              <Plus className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <h3 className="font-semibold">Adicionar Produto</h3>
-              <p className="text-sm text-muted-foreground">Cadastre um novo produto</p>
+              <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
+                <Plus className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Adicionar Produto</h3>
+              <p className="text-sm text-muted-foreground">Cadastre um novo produto com imagens e variações</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardContent className="flex items-center justify-center p-6">
+        <Card className="card-modern cursor-pointer hover:shadow-xl transition-all duration-300">
+          <CardContent className="flex items-center justify-center p-8">
             <div className="text-center">
-              <Settings className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <h3 className="font-semibold">Configurar Catálogos</h3>
+              <div className="bg-purple-100 p-4 rounded-full inline-block mb-4">
+                <Settings className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Configurar Catálogos</h3>
               <p className="text-sm text-muted-foreground">Gerencie varejo e atacado</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardContent className="flex items-center justify-center p-6">
+        <Card className="card-modern cursor-pointer hover:shadow-xl transition-all duration-300">
+          <CardContent className="flex items-center justify-center p-8">
             <div className="text-center">
-              <ShoppingCart className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <h3 className="font-semibold">Ver Pedidos</h3>
-              <p className="text-sm text-muted-foreground">Acompanhe seus pedidos</p>
+              <div className="bg-green-100 p-4 rounded-full inline-block mb-4">
+                <ShoppingCart className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Ver Pedidos</h3>
+              <p className="text-sm text-muted-foreground">Acompanhe vendas e entregas</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Lista de Produtos */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Produtos Recentes</CardTitle>
-          <Button variant="outline" onClick={() => setShowProductForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Produto
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-4">Carregando produtos...</div>
-          ) : (
-            <div className="space-y-4">
-              {products.slice(0, 5).map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                      <Package className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{product.name}</h3>
-                        <Badge variant={product.is_active ? "default" : "secondary"}>
-                          {product.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
-                        {product.stock <= 5 && (
-                          <Badge variant="destructive">Estoque Baixo</Badge>
-                        )}
+      {/* Produtos e Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Lista de Produtos Recentes */}
+        <Card className="card-modern">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              Produtos Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="loading-spinner"></div>
+                <span className="ml-2">Carregando produtos...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {products.slice(0, 5).map((product) => (
+                  <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-lg flex items-center justify-center">
+                        <Package className="h-6 w-6 text-white" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {product.category || "Sem categoria"} • {product.stock} unidades
-                      </p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm">{product.name}</h3>
+                          <Badge variant={product.is_active ? "default" : "secondary"} className="text-xs">
+                            {product.is_active ? "Ativo" : "Inativo"}
+                          </Badge>
+                          {product.stock <= 5 && (
+                            <Badge variant="destructive" className="text-xs">Estoque Baixo</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {product.category || "Sem categoria"} • {product.stock} unidades
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-sm">R$ {product.retail_price.toFixed(2)}</p>
+                      {product.wholesale_price && (
+                        <p className="text-xs text-muted-foreground">
+                          Atacado: R$ {product.wholesale_price.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">R$ {product.retail_price.toFixed(2)}</p>
-                    {product.wholesale_price && (
-                      <p className="text-sm text-muted-foreground">
-                        Atacado: R$ {product.wholesale_price.toFixed(2)}
-                      </p>
-                    )}
+                ))}
+                {products.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="mb-2">Nenhum produto cadastrado ainda</p>
+                    <Button onClick={() => setShowProductForm(true)} variant="outline">
+                      Cadastrar Primeiro Produto
+                    </Button>
                   </div>
-                </div>
-              ))}
-              {products.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhum produto cadastrado ainda.
-                  <br />
-                  <Button className="mt-2" onClick={() => setShowProductForm(true)}>
-                    Cadastrar Primeiro Produto
-                  </Button>
-                </div>
-              )}
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gráfico de Vendas Simulado */}
+        <Card className="card-modern">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Performance de Vendas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Vendas Hoje</span>
+                <span className="text-sm text-green-600">+0%</span>
+              </div>
+              <div className="w-full h-3 bg-gray-200 rounded-full">
+                <div className="h-full w-0 bg-green-500 rounded-full"></div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Meta Mensal</span>
+                <span className="text-sm text-blue-600">45%</span>
+              </div>
+              <div className="w-full h-3 bg-gray-200 rounded-full">
+                <div className="h-full w-2/5 bg-blue-500 rounded-full"></div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Produtos Ativos</span>
+                <span className="text-sm text-purple-600">{((activeProducts / totalProducts) * 100 || 0).toFixed(1)}%</span>
+              </div>
+              <div className="w-full h-3 bg-gray-200 rounded-full">
+                <div 
+                  className="h-full bg-purple-500 rounded-full"
+                  style={{ width: `${(activeProducts / totalProducts) * 100 || 0}%` }}
+                ></div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Dialog para criar novo produto */}
       <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Produto</DialogTitle>
           </DialogHeader>
-          <ProductForm onSubmit={handleCreateProduct} onCancel={() => setShowProductForm(false)} />
+          <ProductFormAdvanced onSubmit={handleCreateProduct} onCancel={() => setShowProductForm(false)} />
         </DialogContent>
       </Dialog>
     </div>

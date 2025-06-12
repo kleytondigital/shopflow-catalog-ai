@@ -159,6 +159,101 @@ export type Database = {
           },
         ]
       }
+      product_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          image_order: number
+          image_url: string
+          is_primary: boolean
+          product_id: string
+          variation_id: string | null
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_order?: number
+          image_url: string
+          is_primary?: boolean
+          product_id: string
+          variation_id?: string | null
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_order?: number
+          image_url?: string
+          is_primary?: boolean
+          product_id?: string
+          variation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_images_variation_id_fkey"
+            columns: ["variation_id"]
+            isOneToOne: false
+            referencedRelation: "product_variations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variations: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          price_adjustment: number | null
+          product_id: string
+          size: string | null
+          sku: string | null
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_adjustment?: number | null
+          product_id: string
+          size?: string | null
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_adjustment?: number | null
+          product_id?: string
+          size?: string | null
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
@@ -167,9 +262,13 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          keywords: string | null
+          meta_description: string | null
+          meta_title: string | null
           min_wholesale_qty: number | null
           name: string
           retail_price: number
+          seo_slug: string | null
           stock: number
           store_id: string
           updated_at: string
@@ -182,9 +281,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          keywords?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           min_wholesale_qty?: number | null
           name: string
           retail_price?: number
+          seo_slug?: string | null
           stock?: number
           store_id: string
           updated_at?: string
@@ -197,9 +300,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          keywords?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           min_wholesale_qty?: number | null
           name?: string
           retail_price?: number
+          seo_slug?: string | null
           stock?: number
           store_id?: string
           updated_at?: string

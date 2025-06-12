@@ -1,87 +1,82 @@
 
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
+  Home, 
   Package, 
   ShoppingCart, 
   Users, 
   Settings, 
-  BarChart3, 
-  MessageSquare, 
-  Tag,
-  Store
+  Tag, 
+  BarChart3,
+  Store,
+  Palette
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UserRole } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
-interface SidebarProps {
-  userRole: UserRole;
-  activePage: string;
-  onPageChange: (page: string) => void;
-}
+const Sidebar = () => {
+  const location = useLocation();
+  const { profile } = useAuth();
 
-const Sidebar = ({ userRole, activePage, onPageChange }: SidebarProps) => {
-  const superadminMenuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'stores', label: 'Lojas', icon: Store },
-    { id: 'users', label: 'Usuários', icon: Users },
-    { id: 'reports', label: 'Relatórios', icon: BarChart3 },
-    { id: 'settings', label: 'Configurações', icon: Settings },
+  const menuItems = [
+    { path: '/', icon: Home, label: 'Dashboard', roles: ['superadmin', 'store_admin'] },
+    { path: '/products', icon: Package, label: 'Produtos', roles: ['store_admin'] },
+    { path: '/orders', icon: ShoppingCart, label: 'Pedidos', roles: ['store_admin'] },
+    { path: '/customers', icon: Users, label: 'Clientes', roles: ['store_admin'] },
+    { path: '/coupons', icon: Tag, label: 'Cupons', roles: ['store_admin'] },
+    { path: '/catalogs', icon: Palette, label: 'Catálogos', roles: ['store_admin'] },
+    { path: '/reports', icon: BarChart3, label: 'Relatórios', roles: ['superadmin', 'store_admin'] },
+    { path: '/stores', icon: Store, label: 'Lojas', roles: ['superadmin'] },
+    { path: '/settings', icon: Settings, label: 'Configurações', roles: ['superadmin', 'store_admin'] },
   ];
 
-  const adminMenuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', label: 'Produtos', icon: Package },
-    { id: 'catalogs', label: 'Catálogos', icon: ShoppingCart },
-    { id: 'orders', label: 'Pedidos', icon: ShoppingCart },
-    { id: 'coupons', label: 'Cupons', icon: Tag },
-    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-    { id: 'reports', label: 'Relatórios', icon: BarChart3 },
-    { id: 'settings', label: 'Configurações', icon: Settings },
-  ];
-
-  const menuItems = userRole === 'superadmin' ? superadminMenuItems : adminMenuItems;
+  const filteredMenuItems = menuItems.filter(item => 
+    item.roles.includes(profile?.role || 'store_admin')
+  );
 
   return (
-    <div className="w-64 bg-white border-r border-border h-screen flex flex-col">
-      <div className="p-6 border-b border-border">
-        <h2 className="text-xl font-bold text-primary">ShopFlow</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {userRole === 'superadmin' ? 'Superadmin' : 'Admin da Loja'}
-        </p>
+    <div className="fixed left-0 top-16 h-full w-64 bg-white border-r border-gray-200 z-40">
+      <div className="p-6">
+        <nav className="space-y-2">
+          {filteredMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon size={20} />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
       
-      <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activePage === item.id;
-          
-          return (
-            <Button
-              key={item.id}
-              variant={isActive ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 h-12 ${
-                isActive 
-                  ? 'bg-primary text-primary-foreground hover:bg-primary-600' 
-                  : 'hover:bg-muted'
-              }`}
-              onClick={() => onPageChange(item.id)}
-            >
-              <Icon size={20} />
-              {item.label}
-            </Button>
-          );
-        })}
-      </nav>
-      
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-xs font-medium text-primary-foreground">U</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Usuário</p>
-            <p className="text-xs text-muted-foreground">usuario@exemplo.com</p>
+      {/* User Info */}
+      <div className="absolute bottom-6 left-6 right-6">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold text-sm">
+                {profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || 'U'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {profile?.full_name || 'Usuário'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {profile?.role === 'superadmin' ? 'Super Admin' : 'Admin da Loja'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
