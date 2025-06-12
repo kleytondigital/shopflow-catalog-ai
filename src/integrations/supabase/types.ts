@@ -50,6 +50,36 @@ export type Database = {
           },
         ]
       }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           code: string
@@ -369,33 +399,39 @@ export type Database = {
           created_at: string
           id: string
           payment_methods: Json | null
+          retail_catalog_active: boolean | null
           shipping_options: Json | null
           store_id: string
           updated_at: string
           whatsapp_integration_active: boolean | null
           whatsapp_number: string | null
+          wholesale_catalog_active: boolean | null
         }
         Insert: {
           business_hours?: Json | null
           created_at?: string
           id?: string
           payment_methods?: Json | null
+          retail_catalog_active?: boolean | null
           shipping_options?: Json | null
           store_id: string
           updated_at?: string
           whatsapp_integration_active?: boolean | null
           whatsapp_number?: string | null
+          wholesale_catalog_active?: boolean | null
         }
         Update: {
           business_hours?: Json | null
           created_at?: string
           id?: string
           payment_methods?: Json | null
+          retail_catalog_active?: boolean | null
           shipping_options?: Json | null
           store_id?: string
           updated_at?: string
           whatsapp_integration_active?: boolean | null
           whatsapp_number?: string | null
+          wholesale_catalog_active?: boolean | null
         }
         Relationships: [
           {

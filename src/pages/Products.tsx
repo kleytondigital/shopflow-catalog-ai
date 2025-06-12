@@ -1,5 +1,12 @@
+
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Grid, List, Box, Edit, Trash2, Sparkles } from 'lucide-react';
+import { Plus, Search, Filter, Grid, List, Box, Edit, Trash2, Sparkles, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import ProductFormAdvanced from '@/components/products/ProductFormAdvanced';
+import { useProducts, CreateProductData } from '@/hooks/useProducts';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Product {
   id: string;
@@ -17,6 +24,11 @@ const Products = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  const { createProduct } = useProducts();
+  const { profile } = useAuth();
+  const { toast } = useToast();
 
   // Mock data for products
   const mockProducts: Product[] = [
@@ -51,6 +63,34 @@ const Products = () => {
     }
   ];
 
+  const handleCreateProduct = async (productData: CreateProductData) => {
+    if (!profile?.store_id) {
+      toast({
+        title: "Erro",
+        description: "Loja não identificada",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const dataWithStore = { ...productData, store_id: profile.store_id };
+    const { error } = await createProduct(dataWithStore);
+
+    if (error) {
+      toast({
+        title: "Erro ao criar produto",
+        description: "Verifique os dados e tente novamente",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Produto criado",
+        description: "O produto foi criado com sucesso"
+      });
+      setShowForm(false);
+    }
+  };
+
   const onEdit = (product: Product) => {
     alert(`Editar produto ${product.name}`);
   };
@@ -70,6 +110,17 @@ const Products = () => {
 
     return searchRegex.test(product.name) && categoryMatch && statusMatch;
   });
+
+  if (showForm) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <ProductFormAdvanced
+          onSubmit={handleCreateProduct}
+          onCancel={() => setShowForm(false)}
+        />
+      </div>
+    );
+  }
 
   const renderProductCard = (product: any) => (
     <div key={product.id} className="card-modern hover:scale-105 transition-all duration-300">
@@ -201,11 +252,20 @@ const Products = () => {
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold">Produtos</h1>
-              <p className="text-muted-foreground">Gerencie o catálogo da sua loja</p>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">Produtos</h1>
+                <p className="text-muted-foreground">Gerencie o catálogo da sua loja</p>
+              </div>
             </div>
-            <button className="btn-primary gap-2">
+            <button 
+              className="btn-primary gap-2"
+              onClick={() => setShowForm(true)}
+            >
               <Plus size={20} />
               Adicionar Produto
             </button>

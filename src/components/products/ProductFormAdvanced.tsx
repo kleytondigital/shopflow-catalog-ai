@@ -1,22 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCategories } from '@/hooks/useCategories';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { CreateProductData } from '@/hooks/useProducts';
-import ProductImageUpload from './ProductImageUpload';
-import ProductVariationsForm from './ProductVariationsForm';
-import { useToast } from '@/hooks/use-toast';
+import QuickCategoryForm from './QuickCategoryForm';
+import ProductDescriptionAI from '@/components/ai/ProductDescriptionAI';
+import { Plus, ArrowLeft } from 'lucide-react';
 
 interface ProductFormAdvancedProps {
-  onSubmit: (data: CreateProductData, variations: any[], images: string[]) => void;
+  onSubmit: (data: CreateProductData) => void;
   onCancel: () => void;
   initialData?: any;
 }
 
 const ProductFormAdvanced = ({ onSubmit, onCancel, initialData }: ProductFormAdvancedProps) => {
+  const [showQuickCategory, setShowQuickCategory] = useState(false);
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -25,39 +29,14 @@ const ProductFormAdvanced = ({ onSubmit, onCancel, initialData }: ProductFormAdv
     wholesale_price: initialData?.wholesale_price || '',
     stock: initialData?.stock || 0,
     min_wholesale_qty: initialData?.min_wholesale_qty || 1,
-    is_active: initialData?.is_active ?? true,
-    meta_title: initialData?.meta_title || '',
-    meta_description: initialData?.meta_description || '',
-    keywords: initialData?.keywords || '',
-    seo_slug: initialData?.seo_slug || ''
+    is_active: initialData?.is_active ?? true
   });
 
-  const [images, setImages] = useState<string[]>([]);
-  const [variations, setVariations] = useState<any[]>([]);
-  const { toast } = useToast();
-
-  const handleImageUpload = async (file: File, order: number) => {
-    // Simular upload por enquanto - você implementará com Supabase Storage
-    const imageUrl = URL.createObjectURL(file);
-    setImages(prev => [...prev, imageUrl]);
-  };
-
-  const handleImageRemove = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { settings } = useStoreSettings();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (images.length === 0) {
-      toast({
-        title: "Atenção",
-        description: "Adicione pelo menos uma imagem do produto",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const productData: CreateProductData = {
       name: formData.name,
       description: formData.description || undefined,
@@ -67,182 +46,189 @@ const ProductFormAdvanced = ({ onSubmit, onCancel, initialData }: ProductFormAdv
       stock: formData.stock,
       min_wholesale_qty: formData.min_wholesale_qty || undefined,
       is_active: formData.is_active,
-      store_id: '' // Será preenchido pelo componente pai
+      store_id: ''
     };
-
-    onSubmit(productData, variations, images);
+    onSubmit(productData);
   };
 
+  const handleCategoryCreated = (category: any) => {
+    setFormData({ ...formData, category: category.name });
+    setShowQuickCategory(false);
+  };
+
+  const handleDescriptionGenerated = (description: string) => {
+    setFormData({ ...formData, description });
+  };
+
+  const showRetailFields = settings?.retail_catalog_active !== false;
+  const showWholesaleFields = settings?.wholesale_catalog_active === true;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic">Básico</TabsTrigger>
-          <TabsTrigger value="images">Imagens</TabsTrigger>
-          <TabsTrigger value="variations">Variações</TabsTrigger>
-          <TabsTrigger value="seo">SEO</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="basic" className="space-y-4">
-          <div>
-            <Label htmlFor="name">Nome do Produto *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Digite o nome do produto"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descreva o produto..."
-              rows={4}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="category">Categoria</Label>
-            <Input
-              id="category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="Ex: Roupas, Eletrônicos, Casa"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="retail_price">Preço Varejo (R$) *</Label>
-              <Input
-                id="retail_price"
-                type="number"
-                step="0.01"
-                value={formData.retail_price}
-                onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) || 0 })}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="wholesale_price">Preço Atacado (R$)</Label>
-              <Input
-                id="wholesale_price"
-                type="number"
-                step="0.01"
-                value={formData.wholesale_price}
-                onChange={(e) => setFormData({ ...formData, wholesale_price: e.target.value })}
-                placeholder="Opcional"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="stock">Estoque *</Label>
-              <Input
-                id="stock"
-                type="number"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="min_wholesale_qty">Qtd. Mín. Atacado</Label>
-              <Input
-                id="min_wholesale_qty"
-                type="number"
-                value={formData.min_wholesale_qty}
-                onChange={(e) => setFormData({ ...formData, min_wholesale_qty: parseInt(e.target.value) || 1 })}
-              />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="images">
-          <ProductImageUpload
-            onImageUpload={handleImageUpload}
-            images={images}
-            onImageRemove={handleImageRemove}
-            maxImages={3}
-          />
-        </TabsContent>
-
-        <TabsContent value="variations">
-          <ProductVariationsForm
-            variations={variations}
-            onVariationsChange={setVariations}
-          />
-        </TabsContent>
-
-        <TabsContent value="seo" className="space-y-4">
-          <div>
-            <Label htmlFor="meta_title">Título SEO</Label>
-            <Input
-              id="meta_title"
-              value={formData.meta_title}
-              onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
-              placeholder="Título para mecanismos de busca"
-              maxLength={60}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.meta_title.length}/60 caracteres
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="meta_description">Descrição SEO</Label>
-            <Textarea
-              id="meta_description"
-              value={formData.meta_description}
-              onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
-              placeholder="Descrição para mecanismos de busca"
-              rows={3}
-              maxLength={160}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.meta_description.length}/160 caracteres
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="keywords">Palavras-chave</Label>
-            <Input
-              id="keywords"
-              value={formData.keywords}
-              onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-              placeholder="palavra1, palavra2, palavra3"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="seo_slug">URL Amigável</Label>
-            <Input
-              id="seo_slug"
-              value={formData.seo_slug}
-              onChange={(e) => setFormData({ ...formData, seo_slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-              placeholder="produto-exemplo"
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex gap-3 pt-4 border-t">
-        <Button type="submit" className="flex-1">
-          {initialData ? 'Atualizar' : 'Criar'} Produto
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
+        <h2 className="text-2xl font-bold">
+          {initialData ? 'Editar Produto' : 'Novo Produto'}
+        </h2>
       </div>
-    </form>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Informações Básicas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Básicas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nome do Produto</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Camiseta Premium Cotton"
+                required
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Label htmlFor="description">Descrição</Label>
+                <ProductDescriptionAI
+                  productName={formData.name}
+                  category={formData.category}
+                  onDescriptionGenerated={handleDescriptionGenerated}
+                  disabled={!formData.name.trim()}
+                />
+              </div>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição detalhada do produto..."
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowQuickCategory(!showQuickCategory)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nova
+                </Button>
+              </div>
+
+              {showQuickCategory && (
+                <div className="mb-4">
+                  <QuickCategoryForm
+                    onCategoryCreated={handleCategoryCreated}
+                    onCancel={() => setShowQuickCategory(false)}
+                  />
+                </div>
+              )}
+
+              <Select 
+                value={formData.category} 
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                disabled={categoriesLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preços e Estoque */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Preços e Estoque</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {showRetailFields && (
+                <div>
+                  <Label htmlFor="retail_price">Preço Varejo (R$)</Label>
+                  <Input
+                    id="retail_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.retail_price}
+                    onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+              )}
+
+              {showWholesaleFields && (
+                <div>
+                  <Label htmlFor="wholesale_price">Preço Atacado (R$)</Label>
+                  <Input
+                    id="wholesale_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.wholesale_price}
+                    onChange={(e) => setFormData({ ...formData, wholesale_price: e.target.value })}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="stock">Estoque</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              {showWholesaleFields && (
+                <div>
+                  <Label htmlFor="min_wholesale_qty">Qtd. Mín. Atacado</Label>
+                  <Input
+                    id="min_wholesale_qty"
+                    type="number"
+                    value={formData.min_wholesale_qty}
+                    onChange={(e) => setFormData({ ...formData, min_wholesale_qty: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botões de Ação */}
+        <div className="flex gap-4">
+          <Button type="submit" className="flex-1">
+            {initialData ? 'Atualizar' : 'Criar'} Produto
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 
