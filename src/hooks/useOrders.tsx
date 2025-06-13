@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface OrderItem {
   id: string;
@@ -12,14 +13,19 @@ export interface OrderItem {
   variation?: string;
 }
 
+// Usar os tipos do Supabase para garantir compatibilidade
+type DatabaseOrder = Database['public']['Tables']['orders']['Row'];
+type OrderStatus = Database['public']['Enums']['order_status'];
+type CatalogType = Database['public']['Enums']['catalog_type'];
+
 export interface Order {
   id: string;
   order_number?: string;
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
-  status: 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
-  order_type: 'retail' | 'wholesale';
+  status: OrderStatus; // Usar o tipo do banco
+  order_type: CatalogType; // Usar o tipo do banco
   total_amount: number;
   shipping_cost?: number;
   discount_amount?: number;
@@ -70,11 +76,11 @@ export const useOrders = (filters: OrderFilters = {}) => {
 
     // Aplicar filtros
     if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
+      query = query.eq('status', filters.status as OrderStatus);
     }
 
     if (filters.order_type && filters.order_type !== 'all') {
-      query = query.eq('order_type', filters.order_type);
+      query = query.eq('order_type', filters.order_type as CatalogType);
     }
 
     // Filtro de busca por texto
@@ -85,11 +91,11 @@ export const useOrders = (filters: OrderFilters = {}) => {
     // Filtros por aba
     if (filters.tab === 'unpaid') {
       // Mock do filtro de não pagos - adaptar conforme estrutura real
-      query = query.eq('status', 'pending');
+      query = query.eq('status', 'pending' as OrderStatus);
     } else if (filters.tab === 'pending') {
-      query = query.in('status', ['pending', 'confirmed']);
+      query = query.in('status', ['pending', 'confirmed'] as OrderStatus[]);
     } else if (filters.tab === 'shipped') {
-      query = query.in('status', ['shipped', 'delivered']);
+      query = query.in('status', ['shipping', 'delivered'] as OrderStatus[]); // Usar 'shipping' ao invés de 'shipped'
     }
 
     // Ordenar por data mais recente
@@ -103,7 +109,22 @@ export const useOrders = (filters: OrderFilters = {}) => {
     }
 
     console.log('Pedidos encontrados:', data?.length || 0);
-    return data || [];
+    
+    // Converter dados do banco para nossa interface
+    return (data || []).map((order: DatabaseOrder): Order => ({
+      id: order.id,
+      customer_name: order.customer_name,
+      customer_email: order.customer_email || undefined,
+      customer_phone: order.customer_phone || undefined,
+      status: order.status,
+      order_type: order.order_type,
+      total_amount: Number(order.total_amount),
+      items: Array.isArray(order.items) ? order.items as OrderItem[] : [],
+      shipping_address: order.shipping_address ? order.shipping_address as Order['shipping_address'] : undefined,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      store_id: order.store_id
+    }));
   };
 
   // Query para buscar pedidos
@@ -122,7 +143,10 @@ export const useOrders = (filters: OrderFilters = {}) => {
       
       const { data, error } = await supabase
         .from('orders')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({ 
+          status: status as OrderStatus, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', orderId)
         .select()
         .single();
@@ -149,8 +173,16 @@ export const useOrders = (filters: OrderFilters = {}) => {
         throw new Error('Store ID não encontrado');
       }
 
-      const newOrder = {
-        ...orderData,
+      // Preparar dados para inserção no formato esperado pelo banco
+      const newOrderData = {
+        customer_name: orderData.customer_name || '',
+        customer_email: orderData.customer_email || null,
+        customer_phone: orderData.customer_phone || null,
+        status: (orderData.status || 'pending') as OrderStatus,
+        order_type: (orderData.order_type || 'retail') as CatalogType,
+        total_amount: orderData.total_amount || 0,
+        items: orderData.items || [],
+        shipping_address: orderData.shipping_address || null,
         store_id: profile.store_id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -158,7 +190,7 @@ export const useOrders = (filters: OrderFilters = {}) => {
 
       const { data, error } = await supabase
         .from('orders')
-        .insert([newOrder])
+        .insert([newOrderData])
         .select()
         .single();
 
@@ -189,7 +221,23 @@ export const useOrders = (filters: OrderFilters = {}) => {
       return null;
     }
 
-    return data;
+    // Converter dados do banco para nossa interface
+    const order: Order = {
+      id: data.id,
+      customer_name: data.customer_name,
+      customer_email: data.customer_email || undefined,
+      customer_phone: data.customer_phone || undefined,
+      status: data.status,
+      order_type: data.order_type,
+      total_amount: Number(data.total_amount),
+      items: Array.isArray(data.items) ? data.items as OrderItem[] : [],
+      shipping_address: data.shipping_address ? data.shipping_address as Order['shipping_address'] : undefined,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      store_id: data.store_id
+    };
+
+    return order;
   };
 
   return {

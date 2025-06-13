@@ -51,7 +51,7 @@ const Orders = () => {
       case 'pending': return <Clock className="h-4 w-4" />;
       case 'confirmed': return <CheckCircle className="h-4 w-4" />;
       case 'preparing': return <Package2 className="h-4 w-4" />;
-      case 'shipped': return <Truck className="h-4 w-4" />;
+      case 'shipping': return <Truck className="h-4 w-4" />; // Atualizado de 'shipped' para 'shipping'
       case 'delivered': return <CheckCircle className="h-4 w-4" />;
       case 'cancelled': return <AlertCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
@@ -63,7 +63,7 @@ const Orders = () => {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'confirmed': return 'bg-blue-100 text-blue-800';
       case 'preparing': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-orange-100 text-orange-800';
+      case 'shipping': return 'bg-orange-100 text-orange-800'; // Atualizado de 'shipped' para 'shipping'
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -75,7 +75,7 @@ const Orders = () => {
       case 'pending': return 'Pendente';
       case 'confirmed': return 'Confirmado';
       case 'preparing': return 'Preparando';
-      case 'shipped': return 'Enviado';
+      case 'shipping': return 'Enviado'; // Atualizado de 'shipped' para 'shipping'
       case 'delivered': return 'Entregue';
       case 'cancelled': return 'Cancelado';
       default: return 'Desconhecido';
@@ -144,7 +144,7 @@ const Orders = () => {
     } else if (activeTab === 'pending') {
       tabMatch = order.status === 'pending' || order.status === 'confirmed';
     } else if (activeTab === 'shipped') {
-      tabMatch = order.status === 'shipped' || order.status === 'delivered';
+      tabMatch = order.status === 'shipping' || order.status === 'delivered'; // Atualizado de 'shipped' para 'shipping'
     }
     return tabMatch;
   });
@@ -222,7 +222,7 @@ const Orders = () => {
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
                   <SelectItem value="preparing">Preparando</SelectItem>
-                  <SelectItem value="shipped">Enviado</SelectItem>
+                  <SelectItem value="shipping">Enviado</SelectItem> {/* Atualizado */}
                   <SelectItem value="delivered">Entregue</SelectItem>
                   <SelectItem value="cancelled">Cancelado</SelectItem>
                 </SelectContent>
@@ -269,7 +269,7 @@ const Orders = () => {
               Pendentes ({orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length})
             </TabsTrigger>
             <TabsTrigger value="shipped">
-              Enviados ({orders.filter(o => o.status === 'shipped' || o.status === 'delivered').length})
+              Enviados ({orders.filter(o => o.status === 'shipping' || o.status === 'delivered').length}) {/* Atualizado */}
             </TabsTrigger>
           </TabsList>
 
