@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MercadoPagoCheckout {
   items: Array<{
@@ -29,20 +30,18 @@ export const useMercadoPago = () => {
     try {
       setLoading(true);
       
-      // TODO: Implementar chamada para edge function do Mercado Pago
-      const response = await fetch('/api/mercadopago/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(checkoutData),
+      console.log('Criando checkout no Mercado Pago:', checkoutData);
+      
+      const { data, error } = await supabase.functions.invoke('mercadopago-checkout', {
+        body: checkoutData
       });
 
-      if (!response.ok) {
-        throw new Error('Erro ao criar checkout');
+      if (error) {
+        console.error('Erro na edge function:', error);
+        throw error;
       }
 
-      const data = await response.json();
+      console.log('Checkout criado com sucesso:', data);
       
       // Redirecionar para o checkout do Mercado Pago
       if (data.init_point) {

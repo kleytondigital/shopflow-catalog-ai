@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
+import { useCart } from '@/hooks/useCart';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist?: boolean;
@@ -19,13 +20,14 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = memo(({
   product,
   catalogType,
-  onAddToCart,
   onAddToWishlist,
   onQuickView,
   isInWishlist = false
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { addItem } = useCart();
+  const { toast } = useToast();
 
   const price = catalogType === 'wholesale' && product.wholesale_price 
     ? product.wholesale_price 
@@ -49,14 +51,21 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
     if (navigator.share) {
       await navigator.share(shareData);
     } else {
-      // Fallback para copiar URL
       navigator.clipboard.writeText(shareData.url);
+      toast({
+        title: "Link copiado!",
+        description: "O link do produto foi copiado para a área de transferência.",
+      });
     }
-  }, [product.name, product.description, product.id]);
+  }, [product.name, product.description, product.id, toast]);
 
   const handleAddToCart = useCallback(() => {
-    onAddToCart(product);
-  }, [onAddToCart, product]);
+    addItem(product, catalogType);
+    toast({
+      title: "Produto adicionado!",
+      description: `${product.name} foi adicionado ao carrinho.`,
+    });
+  }, [addItem, product, catalogType, toast]);
 
   const handleAddToWishlist = useCallback(() => {
     onAddToWishlist(product);
@@ -83,63 +92,67 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
   const stockStatus = getStockStatus();
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden bg-white border-0 shadow-md">
+    <Card className="group hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] overflow-hidden bg-white border-0 shadow-lg hover:shadow-blue-100/50">
       <CardContent className="p-0">
         {/* Image Container */}
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
+        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           {!imageError ? (
             <img
               src={product.image_url || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop'}
               alt={product.name}
-              className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-110 ${
+              className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               onLoad={handleImageLoad}
               onError={handleImageError}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-200">
-              <span className="text-gray-400 text-sm">Sem imagem</span>
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+              <span className="text-gray-400 text-sm font-medium">Sem imagem</span>
             </div>
           )}
 
           {/* Overlay Actions */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleQuickView}
-              className="bg-white/90 hover:bg-white"
-            >
-              <Eye size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleAddToWishlist}
-              className={`bg-white/90 hover:bg-white ${isInWishlist ? 'text-red-500' : ''}`}
-            >
-              <Heart size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleShare}
-              className="bg-white/90 hover:bg-white"
-            >
-              <Share2 size={16} />
-            </Button>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-4">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleQuickView}
+                className="bg-white/95 hover:bg-white text-gray-900 shadow-lg backdrop-blur-sm"
+              >
+                <Eye size={16} />
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleAddToWishlist}
+                className={`bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm ${
+                  isInWishlist ? 'text-red-500' : 'text-gray-900'
+                }`}
+              >
+                <Heart size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleShare}
+                className="bg-white/95 hover:bg-white text-gray-900 shadow-lg backdrop-blur-sm"
+              >
+                <Share2 size={16} />
+              </Button>
+            </div>
           </div>
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {catalogType === 'wholesale' && discountPercentage > 0 && (
-              <Badge className="bg-green-500 hover:bg-green-600">
+              <Badge className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg">
                 -{discountPercentage}%
               </Badge>
             )}
             {stockStatus && (
-              <Badge className={`${stockStatus.color} text-white`}>
+              <Badge className={`${stockStatus.color} text-white shadow-lg`}>
                 {stockStatus.text}
               </Badge>
             )}
@@ -150,45 +163,45 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
             size="sm"
             variant="ghost"
             onClick={handleAddToWishlist}
-            className="absolute top-3 right-3 w-8 h-8 p-0 bg-white/80 hover:bg-white"
+            className="absolute top-3 right-3 w-9 h-9 p-0 bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm"
           >
-            <Heart size={16} fill={isInWishlist ? 'red' : 'none'} className={isInWishlist ? 'text-red-500' : ''} />
+            <Heart size={16} fill={isInWishlist ? 'red' : 'none'} className={isInWishlist ? 'text-red-500' : 'text-gray-600'} />
           </Button>
         </div>
 
         {/* Product Info */}
-        <div className="p-4">
+        <div className="p-5">
           {/* Category */}
           {product.category && (
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+            <p className="text-xs text-blue-600 uppercase tracking-wider mb-2 font-semibold">
               {product.category}
             </p>
           )}
 
           {/* Name */}
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors text-lg">
             {product.name}
           </h3>
 
           {/* Description */}
           {product.description && (
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed">
               {product.description}
             </p>
           )}
 
           {/* Rating (Mock) */}
-          <div className="flex items-center gap-1 mb-3">
+          <div className="flex items-center gap-1 mb-4">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} size={12} className="text-yellow-400" fill="currentColor" />
+              <Star key={i} size={14} className="text-yellow-400" fill="currentColor" />
             ))}
-            <span className="text-xs text-gray-500 ml-1">(24 avaliações)</span>
+            <span className="text-xs text-gray-500 ml-2">(24 avaliações)</span>
           </div>
 
           {/* Price */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-gray-900">
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl font-bold text-gray-900">
                 R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
               {catalogType === 'wholesale' && product.wholesale_price && (
@@ -199,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
             </div>
             
             {catalogType === 'wholesale' && minQuantity > 1 && (
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600">
                 Mín. {minQuantity} unidades
               </p>
             )}
@@ -209,9 +222,10 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
           <Button
             onClick={handleAddToCart}
             disabled={product.stock === 0}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            size="lg"
           >
-            <ShoppingCart size={16} className="mr-2" />
+            <ShoppingCart size={18} className="mr-2" />
             {product.stock === 0 ? 'Esgotado' : 'Adicionar ao Carrinho'}
           </Button>
         </div>

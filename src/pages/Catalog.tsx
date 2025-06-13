@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
@@ -6,13 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCatalog, CatalogType } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { Product } from '@/hooks/useProducts';
-import { CartProvider, useCart } from '@/hooks/useCart';
+import { CartProvider } from '@/hooks/useCart';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import FilterSidebar, { FilterState } from '@/components/catalog/FilterSidebar';
 import ProductGrid from '@/components/catalog/ProductGrid';
 import CatalogFooter from '@/components/catalog/CatalogFooter';
 import FloatingCart from '@/components/catalog/FloatingCart';
-import Checkout from '@/components/catalog/Checkout';
+import CheckoutModal from '@/components/catalog/CheckoutModal';
 import { useToast } from '@/hooks/use-toast';
 
 const CatalogContent = () => {
@@ -23,22 +24,18 @@ const CatalogContent = () => {
   }>();
   const location = useLocation();
   const { toast } = useToast();
-  const { totalItems } = useCart();
   
-  // Determinar o identificador da loja (slug ou ID)
   const storeIdentifier = storeSlug || storeId;
   
-  // Determinar o tipo de catálogo baseado na URL
   const getCatalogTypeFromUrl = (): CatalogType => {
     if (urlCatalogType === 'atacado') return 'wholesale';
     if (urlCatalogType === 'varejo') return 'retail';
     
-    // Para URLs antigas (/catalog/:storeId), verificar query params ou default
     const params = new URLSearchParams(location.search);
     const typeParam = params.get('type');
     if (typeParam === 'wholesale') return 'wholesale';
     
-    return 'retail'; // Default
+    return 'retail';
   };
 
   const initialCatalogType = getCatalogTypeFromUrl();
@@ -59,11 +56,9 @@ const CatalogContent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('name');
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
-  const [cart, setCart] = useState<Product[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  // Inicializar catálogo quando mudar o identificador ou tipo
   useEffect(() => {
     if (storeIdentifier) {
       console.log('Inicializando catálogo:', storeIdentifier, catalogType);
@@ -79,7 +74,6 @@ const CatalogContent = () => {
     }
   }, [storeIdentifier, catalogType, initializeCatalog]);
 
-  // Atualizar o tipo de catálogo quando a URL mudar
   useEffect(() => {
     const newCatalogType = getCatalogTypeFromUrl();
     if (newCatalogType !== catalogType) {
@@ -94,7 +88,6 @@ const CatalogContent = () => {
   }, [store, catalogType]);
 
   const handleCatalogTypeChange = (type: CatalogType) => {
-    // Verificar se o tipo de catálogo está ativo
     if (type === 'wholesale' && settings && !settings.wholesale_catalog_active) {
       toast({
         title: "Catálogo indisponível",
@@ -115,7 +108,6 @@ const CatalogContent = () => {
 
     setCatalogType(type);
     
-    // Recarregar produtos para o novo tipo
     if (storeIdentifier) {
       initializeCatalog(storeIdentifier, type);
     }
@@ -134,25 +126,6 @@ const CatalogContent = () => {
     };
     
     filterProducts(filterOptions);
-  };
-
-  const handleAddToCart = (product: Product) => {
-    const existingItem = cart.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, stock: item.stock + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, { ...product, stock: 1 }]);
-    }
-
-    toast({
-      title: "Produto adicionado!",
-      description: `${product.name} foi adicionado ao carrinho.`,
-    });
   };
 
   const handleAddToWishlist = (product: Product) => {
@@ -209,21 +182,19 @@ const CatalogContent = () => {
   }
 
   const sortedProducts = getSortedProducts();
-  
-  // Verificar se filtros devem aparecer baseado nas configurações
   const showCategoryFilter = settings?.allow_categories_filter !== false;
   const showPriceFilter = settings?.allow_price_filter !== false;
   const showFilters = showCategoryFilter || showPriceFilter;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
       {/* Header */}
       <CatalogHeader
         store={store}
         catalogType={catalogType}
         onCatalogTypeChange={handleCatalogTypeChange}
         onSearch={handleSearch}
-        cartItemsCount={totalItems}
+        cartItemsCount={0}
         wishlistCount={wishlist.length}
         whatsappNumber={settings?.whatsapp_number || undefined}
         onCartClick={() => setShowCheckout(true)}
@@ -232,7 +203,7 @@ const CatalogContent = () => {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
-          {/* Filter Sidebar - Desktop - Mostrar apenas se filtros estiverem habilitados */}
+          {/* Filter Sidebar - Desktop */}
           {showFilters && (
             <div className="hidden lg:block w-80 flex-shrink-0">
               <FilterSidebar
@@ -257,10 +228,9 @@ const CatalogContent = () => {
           {/* Products Area */}
           <div className="flex-1 min-w-0">
             {/* Toolbar */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
-                  {/* Mostrar botão de filtros apenas se filtros estiverem habilitados */}
                   {showFilters && (
                     <Button
                       variant="outline"
@@ -272,18 +242,19 @@ const CatalogContent = () => {
                     </Button>
                   )}
                   
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 font-medium">
                     {sortedProducts.length} produto{sortedProducts.length !== 1 ? 's' : ''} encontrado{sortedProducts.length !== 1 ? 's' : ''}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   {/* View Mode Toggle */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
+                  <div className="flex bg-gray-100 rounded-xl p-1">
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setViewMode('grid')}
+                      className="rounded-lg"
                     >
                       <Grid size={16} />
                     </Button>
@@ -291,6 +262,7 @@ const CatalogContent = () => {
                       variant={viewMode === 'list' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setViewMode('list')}
+                      className="rounded-lg"
                     >
                       <List size={16} />
                     </Button>
@@ -318,7 +290,6 @@ const CatalogContent = () => {
               products={sortedProducts}
               catalogType={catalogType}
               loading={loading}
-              onAddToCart={handleAddToCart}
               onAddToWishlist={handleAddToWishlist}
               onQuickView={handleQuickView}
               wishlist={wishlist}
@@ -335,6 +306,13 @@ const CatalogContent = () => {
 
       {/* Floating Cart */}
       <FloatingCart />
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        storeSettings={settings}
+      />
     </div>
   );
 };
