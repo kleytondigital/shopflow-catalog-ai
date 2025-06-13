@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,15 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useCategories } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useDraftImages } from '@/hooks/useDraftImages';
 import { useProductImages } from '@/hooks/useProductImages';
-import { useProductVariations } from '@/hooks/useProductVariations';
 import { CreateProductData, UpdateProductData } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
-import QuickCategoryForm from './QuickCategoryForm';
-import ProductDescriptionAI from '@/components/ai/ProductDescriptionAI';
+import SimpleCategoryForm from './SimpleCategoryForm';
+import AIContentGenerator from '@/components/ai/AIContentGenerator';
+import DraftImageUpload from './DraftImageUpload';
 import ProductImageUpload from './ProductImageUpload';
-import ProductVariationsForm from './ProductVariationsForm';
-import { Plus, ArrowLeft, Package, Image, Palette, Search, Sparkles } from 'lucide-react';
+import { Plus, ArrowLeft, Package, Image, Search } from 'lucide-react';
 
 interface ProductFormCompleteProps {
   onSubmit: (data: CreateProductData | UpdateProductData) => void;
@@ -27,19 +26,10 @@ interface ProductFormCompleteProps {
   mode?: 'create' | 'edit';
 }
 
-interface Variation {
-  color?: string;
-  size?: string;
-  stock: number;
-  price_adjustment: number;
-  sku?: string;
-}
-
 const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' }: ProductFormCompleteProps) => {
   const [activeTab, setActiveTab] = useState('basic');
   const [showQuickCategory, setShowQuickCategory] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [variations, setVariations] = useState<Variation[]>([]);
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -57,23 +47,17 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
     seo_slug: initialData?.seo_slug || ''
   });
 
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
   const { settings } = useStoreSettings();
   const { images, uploadImage, deleteImage } = useProductImages(initialData?.id);
-  const { variations: dbVariations, createVariation, updateVariation, deleteVariation } = useProductVariations(initialData?.id);
-
-  // Carregar variações do banco quando em modo de edição
-  useEffect(() => {
-    if (mode === 'edit' && dbVariations.length > 0) {
-      setVariations(dbVariations.map(v => ({
-        color: v.color || '',
-        size: v.size || '',
-        stock: v.stock,
-        price_adjustment: v.price_adjustment || 0,
-        sku: v.sku || ''
-      })));
-    }
-  }, [dbVariations, mode]);
+  const {
+    draftImages,
+    uploading: uploadingDraft,
+    addDraftImage,
+    removeDraftImage,
+    uploadDraftImages,
+    clearDraftImages
+  } = useDraftImages();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,18 +78,27 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
         meta_description: formData.meta_description || undefined,
         keywords: formData.keywords || undefined,
         seo_slug: formData.seo_slug || undefined,
-        store_id: initialData?.store_id || '',
-        image_url: images[0]?.image_url || undefined
+        store_id: initialData?.store_id || ''
       };
 
-      await onSubmit(productData as CreateProductData | UpdateProductData);
-
-      // Salvar variações se existirem
-      if (variations.length > 0 && mode === 'create') {
-        // Para produtos novos, as variações serão salvas após a criação do produto
-        // Isso será feito no componente pai após obter o ID do produto criado
+      // Criar/atualizar produto primeiro
+      const result = await onSubmit(productData as CreateProductData | UpdateProductData);
+      
+      // Se é criação e temos imagens draft, fazer upload
+      if (mode === 'create' && draftImages.length > 0 && result?.data?.id) {
+        const uploadResult = await uploadDraftImages(result.data.id);
+        if (uploadResult.success && uploadResult.urls.length > 0) {
+          // Atualizar produto com a primeira imagem como imagem principal
+          const updateData = {
+            id: result.data.id,
+            image_url: uploadResult.urls[0]
+          };
+          await onSubmit(updateData as UpdateProductData);
+        }
       }
 
+      clearDraftImages();
+      
       toast({
         title: mode === 'edit' ? 'Produto atualizado' : 'Produto criado',
         description: mode === 'edit' ? 'As alterações foram salvas com sucesso' : 'O produto foi criado com sucesso'
@@ -123,23 +116,34 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
     }
   };
 
-  const handleCategoryCreated = (category: any) => {
+  const handleCategoryCreated = async (category: any) => {
     setFormData({ ...formData, category: category.name });
     setShowQuickCategory(false);
+    await fetchCategories(); // Recarregar lista de categorias
   };
 
   const handleDescriptionGenerated = (description: string) => {
     setFormData({ ...formData, description });
   };
 
+  const handleSEOGenerated = (seoData: any) => {
+    setFormData({
+      ...formData,
+      meta_title: seoData.metaTitle || '',
+      meta_description: seoData.metaDescription || '',
+      keywords: seoData.keywords || '',
+      seo_slug: seoData.seoSlug || ''
+    });
+  };
+
   const handleImageUpload = async (file: File, order: number) => {
-    if (initialData?.id) {
+    if (mode === 'edit' && initialData?.id) {
       await uploadImage(file, initialData.id, order);
     }
   };
 
   const handleImageRemove = async (index: number) => {
-    if (images[index]?.id) {
+    if (mode === 'edit' && images[index]?.id) {
       await deleteImage(images[index].id);
     }
   };
@@ -167,7 +171,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Básico
@@ -175,10 +179,6 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
             <TabsTrigger value="images" className="flex items-center gap-2">
               <Image className="h-4 w-4" />
               Imagens
-            </TabsTrigger>
-            <TabsTrigger value="variations" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Variações
             </TabsTrigger>
             <TabsTrigger value="seo" className="flex items-center gap-2">
               <Search className="h-4 w-4" />
@@ -205,13 +205,14 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center justify-between mb-2">
                     <Label htmlFor="description">Descrição</Label>
-                    <ProductDescriptionAI
+                    <AIContentGenerator
                       productName={formData.name}
                       category={formData.category}
                       onDescriptionGenerated={handleDescriptionGenerated}
                       disabled={!formData.name.trim()}
+                      variant="description"
                     />
                   </div>
                   <Textarea
@@ -239,7 +240,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
                   {showQuickCategory && (
                     <div className="mb-4">
-                      <QuickCategoryForm
+                      <SimpleCategoryForm
                         onCategoryCreated={handleCategoryCreated}
                         onCancel={() => setShowQuickCategory(false)}
                       />
@@ -344,36 +345,21 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
                 <CardTitle>Imagens do Produto</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProductImageUpload
-                  onImageUpload={handleImageUpload}
-                  images={images.map(img => img.image_url)}
-                  onImageRemove={handleImageRemove}
-                  maxImages={5}
-                />
-                {mode === 'create' && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Salve o produto primeiro para adicionar imagens
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Aba Variações */}
-          <TabsContent value="variations" className="space-y-6">
-            <Card className="card-modern">
-              <CardHeader>
-                <CardTitle>Variações do Produto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProductVariationsForm
-                  variations={variations}
-                  onVariationsChange={setVariations}
-                />
-                {mode === 'create' && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Salve o produto primeiro para gerenciar variações
-                  </p>
+                {mode === 'create' ? (
+                  <DraftImageUpload
+                    draftImages={draftImages}
+                    onImageAdd={addDraftImage}
+                    onImageRemove={removeDraftImage}
+                    uploading={uploadingDraft}
+                    maxImages={5}
+                  />
+                ) : (
+                  <ProductImageUpload
+                    onImageUpload={handleImageUpload}
+                    images={images.map(img => img.image_url)}
+                    onImageRemove={handleImageRemove}
+                    maxImages={5}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -383,12 +369,20 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
           <TabsContent value="seo" className="space-y-6">
             <Card className="card-modern">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Otimização SEO
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Otimização SEO</CardTitle>
+                  <AIContentGenerator
+                    productName={formData.name}
+                    category={formData.category}
+                    description={formData.description}
+                    onSEOGenerated={handleSEOGenerated}
+                    disabled={!formData.name.trim()}
+                    variant="seo"
+                  />
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                
                 <div>
                   <Label htmlFor="meta_title">Título SEO</Label>
                   <Input
@@ -450,10 +444,10 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
         {/* Botões de Ação */}
         <div className="flex gap-4 sticky bottom-0 bg-background p-4 border-t">
-          <Button type="submit" className="flex-1 btn-primary" disabled={saving}>
-            {saving ? 'Salvando...' : (mode === 'edit' ? 'Atualizar' : 'Criar')} Produto
+          <Button type="submit" className="flex-1 btn-primary" disabled={saving || uploadingDraft}>
+            {(saving || uploadingDraft) ? 'Salvando...' : (mode === 'edit' ? 'Atualizar' : 'Criar')} Produto
           </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={saving || uploadingDraft}>
             Cancelar
           </Button>
         </div>

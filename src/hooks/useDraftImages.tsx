@@ -1,0 +1,147 @@
+
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+export interface DraftImage {
+  id: string;
+  url: string;
+  file: File;
+  uploaded: boolean;
+}
+
+export const useDraftImages = () => {
+  const [draftImages, setDraftImages] = useState<DraftImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const ensureBucketExists = async () => {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const productImagesBucket = buckets?.find(bucket => bucket.name === 'product-images');
+      
+      if (!productImagesBucket) {
+        const { error } = await supabase.storage.createBucket('product-images', { 
+          public: true,
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+          fileSizeLimit: 5242880 // 5MB
+        });
+        if (error) {
+          console.error('Erro ao criar bucket:', error);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Erro ao verificar bucket:', error);
+      return false;
+    }
+  };
+
+  const addDraftImage = (file: File) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const url = URL.createObjectURL(file);
+    
+    const newImage: DraftImage = {
+      id,
+      url,
+      file,
+      uploaded: false
+    };
+
+    setDraftImages(prev => [...prev, newImage]);
+    return id;
+  };
+
+  const removeDraftImage = (id: string) => {
+    setDraftImages(prev => {
+      const image = prev.find(img => img.id === id);
+      if (image && !image.uploaded) {
+        URL.revokeObjectURL(image.url);
+      }
+      return prev.filter(img => img.id !== id);
+    });
+  };
+
+  const uploadDraftImages = async (productId: string) => {
+    if (draftImages.length === 0) return { success: true, urls: [] };
+
+    setUploading(true);
+    await ensureBucketExists();
+
+    const uploadedUrls: string[] = [];
+    
+    try {
+      for (let i = 0; i < draftImages.length; i++) {
+        const image = draftImages[i];
+        
+        const fileExt = image.file.name.split('.').pop()?.toLowerCase();
+        const fileName = `${productId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, image.file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Erro no upload:', uploadError);
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+
+        const { error: dbError } = await supabase
+          .from('product_images')
+          .insert({
+            product_id: productId,
+            image_url: publicUrl,
+            image_order: i + 1,
+            is_primary: i === 0,
+            alt_text: image.file.name
+          });
+
+        if (dbError) {
+          console.error('Erro ao salvar no banco:', dbError);
+          continue;
+        }
+
+        uploadedUrls.push(publicUrl);
+        
+        // Atualizar estado para marcar como enviado
+        setDraftImages(prev => 
+          prev.map(img => 
+            img.id === image.id 
+              ? { ...img, uploaded: true, url: publicUrl }
+              : img
+          )
+        );
+      }
+
+      return { success: true, urls: uploadedUrls };
+    } catch (error) {
+      console.error('Erro no upload das imagens:', error);
+      return { success: false, urls: [] };
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearDraftImages = () => {
+    draftImages.forEach(image => {
+      if (!image.uploaded) {
+        URL.revokeObjectURL(image.url);
+      }
+    });
+    setDraftImages([]);
+  };
+
+  return {
+    draftImages,
+    uploading,
+    addDraftImage,
+    removeDraftImage,
+    uploadDraftImages,
+    clearDraftImages
+  };
+};
