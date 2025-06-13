@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStoreSettings } from './useStoreSettings';
@@ -39,16 +39,25 @@ interface FilterOptions {
   inStock?: boolean;
 }
 
-// Função para verificar se é um UUID válido
+// Função mais robusta para verificar se é um UUID válido
 const isValidUUID = (str: string): boolean => {
+  if (!str || typeof str !== 'string') return false;
+  
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+  const result = uuidRegex.test(str);
+  
+  console.log('useCatalog: UUID validation -', str, 'is UUID:', result);
+  return result;
 };
 
 export const useCatalog = (identifier?: string) => {
   const [catalogType, setCatalogType] = useState<CatalogType>('retail');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({});
+  
+  // Refs para controle de estado
+  const lastIdentifier = useRef<string | null>(null);
+  const queryTimestamp = useRef<number>(0);
 
   // Query para buscar loja por ID ou slug
   const storeQuery = useQuery({
@@ -59,6 +68,14 @@ export const useCatalog = (identifier?: string) => {
         return null;
       }
 
+      // Throttle queries para evitar spam
+      const now = Date.now();
+      if (now - queryTimestamp.current < 500) {
+        console.log('useCatalog: Query throttled');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      queryTimestamp.current = now;
+
       console.log('useCatalog: Buscando loja para identificador:', identifier);
 
       let query = supabase
@@ -66,12 +83,14 @@ export const useCatalog = (identifier?: string) => {
         .select('id, name, description, logo_url, is_active')
         .eq('is_active', true);
 
-      // Determinar se é UUID (buscar por ID) ou string (buscar por slug)
-      if (isValidUUID(identifier)) {
-        console.log('useCatalog: Identificador é UUID, buscando por ID');
+      // Melhor detecção UUID vs slug
+      const isUUID = isValidUUID(identifier);
+      
+      if (isUUID) {
+        console.log('useCatalog: Usando busca por ID (UUID)');
         query = query.eq('id', identifier);
       } else {
-        console.log('useCatalog: Identificador é slug, buscando por url_slug');
+        console.log('useCatalog: Usando busca por url_slug');
         query = query.eq('url_slug', identifier);
       }
 
@@ -83,20 +102,25 @@ export const useCatalog = (identifier?: string) => {
       }
 
       if (!data) {
-        console.log('useCatalog: Loja não encontrada');
+        console.log('useCatalog: Loja não encontrada para:', identifier, 'tipo:', isUUID ? 'UUID' : 'slug');
         return null;
       }
 
-      console.log('useCatalog: Loja encontrada:', data.name);
+      console.log('useCatalog: Loja encontrada:', data.name, 'ID:', data.id);
+      lastIdentifier.current = identifier;
       return data;
     },
     enabled: !!identifier,
     retry: 1,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000 // 10 minutos
   });
 
-  // Hook para configurações da loja
-  const { settings: storeSettings, loading: settingsLoading } = useStoreSettings(storeQuery.data?.id);
+  // Hook para configurações da loja - APENAS se temos uma store válida
+  const { settings: storeSettings, loading: settingsLoading } = useStoreSettings(
+    storeQuery.data?.id || undefined
+  );
 
   // Query para buscar produtos da loja
   const productsQuery = useQuery({
@@ -126,7 +150,9 @@ export const useCatalog = (identifier?: string) => {
     },
     enabled: !!storeQuery.data?.id,
     retry: 1,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    gcTime: 5 * 60 * 1000 // 5 minutos
   });
 
   // Filtrar produtos com base na busca e filtros
