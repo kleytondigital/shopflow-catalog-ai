@@ -10,7 +10,7 @@ export interface Order {
   customer_email: string | null;
   customer_phone: string | null;
   total_amount: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'shipping' | 'delivered' | 'cancelled';
   order_type: 'retail' | 'wholesale';
   items: any[];
   shipping_address: any;
@@ -28,11 +28,16 @@ export interface CreateOrderData {
   order_type: 'retail' | 'wholesale';
   items: any[];
   shipping_address?: any;
+  shipping_method?: string;
+  payment_method?: string;
+  shipping_cost?: number;
+  notes?: string;
 }
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { profile, user } = useAuth();
 
@@ -85,6 +90,7 @@ export const useOrders = () => {
   const createOrder = async (orderData: CreateOrderData) => {
     try {
       setError(null);
+      setIsCreatingOrder(true);
       
       // Aguardar profile estar disponível
       await waitForProfile();
@@ -127,7 +133,7 @@ export const useOrders = () => {
 
       // Reservar estoque para cada item
       for (const item of orderData.items) {
-        await reserveStock(item.product_id, item.quantity, data.id);
+        await reserveStock(item.id || item.product_id, item.quantity, data.id);
       }
 
       await fetchOrders();
@@ -137,7 +143,18 @@ export const useOrders = () => {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar pedido';
       setError(errorMessage);
       return { data: null, error: errorMessage };
+    } finally {
+      setIsCreatingOrder(false);
     }
+  };
+
+  // Versão async que retorna o pedido diretamente ou lança erro
+  const createOrderAsync = async (orderData: CreateOrderData): Promise<Order> => {
+    const result = await createOrder(orderData);
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'Erro ao criar pedido');
+    }
+    return result.data;
   };
 
   const reserveStock = async (productId: string, quantity: number, orderId: string) => {
@@ -241,8 +258,10 @@ export const useOrders = () => {
     orders,
     loading,
     error,
+    isCreatingOrder,
     fetchOrders,
     createOrder,
+    createOrderAsync,
     updateOrderStatus
   };
 };
