@@ -92,7 +92,7 @@ const DraftImageUpload = ({
               <img
                 src={image.url}
                 alt={`Produto ${index + 1}`}
-                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                className="w-full h-full object-cover"
               />
             </div>
             

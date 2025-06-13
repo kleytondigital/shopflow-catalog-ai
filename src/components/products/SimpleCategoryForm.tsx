@@ -29,6 +29,9 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('SimpleCategoryForm: Iniciando submissão da categoria', { name, description, profile });
     
     if (!name.trim()) {
       toast({
@@ -40,6 +43,7 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
     }
 
     if (!profile?.store_id) {
+      console.error('SimpleCategoryForm: Profile ou store_id não encontrado', { profile });
       toast({
         title: "Erro",
         description: "Loja não identificada",
@@ -58,24 +62,42 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
         is_active: true
       };
 
+      console.log('SimpleCategoryForm: Dados da categoria a serem criados', categoryData);
+      
       const { data, error } = await createCategory(categoryData);
 
+      console.log('SimpleCategoryForm: Resultado da criação', { data, error });
+
       if (error) {
-        console.error('Erro ao criar categoria:', error);
+        console.error('SimpleCategoryForm: Erro ao criar categoria:', error);
         toast({
           title: "Erro ao criar categoria",
           description: "Verifique se o nome não está duplicado",
           variant: "destructive"
         });
-      } else {
+      } else if (data) {
+        console.log('SimpleCategoryForm: Categoria criada com sucesso:', data);
         toast({
           title: "Categoria criada",
           description: `A categoria "${name}" foi criada com sucesso`
         });
+        
+        // Limpar formulário
+        setName('');
+        setDescription('');
+        
+        // Chamar callback
         onCategoryCreated(data);
+      } else {
+        console.error('SimpleCategoryForm: Nenhum dado retornado');
+        toast({
+          title: "Erro",
+          description: "Nenhum dado foi retornado",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      console.error('SimpleCategoryForm: Erro inesperado:', error);
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro ao criar a categoria",

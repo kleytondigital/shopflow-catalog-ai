@@ -28,20 +28,36 @@ export const useCategories = (storeId?: string) => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('categories').select('*');
       
-      if (storeId) {
-        query = query.eq('store_id', storeId);
+      // Usar o store_id do parâmetro ou do profile
+      const targetStoreId = storeId || profile?.store_id;
+      
+      console.log('useCategories: Buscando categorias para store_id:', targetStoreId);
+      
+      if (!targetStoreId) {
+        console.log('useCategories: Nenhum store_id disponível');
+        setCategories([]);
+        return;
       }
       
-      const { data, error } = await query
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('store_id', targetStoreId)
         .eq('is_active', true)
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      console.log('useCategories: Resultado da busca:', { data, error });
+
+      if (error) {
+        console.error('useCategories: Erro ao buscar categorias:', error);
+        throw error;
+      }
+      
       setCategories(data || []);
     } catch (error) {
-      console.error('Erro ao buscar categorias:', error);
+      console.error('useCategories: Erro ao buscar categorias:', error);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -49,17 +65,25 @@ export const useCategories = (storeId?: string) => {
 
   const createCategory = async (categoryData: CreateCategoryData) => {
     try {
+      console.log('useCategories: Criando categoria:', categoryData);
+      
       const { data, error } = await supabase
         .from('categories')
         .insert([categoryData])
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('useCategories: Resultado da inserção:', { data, error });
+
+      if (error) {
+        console.error('useCategories: Erro na inserção:', error);
+        throw error;
+      }
+      
       await fetchCategories();
       return { data, error: null };
     } catch (error) {
-      console.error('Erro ao criar categoria:', error);
+      console.error('useCategories: Erro ao criar categoria:', error);
       return { data: null, error };
     }
   };
@@ -99,10 +123,10 @@ export const useCategories = (storeId?: string) => {
   };
 
   useEffect(() => {
-    if (profile) {
+    if (profile || storeId) {
       fetchCategories();
     }
-  }, [profile, storeId]);
+  }, [profile?.store_id, storeId]);
 
   return {
     categories,

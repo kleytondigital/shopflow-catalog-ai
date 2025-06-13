@@ -61,6 +61,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setSaving(true);
 
     try {
@@ -81,6 +82,8 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
         store_id: initialData?.store_id || ''
       };
 
+      console.log('ProductFormComplete: Submetendo produto:', productData);
+
       // Criar/atualizar produto
       await onSubmit(productData as CreateProductData | UpdateProductData);
 
@@ -95,7 +98,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
       });
 
     } catch (error) {
-      console.error('Erro ao salvar produto:', error);
+      console.error('ProductFormComplete: Erro ao salvar produto:', error);
       toast({
         title: 'Erro ao salvar',
         description: 'Ocorreu um erro ao salvar o produto. Tente novamente.',
@@ -107,9 +110,11 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
   };
 
   const handleCategoryCreated = async (category: any) => {
+    console.log('ProductFormComplete: Categoria criada:', category);
     setFormData({ ...formData, category: category.name });
     setShowQuickCategory(false);
-    await fetchCategories(); // Recarregar lista de categorias
+    // Recarregar lista de categorias
+    await fetchCategories();
   };
 
   const handleDescriptionGenerated = (description: string) => {
@@ -178,7 +183,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
           {/* Aba Básico */}
           <TabsContent value="basic" className="space-y-6">
-            <Card className="card-modern">
+            <Card className="border-2 border-gray-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle>Informações Básicas</CardTitle>
               </CardHeader>
@@ -266,7 +271,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
               </CardContent>
             </Card>
 
-            <Card className="card-modern">
+            <Card className="border-2 border-gray-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle>Preços e Estoque</CardTitle>
               </CardHeader>
@@ -330,7 +335,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
           {/* Aba Imagens */}
           <TabsContent value="images" className="space-y-6">
-            <Card className="card-modern">
+            <Card className="border-2 border-gray-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle>Imagens do Produto</CardTitle>
               </CardHeader>
@@ -357,7 +362,7 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
 
           {/* Aba SEO */}
           <TabsContent value="seo" className="space-y-6">
-            <Card className="card-modern">
+            <Card className="border-2 border-gray-200 bg-white shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Otimização SEO</CardTitle>
@@ -372,7 +377,6 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                
                 <div>
                   <Label htmlFor="meta_title">Título SEO</Label>
                   <Input
