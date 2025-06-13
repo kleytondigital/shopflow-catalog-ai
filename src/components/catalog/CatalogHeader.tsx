@@ -14,6 +14,7 @@ interface CatalogHeaderProps {
   cartItemsCount: number;
   wishlistCount: number;
   whatsappNumber?: string;
+  onCartClick?: () => void;
 }
 
 const CatalogHeader: React.FC<CatalogHeaderProps> = ({
@@ -23,7 +24,8 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   onSearch,
   cartItemsCount,
   wishlistCount,
-  whatsappNumber
+  whatsappNumber,
+  onCartClick
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,6 +39,12 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
     if (whatsappNumber) {
       const message = `Olá! Estou interessado nos produtos da ${store.name}`;
       window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+  };
+
+  const handleCartClick = () => {
+    if (onCartClick) {
+      onCartClick();
     }
   };
 
@@ -122,7 +130,12 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                   </Badge>
                 )}
               </Button>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={handleCartClick}
+              >
                 <ShoppingCart size={20} />
                 {cartItemsCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs bg-blue-500">
@@ -185,7 +198,11 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                   <Heart size={16} />
                   Lista de Desejos ({wishlistCount})
                 </Button>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={handleCartClick}
+                >
                   <ShoppingCart size={16} />
                   Carrinho ({cartItemsCount})
                 </Button>

@@ -6,13 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCatalog, CatalogType } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { Product } from '@/hooks/useProducts';
+import { CartProvider, useCart } from '@/hooks/useCart';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import FilterSidebar, { FilterState } from '@/components/catalog/FilterSidebar';
 import ProductGrid from '@/components/catalog/ProductGrid';
 import CatalogFooter from '@/components/catalog/CatalogFooter';
+import FloatingCart from '@/components/catalog/FloatingCart';
+import Checkout from '@/components/catalog/Checkout';
 import { useToast } from '@/hooks/use-toast';
 
-const Catalog = () => {
+const CatalogContent = () => {
   const { storeId, storeSlug, catalogType: urlCatalogType } = useParams<{ 
     storeId?: string; 
     storeSlug?: string; 
@@ -20,6 +23,7 @@ const Catalog = () => {
   }>();
   const location = useLocation();
   const { toast } = useToast();
+  const { totalItems } = useCart();
   
   // Determinar o identificador da loja (slug ou ID)
   const storeIdentifier = storeSlug || storeId;
@@ -57,6 +61,7 @@ const Catalog = () => {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [cart, setCart] = useState<Product[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   // Inicializar catálogo quando mudar o identificador ou tipo
   useEffect(() => {
@@ -218,9 +223,10 @@ const Catalog = () => {
         catalogType={catalogType}
         onCatalogTypeChange={handleCatalogTypeChange}
         onSearch={handleSearch}
-        cartItemsCount={cart.length}
+        cartItemsCount={totalItems}
         wishlistCount={wishlist.length}
         whatsappNumber={settings?.whatsapp_number || undefined}
+        onCartClick={() => setShowCheckout(true)}
       />
 
       {/* Main Content */}
@@ -326,7 +332,18 @@ const Catalog = () => {
         store={store}
         whatsappNumber={settings?.whatsapp_number || undefined}
       />
+
+      {/* Floating Cart */}
+      <FloatingCart />
     </div>
+  );
+};
+
+const Catalog = () => {
+  return (
+    <CartProvider>
+      <CatalogContent />
+    </CartProvider>
   );
 };
 

@@ -4,12 +4,13 @@ import { Loader2 } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
+import { useCart } from '@/hooks/useCart';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductGridProps {
   products: Product[];
   catalogType: CatalogType;
   loading: boolean;
-  onAddToCart: (product: Product) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   wishlist: Product[];
@@ -54,11 +55,21 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
   products,
   catalogType,
   loading,
-  onAddToCart,
   onAddToWishlist,
   onQuickView,
   wishlist
 }) => {
+  const { addItem } = useCart();
+  const { toast } = useToast();
+
+  const handleAddToCart = (product: Product) => {
+    addItem(product, catalogType);
+    toast({
+      title: "Produto adicionado!",
+      description: `${product.name} foi adicionado ao carrinho.`,
+    });
+  };
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -80,7 +91,7 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
           <ProductCard
             product={product}
             catalogType={catalogType}
-            onAddToCart={onAddToCart}
+            onAddToCart={handleAddToCart}
             onAddToWishlist={onAddToWishlist}
             onQuickView={onQuickView}
             isInWishlist={wishlist.some(item => item.id === product.id)}
