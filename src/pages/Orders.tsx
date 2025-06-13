@@ -1,61 +1,218 @@
 
-import React from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Eye, Calendar, User, Phone, Mail, MapPin } from 'lucide-react';
-import { useOrders } from '@/hooks/useOrders';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Package } from 'lucide-react';
+import { useOrders, Order } from '@/hooks/useOrders';
+import { useToast } from '@/hooks/use-toast';
+import OrdersHeader from '@/components/orders/OrdersHeader';
+import OrderFilters from '@/components/orders/OrderFilters';
+import OrdersTable from '@/components/orders/OrdersTable';
+import OrdersGrid from '@/components/orders/OrdersGrid';
+import OrdersPagination from '@/components/orders/OrdersPagination';
+import OrderDetailsModal from '@/components/orders/OrderDetailsModal';
+import { generateWhatsAppMessage } from '@/components/catalog/checkout/checkoutUtils';
 
 const Orders = () => {
-  const { orders, loading, error } = useOrders();
+  const { orders, loading, error, fetchOrders, updateOrderStatus } = useOrders();
+  const { toast } = useToast();
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      preparing: 'bg-orange-100 text-orange-800',
-      shipping: 'bg-purple-100 text-purple-800',
-      delivered: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800'
-    };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  // View State
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  // Filter and Search Logic
+  const filteredOrders = useMemo(() => {
+    let filtered = [...orders];
+
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.customer_name.toLowerCase().includes(searchLower) ||
+        order.customer_phone?.toLowerCase().includes(searchLower) ||
+        order.customer_email?.toLowerCase().includes(searchLower) ||
+        order.id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Payment filter
+    if (paymentFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        const paymentStatus = getPaymentStatus(order);
+        return paymentStatus === paymentFilter;
+      });
+    }
+
+    // Type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(order => order.order_type === typeFilter);
+    }
+
+    return filtered;
+  }, [orders, searchTerm, statusFilter, paymentFilter, typeFilter]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredOrders.slice(startIndex, endIndex);
+  }, [filteredOrders, currentPage, itemsPerPage]);
+
+  // Helper Functions
+  const getPaymentStatus = (order: Order) => {
+    if (order.status === 'cancelled') return 'cancelled';
+    if (order.status === 'delivered') return 'paid';
+    if (order.status === 'pending') return 'pending';
+    return 'processing';
   };
 
-  const getStatusText = (status: string) => {
-    const texts = {
-      pending: 'Pendente',
-      confirmed: 'Confirmado',
-      preparing: 'Preparando',
-      shipping: 'Enviado',
-      delivered: 'Entregue',
-      cancelled: 'Cancelado'
-    };
-    return texts[status as keyof typeof texts] || status;
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (statusFilter !== 'all') count++;
+    if (paymentFilter !== 'all') count++;
+    if (typeFilter !== 'all') count++;
+    return count;
   };
 
+  // Event Handlers
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const result = await updateOrderStatus(orderId, 'cancelled');
+      if (result.error) {
+        toast({
+          title: "Erro",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Pedido cancelado com sucesso!",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao cancelar pedido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendFollowUp = (order: Order) => {
+    try {
+      const message = generateWhatsAppMessage(order);
+      const whatsappUrl = `https://wa.me/${order.customer_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      
+      toast({
+        title: "WhatsApp Aberto",
+        description: "Mensagem de cobrança preparada no WhatsApp",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao abrir WhatsApp",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrintLabel = (order: Order) => {
+    // TODO: Implementar impressão de etiqueta
+    toast({
+      title: "Em Desenvolvimento",
+      description: "Funcionalidade de impressão de etiqueta em breve",
+    });
+  };
+
+  const handlePrintDeclaration = (order: Order) => {
+    // TODO: Implementar impressão de declaração
+    toast({
+      title: "Em Desenvolvimento",
+      description: "Funcionalidade de declaração de conteúdo em breve",
+    });
+  };
+
+  const handleExport = () => {
+    // TODO: Implementar exportação
+    toast({
+      title: "Em Desenvolvimento",
+      description: "Funcionalidade de exportação em breve",
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setPaymentFilter('all');
+    setTypeFilter('all');
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (items: number) => {
+    setItemsPerPage(items);
+    setCurrentPage(1);
+  };
+
+  // Loading State
   if (loading) {
     return (
-      <AppLayout title="Pedidos" subtitle="Gerencie todos os pedidos da sua loja">
-        <div className="space-y-6">
-          <Card className="card-modern">
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Carregando pedidos...</p>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="space-y-6">
+            <div className="h-20 bg-gray-200 rounded-lg animate-pulse" />
+            <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
+  // Error State
   if (error) {
     return (
-      <AppLayout title="Pedidos" subtitle="Gerencie todos os pedidos da sua loja">
-        <div className="space-y-6">
-          <Card className="card-modern">
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card>
             <CardContent className="p-6">
               <div className="text-center py-8">
                 <p className="text-red-600">Erro ao carregar pedidos: {error}</p>
@@ -63,117 +220,109 @@ const Orders = () => {
             </CardContent>
           </Card>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout title="Pedidos" subtitle="Gerencie todos os pedidos da sua loja">
-      <div className="space-y-6">
-        <Card className="card-modern">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-6 w-6 text-blue-600" />
-              Lista de Pedidos ({orders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {orders.length === 0 ? (
-              <div className="text-center py-8">
-                <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-muted-foreground mb-2">
-                  Nenhum pedido encontrado
-                </p>
-                <p className="text-sm text-gray-500">
-                  Os pedidos aparecerão aqui quando forem realizados pelos clientes.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map((order) => (
-                  <Card key={order.id} className="border hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <Badge className={getStatusColor(order.status)}>
-                              {getStatusText(order.status)}
-                            </Badge>
-                            <Badge variant="outline">
-                              {order.order_type === 'retail' ? 'Varejo' : 'Atacado'}
-                            </Badge>
-                            <span className="text-sm text-gray-500 flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {formatDistanceToNow(new Date(order.created_at), { 
-                                addSuffix: true, 
-                                locale: ptBR 
-                              })}
-                            </span>
-                          </div>
+    <div className="min-h-screen bg-background">
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <OrdersHeader
+            totalOrders={filteredOrders.length}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onRefresh={fetchOrders}
+            onExport={handleExport}
+            isLoading={loading}
+          />
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium">{order.customer_name}</span>
-                            </div>
-                            
-                            {order.customer_phone && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-gray-400" />
-                                <span>{order.customer_phone}</span>
-                              </div>
-                            )}
-                            
-                            {order.customer_email && (
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-4 w-4 text-gray-400" />
-                                <span>{order.customer_email}</span>
-                              </div>
-                            )}
-                          </div>
+          <OrderFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            paymentFilter={paymentFilter}
+            onPaymentFilterChange={setPaymentFilter}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            onClearFilters={handleClearFilters}
+            activeFiltersCount={getActiveFiltersCount()}
+          />
 
-                          <div className="text-sm text-gray-600">
-                            <strong>Itens:</strong> {order.items?.length || 0} item(s)
-                            {order.items?.length > 0 && (
-                              <span className="ml-2">
-                                ({order.items.map(item => `${item.name} (${item.quantity}x)`).join(', ')})
-                              </span>
-                            )}
-                          </div>
+          <Card>
+            <CardContent className="p-0">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <Package className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Nenhum pedido encontrado
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    {getActiveFiltersCount() > 0 
+                      ? "Tente ajustar os filtros para encontrar pedidos."
+                      : "Os pedidos aparecerão aqui quando forem realizados pelos clientes."
+                    }
+                  </p>
+                  {getActiveFiltersCount() > 0 && (
+                    <Button variant="outline" onClick={handleClearFilters}>
+                      Limpar Filtros
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className={viewMode === 'table' ? 'p-0' : 'p-6'}>
+                    {viewMode === 'table' ? (
+                      <OrdersTable
+                        orders={paginatedOrders}
+                        onViewOrder={handleViewOrder}
+                        onCancelOrder={handleCancelOrder}
+                        onSendFollowUp={handleSendFollowUp}
+                        onPrintLabel={handlePrintLabel}
+                        onPrintDeclaration={handlePrintDeclaration}
+                      />
+                    ) : (
+                      <OrdersGrid
+                        orders={paginatedOrders}
+                        onViewOrder={handleViewOrder}
+                        onCancelOrder={handleCancelOrder}
+                        onSendFollowUp={handleSendFollowUp}
+                        onPrintLabel={handlePrintLabel}
+                        onPrintDeclaration={handlePrintDeclaration}
+                      />
+                    )}
+                  </div>
 
-                          {order.shipping_address && (
-                            <div className="flex items-start gap-2 text-sm text-gray-600">
-                              <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                              <span>
-                                {order.shipping_address.street}, {order.shipping_address.number}
-                                {order.shipping_address.complement && `, ${order.shipping_address.complement}`}
-                                <br />
-                                {order.shipping_address.district}, {order.shipping_address.city} - {order.shipping_address.state}
-                                <br />
-                                CEP: {order.shipping_address.zip_code}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="text-2xl font-bold text-primary">
-                            R$ {order.total_amount.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Pedido #{order.id.slice(-8)}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div className="px-6 pb-6">
+                    <OrdersPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      itemsPerPage={itemsPerPage}
+                      totalItems={filteredOrders.length}
+                      onPageChange={handlePageChange}
+                      onItemsPerPageChange={handleItemsPerPageChange}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </AppLayout>
+
+      <OrderDetailsModal
+        order={selectedOrder}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        onCancelOrder={handleCancelOrder}
+        onSendFollowUp={handleSendFollowUp}
+        onPrintLabel={handlePrintLabel}
+        onPrintDeclaration={handlePrintDeclaration}
+      />
+    </div>
   );
 };
 
