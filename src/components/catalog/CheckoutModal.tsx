@@ -45,7 +45,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState('');
 
-  // Configurações de pagamento e envio baseadas no dashboard
   const availablePaymentMethods = React.useMemo(() => {
     const methods = [];
     if (storeSettings?.payment_methods?.pix) {
@@ -74,7 +73,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     return methods;
   }, [storeSettings, shippingCost]);
 
-  // Definir métodos padrão baseados nas configurações
   useEffect(() => {
     if (availablePaymentMethods.length > 0) {
       setPaymentMethod(availablePaymentMethods[0].id);
@@ -89,7 +87,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const calculateShipping = async () => {
     if (shippingMethod === 'shipping' && shippingAddress.zipCode.length === 8) {
       try {
-        // TODO: Integração com Melhor Envio
         setTimeout(() => {
           setShippingCost(15.50);
         }, 1000);
@@ -103,7 +100,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     console.log('CheckoutModal: Iniciando processamento do pedido...');
     
     try {
-      // Validar dados obrigatórios
       if (!customerData.name.trim()) {
         toast({
           title: "Nome obrigatório",
@@ -131,7 +127,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         return;
       }
 
-      // Preparar dados do pedido
       const orderData = {
         customer_name: customerData.name.trim(),
         customer_email: customerData.email.trim() || undefined,
@@ -163,15 +158,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
       console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
-      // Criar o pedido
       const savedOrder = await createOrderAsync(orderData);
       console.log('CheckoutModal: Pedido salvo com sucesso:', savedOrder);
       
-      // Verificar tipo de checkout configurado
       const checkoutType = storeSettings?.checkout_type || 'both';
       
       if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
-        // Enviar para WhatsApp
         const message = generateWhatsAppMessage(orderData);
         window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
         
@@ -181,7 +173,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           duration: 4000,
         });
       } else {
-        // Checkout online - será implementado futuramente
         toast({
           title: "Pedido criado!",
           description: "Seu pedido foi criado com sucesso! Em breve você receberá as instruções de pagamento.",
@@ -189,7 +180,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         });
       }
 
-      // Limpar carrinho e fechar modal
       clearCart();
       onClose();
 
@@ -280,17 +270,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 gap-0">
-        {/* Header Fixo */}
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
           <DialogTitle className="text-2xl font-bold text-white text-center">
             Finalizar Pedido
           </DialogTitle>
         </DialogHeader>
 
-        {/* Conteúdo Principal com Scroll */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full lg:grid lg:grid-cols-3 lg:gap-0">
-            {/* Formulário - Mobile: Stack, Desktop: 2/3 da tela */}
             <div className="lg:col-span-2 h-full">
               <ScrollArea className="h-full">
                 <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
@@ -496,15 +483,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
               </ScrollArea>
             </div>
 
-            {/* Resumo do Pedido - Mobile: Em baixo, Desktop: Sidebar */}
             <div className="lg:col-span-1 border-l bg-gray-50/50">
               <div className="h-full flex flex-col">
-                {/* Header do Resumo */}
                 <div className="shrink-0 bg-gradient-to-r from-primary to-accent text-white p-4">
                   <h3 className="text-xl font-bold text-center">Resumo do Pedido</h3>
                 </div>
 
-                {/* Itens do Pedido */}
                 <div className="flex-1 overflow-hidden">
                   <ScrollArea className="h-full">
                     <div className="p-4 space-y-3">
@@ -525,7 +509,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                   </ScrollArea>
                 </div>
 
-                {/* Totais e Botão - Fixo no final */}
                 <div className="shrink-0 bg-white border-t p-4 space-y-4">
                   <div className="space-y-3">
                     <div className="flex justify-between text-lg">
@@ -560,7 +543,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           </div>
         </div>
 
-        {/* Botão de Finalização Mobile - Fixo na parte inferior */}
         <div className="lg:hidden shrink-0 bg-white border-t p-4">
           <div className="space-y-4">
             <div className="flex justify-between text-xl font-bold">

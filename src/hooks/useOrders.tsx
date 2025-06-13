@@ -32,7 +32,7 @@ export interface CreateOrderData {
   payment_method?: string;
   shipping_cost?: number;
   notes?: string;
-  store_id?: string; // Novo campo para suportar criação pública
+  store_id?: string;
 }
 
 export const useOrders = () => {
@@ -42,7 +42,6 @@ export const useOrders = () => {
   const [error, setError] = useState<string | null>(null);
   const { profile, user } = useAuth();
 
-  // Função melhorada para aguardar o profile com retry logic mais robusto
   const waitForProfile = useCallback(async (maxAttempts = 15): Promise<void> => {
     let attempts = 0;
     while (attempts < maxAttempts && (!profile || !profile.store_id)) {
@@ -57,7 +56,6 @@ export const useOrders = () => {
     }
   }, [profile]);
 
-  // Função para converter dados do Supabase para o tipo Order
   const convertSupabaseToOrder = (supabaseData: any): Order => {
     return {
       ...supabaseData,
@@ -70,7 +68,6 @@ export const useOrders = () => {
       setLoading(true);
       setError(null);
       
-      // Aguardar profile estar disponível
       await waitForProfile();
       
       if (!profile?.store_id) {
@@ -89,7 +86,6 @@ export const useOrders = () => {
       
       console.log('useOrders: Pedidos carregados:', data?.length || 0);
       
-      // Converter os dados do Supabase para o tipo Order
       const convertedOrders = data ? data.map(convertSupabaseToOrder) : [];
       setOrders(convertedOrders);
     } catch (error) {
@@ -113,7 +109,6 @@ export const useOrders = () => {
         total_amount: orderData.total_amount
       });
       
-      // Validar dados obrigatórios antes de prosseguir
       if (!orderData.customer_name?.trim()) {
         throw new Error('Nome do cliente é obrigatório');
       }
@@ -122,23 +117,19 @@ export const useOrders = () => {
         throw new Error('Pedido deve conter pelo menos um item');
       }
 
-      // Determinar store_id - priorizar o passado via parâmetro para criação pública
       let storeId = orderData.store_id;
       
-      // Se não foi passado store_id, tentar obter do profile (usuário autenticado)
       if (!storeId) {
         console.log('⚠️ useOrders: Store ID não fornecido, tentando obter do profile...');
         storeId = profile?.store_id;
         
         if (!storeId) {
-          console.warn('⚠️ useOrders: Store ID não encontrado no profile, tentando aguardar...');
+          console.warn('⚠️ useOrders: Store ID não encontrado no profile');
           
-          // Tentar aguardar profile por um tempo limitado
           try {
-            await waitForProfile(5); // Apenas 5 tentativas para não bloquear muito
+            await waitForProfile(5);
             storeId = profile?.store_id;
           } catch {
-            // Se não conseguir o profile, verificar se há uma store ativa
             console.log('🔍 useOrders: Buscando store ativa como fallback...');
             const { data: activeStores } = await supabase
               .from('stores')
@@ -162,7 +153,6 @@ export const useOrders = () => {
 
       console.log('🏪 useOrders: Store ID determinado:', storeId);
 
-      // Calcular tempo de expiração da reserva (30 minutos)
       const reservationExpires = new Date();
       reservationExpires.setMinutes(reservationExpires.getMinutes() + 30);
 
@@ -199,12 +189,11 @@ export const useOrders = () => {
 
       if (error) {
         console.error('❌ useOrders: Erro ao inserir pedido:', error);
-        throw error;
+        throw new Error(`Erro ao criar pedido: ${error.message}`);
       }
 
       console.log('✅ useOrders: Pedido criado com sucesso:', data);
 
-      // Reservar estoque para cada item
       console.log('📦 useOrders: Iniciando reserva de estoque para', orderData.items.length, 'itens');
       
       for (const item of orderData.items) {
@@ -214,17 +203,14 @@ export const useOrders = () => {
           console.log('✅ useOrders: Estoque reservado para produto:', item.id || item.product_id);
         } catch (stockError) {
           console.error('❌ useOrders: Erro ao reservar estoque para produto:', item.id || item.product_id, stockError);
-          // Continuar com outros produtos mesmo se um falhar
         }
       }
 
-      // Recarregar pedidos apenas se o profile estiver disponível e o store_id for o mesmo
       if (profile?.store_id && profile.store_id === storeId) {
         console.log('🔄 useOrders: Recarregando lista de pedidos...');
         await fetchOrders();
       }
       
-      // Converter o dado para o tipo Order antes de retornar
       const convertedOrder = convertSupabaseToOrder(data);
       console.log('🎉 useOrders: Processo de criação concluído com sucesso');
       return { data: convertedOrder, error: null };
@@ -238,7 +224,6 @@ export const useOrders = () => {
     }
   };
 
-  // Versão async que retorna o pedido diretamente ou lança erro
   const createOrderAsync = async (orderData: CreateOrderData): Promise<Order> => {
     const result = await createOrder(orderData);
     if (result.error || !result.data) {
@@ -251,7 +236,6 @@ export const useOrders = () => {
     try {
       console.log('📦 reserveStock: Iniciando reserva:', { productId, quantity, orderId, storeId });
 
-      // Buscar produto atual
       const { data: product, error: productError } = await supabase
         .from('products')
         .select('stock, reserved_stock')
@@ -271,7 +255,6 @@ export const useOrders = () => {
         throw new Error(`Estoque insuficiente para o produto. Disponível: ${availableStock}, Solicitado: ${quantity}`);
       }
 
-      // Atualizar estoque reservado
       console.log('🔄 reserveStock: Atualizando estoque reservado...');
       const { error: updateError } = await supabase
         .from('products')
@@ -285,7 +268,6 @@ export const useOrders = () => {
         throw updateError;
       }
 
-      // Registrar movimentação de estoque
       console.log('📝 reserveStock: Registrando movimentação de estoque...');
       const movementData = {
         product_id: productId,
@@ -296,7 +278,7 @@ export const useOrders = () => {
         new_stock: product.stock,
         notes: `Reserva para pedido ${orderId}`,
         store_id: storeId,
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutos
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
       };
 
       console.log('📋 reserveStock: Dados da movimentação:', movementData);
@@ -332,7 +314,6 @@ export const useOrders = () => {
       
       await fetchOrders();
       
-      // Converter o dado para o tipo Order antes de retornar
       const convertedOrder = convertSupabaseToOrder(data);
       return { data: convertedOrder, error: null };
     } catch (error) {
@@ -343,14 +324,12 @@ export const useOrders = () => {
     }
   };
 
-  // Carregar pedidos quando o profile estiver disponível
   useEffect(() => {
     if (profile?.store_id) {
       console.log('useOrders: Profile disponível, carregando pedidos');
       fetchOrders();
     } else if (user) {
       console.log('useOrders: Usuário logado mas profile ainda não disponível');
-      // Aguardar um pouco e tentar novamente com timeout reduzido
       const timer = setTimeout(() => {
         if (profile?.store_id) {
           fetchOrders();
