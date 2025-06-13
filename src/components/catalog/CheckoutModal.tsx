@@ -158,6 +158,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
       console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
+      // Toast de início do processamento
+      toast({
+        title: "Processando pedido...",
+        description: "Aguarde enquanto criamos seu pedido.",
+      });
+
       const savedOrder = await createOrderAsync(orderData);
       console.log('CheckoutModal: Pedido salvo com sucesso:', savedOrder);
       
@@ -165,18 +171,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       
       if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
         const message = generateWhatsAppMessage(orderData);
-        window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
         
+        // Toast de sucesso com WhatsApp
         toast({
-          title: "Pedido criado!",
-          description: "Seu pedido foi criado e você será redirecionado para o WhatsApp para finalizar.",
-          duration: 4000,
+          title: "✅ Pedido criado com sucesso!",
+          description: `Pedido #${savedOrder.id.slice(-8)} criado. Você será redirecionado para o WhatsApp para finalizar.`,
+          duration: 5000,
         });
+
+        // Aguardar um pouco antes de abrir o WhatsApp
+        setTimeout(() => {
+          window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+        }, 1000);
       } else {
+        // Toast de sucesso sem WhatsApp
         toast({
-          title: "Pedido criado!",
-          description: "Seu pedido foi criado com sucesso! Em breve você receberá as instruções de pagamento.",
-          duration: 4000,
+          title: "✅ Pedido criado com sucesso!",
+          description: `Pedido #${savedOrder.id.slice(-8)} foi criado. Em breve você receberá as instruções de pagamento.`,
+          duration: 5000,
         });
       }
 
@@ -188,10 +200,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
+      // Toast de erro melhorado
       toast({
-        title: "Erro ao processar pedido",
-        description: `Não foi possível criar seu pedido: ${errorMessage}`,
-        variant: "destructive"
+        title: "❌ Erro ao processar pedido",
+        description: `Não foi possível criar seu pedido: ${errorMessage}. Tente novamente.`,
+        variant: "destructive",
+        duration: 7000,
       });
     }
   };

@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, ShoppingCart, Users, DollarSign, Plus, Settings, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useProducts, CreateProductData } from '@/hooks/useProducts';
+import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import ProductFormModal from '@/components/products/ProductFormModal';
@@ -15,7 +16,8 @@ import NavigationPanel from './NavigationPanel';
 const StoreDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { products, loading, createProduct } = useProducts(profile?.store_id || '');
+  const { products, loading: productsLoading, createProduct } = useProducts(profile?.store_id || '');
+  const { orders, loading: ordersLoading } = useOrders();
   const [showProductForm, setShowProductForm] = useState(false);
   const { toast } = useToast();
 
@@ -54,6 +56,15 @@ const StoreDashboard = () => {
   const activeProducts = products.filter(product => product.is_active).length;
   const lowStockProducts = products.filter(product => product.stock <= 5).length;
   const totalValue = products.reduce((sum, product) => sum + (product.retail_price * product.stock), 0);
+  
+  // Calcular estatísticas de pedidos
+  const todayOrders = orders.filter(order => {
+    const today = new Date();
+    const orderDate = new Date(order.created_at);
+    return orderDate.toDateString() === today.toDateString();
+  }).length;
+
+  const pendingOrders = orders.filter(order => order.status === 'pending').length;
 
   return (
     <div className="space-y-8 animate-fadeInUp">
@@ -100,11 +111,12 @@ const StoreDashboard = () => {
 
         <DashboardCard
           title="Pedidos Hoje"
-          value={0}
-          subtitle="Vendas do dia"
+          value={todayOrders}
+          subtitle={`${pendingOrders} pendentes`}
           icon={ShoppingCart}
           variant="secondary"
-          trend={{ value: 0, isPositive: true }}
+          trend={{ value: todayOrders > 0 ? 100 : 0, isPositive: todayOrders > 0 }}
+          onClick={() => navigate('/orders')}
         />
       </div>
 
@@ -114,7 +126,7 @@ const StoreDashboard = () => {
         <NavigationPanel />
       </div>
 
-      {/* Produtos e Performance */}
+      {/* Produtos e Pedidos Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Lista de Produtos Recentes */}
         <Card className="card-modern">
@@ -125,7 +137,7 @@ const StoreDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {productsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="loading-spinner"></div>
                 <span className="ml-2">Carregando produtos...</span>
@@ -177,43 +189,64 @@ const StoreDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Gráfico de Vendas Simulado */}
+        {/* Pedidos Recentes */}
         <Card className="card-modern">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              Performance de Vendas
+              <ShoppingCart className="h-5 w-5 text-green-600" />
+              Pedidos Recentes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Vendas Hoje</span>
-                <span className="text-sm text-green-600">+0%</span>
+            {ordersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="loading-spinner"></div>
+                <span className="ml-2">Carregando pedidos...</span>
               </div>
-              <div className="w-full h-3 bg-gray-200 rounded-full">
-                <div className="h-full w-0 bg-green-500 rounded-full"></div>
+            ) : (
+              <div className="space-y-4">
+                {orders.slice(0, 5).map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-600 rounded-lg flex items-center justify-center">
+                        <ShoppingCart className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm">{order.customer_name}</h3>
+                          <Badge 
+                            variant={order.status === 'pending' ? "secondary" : order.status === 'delivered' ? "default" : "outline"} 
+                            className="text-xs"
+                          >
+                            {order.status === 'pending' ? 'Pendente' : 
+                             order.status === 'confirmed' ? 'Confirmado' :
+                             order.status === 'delivered' ? 'Entregue' : order.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {order.items?.length || 0} item(s) • #{order.id.slice(-8)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-sm">R$ {order.total_amount.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {orders.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="mb-2">Nenhum pedido recebido ainda</p>
+                    <Button onClick={() => navigate('/orders')} variant="outline">
+                      Ver Todos os Pedidos
+                    </Button>
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Meta Mensal</span>
-                <span className="text-sm text-blue-600">45%</span>
-              </div>
-              <div className="w-full h-3 bg-gray-200 rounded-full">
-                <div className="h-full w-2/5 bg-blue-500 rounded-full"></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Produtos Ativos</span>
-                <span className="text-sm text-purple-600">{((activeProducts / totalProducts) * 100 || 0).toFixed(1)}%</span>
-              </div>
-              <div className="w-full h-3 bg-gray-200 rounded-full">
-                <div 
-                  className="h-full bg-purple-500 rounded-full"
-                  style={{ width: `${(activeProducts / totalProducts) * 100 || 0}%` }}
-                ></div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
