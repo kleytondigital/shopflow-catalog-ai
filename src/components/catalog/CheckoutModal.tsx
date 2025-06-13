@@ -1,16 +1,20 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Truck, MapPin, CreditCard, Smartphone, Calculator, QrCode, CreditCard as CardIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Truck, MapPin, CreditCard, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
+import CustomerDataForm from './checkout/CustomerDataForm';
+import ShippingMethodCard from './checkout/ShippingMethodCard';
+import ShippingAddressForm from './checkout/ShippingAddressForm';
+import PaymentMethodCard from './checkout/PaymentMethodCard';
+import OrderSummary from './checkout/OrderSummary';
+import { generateWhatsAppMessage } from './checkout/checkoutUtils';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -158,7 +162,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
       console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
-      // Toast de início do processamento
       toast({
         title: "Processando pedido...",
         description: "Aguarde enquanto criamos seu pedido.",
@@ -172,19 +175,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
         const message = generateWhatsAppMessage(orderData);
         
-        // Toast de sucesso com WhatsApp
         toast({
           title: "✅ Pedido criado com sucesso!",
           description: `Pedido #${savedOrder.id.slice(-8)} criado. Você será redirecionado para o WhatsApp para finalizar.`,
           duration: 5000,
         });
 
-        // Aguardar um pouco antes de abrir o WhatsApp
         setTimeout(() => {
           window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
         }, 1000);
       } else {
-        // Toast de sucesso sem WhatsApp
         toast({
           title: "✅ Pedido criado com sucesso!",
           description: `Pedido #${savedOrder.id.slice(-8)} foi criado. Em breve você receberá as instruções de pagamento.`,
@@ -200,7 +200,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
-      // Toast de erro melhorado
       toast({
         title: "❌ Erro ao processar pedido",
         description: `Não foi possível criar seu pedido: ${errorMessage}. Tente novamente.`,
@@ -208,58 +207,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         duration: 7000,
       });
     }
-  };
-
-  const generateWhatsAppMessage = (orderData: any) => {
-    let message = `🛒 *Novo Pedido*\n\n`;
-    message += `👤 *Cliente:* ${orderData.customer_name}\n`;
-    if (orderData.customer_email) {
-      message += `📧 *Email:* ${orderData.customer_email}\n`;
-    }
-    message += `📱 *Telefone:* ${orderData.customer_phone}\n\n`;
-    
-    message += `📦 *Itens:*\n`;
-    orderData.items.forEach((item: any) => {
-      message += `• ${item.name} (${item.quantity}x) - R$ ${(item.price * item.quantity).toFixed(2)}\n`;
-    });
-    
-    message += `\n💰 *Total:* R$ ${orderData.total_amount.toFixed(2)}`;
-    
-    if (orderData.shipping_cost > 0) {
-      message += `\n🚚 *Frete:* R$ ${orderData.shipping_cost.toFixed(2)}`;
-    }
-    
-    message += `\n📋 *Pagamento:* ${getPaymentMethodName(orderData.payment_method)}`;
-    message += `\n🚚 *Entrega:* ${getShippingMethodName(orderData.shipping_method)}`;
-    
-    if (orderData.shipping_address && orderData.shipping_method !== 'pickup') {
-      message += `\n📍 *Endereço:* ${orderData.shipping_address.street}, ${orderData.shipping_address.number}, ${orderData.shipping_address.district}, ${orderData.shipping_address.city} - ${orderData.shipping_address.state}`;
-    }
-    
-    if (orderData.notes) {
-      message += `\n📝 *Observações:* ${orderData.notes}`;
-    }
-    
-    return message;
-  };
-
-  const getPaymentMethodName = (method: string) => {
-    const methods: { [key: string]: string } = {
-      'pix': 'PIX',
-      'credit_card': 'Cartão de Crédito',
-      'bank_slip': 'Boleto Bancário',
-      'cash': 'Dinheiro'
-    };
-    return methods[method] || method;
-  };
-
-  const getShippingMethodName = (method: string) => {
-    const methods: { [key: string]: string } = {
-      'pickup': 'Retirada na Loja',
-      'delivery': 'Entrega Local',
-      'shipping': 'Correios'
-    };
-    return methods[method] || method;
   };
 
   if (availablePaymentMethods.length === 0 || availableShippingMethods.length === 0) {
@@ -295,191 +242,31 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
             <div className="lg:col-span-2 h-full">
               <ScrollArea className="h-full">
                 <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
-                  {/* Dados do Cliente */}
-                  <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center">
-                          <span className="text-white font-bold">1</span>
-                        </div>
-                        Dados do Cliente
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="name" className="text-sm font-medium">Nome Completo</Label>
-                        <Input
-                          id="name"
-                          placeholder="Seu nome completo"
-                          value={customerData.name}
-                          onChange={(e) => setCustomerData({...customerData, name: e.target.value})}
-                          className="mt-1"
-                        />
-                      </div>
+                  <CustomerDataForm
+                    customerData={customerData}
+                    onDataChange={setCustomerData}
+                  />
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="seu@email.com"
-                            value={customerData.email}
-                            onChange={(e) => setCustomerData({...customerData, email: e.target.value})}
-                            className="mt-1"
-                          />
-                        </div>
+                  <ShippingMethodCard
+                    shippingMethods={availableShippingMethods}
+                    selectedMethod={shippingMethod}
+                    onMethodChange={setShippingMethod}
+                  />
 
-                        <div>
-                          <Label htmlFor="phone" className="text-sm font-medium">Telefone</Label>
-                          <Input
-                            id="phone"
-                            placeholder="(11) 99999-9999"
-                            value={customerData.phone}
-                            onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Método de Entrega */}
-                  <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center">
-                          <span className="text-white font-bold">2</span>
-                        </div>
-                        Método de Entrega
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <RadioGroup value={shippingMethod} onValueChange={setShippingMethod} className="space-y-3">
-                        {availableShippingMethods.map((method) => {
-                          const IconComponent = method.icon;
-                          return (
-                            <div key={method.id} className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                              <RadioGroupItem value={method.id} id={method.id} />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                  <IconComponent size={20} className="text-primary" />
-                                  <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
-                                    {method.name}
-                                  </label>
-                                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                    method.cost === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {method.cost === 0 ? 'Grátis' : `R$ ${method.cost.toFixed(2)}`}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </RadioGroup>
-                    </CardContent>
-                  </Card>
-
-                  {/* Endereço (se necessário) */}
                   {shippingMethod === 'shipping' && (
-                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-3 text-lg">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center">
-                            <span className="text-white font-bold">3</span>
-                          </div>
-                          Endereço de Entrega
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* ... keep existing code (endereço form) */}
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="CEP"
-                            value={shippingAddress.zipCode}
-                            onChange={(e) => setShippingAddress({...shippingAddress, zipCode: e.target.value})}
-                            onBlur={calculateShipping}
-                            className="flex-1"
-                          />
-                          <Button variant="outline" onClick={calculateShipping} className="px-4">
-                            <Calculator size={16} />
-                          </Button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="sm:col-span-2">
-                            <Input
-                              placeholder="Rua"
-                              value={shippingAddress.street}
-                              onChange={(e) => setShippingAddress({...shippingAddress, street: e.target.value})}
-                            />
-                          </div>
-                          <Input
-                            placeholder="Número"
-                            value={shippingAddress.number}
-                            onChange={(e) => setShippingAddress({...shippingAddress, number: e.target.value})}
-                          />
-                        </div>
-
-                        <Input
-                          placeholder="Complemento"
-                          value={shippingAddress.complement}
-                          onChange={(e) => setShippingAddress({...shippingAddress, complement: e.target.value})}
-                        />
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <Input
-                            placeholder="Bairro"
-                            value={shippingAddress.neighborhood}
-                            onChange={(e) => setShippingAddress({...shippingAddress, neighborhood: e.target.value})}
-                          />
-                          <Input
-                            placeholder="Cidade"
-                            value={shippingAddress.city}
-                            onChange={(e) => setShippingAddress({...shippingAddress, city: e.target.value})}
-                          />
-                          <Input
-                            placeholder="Estado"
-                            value={shippingAddress.state}
-                            onChange={(e) => setShippingAddress({...shippingAddress, state: e.target.value})}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ShippingAddressForm
+                      address={shippingAddress}
+                      onAddressChange={setShippingAddress}
+                      onCalculateShipping={calculateShipping}
+                    />
                   )}
 
-                  {/* Método de Pagamento */}
-                  <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center">
-                          <span className="text-white font-bold">4</span>
-                        </div>
-                        Método de Pagamento
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                        {availablePaymentMethods.map((method) => {
-                          const IconComponent = method.icon;
-                          return (
-                            <div key={method.id} className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                              <RadioGroupItem value={method.id} id={method.id} />
-                              <div className="flex items-center gap-3">
-                                <IconComponent size={20} className="text-primary" />
-                                <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
-                                  {method.name}
-                                </label>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </RadioGroup>
-                    </CardContent>
-                  </Card>
+                  <PaymentMethodCard
+                    paymentMethods={availablePaymentMethods}
+                    selectedMethod={paymentMethod}
+                    onMethodChange={setPaymentMethod}
+                  />
 
-                  {/* Observações */}
                   <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg">Observações</CardTitle>
@@ -497,63 +284,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
               </ScrollArea>
             </div>
 
-            <div className="lg:col-span-1 border-l bg-gray-50/50">
-              <div className="h-full flex flex-col">
-                <div className="shrink-0 bg-gradient-to-r from-primary to-accent text-white p-4">
-                  <h3 className="text-xl font-bold text-center">Resumo do Pedido</h3>
-                </div>
-
-                <div className="flex-1 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <div className="p-4 space-y-3">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex justify-between items-start text-sm bg-white p-3 rounded-lg border">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 truncate">{item.product.name}</p>
-                            <p className="text-gray-600">
-                              {item.quantity}x R$ {item.price.toFixed(2)}
-                            </p>
-                          </div>
-                          <p className="font-bold text-primary ml-2">
-                            R$ {(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-
-                <div className="shrink-0 bg-white border-t p-4 space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-lg">
-                      <span className="font-medium">Subtotal:</span>
-                      <span className="font-bold">R$ {totalAmount.toFixed(2)}</span>
-                    </div>
-                    
-                    {shippingCost > 0 && (
-                      <div className="flex justify-between text-lg">
-                        <span className="font-medium">Frete:</span>
-                        <span className="font-bold text-blue-600">R$ {shippingCost.toFixed(2)}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between text-xl font-bold border-t pt-3">
-                      <span>Total:</span>
-                      <span className="text-primary">R$ {finalTotal.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isCreatingOrder || !customerData.name || !customerData.phone}
-                    className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 text-lg rounded-xl shadow-lg transition-all"
-                    size="lg"
-                  >
-                    {isCreatingOrder ? 'Processando...' : 'Finalizar Pedido'}
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <OrderSummary
+              items={items}
+              totalAmount={totalAmount}
+              shippingCost={shippingCost}
+              finalTotal={finalTotal}
+              isProcessing={isCreatingOrder}
+              isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
+              onSubmit={handleSubmit}
+            />
           </div>
         </div>
 
