@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,16 +20,13 @@ import {
 } from 'lucide-react';
 
 const ShareableLinks = () => {
-  const { settings, updateSettings } = useCatalogSettings();
-  const { stores } = useStores();
+  const { settings } = useCatalogSettings();
+  const { currentStore, updateStoreSlug } = useStores();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [urlSlug, setUrlSlug] = useState('');
 
-  // Encontrar a loja atual
-  const currentStore = stores.find(store => store.id === settings?.store_id);
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentStore?.url_slug) {
       setUrlSlug(currentStore.url_slug);
     } else if (currentStore?.name) {
@@ -46,13 +43,14 @@ const ShareableLinks = () => {
     }
   }, [currentStore]);
 
-  const updateStoreSlug = async () => {
+  const updateStoreSlugHandler = async () => {
     if (!currentStore || !urlSlug.trim()) return;
 
     setSaving(true);
     try {
-      // Atualizar o slug da loja (seria necessário um hook para stores)
-      // Por enquanto, vamos simular
+      const { error } = await updateStoreSlug(currentStore.id, urlSlug.trim());
+      if (error) throw error;
+      
       toast({
         title: "URL atualizada",
         description: "A URL personalizada foi salva com sucesso!",
@@ -75,8 +73,8 @@ const ShareableLinks = () => {
     const identifier = currentStore.url_slug || currentStore.id;
     
     return {
-      retailUrl: `${baseUrl}/loja/${identifier}/varejo`,
-      wholesaleUrl: `${baseUrl}/loja/${identifier}/atacado`
+      retailUrl: `${baseUrl}/catalog/${identifier}?type=retail`,
+      wholesaleUrl: `${baseUrl}/catalog/${identifier}?type=wholesale`
     };
   };
 
@@ -106,7 +104,8 @@ const ShareableLinks = () => {
     return (
       <Card>
         <CardContent className="flex items-center justify-center p-6">
-          <Loader2 className="h-6 w-6 animate-spin" />
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Carregando configurações...</span>
         </CardContent>
       </Card>
     );
@@ -129,7 +128,7 @@ const ShareableLinks = () => {
               <div className="flex-1">
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                    {window.location.origin}/loja/
+                    {window.location.origin}/catalog/
                   </span>
                   <Input
                     id="url_slug"
@@ -141,7 +140,7 @@ const ShareableLinks = () => {
                 </div>
               </div>
               <Button 
-                onClick={updateStoreSlug}
+                onClick={updateStoreSlugHandler}
                 disabled={saving || !urlSlug.trim()}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}

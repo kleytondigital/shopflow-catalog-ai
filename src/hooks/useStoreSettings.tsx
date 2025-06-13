@@ -27,7 +27,10 @@ export const useStoreSettings = (storeId?: string) => {
       setLoading(true);
       const targetStoreId = storeId || profile?.store_id;
       
-      if (!targetStoreId) return;
+      if (!targetStoreId) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('store_settings')
@@ -82,12 +85,13 @@ export const useStoreSettings = (storeId?: string) => {
     }
   };
 
-  // Correção: dependências específicas para evitar loop
+  // Corrigindo as dependências para evitar loop infinito
   useEffect(() => {
-    if (profile?.store_id || storeId) {
+    const targetStoreId = storeId || profile?.store_id;
+    if (targetStoreId) {
       fetchSettings();
     }
-  }, [profile?.store_id, storeId]); // Dependências específicas
+  }, [storeId, profile?.store_id]); // Dependências específicas e estáveis
 
   return {
     settings,

@@ -2,217 +2,184 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Palette, Eye, Download, Upload } from 'lucide-react';
+import { useCatalogSettings } from '@/hooks/useCatalogSettings';
+import { useProducts } from '@/hooks/useProducts';
+import { Palette, Check, Eye } from 'lucide-react';
+import ModernTemplate from '@/components/catalog/templates/ModernTemplate';
+import MinimalTemplate from '@/components/catalog/templates/MinimalTemplate';
+import ElegantTemplate from '@/components/catalog/templates/ElegantTemplate';
 
 const TemplateSettings = () => {
+  const { settings, updateSettings } = useCatalogSettings();
+  const { products } = useProducts();
   const { toast } = useToast();
-  const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [saving, setSaving] = useState(false);
+
+  // Produto de exemplo para preview
+  const sampleProduct = products[0] || {
+    id: 'sample',
+    name: 'Produto de Exemplo',
+    description: 'Esta é uma descrição de exemplo do produto',
+    retail_price: 99.90,
+    wholesale_price: 79.90,
+    stock: 10,
+    image_url: '/placeholder.svg',
+    store_id: '',
+    category: 'Exemplo',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
   const templates = [
     {
       id: 'modern',
       name: 'Moderno',
-      description: 'Design limpo e minimalista',
-      preview: '/placeholder.svg',
-      colors: ['#3B82F6', '#1E40AF', '#EFF6FF']
+      description: 'Design arrojado com gradientes e sombras vibrantes',
+      component: ModernTemplate,
+      preview: '/placeholder.svg' // Pode ser uma screenshot do template
     },
     {
-      id: 'classic',
-      name: 'Clássico',
-      description: 'Design tradicional e elegante',
-      preview: '/placeholder.svg',
-      colors: ['#374151', '#111827', '#F9FAFB']
+      id: 'minimal',
+      name: 'Minimalista',
+      description: 'Layout limpo e focado no produto',
+      component: MinimalTemplate,
+      preview: '/placeholder.svg'
     },
     {
-      id: 'vibrant',
-      name: 'Vibrante',
-      description: 'Cores alegres e chamativas',
-      preview: '/placeholder.svg',
-      colors: ['#EC4899', '#BE185D', '#FCE7F3']
-    },
-    {
-      id: 'dark',
-      name: 'Dark Mode',
-      description: 'Tema escuro elegante',
-      preview: '/placeholder.svg',
-      colors: ['#1F2937', '#111827', '#374151']
-    },
-    {
-      id: 'nature',
-      name: 'Natureza',
-      description: 'Inspirado na natureza',
-      preview: '/placeholder.svg',
-      colors: ['#059669', '#047857', '#ECFDF5']
-    },
-    {
-      id: 'luxury',
-      name: 'Luxo',
-      description: 'Design sofisticado e premium',
-      preview: '/placeholder.svg',
-      colors: ['#D97706', '#92400E', '#FEF3C7']
+      id: 'elegant',
+      name: 'Elegante',
+      description: 'Estilo sofisticado com detalhes refinados',
+      component: ElegantTemplate,
+      preview: '/placeholder.svg'
     }
   ];
 
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplate(templateId);
-    toast({
-      title: "Template selecionado",
-      description: `Template ${templates.find(t => t.id === templateId)?.name} foi aplicado`,
-    });
-  };
+  const currentTemplate = settings?.template_name || 'modern';
 
-  const previewTemplate = (templateId: string) => {
-    toast({
-      title: "Prévia do template",
-      description: "Abrindo prévia em nova aba...",
-    });
+  const handleTemplateChange = async (templateId: string) => {
+    setSaving(true);
+    try {
+      const { error } = await updateSettings({
+        template_name: templateId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Template atualizado",
+        description: "O template foi alterado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o template.",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Templates Disponíveis */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Templates Disponíveis</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => (
-            <Card 
-              key={template.id} 
-              className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                selectedTemplate === template.id ? 'ring-2 ring-blue-500' : ''
-              }`}
-            >
-              <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                  <Palette className="h-8 w-8 text-gray-400" />
-                </div>
-                <CardTitle className="text-base">{template.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{template.description}</p>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="flex gap-2 mb-3">
-                  {template.colors.map((color, index) => (
-                    <div 
-                      key={index}
-                      className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => previewTemplate(template.id)}
-                    className="flex-1"
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Prévia
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => handleTemplateSelect(template.id)}
-                    className={`flex-1 ${
-                      selectedTemplate === template.id ? 'bg-blue-600' : ''
-                    }`}
-                  >
-                    {selectedTemplate === template.id ? 'Selecionado' : 'Selecionar'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Personalização Avançada */}
       <Card>
         <CardHeader>
-          <CardTitle>Personalização Avançada</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Escolha o Template do Catálogo
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Cor Primária</label>
-              <div className="flex gap-2">
-                <input 
-                  type="color" 
-                  defaultValue="#3B82F6" 
-                  className="w-12 h-10 rounded border"
-                />
-                <input 
-                  type="text" 
-                  defaultValue="#3B82F6" 
-                  className="flex-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Cor Secundária</label>
-              <div className="flex gap-2">
-                <input 
-                  type="color" 
-                  defaultValue="#1E40AF" 
-                  className="w-12 h-10 rounded border"
-                />
-                <input 
-                  type="text" 
-                  defaultValue="#1E40AF" 
-                  className="flex-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Cor de Fundo</label>
-              <div className="flex gap-2">
-                <input 
-                  type="color" 
-                  defaultValue="#FFFFFF" 
-                  className="w-12 h-10 rounded border"
-                />
-                <input 
-                  type="text" 
-                  defaultValue="#FFFFFF" 
-                  className="flex-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Cor do Texto</label>
-              <div className="flex gap-2">
-                <input 
-                  type="color" 
-                  defaultValue="#1F2937" 
-                  className="w-12 h-10 rounded border"
-                />
-                <input 
-                  type="text" 
-                  defaultValue="#1F2937" 
-                  className="flex-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-6">
+            Selecione o template que melhor representa sua marca. As alterações são aplicadas em tempo real.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {templates.map((template) => {
+              const TemplateComponent = template.component;
+              const isSelected = currentTemplate === template.id;
+              
+              return (
+                <Card 
+                  key={template.id} 
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    isSelected ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:ring-1 hover:ring-gray-300'
+                  }`}
+                  onClick={() => handleTemplateChange(template.id)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{template.name}</h3>
+                      {isSelected && (
+                        <Badge variant="default" className="text-xs">
+                          <Check className="h-3 w-3 mr-1" />
+                          Ativo
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {template.description}
+                    </p>
+                  </CardHeader>
+                  
+                  <CardContent className="pt-0">
+                    {/* Preview do Template */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                      <div className="transform scale-75 origin-top-left">
+                        <TemplateComponent
+                          product={sampleProduct}
+                          catalogType="retail"
+                          onAddToCart={() => {}}
+                          onAddToWishlist={() => {}}
+                          onQuickView={() => {}}
+                          isInWishlist={false}
+                          showPrices={true}
+                          showStock={true}
+                        />
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      variant={isSelected ? "default" : "outline"}
+                      className="w-full"
+                      disabled={saving}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTemplateChange(template.id);
+                      }}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Selecionado
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Usar Este Template
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="flex-1">
-              <Upload className="h-4 w-4 mr-2" />
-              Importar Tema
-            </Button>
-            <Button variant="outline" className="flex-1">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar Tema
-            </Button>
+          
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">Sobre os Templates:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• As alterações são aplicadas instantaneamente no catálogo</li>
+              <li>• Cada template é otimizado para diferentes tipos de produtos</li>
+              <li>• Todos os templates são responsivos e funcionam em mobile</li>
+              <li>• Você pode trocar o template a qualquer momento</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
-
-      <Button className="btn-primary w-full">
-        Aplicar Configurações de Template
-      </Button>
     </div>
   );
 };
