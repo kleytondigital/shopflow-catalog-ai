@@ -16,19 +16,23 @@ export interface CatalogStore {
 export interface CatalogSettings {
   id: string;
   store_id: string;
-  retail_catalog_active: boolean;
-  wholesale_catalog_active: boolean;
+  retail_catalog_active: boolean | null;
+  wholesale_catalog_active: boolean | null;
   whatsapp_number: string | null;
+  whatsapp_integration_active: boolean | null;
   payment_methods: {
     pix: boolean;
     bank_slip: boolean;
     credit_card: boolean;
-  };
+  } | null;
   shipping_options: {
     pickup: boolean;
     delivery: boolean;
     shipping: boolean;
-  };
+  } | null;
+  business_hours: any;
+  created_at: string;
+  updated_at: string;
 }
 
 export type CatalogType = 'retail' | 'wholesale';
@@ -66,7 +70,31 @@ export const useCatalog = (storeId?: string) => {
         .single();
 
       if (error) throw error;
-      setSettings(data);
+      
+      // Converter e validar os dados JSON
+      const processedSettings: CatalogSettings = {
+        ...data,
+        payment_methods: data.payment_methods ? {
+          pix: (data.payment_methods as any)?.pix || false,
+          bank_slip: (data.payment_methods as any)?.bank_slip || false,
+          credit_card: (data.payment_methods as any)?.credit_card || false,
+        } : {
+          pix: false,
+          bank_slip: false,
+          credit_card: false,
+        },
+        shipping_options: data.shipping_options ? {
+          pickup: (data.shipping_options as any)?.pickup || false,
+          delivery: (data.shipping_options as any)?.delivery || false,
+          shipping: (data.shipping_options as any)?.shipping || false,
+        } : {
+          pickup: true,
+          delivery: false,
+          shipping: false,
+        }
+      };
+
+      setSettings(processedSettings);
     } catch (error) {
       console.error('Erro ao buscar configurações:', error);
     }
