@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/hooks/useProducts';
 
@@ -46,7 +46,7 @@ export const useCatalog = (storeIdentifier?: string) => {
   const [loading, setLoading] = useState(true);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
-  const fetchStoreBySlugOrId = async (identifier: string) => {
+  const fetchStoreBySlugOrId = useCallback(async (identifier: string) => {
     try {
       console.log('Buscando loja por identifier:', identifier);
       
@@ -84,9 +84,9 @@ export const useCatalog = (storeIdentifier?: string) => {
       console.error('Erro ao buscar loja:', error);
       return null;
     }
-  };
+  }, []);
 
-  const fetchSettings = async (storeId: string) => {
+  const fetchSettings = useCallback(async (storeId: string) => {
     try {
       console.log('Buscando configurações para store:', storeId);
       const { data, error } = await supabase
@@ -130,9 +130,9 @@ export const useCatalog = (storeIdentifier?: string) => {
       console.error('Erro ao buscar configurações:', error);
       return null;
     }
-  };
+  }, []);
 
-  const fetchProducts = async (storeId: string, catalogType: CatalogType) => {
+  const fetchProducts = useCallback(async (storeId: string, catalogType: CatalogType) => {
     try {
       setLoading(true);
       console.log('Buscando produtos para store:', storeId, 'tipo:', catalogType);
@@ -162,9 +162,9 @@ export const useCatalog = (storeIdentifier?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const searchProducts = (query: string) => {
+  const searchProducts = useCallback((query: string) => {
     if (!query.trim()) {
       setFilteredProducts(products);
       return;
@@ -177,9 +177,9 @@ export const useCatalog = (storeIdentifier?: string) => {
     );
 
     setFilteredProducts(filtered);
-  };
+  }, [products]);
 
-  const filterProducts = (filters: {
+  const filterProducts = useCallback((filters: {
     category?: string;
     minPrice?: number;
     maxPrice?: number;
@@ -204,10 +204,11 @@ export const useCatalog = (storeIdentifier?: string) => {
     }
 
     setFilteredProducts(filtered);
-  };
+  }, [products]);
 
-  const initializeCatalog = async (identifier: string, catalogType: CatalogType) => {
+  const initializeCatalog = useCallback(async (identifier: string, catalogType: CatalogType) => {
     console.log('Inicializando catálogo:', identifier, catalogType);
+    
     const storeId = await fetchStoreBySlugOrId(identifier);
     if (storeId) {
       const settings = await fetchSettings(storeId);
@@ -227,18 +228,16 @@ export const useCatalog = (storeIdentifier?: string) => {
       return true;
     }
     return false;
-  };
+  }, [fetchStoreBySlugOrId, fetchSettings, fetchProducts]);
 
+  // Efeito principal que inicializa o catálogo apenas quando necessário
   useEffect(() => {
     if (storeIdentifier) {
-      // Resetar estado
+      // Resetar estado apenas se mudou o identificador
       setStore(null);
       setSettings(null);
       setProducts([]);
       setFilteredProducts([]);
-      
-      // Inicializar com tipo padrão (será sobrescrito pela página)
-      initializeCatalog(storeIdentifier, 'retail');
     }
   }, [storeIdentifier]);
 
@@ -248,7 +247,7 @@ export const useCatalog = (storeIdentifier?: string) => {
     products,
     filteredProducts,
     loading,
-    fetchProducts: (storeId: string, catalogType: CatalogType) => fetchProducts(storeId, catalogType),
+    fetchProducts,
     searchProducts,
     filterProducts,
     initializeCatalog

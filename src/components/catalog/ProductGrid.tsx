@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { Product } from '@/hooks/useProducts';
@@ -16,7 +16,7 @@ interface ProductGridProps {
 }
 
 // Skeleton component para loading state
-const ProductSkeleton = () => (
+const ProductSkeleton = memo(() => (
   <div className="bg-white rounded-lg shadow-sm border overflow-hidden animate-pulse">
     <div className="aspect-square bg-gray-200" />
     <div className="p-4 space-y-3">
@@ -28,9 +28,29 @@ const ProductSkeleton = () => (
       </div>
     </div>
   </div>
-);
+));
 
-const ProductGrid: React.FC<ProductGridProps> = ({
+ProductSkeleton.displayName = 'ProductSkeleton';
+
+// Componente de estado vazio
+const EmptyState = memo(() => (
+  <div className="text-center py-20">
+    <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+      <span className="text-4xl">📦</span>
+    </div>
+    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+      Nenhum produto encontrado
+    </h3>
+    <p className="text-gray-600 max-w-md mx-auto">
+      Não encontramos produtos que correspondam aos seus critérios de busca. 
+      Tente ajustar os filtros ou buscar por outros termos.
+    </p>
+  </div>
+));
+
+EmptyState.displayName = 'EmptyState';
+
+const ProductGrid: React.FC<ProductGridProps> = memo(({
   products,
   catalogType,
   loading,
@@ -43,27 +63,14 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {Array.from({ length: 8 }).map((_, index) => (
-          <ProductSkeleton key={index} />
+          <ProductSkeleton key={`skeleton-${index}`} />
         ))}
       </div>
     );
   }
 
   if (products.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-          <span className="text-4xl">📦</span>
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Nenhum produto encontrado
-        </h3>
-        <p className="text-gray-600 max-w-md mx-auto">
-          Não encontramos produtos que correspondam aos seus critérios de busca. 
-          Tente ajustar os filtros ou buscar por outros termos.
-        </p>
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return (
@@ -82,6 +89,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({
       ))}
     </div>
   );
-};
+});
+
+ProductGrid.displayName = 'ProductGrid';
 
 export default ProductGrid;

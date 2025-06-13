@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { Heart, ShoppingCart, Eye, Star, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ interface ProductCardProps {
   isInWishlist?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCard: React.FC<ProductCardProps> = memo(({
   product,
   catalogType,
   onAddToCart,
@@ -39,7 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? Math.round(((product.retail_price - product.wholesale_price) / product.retail_price) * 100)
     : 0;
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     const shareData = {
       title: product.name,
       text: product.description || 'Confira este produto incrível!',
@@ -52,7 +52,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
       // Fallback para copiar URL
       navigator.clipboard.writeText(shareData.url);
     }
-  };
+  }, [product.name, product.description, product.id]);
+
+  const handleAddToCart = useCallback(() => {
+    onAddToCart(product);
+  }, [onAddToCart, product]);
+
+  const handleAddToWishlist = useCallback(() => {
+    onAddToWishlist(product);
+  }, [onAddToWishlist, product]);
+
+  const handleQuickView = useCallback(() => {
+    onQuickView(product);
+  }, [onQuickView, product]);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+  }, []);
 
   const getStockStatus = () => {
     if (product.stock === 0) return { text: 'Esgotado', color: 'bg-red-500' };
@@ -74,8 +94,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
               className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-110 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -88,7 +108,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => onQuickView(product)}
+              onClick={handleQuickView}
               className="bg-white/90 hover:bg-white"
             >
               <Eye size={16} />
@@ -96,7 +116,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => onAddToWishlist(product)}
+              onClick={handleAddToWishlist}
               className={`bg-white/90 hover:bg-white ${isInWishlist ? 'text-red-500' : ''}`}
             >
               <Heart size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
@@ -129,7 +149,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onAddToWishlist(product)}
+            onClick={handleAddToWishlist}
             className="absolute top-3 right-3 w-8 h-8 p-0 bg-white/80 hover:bg-white"
           >
             <Heart size={16} fill={isInWishlist ? 'red' : 'none'} className={isInWishlist ? 'text-red-500' : ''} />
@@ -187,7 +207,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Add to Cart Button */}
           <Button
-            onClick={() => onAddToCart(product)}
+            onClick={handleAddToCart}
             disabled={product.stock === 0}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
           >
@@ -198,6 +218,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;
