@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Order } from '@/hooks/useOrders';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +12,9 @@ import {
   Phone,
   Calendar,
   Package,
-  MapPin
+  MapPin,
+  Truck,
+  CreditCard
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -86,6 +87,32 @@ const OrdersGrid: React.FC<OrdersGridProps> = ({
     return texts[status as keyof typeof texts] || status;
   };
 
+  const getShippingMethodText = (method: string | null) => {
+    const methods = {
+      pickup: 'Retirada na Loja',
+      delivery: 'Entrega Local',
+      shipping: 'Correios',
+      express: 'Entrega Expressa'
+    };
+    return methods[method as keyof typeof methods] || method || 'Não informado';
+  };
+
+  const getShippingMethodColor = (method: string | null) => {
+    const colors = {
+      pickup: 'bg-blue-50 text-blue-700 border-blue-200',
+      delivery: 'bg-green-50 text-green-700 border-green-200',
+      shipping: 'bg-orange-50 text-orange-700 border-orange-200',
+      express: 'bg-purple-50 text-purple-700 border-purple-200'
+    };
+    return colors[method as keyof typeof colors] || 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+
+  const canPrintLabel = (order: Order) => {
+    return order.status !== 'pending' && 
+           order.status !== 'cancelled' && 
+           (order.shipping_method === 'shipping' || order.shipping_method === 'express');
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4">
       {orders.map((order) => {
@@ -130,14 +157,26 @@ const OrdersGrid: React.FC<OrdersGridProps> = ({
                 </div>
 
                 {/* Status Badges */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={getStatusColor(order.status)} variant="outline">
                     {getStatusText(order.status)}
                   </Badge>
                   <Badge className={getPaymentStatusColor(paymentStatus)} variant="outline">
                     {getPaymentStatusText(paymentStatus)}
                   </Badge>
+                  <Badge className={getShippingMethodColor(order.shipping_method)} variant="outline">
+                    <Truck className="h-3 w-3 mr-1" />
+                    {getShippingMethodText(order.shipping_method)}
+                  </Badge>
                 </div>
+
+                {/* Tracking Code */}
+                {order.tracking_code && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Package className="h-4 w-4" />
+                    <span className="font-mono">Rastreamento: {order.tracking_code}</span>
+                  </div>
+                )}
 
                 {/* Items Preview */}
                 <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -158,6 +197,14 @@ const OrdersGrid: React.FC<OrdersGridProps> = ({
                     <span className="truncate">
                       {order.shipping_address.city} - {order.shipping_address.state}
                     </span>
+                  </div>
+                )}
+
+                {/* Shipping Cost */}
+                {order.shipping_cost && order.shipping_cost > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Frete: R$ {order.shipping_cost.toFixed(2)}</span>
                   </div>
                 )}
 
@@ -188,25 +235,28 @@ const OrdersGrid: React.FC<OrdersGridProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {canPrintLabel(order) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onPrintLabel(order)}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                        title="Imprimir Etiqueta"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
                     {(order.status === 'confirmed' || order.status === 'preparing' || order.status === 'shipping') && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onPrintLabel(order)}
-                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onPrintDeclaration(order)}
-                          className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onPrintDeclaration(order)}
+                        className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
+                        title="Declaração de Conteúdo"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
                     )}
                     
                     {order.status !== 'cancelled' && order.status !== 'delivered' && (

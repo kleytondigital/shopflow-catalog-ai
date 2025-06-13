@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Package } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
@@ -7,6 +8,7 @@ import OrdersTable from '@/components/orders/OrdersTable';
 import OrdersGrid from '@/components/orders/OrdersGrid';
 import OrdersPagination from '@/components/orders/OrdersPagination';
 import OrderDetailsModal from '@/components/orders/OrderDetailsModal';
+import ContentDeclarationModal from '@/components/orders/ContentDeclarationModal';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 
@@ -21,6 +23,7 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [shippingFilter, setShippingFilter] = useState('all');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,6 +32,7 @@ const Orders = () => {
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeclarationModalOpen, setIsDeclarationModalOpen] = useState(false);
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
@@ -39,8 +43,9 @@ const Orders = () => {
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.order_type === typeFilter;
+    const matchesShipping = shippingFilter === 'all' || order.shipping_method === shippingFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesShipping;
   });
 
   // Paginate orders
@@ -63,21 +68,13 @@ const Orders = () => {
     setStatusFilter('all');
     setPaymentFilter('all');
     setTypeFilter('all');
+    setShippingFilter('all');
     setCurrentPage(1);
   };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsModalOpen(true);
-  };
-
-  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
-    const result = await updateOrderStatus(orderId, newStatus);
-    if (result.error) {
-      toast.error('Erro ao atualizar status: ' + result.error);
-    } else {
-      toast.success('Status atualizado com sucesso');
-    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -96,6 +93,12 @@ const Orders = () => {
   };
 
   const handlePrintLabel = async (order: Order) => {
+    // Verificar se o método de envio permite impressão de etiqueta
+    if (order.shipping_method !== 'shipping' && order.shipping_method !== 'express') {
+      toast.warning('Etiquetas só podem ser geradas para envios via Correios ou Expresso');
+      return;
+    }
+
     if (order.label_generated_at) {
       toast.warning('Etiqueta já foi gerada para este pedido');
       return;
@@ -110,8 +113,62 @@ const Orders = () => {
   };
 
   const handlePrintDeclaration = (order: Order) => {
-    toast.success('Declaração de conteúdo enviada para impressão');
-    // Lógica de impressão aqui
+    setSelectedOrder(order);
+    setIsDeclarationModalOpen(true);
+  };
+
+  const handlePrintDeclarationDocument = () => {
+    if (selectedOrder) {
+      // Imprimir o conteúdo da declaração
+      const printWindow = window.open('', '_blank');
+      const declarationContent = document.getElementById('declaration-content');
+      
+      if (printWindow && declarationContent) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Declaração de Conteúdo - Pedido #${selectedOrder.id.slice(-8)}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .font-bold { font-weight: bold; }
+                .mt-8 { margin-top: 32px; }
+                .pt-6 { padding-top: 24px; }
+                .border-t { border-top: 1px solid #ddd; }
+                .border-b { border-bottom: 1px solid #ddd; }
+                .pb-4 { padding-bottom: 16px; }
+                .mb-2 { margin-bottom: 8px; }
+                @media print {
+                  body { margin: 0; }
+                  .no-print { display: none; }
+                }
+              </style>
+            </head>
+            <body>
+              ${declarationContent.innerHTML}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+        
+        // Marcar como impresso
+        markPrintedDocument(selectedOrder.id, 'content_declaration');
+        toast.success('Declaração de conteúdo enviada para impressão');
+      }
+    }
+    setIsDeclarationModalOpen(false);
+  };
+
+  const handleDownloadPdf = () => {
+    if (selectedOrder) {
+      toast.info('Funcionalidade de download em PDF em desenvolvimento');
+      // Aqui seria implementada a geração do PDF
+    }
   };
 
   const handleMarkPrintedDocument = async (orderId: string, documentType: 'label' | 'picking_list' | 'content_declaration' | 'receipt') => {
@@ -136,6 +193,7 @@ const Orders = () => {
     statusFilter !== 'all',
     paymentFilter !== 'all',
     typeFilter !== 'all',
+    shippingFilter !== 'all',
     searchTerm !== ''
   ].filter(Boolean).length;
 
@@ -159,6 +217,8 @@ const Orders = () => {
         onPaymentFilterChange={setPaymentFilter}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
+        shippingFilter={shippingFilter}
+        onShippingFilterChange={setShippingFilter}
         onClearFilters={handleClearFilters}
         activeFiltersCount={activeFiltersCount}
       />
@@ -229,6 +289,14 @@ const Orders = () => {
         onPrintDeclaration={handlePrintDeclaration}
         onMarkPrintedDocument={handleMarkPrintedDocument}
         onGenerateTrackingCode={handleGenerateTrackingCode}
+      />
+
+      <ContentDeclarationModal
+        order={selectedOrder}
+        isOpen={isDeclarationModalOpen}
+        onClose={() => setIsDeclarationModalOpen(false)}
+        onPrint={handlePrintDeclarationDocument}
+        onDownloadPdf={handleDownloadPdf}
       />
     </div>
   );

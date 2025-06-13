@@ -9,7 +9,8 @@ import {
   X, 
   Calendar,
   Package,
-  CreditCard
+  CreditCard,
+  Truck
 } from 'lucide-react';
 import {
   Select,
@@ -28,6 +29,8 @@ interface OrderFiltersProps {
   onPaymentFilterChange: (value: string) => void;
   typeFilter: string;
   onTypeFilterChange: (value: string) => void;
+  shippingFilter: string;
+  onShippingFilterChange: (value: string) => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
 }
@@ -41,6 +44,8 @@ const OrderFilters: React.FC<OrderFiltersProps> = ({
   onPaymentFilterChange,
   typeFilter,
   onTypeFilterChange,
+  shippingFilter,
+  onShippingFilterChange,
   onClearFilters,
   activeFiltersCount
 }) => {
@@ -101,6 +106,20 @@ const OrderFilters: React.FC<OrderFiltersProps> = ({
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="retail">Varejo</SelectItem>
             <SelectItem value="wholesale">Atacado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={shippingFilter} onValueChange={onShippingFilterChange}>
+          <SelectTrigger className="w-[150px]">
+            <Truck className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Envio" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pickup">Retirada</SelectItem>
+            <SelectItem value="delivery">Entrega Local</SelectItem>
+            <SelectItem value="shipping">Correios</SelectItem>
+            <SelectItem value="express">Expresso</SelectItem>
           </SelectContent>
         </Select>
 

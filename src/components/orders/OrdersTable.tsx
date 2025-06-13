@@ -10,7 +10,8 @@ import {
   Printer, 
   FileText,
   CreditCard,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -83,6 +84,32 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
     return texts[status as keyof typeof texts] || status;
   };
 
+  const getShippingMethodText = (method: string | null) => {
+    const methods = {
+      pickup: 'Retirada',
+      delivery: 'Entrega',
+      shipping: 'Correios',
+      express: 'Expresso'
+    };
+    return methods[method as keyof typeof methods] || method || 'N/I';
+  };
+
+  const getShippingMethodColor = (method: string | null) => {
+    const colors = {
+      pickup: 'bg-blue-50 text-blue-700 border-blue-200',
+      delivery: 'bg-green-50 text-green-700 border-green-200',
+      shipping: 'bg-orange-50 text-orange-700 border-orange-200',
+      express: 'bg-purple-50 text-purple-700 border-purple-200'
+    };
+    return colors[method as keyof typeof colors] || 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+
+  const canPrintLabel = (order: Order) => {
+    return order.status !== 'pending' && 
+           order.status !== 'cancelled' && 
+           (order.shipping_method === 'shipping' || order.shipping_method === 'express');
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -92,6 +119,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
             <th className="text-left py-3 px-4 font-medium text-gray-600">Cliente</th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">Pagamento</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-600">Envio</th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">Valor</th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">Data</th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">Ações</th>
@@ -133,11 +161,31 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                     {getPaymentStatusText(paymentStatus)}
                   </Badge>
                 </td>
+
+                <td className="py-3 px-4">
+                  <div className="flex flex-col gap-1">
+                    <Badge className={getShippingMethodColor(order.shipping_method)} variant="outline">
+                      {getShippingMethodText(order.shipping_method)}
+                    </Badge>
+                    {order.tracking_code && (
+                      <span className="text-xs text-gray-500 font-mono">
+                        {order.tracking_code}
+                      </span>
+                    )}
+                  </div>
+                </td>
                 
                 <td className="py-3 px-4">
-                  <span className="font-semibold text-gray-900">
-                    R$ {order.total_amount.toFixed(2)}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-900">
+                      R$ {order.total_amount.toFixed(2)}
+                    </span>
+                    {order.shipping_cost && order.shipping_cost > 0 && (
+                      <span className="text-xs text-gray-500">
+                        +R$ {order.shipping_cost.toFixed(2)} frete
+                      </span>
+                    )}
+                  </div>
                 </td>
                 
                 <td className="py-3 px-4">
@@ -182,25 +230,28 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                       </Button>
                     )}
                     
+                    {canPrintLabel(order) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onPrintLabel(order)}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                        title="Imprimir Etiqueta"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
                     {(order.status === 'confirmed' || order.status === 'preparing' || order.status === 'shipping') && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onPrintLabel(order)}
-                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onPrintDeclaration(order)}
-                          className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onPrintDeclaration(order)}
+                        className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
+                        title="Declaração de Conteúdo"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
                 </td>
