@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import SuperadminDashboard from '@/components/dashboard/SuperadminDashboard';
 import StoreDashboard from '@/components/dashboard/StoreDashboard';
 import StoreSetup from '@/components/onboarding/StoreSetup';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -35,66 +34,30 @@ const Index = () => {
   // Mostrar loading enquanto carrega o perfil
   if (loading) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregando perfil...</p>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando perfil...</p>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   // Se não há perfil, mostrar loading
   if (!profile) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregando dados do usuário...</p>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando dados do usuário...</p>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   // Log para debug
   console.log('Renderizando Index - Perfil:', profile);
 
-  // Renderizar dashboard específico baseado no papel do usuário
-  if (profile.role === 'superadmin') {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-bold">
-                  Bem-vindo, {profile.full_name || profile.email}
-                </h2>
-                <p className="text-muted-foreground">
-                  Superadministrador
-                </p>
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="gap-2"
-              >
-                <LogOut size={16} />
-                Sair
-              </Button>
-            </div>
-            
-            <SuperadminDashboard />
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  } 
-  
   // Para store_admin, verificar se tem loja associada
   if (profile.role === 'store_admin') {
     console.log('Store admin detectado - store_id:', profile.store_id);
@@ -102,18 +65,14 @@ const Index = () => {
     // Se não tem store_id, mostrar o wizard de configuração
     if (!profile.store_id) {
       console.log('Store admin sem loja - mostrando StoreSetup');
-      return (
-        <ProtectedRoute>
-          <StoreSetup />
-        </ProtectedRoute>
-      );
+      return <StoreSetup />;
     }
 
     // Se tem store_id, mostrar o dashboard da loja
     console.log('Store admin com loja - mostrando StoreDashboard');
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background">
+      <div className="flex h-screen">
+        <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -137,25 +96,55 @@ const Index = () => {
             <StoreDashboard />
           </div>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
-  // Fallback - não deveria chegar aqui
-  return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Perfil não reconhecido</h2>
-          <p className="text-muted-foreground mb-4">
-            Seu perfil não está configurado corretamente. Entre em contato com o administrador.
-          </p>
-          <Button onClick={handleLogout}>
-            Fazer Logout
-          </Button>
+  // Renderizar dashboard específico baseado no papel do usuário
+  if (profile.role === 'superadmin') {
+    return (
+      <div className="flex h-screen">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-3xl font-bold">
+                  Bem-vindo, {profile.full_name || profile.email}
+                </h2>
+                <p className="text-muted-foreground">
+                  Superadministrador
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut size={16} />
+                Sair
+              </Button>
+            </div>
+            
+            <SuperadminDashboard />
+          </div>
         </div>
       </div>
-    </ProtectedRoute>
+    );
+  } 
+
+  // Fallback - não deveria chegar aqui
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-4">Perfil não reconhecido</h2>
+        <p className="text-muted-foreground mb-4">
+          Seu perfil não está configurado corretamente. Entre em contato com o administrador.
+        </p>
+        <Button onClick={handleLogout}>
+          Fazer Logout
+        </Button>
+      </div>
+    </div>
   );
 };
 

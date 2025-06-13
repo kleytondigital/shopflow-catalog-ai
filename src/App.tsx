@@ -24,29 +24,64 @@ function App() {
         <div className="min-h-screen bg-background">
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <div className="flex h-screen">
-                    <Sidebar />
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      <Header title="Dashboard" />
-                      <main className="flex-1 overflow-auto">
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/products" element={<Products />} />
-                          <Route path="/orders" element={<Orders />} />
-                          <Route path="/users" element={<UserManagement />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
-                    </div>
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute>
+                <div className="flex h-screen">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header title="Produtos" />
+                    <main className="flex-1 overflow-auto">
+                      <Products />
+                    </main>
                   </div>
-                </ProtectedRoute>
-              }
-            />
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/orders" element={
+              <ProtectedRoute>
+                <div className="flex h-screen">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header title="Pedidos" />
+                    <main className="flex-1 overflow-auto">
+                      <Orders />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <div className="flex h-screen">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header title="Usuários" />
+                    <main className="flex-1 overflow-auto">
+                      <UserManagement />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <div className="flex h-screen">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header title="Configurações" />
+                    <main className="flex-1 overflow-auto">
+                      <Settings />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
         </div>
