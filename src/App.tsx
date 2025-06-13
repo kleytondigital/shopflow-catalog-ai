@@ -15,6 +15,7 @@ import Coupons from '@/pages/Coupons';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
+import Catalog from '@/pages/Catalog';
 import NotFound from '@/pages/NotFound';
 import './App.css';
 
@@ -27,6 +28,11 @@ function App() {
         <div className="min-h-screen bg-background">
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            
+            {/* Rota pública do catálogo */}
+            <Route path="/catalog/:storeId" element={<Catalog />} />
+            <Route path="/loja/:storeSlug/catalogo" element={<Catalog />} />
+            
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
