@@ -4,6 +4,7 @@ import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCatalog, CatalogType } from '@/hooks/useCatalog';
+import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { Product } from '@/hooks/useProducts';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import FilterSidebar, { FilterState } from '@/components/catalog/FilterSidebar';
@@ -17,7 +18,6 @@ const Catalog = () => {
   
   const {
     store,
-    settings,
     products,
     filteredProducts,
     loading,
@@ -25,6 +25,8 @@ const Catalog = () => {
     searchProducts,
     filterProducts
   } = useCatalog(storeId);
+
+  const { settings } = useCatalogSettings(storeId);
 
   const [catalogType, setCatalogType] = useState<CatalogType>('retail');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -39,7 +41,6 @@ const Catalog = () => {
     }
   }, [storeId, catalogType, fetchProducts]);
 
-  // Configurar o título da página
   useEffect(() => {
     if (store) {
       document.title = `${store.name} - Catálogo ${catalogType === 'retail' ? 'Varejo' : 'Atacado'}`;
@@ -49,7 +50,6 @@ const Catalog = () => {
   const handleCatalogTypeChange = (type: CatalogType) => {
     setCatalogType(type);
     
-    // Verificar se o tipo de catálogo está ativo
     if (type === 'wholesale' && settings && !settings.wholesale_catalog_active) {
       toast({
         title: "Catálogo indisponível",
