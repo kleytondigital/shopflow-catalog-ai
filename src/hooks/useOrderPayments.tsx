@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePayments, Payment } from '@/hooks/usePayments';
 import { Order } from '@/hooks/useOrders';
 
@@ -16,7 +16,18 @@ export interface OrderPaymentStatus {
 export const useOrderPayments = (orders: Order[]) => {
   const [orderPayments, setOrderPayments] = useState<Map<string, OrderPaymentStatus>>(new Map());
   const [loading, setLoading] = useState(false);
+  const [lastFetchedOrderIds, setLastFetchedOrderIds] = useState<string>('');
   const { fetchPaymentsByOrder } = usePayments();
+
+  // Memorizar IDs dos pedidos para evitar re-renders desnecessários
+  const orderIds = useMemo(() => {
+    return orders.map(o => o.id).sort();
+  }, [orders]);
+
+  // Verificar se os IDs realmente mudaram
+  const orderIdsKey = useMemo(() => {
+    return orderIds.join(',');
+  }, [orderIds]);
 
   const calculatePaymentStatus = useCallback((order: Order, payments: Payment[]): OrderPaymentStatus => {
     const confirmedPayments = payments.filter(p => p.status === 'confirmed');
@@ -48,48 +59,61 @@ export const useOrderPayments = (orders: Order[]) => {
     };
   }, []);
 
-  const loadPaymentsForOrders = useCallback(async (orderIds: string[]) => {
-    if (orderIds.length === 0) return;
+  const loadPaymentsForOrders = useCallback(async (orderIdsToFetch: string[]) => {
+    if (orderIdsToFetch.length === 0) return;
+    
+    console.log('🔄 useOrderPayments: Carregando pagamentos para pedidos:', orderIdsToFetch.length);
     
     setLoading(true);
     try {
       const paymentStatusMap = new Map<string, OrderPaymentStatus>();
       
-      // Buscar pagamentos para cada pedido
-      await Promise.all(
-        orderIds.map(async (orderId) => {
-          const order = orders.find(o => o.id === orderId);
-          if (!order) return;
-          
-          const { data: payments } = await fetchPaymentsByOrder(orderId);
-          const paymentStatus = calculatePaymentStatus(order, payments || []);
-          paymentStatusMap.set(orderId, paymentStatus);
-        })
-      );
+      // Buscar pagamentos para cada pedido em lotes menores
+      const batchSize = 5;
+      for (let i = 0; i < orderIdsToFetch.length; i += batchSize) {
+        const batch = orderIdsToFetch.slice(i, i + batchSize);
+        
+        await Promise.all(
+          batch.map(async (orderId) => {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            const { data: payments } = await fetchPaymentsByOrder(orderId);
+            const paymentStatus = calculatePaymentStatus(order, payments || []);
+            paymentStatusMap.set(orderId, paymentStatus);
+          })
+        );
+      }
       
       setOrderPayments(paymentStatusMap);
+      console.log('✅ useOrderPayments: Pagamentos carregados com sucesso');
     } catch (error) {
-      console.error('Erro ao carregar pagamentos:', error);
+      console.error('❌ useOrderPayments: Erro ao carregar pagamentos:', error);
     } finally {
       setLoading(false);
     }
-  }, [orders, fetchPaymentsByOrder, calculatePaymentStatus]);
+  }, [fetchPaymentsByOrder, calculatePaymentStatus, orders]);
 
   const getOrderPaymentStatus = useCallback((orderId: string): OrderPaymentStatus | null => {
     return orderPayments.get(orderId) || null;
   }, [orderPayments]);
 
   const refreshPayments = useCallback(() => {
-    const orderIds = orders.map(o => o.id);
-    loadPaymentsForOrders(orderIds);
-  }, [orders, loadPaymentsForOrders]);
-
-  useEffect(() => {
-    if (orders.length > 0) {
-      const orderIds = orders.map(o => o.id);
+    console.log('🔄 useOrderPayments: Refresh manual solicitado');
+    if (orderIds.length > 0) {
       loadPaymentsForOrders(orderIds);
+      setLastFetchedOrderIds(orderIdsKey);
     }
-  }, [orders, loadPaymentsForOrders]);
+  }, [orderIds, orderIdsKey, loadPaymentsForOrders]);
+
+  // Carregar pagamentos apenas quando os IDs realmente mudarem
+  useEffect(() => {
+    if (orderIdsKey && orderIdsKey !== lastFetchedOrderIds && orderIds.length > 0) {
+      console.log('🆕 useOrderPayments: IDs dos pedidos mudaram, carregando pagamentos');
+      loadPaymentsForOrders(orderIds);
+      setLastFetchedOrderIds(orderIdsKey);
+    }
+  }, [orderIdsKey, lastFetchedOrderIds, orderIds, loadPaymentsForOrders]);
 
   return {
     orderPayments,

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Package } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useOrderPayments } from '@/hooks/useOrderPayments';
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrderFilters from '@/components/orders/OrderFilters';
-import OrdersTable from '@/components/orders/OrdersTable';
-import OrdersGrid from '@/components/orders/OrdersGrid';
+import OrdersTableMemo from '@/components/orders/OrdersTableMemo';
+import OrdersGridMemo from '@/components/orders/OrdersGridMemo';
 import OrdersPagination from '@/components/orders/OrdersPagination';
 import OrderDetailsModal from '@/components/orders/OrderDetailsModal';
 import ContentDeclarationModal from '@/components/orders/ContentDeclarationModal';
@@ -13,6 +13,8 @@ import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 
 const Orders = () => {
+  console.log('🔄 Orders: Component re-render');
+  
   const { orders, loading, fetchOrders, updateOrderStatus, markPrintedDocument, generateTrackingCode } = useOrders();
   const { orderPayments, loading: paymentsLoading, getOrderPaymentStatus, refreshPayments } = useOrderPayments(orders);
   
@@ -35,79 +37,92 @@ const Orders = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeclarationModalOpen, setIsDeclarationModalOpen] = useState(false);
 
-  // Filter orders with payment status integration
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = searchTerm === '' || 
-      order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_phone?.includes(searchTerm) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesType = typeFilter === 'all' || order.order_type === typeFilter;
-    const matchesShipping = shippingFilter === 'all' || order.shipping_method === shippingFilter;
-    
-    // Payment filter logic using real payment data
-    let matchesPayment = true;
-    if (paymentFilter !== 'all') {
-      const paymentStatus = getOrderPaymentStatus(order.id);
-      if (paymentStatus) {
-        matchesPayment = paymentStatus.status === paymentFilter;
-      } else {
-        // Fallback for orders without payment data loaded yet
-        matchesPayment = paymentFilter === 'pending';
+  // Memorizar pedidos filtrados para evitar recálculos desnecessários
+  const filteredOrders = useMemo(() => {
+    console.log('🔍 Orders: Recalculando filtros');
+    return orders.filter(order => {
+      const matchesSearch = searchTerm === '' || 
+        order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer_phone?.includes(searchTerm) ||
+        order.id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      const matchesType = typeFilter === 'all' || order.order_type === typeFilter;
+      const matchesShipping = shippingFilter === 'all' || order.shipping_method === shippingFilter;
+      
+      // Payment filter logic using real payment data
+      let matchesPayment = true;
+      if (paymentFilter !== 'all') {
+        const paymentStatus = getOrderPaymentStatus(order.id);
+        if (paymentStatus) {
+          matchesPayment = paymentStatus.status === paymentFilter;
+        } else {
+          // Fallback for orders without payment data loaded yet
+          matchesPayment = paymentFilter === 'pending';
+        }
       }
-    }
+      
+      return matchesSearch && matchesStatus && matchesType && matchesShipping && matchesPayment;
+    });
+  }, [orders, searchTerm, statusFilter, paymentFilter, typeFilter, shippingFilter, getOrderPaymentStatus]);
+
+  // Memorizar pedidos paginados
+  const { paginatedOrders, totalPages } = useMemo(() => {
+    const total = Math.ceil(filteredOrders.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginated = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
     
-    return matchesSearch && matchesStatus && matchesType && matchesShipping && matchesPayment;
-  });
+    return {
+      paginatedOrders: paginated,
+      totalPages: total
+    };
+  }, [filteredOrders, currentPage, itemsPerPage]);
 
-  // Paginate orders
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
-
-  // Handlers
-  const handleRefresh = async () => {
+  // Handlers com useCallback para estabilidade
+  const handleRefresh = useCallback(async () => {
+    console.log('🔄 Orders: Refresh manual');
     await fetchOrders();
     refreshPayments();
     toast.success('Lista de pedidos atualizada');
-  };
+  }, [fetchOrders, refreshPayments]);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     toast.info('Funcionalidade de exportação em desenvolvimento');
-  };
+  }, []);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
+    console.log('🧹 Orders: Limpando filtros');
     setSearchTerm('');
     setStatusFilter('all');
     setPaymentFilter('all');
     setTypeFilter('all');
     setShippingFilter('all');
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handleViewOrder = (order: Order) => {
+  const handleViewOrder = useCallback((order: Order) => {
     setSelectedOrder(order);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCancelOrder = async (orderId: string) => {
+  const handleCancelOrder = useCallback(async (orderId: string) => {
+    console.log('❌ Orders: Cancelando pedido', orderId);
     const result = await updateOrderStatus(orderId, 'cancelled');
     if (result.error) {
       toast.error('Erro ao cancelar pedido: ' + result.error);
     } else {
       toast.success('Pedido cancelado com sucesso');
       setIsModalOpen(false);
-      refreshPayments();
+      // Não chamar refreshPayments aqui para evitar loop
     }
-  };
+  }, [updateOrderStatus]);
 
-  const handleSendFollowUp = (order: Order) => {
+  const handleSendFollowUp = useCallback((order: Order) => {
     toast.info('Enviando lembrete de pagamento via WhatsApp...');
     // Integração com WhatsApp seria implementada aqui
-  };
+  }, []);
 
-  const handlePrintLabel = async (order: Order) => {
+  const handlePrintLabel = useCallback(async (order: Order) => {
     // Verificar se o método de envio permite impressão de etiqueta
     if (order.shipping_method !== 'shipping' && order.shipping_method !== 'express') {
       toast.warning('Etiquetas só podem ser geradas para envios via Correios ou Expresso');
@@ -125,12 +140,12 @@ const Orders = () => {
     } else {
       toast.error('Erro ao gerar etiqueta: ' + result.error);
     }
-  };
+  }, [generateTrackingCode]);
 
-  const handlePrintDeclaration = (order: Order) => {
+  const handlePrintDeclaration = useCallback((order: Order) => {
     setSelectedOrder(order);
     setIsDeclarationModalOpen(true);
-  };
+  }, []);
 
   const handlePrintDeclarationDocument = () => {
     if (selectedOrder) {
@@ -204,13 +219,15 @@ const Orders = () => {
     }
   };
 
-  const activeFiltersCount = [
-    statusFilter !== 'all',
-    paymentFilter !== 'all',
-    typeFilter !== 'all',
-    shippingFilter !== 'all',
-    searchTerm !== ''
-  ].filter(Boolean).length;
+  const activeFiltersCount = useMemo(() => {
+    return [
+      statusFilter !== 'all',
+      paymentFilter !== 'all',
+      typeFilter !== 'all',
+      shippingFilter !== 'all',
+      searchTerm !== ''
+    ].filter(Boolean).length;
+  }, [statusFilter, paymentFilter, typeFilter, shippingFilter, searchTerm]);
 
   const isLoading = loading || paymentsLoading;
 
@@ -263,7 +280,7 @@ const Orders = () => {
       ) : (
         <>
           {viewMode === 'table' ? (
-            <OrdersTable
+            <OrdersTableMemo
               orders={paginatedOrders}
               onViewOrder={handleViewOrder}
               onCancelOrder={handleCancelOrder}
@@ -273,7 +290,7 @@ const Orders = () => {
               getOrderPaymentStatus={getOrderPaymentStatus}
             />
           ) : (
-            <OrdersGrid
+            <OrdersGridMemo
               orders={paginatedOrders}
               onViewOrder={handleViewOrder}
               onCancelOrder={handleCancelOrder}
@@ -306,16 +323,66 @@ const Orders = () => {
         onSendFollowUp={handleSendFollowUp}
         onPrintLabel={handlePrintLabel}
         onPrintDeclaration={handlePrintDeclaration}
-        onMarkPrintedDocument={handleMarkPrintedDocument}
-        onGenerateTrackingCode={handleGenerateTrackingCode}
+        onMarkPrintedDocument={markPrintedDocument}
+        onGenerateTrackingCode={generateTrackingCode}
       />
 
       <ContentDeclarationModal
         order={selectedOrder}
         isOpen={isDeclarationModalOpen}
         onClose={() => setIsDeclarationModalOpen(false)}
-        onPrint={handlePrintDeclarationDocument}
-        onDownloadPdf={handleDownloadPdf}
+        onPrint={() => {
+          if (selectedOrder) {
+            // Imprimir o conteúdo da declaração
+            const printWindow = window.open('', '_blank');
+            const declarationContent = document.getElementById('declaration-content');
+            
+            if (printWindow && declarationContent) {
+              printWindow.document.write(`
+                <html>
+                  <head>
+                    <title>Declaração de Conteúdo - Pedido #${selectedOrder.id.slice(-8)}</title>
+                    <style>
+                      body { font-family: Arial, sans-serif; margin: 20px; }
+                      table { border-collapse: collapse; width: 100%; }
+                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                      th { background-color: #f2f2f2; }
+                      .text-center { text-align: center; }
+                      .text-right { text-align: right; }
+                      .font-bold { font-weight: bold; }
+                      .mt-8 { margin-top: 32px; }
+                      .pt-6 { padding-top: 24px; }
+                      .border-t { border-top: 1px solid #ddd; }
+                      .border-b { border-bottom: 1px solid #ddd; }
+                      .pb-4 { padding-bottom: 16px; }
+                      .mb-2 { margin-bottom: 8px; }
+                      @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    ${declarationContent.innerHTML}
+                  </body>
+                </html>
+              `);
+              printWindow.document.close();
+              printWindow.print();
+              
+              // Marcar como impresso
+              markPrintedDocument(selectedOrder.id, 'content_declaration');
+              toast.success('Declaração de conteúdo enviada para impressão');
+            }
+          }
+          setIsDeclarationModalOpen(false);
+        }}
+        onDownloadPdf={() => {
+          if (selectedOrder) {
+            toast.info('Funcionalidade de download em PDF em desenvolvimento');
+            // Aqui seria implementada a geração do PDF
+          }
+        }}
       />
     </div>
   );
