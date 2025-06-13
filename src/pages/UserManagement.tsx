@@ -7,50 +7,82 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUsers } from '@/hooks/useUsers';
 import { useStores } from '@/hooks/useStores';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Store, AlertCircle } from 'lucide-react';
+import { Users, Store, AlertCircle, RefreshCw } from 'lucide-react';
 
 const UserManagement = () => {
-  const { users, loading: usersLoading, updateUserStore, updateUserRole } = useUsers();
+  const { users, loading: usersLoading, updateUserStore, updateUserRole, fetchUsers } = useUsers();
   const { stores, loading: storesLoading } = useStores();
   const { toast } = useToast();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handleUpdateUserStore = async (userId: string, storeId: string) => {
     setUpdating(userId);
-    const { error } = await updateUserStore(userId, storeId === 'none' ? null : storeId);
     
-    if (error) {
+    try {
+      const { error } = await updateUserStore(userId, storeId === 'none' ? null : storeId);
+      
+      if (error) {
+        console.error('Erro na atualização:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar a associação da loja",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Usuário associado à loja com sucesso",
+        });
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar a associação da loja",
+        description: "Erro inesperado ao atualizar usuário",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Sucesso",
-        description: "Usuário associado à loja com sucesso",
-      });
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   };
 
   const handleUpdateUserRole = async (userId: string, role: 'superadmin' | 'store_admin') => {
     setUpdating(userId);
-    const { error } = await updateUserRole(userId, role);
     
-    if (error) {
+    try {
+      const { error } = await updateUserRole(userId, role);
+      
+      if (error) {
+        console.error('Erro na atualização do papel:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o papel do usuário",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Papel do usuário atualizado com sucesso",
+        });
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o papel do usuário",
+        description: "Erro inesperado ao atualizar papel",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Sucesso",
-        description: "Papel do usuário atualizado com sucesso",
-      });
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
+  };
+
+  const handleRefresh = async () => {
+    await fetchUsers();
+    toast({
+      title: "Atualizado",
+      description: "Lista de usuários atualizada",
+    });
   };
 
   const usersWithoutStore = users.filter(user => user.role === 'store_admin' && !user.store_id);
@@ -59,8 +91,10 @@ const UserManagement = () => {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando usuários...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando usuários...</p>
+          </div>
         </div>
       </div>
     );
@@ -69,12 +103,30 @@ const UserManagement = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold gradient-text">Gerenciamento de Usuários</h1>
-        <p className="text-muted-foreground">
-          Gerencie usuários e suas associações com lojas
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold gradient-text">Gerenciamento de Usuários</h1>
+          <p className="text-muted-foreground">
+            Gerencie usuários e suas associações com lojas
+          </p>
+        </div>
+        <Button onClick={handleRefresh} variant="outline" className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Atualizar
+        </Button>
       </div>
+
+      {/* Debug Info */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-blue-800 text-sm">Informações de Debug</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm">
+          <p>Total de usuários: {users.length}</p>
+          <p>Usuários sem loja: {usersWithoutStore.length}</p>
+          <p>Total de lojas: {stores.length}</p>
+        </CardContent>
+      </Card>
 
       {/* Usuários sem loja */}
       {usersWithoutStore.length > 0 && (
@@ -137,6 +189,7 @@ const UserManagement = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold">{user.full_name || 'Nome não informado'}</h3>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="text-xs text-gray-500">ID: {user.id}</p>
                   <div className="flex gap-2 mt-2">
                     <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>
                       {user.role === 'superadmin' ? 'Super Admin' : 'Admin da Loja'}
@@ -144,10 +197,12 @@ const UserManagement = () => {
                     <Badge variant={user.is_active ? 'default' : 'secondary'}>
                       {user.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
-                    {user.store_id && (
+                    {user.store_id ? (
                       <Badge variant="outline">
-                        Loja: {stores.find(s => s.id === user.store_id)?.name || 'Desconhecida'}
+                        Loja: {stores.find(s => s.id === user.store_id)?.name || user.store_id.slice(0, 8)}
                       </Badge>
+                    ) : (
+                      <Badge variant="destructive">Sem Loja</Badge>
                     )}
                   </div>
                 </div>

@@ -24,26 +24,41 @@ const StoreSetup = () => {
 
     setLoading(true);
     
-    const { error } = await createStoreForUser(
-      profile.id,
-      formData.name,
-      formData.description
-    );
+    try {
+      const { error } = await createStoreForUser(
+        profile.id,
+        formData.name,
+        formData.description
+      );
 
-    if (error) {
+      if (error) {
+        console.error('Erro ao criar loja:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar sua loja. Tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso!",
+          description: "Sua loja foi criada com sucesso! Redirecionando...",
+        });
+        
+        // Aguardar um pouco para o toast aparecer e então recarregar
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('Erro inesperado ao criar loja:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar sua loja. Tente novamente.",
+        description: "Erro inesperado ao criar loja. Tente novamente.",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Sucesso!",
-        description: "Sua loja foi criada com sucesso!",
-      });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -68,6 +83,7 @@ const StoreSetup = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Minha Loja Online"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -79,6 +95,7 @@ const StoreSetup = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Descreva sua loja e produtos..."
                 rows={3}
+                disabled={loading}
               />
             </div>
 
@@ -110,6 +127,16 @@ const StoreSetup = () => {
               <li>• Configurações de pagamento e entrega</li>
             </ul>
           </div>
+
+          {/* Informações de debug */}
+          {profile && (
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
+              <p><strong>Debug Info:</strong></p>
+              <p>Usuário ID: {profile.id}</p>
+              <p>Store ID: {profile.store_id || 'Não definido'}</p>
+              <p>Papel: {profile.role}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
