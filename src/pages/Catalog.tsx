@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
@@ -305,7 +304,7 @@ const CatalogContent = () => {
       />
 
       {/* Floating Cart */}
-      <FloatingCart />
+      <FloatingCart onCheckout={() => setShowCheckout(true)} />
 
       {/* Checkout Modal */}
       <CheckoutModal

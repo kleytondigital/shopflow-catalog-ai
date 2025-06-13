@@ -1,185 +1,167 @@
 
 import React from 'react';
-import { ShoppingCart, X, Plus, Minus, Trash2, Package } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { useCart } from '@/hooks/useCart';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
-const FloatingCart = () => {
-  const { 
-    items, 
-    totalItems, 
-    totalAmount, 
-    isOpen, 
-    toggleCart, 
-    closeCart,
+interface FloatingCartProps {
+  onCheckout?: () => void;
+}
+
+const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
+  const {
+    items,
+    totalItems,
+    totalAmount,
+    removeItem,
     updateQuantity,
-    removeItem 
+    isOpen,
+    toggleCart,
+    closeCart
   } = useCart();
 
-  if (totalItems === 0) return null;
+  const handleCheckout = () => {
+    closeCart();
+    if (onCheckout) {
+      onCheckout();
+    }
+  };
+
+  if (totalItems === 0) {
+    return null;
+  }
 
   return (
-    <>
-      {/* Floating Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={toggleCart}
-          className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 hover:from-blue-700 hover:via-purple-700 hover:to-blue-800 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 animate-pulse hover:animate-none border-2 border-white/20"
-          size="lg"
-        >
-          <div className="relative">
-            <ShoppingCart size={26} className="text-white" />
-            <Badge className="absolute -top-3 -right-3 h-7 w-7 flex items-center justify-center text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-2 border-white shadow-lg animate-bounce">
-              {totalItems}
-            </Badge>
-          </div>
-        </Button>
-      </div>
+    <div className="fixed bottom-6 right-6 z-50">
+      <Sheet open={isOpen} onOpenChange={toggleCart}>
+        <SheetTrigger asChild>
+          <Button
+            size="lg"
+            className="relative h-16 w-16 rounded-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 shadow-2xl hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+          >
+            <ShoppingCart size={24} className="text-white" />
+            {totalItems > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 flex items-center justify-center bg-secondary text-white font-bold text-sm animate-pulse"
+              >
+                {totalItems > 99 ? '99+' : totalItems}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
 
-      {/* Cart Drawer */}
-      <Drawer open={isOpen} onOpenChange={closeCart}>
-        <DrawerContent className="max-h-[85vh] bg-gradient-to-b from-white to-gray-50">
-          <DrawerHeader className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                  <ShoppingCart size={20} className="text-white" />
-                </div>
-                <div>
-                  <DrawerTitle className="text-xl font-bold text-gray-900">
-                    Meu Carrinho
-                  </DrawerTitle>
-                  <p className="text-sm text-gray-600">
-                    {totalItems} {totalItems === 1 ? 'item' : 'itens'} selecionado{totalItems === 1 ? '' : 's'}
+        <SheetContent className="w-full sm:max-w-lg overflow-hidden p-0">
+          <div className="flex flex-col h-full">
+            <SheetHeader className="px-6 py-4 bg-gradient-to-r from-primary to-accent">
+              <SheetTitle className="text-xl font-bold text-white text-center">
+                Carrinho de Compras
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <ShoppingCart size={64} className="text-gray-300 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                    Carrinho vazio
+                  </h3>
+                  <p className="text-gray-500">
+                    Adicione produtos ao seu carrinho para continuar
                   </p>
                 </div>
-              </div>
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-gray-100">
-                  <X size={20} />
-                </Button>
-              </DrawerClose>
-            </div>
-          </DrawerHeader>
-
-          <div className="flex-1 overflow-y-auto p-4">
-            {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
-                  <Package size={32} className="text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Carrinho vazio</h3>
-                <p className="text-gray-600 text-center">
-                  Adicione produtos ao carrinho para continuar
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
-                    <div className="relative">
-                      <img
-                        src={item.product.image_url || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop'}
-                        alt={item.product.name}
-                        className="w-18 h-18 object-cover rounded-lg"
-                      />
-                      <Badge className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs">
-                        {item.catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 line-clamp-2 mb-1">
-                        {item.product.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {item.product.category}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-blue-600 text-lg">
-                            R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Total: R$ {(item.price * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
+              ) : (
+                <div className="space-y-4">
+                  {items.map((item) => (
+                    <div key={item.id} className="bg-white rounded-xl border shadow-sm p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <div className="text-2xl">📦</div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="h-8 w-8 rounded-full"
-                          >
-                            <Minus size={14} />
-                          </Button>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 truncate">
+                            {item.product.name}
+                          </h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {item.catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
+                          </p>
                           
-                          <span className="w-12 text-center font-semibold bg-gray-50 rounded-lg py-1">
-                            {item.quantity}
-                          </span>
-                          
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="h-8 w-8 rounded-full"
-                          >
-                            <Plus size={14} />
-                          </Button>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                className="h-8 w-8 p-0 rounded-full"
+                              >
+                                <Minus size={12} />
+                              </Button>
+                              
+                              <span className="font-semibold min-w-[2rem] text-center">
+                                {item.quantity}
+                              </span>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                className="h-8 w-8 p-0 rounded-full"
+                              >
+                                <Plus size={12} />
+                              </Button>
+                            </div>
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(item.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-bold text-primary">
+                            R$ {(item.price * item.quantity).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            R$ {item.price.toFixed(2)} cada
+                          </p>
                         </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                    <div className="flex flex-col items-end justify-between">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(item.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full w-8 h-8"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Cart Footer */}
-          {items.length > 0 && (
-            <div className="border-t border-gray-200 p-6 bg-gradient-to-r from-gray-50 to-white">
-              <div className="space-y-4">
+            {items.length > 0 && (
+              <div className="border-t bg-gray-50 p-6 space-y-4">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm text-gray-600">Total ({totalItems} {totalItems === 1 ? 'item' : 'itens'})</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
+                  <span className="text-lg font-semibold">Total:</span>
+                  <span className="text-2xl font-bold text-primary">
+                    R$ {totalAmount.toFixed(2)}
+                  </span>
                 </div>
                 
-                <Button 
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                <Button
+                  onClick={handleCheckout}
+                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
                   size="lg"
-                  onClick={() => {
-                    closeCart();
-                    // TODO: Abrir checkout
-                    console.log('Ir para checkout');
-                  }}
                 >
-                  <ShoppingCart size={20} className="mr-2" />
                   Finalizar Pedido
                 </Button>
               </div>
-            </div>
-          )}
-        </DrawerContent>
-      </Drawer>
-    </>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 };
 
