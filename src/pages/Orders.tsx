@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Search, Filter, Calendar, Package2, 
   Truck, CheckCircle, Clock, AlertCircle, Printer,
-  FileText, Eye, MoreHorizontal, Tag
+  FileText, Eye, MoreHorizontal, Tag, RefreshCw,
+  Download, CreditCard, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,96 +15,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  variation?: string;
-}
-
-interface Order {
-  id: string;
-  order_number: string;
-  customer_name: string;
-  customer_email?: string;
-  customer_phone?: string;
-  status: 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
-  order_type: 'retail' | 'wholesale';
-  total_amount: number;
-  shipping_cost: number;
-  discount_amount: number;
-  items: OrderItem[];
-  shipping_address?: {
-    street: string;
-    number: string;
-    district: string;
-    city: string;
-    state: string;
-    zip_code: string;
-  };
-  shipping_method: string;
-  tracking_code?: string;
-  notes?: string;
-  created_at: string;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useOrders, Order } from '@/hooks/useOrders';
+import { toast } from 'sonner';
 
 const Orders = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterPayment, setFilterPayment] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
-  // Mock data - em produção virá do banco
-  const mockOrders: Order[] = [
-    {
-      id: '1',
-      order_number: '#PED-001',
-      customer_name: 'João Silva',
-      customer_email: 'joao@email.com',
-      customer_phone: '(11) 99999-9999',
-      status: 'confirmed',
-      order_type: 'retail',
-      total_amount: 149.90,
-      shipping_cost: 15.00,
-      discount_amount: 0,
-      items: [
-        { id: '1', name: 'Camiseta Premium', quantity: 2, price: 49.90, variation: 'Azul - M' },
-        { id: '2', name: 'Calça Jeans', quantity: 1, price: 89.90 }
-      ],
-      shipping_address: {
-        street: 'Rua das Flores',
-        number: '123',
-        district: 'Centro',
-        city: 'São Paulo',
-        state: 'SP',
-        zip_code: '01234-567'
-      },
-      shipping_method: 'PAC',
-      created_at: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: '2',
-      order_number: '#PED-002',
-      customer_name: 'Maria Santos',
-      customer_phone: '(11) 88888-8888',
-      status: 'shipped',
-      order_type: 'wholesale',
-      total_amount: 450.00,
-      shipping_cost: 25.00,
-      discount_amount: 50.00,
-      items: [
-        { id: '3', name: 'Kit 10 Camisetas', quantity: 1, price: 250.00 },
-        { id: '4', name: 'Kit 5 Bermudas', quantity: 1, price: 200.00 }
-      ],
-      shipping_method: 'SEDEX',
-      tracking_code: 'BR123456789BR',
-      created_at: '2024-01-14T14:20:00Z'
-    }
-  ];
+  // Hook para gerenciar pedidos
+  const { 
+    orders, 
+    isLoading, 
+    error, 
+    updateOrderStatus, 
+    isUpdatingStatus,
+    unpaidOrders,
+    refetch 
+  } = useOrders({
+    status: filterStatus,
+    order_type: filterType,
+    payment_status: filterPayment,
+    search: searchTerm,
+    tab: activeTab
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -141,29 +82,90 @@ const Orders = () => {
     }
   };
 
-  const filteredOrders = mockOrders.filter(order => {
-    const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       order.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const statusMatch = filterStatus === 'all' || order.status === filterStatus;
-    const typeMatch = filterType === 'all' || order.order_type === filterType;
-    
-    return searchMatch && statusMatch && typeMatch;
-  });
+  const getPaymentStatusColor = (status?: string) => {
+    switch (status) {
+      case 'paid': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'refunded': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPaymentStatusText = (status?: string) => {
+    switch (status) {
+      case 'paid': return 'Pago';
+      case 'pending': return 'Pendente';
+      case 'failed': return 'Falhou';
+      case 'refunded': return 'Reembolsado';
+      default: return 'N/A';
+    }
+  };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
   };
 
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    try {
+      updateOrderStatus({ orderId, status: newStatus });
+      toast.success('Status do pedido atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status do pedido');
+    }
+  };
+
   const handlePrintLabel = (order: Order) => {
     // Integração com Melhor Envio
-    alert(`Imprimir etiqueta para pedido ${order.order_number}`);
+    toast.info(`Imprimir etiqueta para pedido ${order.id}`);
   };
 
   const handlePrintDeclaration = (order: Order) => {
     // Gerar declaração de conteúdo
-    alert(`Imprimir declaração de conteúdo para pedido ${order.order_number}`);
+    toast.info(`Imprimir declaração de conteúdo para pedido ${order.id}`);
   };
+
+  const handleRecoverUnpaidOrder = (order: Order) => {
+    // Enviar cobrança via WhatsApp ou email
+    toast.info(`Enviando cobrança para ${order.customer_name} - ${order.id}`);
+  };
+
+  const handleBulkRecovery = () => {
+    toast.info(`Enviando cobranças para ${unpaidOrders.length} pedidos não pagos`);
+  };
+
+  // Filtrar pedidos localmente para as abas
+  const filteredOrders = orders.filter(order => {
+    let tabMatch = true;
+    if (activeTab === 'unpaid') {
+      tabMatch = order.payment_status === 'pending' || order.status === 'pending';
+    } else if (activeTab === 'pending') {
+      tabMatch = order.status === 'pending' || order.status === 'confirmed';
+    } else if (activeTab === 'shipped') {
+      tabMatch = order.status === 'shipped' || order.status === 'delivered';
+    }
+    return tabMatch;
+  });
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Erro ao carregar pedidos</h2>
+          <p className="text-muted-foreground mb-4">
+            Ocorreu um erro ao buscar os pedidos. Tente novamente.
+          </p>
+          <Button onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,6 +182,21 @@ const Orders = () => {
                 <h1 className="text-3xl font-bold gradient-text">Pedidos</h1>
                 <p className="text-muted-foreground">Gerencie todos os pedidos da sua loja</p>
               </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleBulkRecovery}
+                disabled={unpaidOrders.length === 0}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Recuperar Não Pagos ({unpaidOrders.length})
+              </Button>
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+              </Button>
             </div>
           </div>
           
@@ -221,124 +238,176 @@ const Orders = () => {
                   <SelectItem value="wholesale">Atacado</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={filterPayment} onValueChange={setFilterPayment}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="paid">Pago</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="failed">Falhou</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lista de Pedidos */}
+      {/* Tabs de Navegação */}
       <div className="p-6">
-        <div className="space-y-4">
-          {filteredOrders.map((order) => (
-            <Card key={order.id} className="card-modern hover:shadow-lg transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-lg">{order.order_number}</h3>
-                      <Badge className={getStatusColor(order.status)}>
-                        {getStatusIcon(order.status)}
-                        <span className="ml-1">{getStatusText(order.status)}</span>
-                      </Badge>
-                      <Badge variant="outline">
-                        {order.order_type === 'retail' ? 'Varejo' : 'Atacado'}
-                      </Badge>
-                      {order.tracking_code && (
-                        <Badge variant="secondary">
-                          <Truck className="h-3 w-3 mr-1" />
-                          {order.tracking_code}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Cliente</p>
-                        <p className="font-medium">{order.customer_name}</p>
-                        {order.customer_phone && (
-                          <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground">Itens</p>
-                        <p className="font-medium">{order.items.length} produto(s)</p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.items.reduce((sum, item) => sum + item.quantity, 0)} unidades
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground">Data</p>
-                        <p className="font-medium">
-                          {new Date(order.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleTimeString('pt-BR')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">
-                        R$ {order.total_amount.toFixed(2)}
-                      </p>
-                      {order.shipping_cost > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          + R$ {order.shipping_cost.toFixed(2)} frete
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Detalhes
-                      </Button>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handlePrintLabel(order)}>
-                            <Printer className="h-4 w-4 mr-2" />
-                            Imprimir Etiqueta
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handlePrintDeclaration(order)}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Declaração de Conteúdo
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">
+              Todos ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger value="unpaid" className="text-red-600">
+              Não Pagos ({unpaidOrders.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending">
+              Pendentes ({orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length})
+            </TabsTrigger>
+            <TabsTrigger value="shipped">
+              Enviados ({orders.filter(o => o.status === 'shipped' || o.status === 'delivered').length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="space-y-4">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                <p className="text-muted-foreground">Carregando pedidos...</p>
+              </div>
+            ) : (
+              <>
+                {/* Lista de Pedidos */}
+                <div className="space-y-4">
+                  {filteredOrders.map((order) => (
+                    <Card key={order.id} className="card-modern hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-lg">#{order.id.slice(0, 8)}</h3>
+                              <Badge className={getStatusColor(order.status)}>
+                                {getStatusIcon(order.status)}
+                                <span className="ml-1">{getStatusText(order.status)}</span>
+                              </Badge>
+                              <Badge variant="outline">
+                                {order.order_type === 'retail' ? 'Varejo' : 'Atacado'}
+                              </Badge>
+                              {order.payment_status && (
+                                <Badge className={getPaymentStatusColor(order.payment_status)}>
+                                  {getPaymentStatusText(order.payment_status)}
+                                </Badge>
+                              )}
+                              {order.tracking_code && (
+                                <Badge variant="secondary">
+                                  <Truck className="h-3 w-3 mr-1" />
+                                  {order.tracking_code}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Cliente</p>
+                                <p className="font-medium">{order.customer_name}</p>
+                                {order.customer_phone && (
+                                  <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                                )}
+                              </div>
+                              
+                              <div>
+                                <p className="text-muted-foreground">Itens</p>
+                                <p className="font-medium">{order.items.length} produto(s)</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {order.items.reduce((sum, item) => sum + item.quantity, 0)} unidades
+                                </p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-muted-foreground">Data</p>
+                                <p className="font-medium">
+                                  {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(order.created_at).toLocaleTimeString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-primary">
+                                R$ {order.total_amount.toFixed(2)}
+                              </p>
+                              {order.shipping_cost && order.shipping_cost > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  + R$ {order.shipping_cost.toFixed(2)} frete
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewOrder(order)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Detalhes
+                              </Button>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {(order.payment_status === 'pending' || order.status === 'pending') && (
+                                    <DropdownMenuItem onClick={() => handleRecoverUnpaidOrder(order)}>
+                                      <CreditCard className="h-4 w-4 mr-2" />
+                                      Cobrar Pagamento
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => handlePrintLabel(order)}>
+                                    <Printer className="h-4 w-4 mr-2" />
+                                    Etiqueta
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handlePrintDeclaration(order)}>
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Declaração
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-12">
-            <Package2 size={48} className="mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum pedido encontrado</h3>
-            <p className="text-muted-foreground">
-              {searchTerm || filterStatus || filterType
-                ? 'Tente ajustar os filtros de busca'
-                : 'Aguardando os primeiros pedidos da sua loja'
-              }
-            </p>
-          </div>
-        )}
+                
+                {filteredOrders.length === 0 && !isLoading && (
+                  <div className="text-center py-12">
+                    <Package2 size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhum pedido encontrado</h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm || filterStatus !== 'all' || filterType !== 'all' || filterPayment !== 'all'
+                        ? 'Tente ajustar os filtros de busca'
+                        : 'Aguardando os primeiros pedidos da sua loja'
+                      }
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modal de Detalhes do Pedido */}
@@ -347,7 +416,7 @@ const Orders = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package2 className="h-5 w-5" />
-              Detalhes do Pedido {selectedOrder?.order_number}
+              Detalhes do Pedido #{selectedOrder?.id.slice(0, 8)}
             </DialogTitle>
           </DialogHeader>
           
@@ -459,15 +528,15 @@ const Orders = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>R$ {(selectedOrder.total_amount - selectedOrder.shipping_cost + selectedOrder.discount_amount).toFixed(2)}</span>
+                      <span>R$ {(selectedOrder.total_amount - (selectedOrder.shipping_cost || 0) + (selectedOrder.discount_amount || 0)).toFixed(2)}</span>
                     </div>
-                    {selectedOrder.discount_amount > 0 && (
+                    {selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>Desconto:</span>
                         <span>-R$ {selectedOrder.discount_amount.toFixed(2)}</span>
                       </div>
                     )}
-                    {selectedOrder.shipping_cost > 0 && (
+                    {selectedOrder.shipping_cost && selectedOrder.shipping_cost > 0 && (
                       <div className="flex justify-between">
                         <span>Frete ({selectedOrder.shipping_method}):</span>
                         <span>R$ {selectedOrder.shipping_cost.toFixed(2)}</span>
