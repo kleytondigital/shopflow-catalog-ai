@@ -24,8 +24,8 @@ export interface Order {
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
-  status: OrderStatus; // Usar o tipo do banco
-  order_type: CatalogType; // Usar o tipo do banco
+  status: OrderStatus;
+  order_type: CatalogType;
   total_amount: number;
   shipping_cost?: number;
   discount_amount?: number;
@@ -56,6 +56,29 @@ export interface OrderFilters {
   search?: string;
   tab?: string;
 }
+
+// Função helper para converter Json para OrderItem[]
+const convertJsonToOrderItems = (items: any): OrderItem[] => {
+  if (!Array.isArray(items)) return [];
+  return items.map((item: any) => ({
+    id: item.id || '',
+    name: item.name || '',
+    quantity: Number(item.quantity) || 0,
+    price: Number(item.price) || 0,
+    variation: item.variation || undefined
+  }));
+};
+
+// Função helper para converter OrderItem[] para Json
+const convertOrderItemsToJson = (items: OrderItem[]): any => {
+  return items.map(item => ({
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price,
+    variation: item.variation || null
+  }));
+};
 
 export const useOrders = (filters: OrderFilters = {}) => {
   const { profile, isSuperadmin } = useAuth();
@@ -90,12 +113,11 @@ export const useOrders = (filters: OrderFilters = {}) => {
 
     // Filtros por aba
     if (filters.tab === 'unpaid') {
-      // Mock do filtro de não pagos - adaptar conforme estrutura real
       query = query.eq('status', 'pending' as OrderStatus);
     } else if (filters.tab === 'pending') {
       query = query.in('status', ['pending', 'confirmed'] as OrderStatus[]);
     } else if (filters.tab === 'shipped') {
-      query = query.in('status', ['shipping', 'delivered'] as OrderStatus[]); // Usar 'shipping' ao invés de 'shipped'
+      query = query.in('status', ['shipping', 'delivered'] as OrderStatus[]);
     }
 
     // Ordenar por data mais recente
@@ -119,7 +141,7 @@ export const useOrders = (filters: OrderFilters = {}) => {
       status: order.status,
       order_type: order.order_type,
       total_amount: Number(order.total_amount),
-      items: Array.isArray(order.items) ? order.items as OrderItem[] : [],
+      items: convertJsonToOrderItems(order.items),
       shipping_address: order.shipping_address ? order.shipping_address as Order['shipping_address'] : undefined,
       created_at: order.created_at,
       updated_at: order.updated_at,
@@ -181,7 +203,7 @@ export const useOrders = (filters: OrderFilters = {}) => {
         status: (orderData.status || 'pending') as OrderStatus,
         order_type: (orderData.order_type || 'retail') as CatalogType,
         total_amount: orderData.total_amount || 0,
-        items: orderData.items || [],
+        items: convertOrderItemsToJson(orderData.items || []),
         shipping_address: orderData.shipping_address || null,
         store_id: profile.store_id,
         created_at: new Date().toISOString(),
@@ -190,7 +212,7 @@ export const useOrders = (filters: OrderFilters = {}) => {
 
       const { data, error } = await supabase
         .from('orders')
-        .insert([newOrderData])
+        .insert(newOrderData)
         .select()
         .single();
 
@@ -230,7 +252,7 @@ export const useOrders = (filters: OrderFilters = {}) => {
       status: data.status,
       order_type: data.order_type,
       total_amount: Number(data.total_amount),
-      items: Array.isArray(data.items) ? data.items as OrderItem[] : [],
+      items: convertJsonToOrderItems(data.items),
       shipping_address: data.shipping_address ? data.shipping_address as Order['shipping_address'] : undefined,
       created_at: data.created_at,
       updated_at: data.updated_at,
