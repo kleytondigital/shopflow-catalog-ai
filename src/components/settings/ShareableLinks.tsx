@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 
 const ShareableLinks = () => {
-  const { settings } = useCatalogSettings();
-  const { currentStore, updateStoreSlug } = useStores();
+  const { settings, loading: settingsLoading } = useCatalogSettings();
+  const { currentStore, updateStoreSlug, loading: storesLoading } = useStores();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [urlSlug, setUrlSlug] = useState('');
@@ -44,21 +44,33 @@ const ShareableLinks = () => {
   }, [currentStore]);
 
   const updateStoreSlugHandler = async () => {
-    if (!currentStore || !urlSlug.trim()) return;
+    if (!currentStore || !urlSlug.trim()) {
+      toast({
+        title: "URL inválida",
+        description: "Digite uma URL válida para continuar.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setSaving(true);
     try {
+      console.log('Atualizando URL da loja:', urlSlug.trim());
       const { error } = await updateStoreSlug(currentStore.id, urlSlug.trim());
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar URL:', error);
+        throw error;
+      }
       
       toast({
         title: "URL atualizada",
         description: "A URL personalizada foi salva com sucesso!",
       });
     } catch (error) {
+      console.error('Erro completo ao atualizar URL:', error);
       toast({
         title: "Erro ao atualizar URL",
-        description: "Não foi possível salvar a URL personalizada.",
+        description: "Não foi possível salvar a URL personalizada. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -78,8 +90,6 @@ const ShareableLinks = () => {
     };
   };
 
-  const { retailUrl, wholesaleUrl } = generateLinks();
-
   const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -88,6 +98,7 @@ const ShareableLinks = () => {
         description: `O link do catálogo de ${type} foi copiado para a área de transferência.`,
       });
     } catch (error) {
+      console.error('Erro ao copiar:', error);
       toast({
         title: "Erro ao copiar",
         description: "Não foi possível copiar o link.",
@@ -100,16 +111,34 @@ const ShareableLinks = () => {
     window.open(url, '_blank');
   };
 
-  if (!settings || !currentStore) {
+  // Loading states
+  const isLoading = settingsLoading || storesLoading;
+  
+  if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center p-6">
+        <CardContent className="flex items-center justify-center p-8">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
           <span>Carregando configurações...</span>
         </CardContent>
       </Card>
     );
   }
+
+  if (!currentStore) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="text-muted-foreground">Nenhuma loja encontrada.</p>
+            <p className="text-sm text-muted-foreground mt-1">Verifique suas permissões ou contate o suporte.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { retailUrl, wholesaleUrl } = generateLinks();
 
   return (
     <div className="space-y-6">
@@ -168,7 +197,7 @@ const ShareableLinks = () => {
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-blue-600" />
                 <Label className="font-medium">Catálogo de Varejo</Label>
-                {settings.retail_catalog_active ? (
+                {settings?.retail_catalog_active ? (
                   <Badge variant="default" className="text-xs">
                     <Eye className="h-3 w-3 mr-1" />
                     Ativo
@@ -182,7 +211,7 @@ const ShareableLinks = () => {
               </div>
             </div>
             
-            {settings.retail_catalog_active ? (
+            {settings?.retail_catalog_active ? (
               <div className="flex gap-2">
                 <Input
                   value={retailUrl}
@@ -217,7 +246,7 @@ const ShareableLinks = () => {
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-orange-600" />
                 <Label className="font-medium">Catálogo de Atacado</Label>
-                {settings.wholesale_catalog_active ? (
+                {settings?.wholesale_catalog_active ? (
                   <Badge variant="default" className="text-xs">
                     <Eye className="h-3 w-3 mr-1" />
                     Ativo
@@ -231,7 +260,7 @@ const ShareableLinks = () => {
               </div>
             </div>
             
-            {settings.wholesale_catalog_active ? (
+            {settings?.wholesale_catalog_active ? (
               <div className="flex gap-2">
                 <Input
                   value={wholesaleUrl}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Truck, MapPin, CreditCard, Smartphone, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCart } from '@/hooks/useCart';
+import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 
 interface CheckoutModalProps {
@@ -20,6 +20,7 @@ interface CheckoutModalProps {
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSettings }) => {
   const { items, totalAmount, clearCart } = useCart();
+  const { createOrder, isCreatingOrder } = useOrders();
   const { toast } = useToast();
   
   const [customerData, setCustomerData] = useState({
@@ -42,79 +43,132 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const finalTotal = totalAmount + shippingCost;
 
   const calculateShipping = async () => {
     if (shippingMethod === 'shipping' && shippingAddress.zipCode.length === 8) {
-      setLoading(true);
       try {
         // TODO: Integração com Melhor Envio
         setTimeout(() => {
           setShippingCost(15.50);
-          setLoading(false);
         }, 1000);
       } catch (error) {
         console.error('Erro ao calcular frete:', error);
-        setLoading(false);
       }
     }
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
+    console.log('Iniciando processamento do pedido...');
     
     try {
+      // Validar dados obrigatórios
+      if (!customerData.name.trim()) {
+        toast({
+          title: "Nome obrigatório",
+          description: "Por favor, informe seu nome.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!customerData.phone.trim()) {
+        toast({
+          title: "Telefone obrigatório",
+          description: "Por favor, informe seu telefone.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (items.length === 0) {
+        toast({
+          title: "Carrinho vazio",
+          description: "Adicione produtos ao carrinho antes de finalizar.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Preparar dados do pedido para salvar no banco
       const orderData = {
-        customer: customerData,
+        customer_name: customerData.name.trim(),
+        customer_email: customerData.email.trim() || undefined,
+        customer_phone: customerData.phone.trim(),
+        status: 'pending' as const,
+        order_type: items[0]?.catalogType || 'retail' as const,
+        total_amount: finalTotal,
         items: items.map(item => ({
-          product_id: item.product.id,
+          id: item.product.id,
           name: item.product.name,
           quantity: item.quantity,
           price: item.price,
-          catalog_type: item.catalogType
+          variation: item.variation || undefined
         })),
+        shipping_address: shippingMethod !== 'pickup' ? {
+          street: shippingAddress.street,
+          number: shippingAddress.number,
+          district: shippingAddress.neighborhood,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          zip_code: shippingAddress.zipCode
+        } : undefined,
         shipping_method: shippingMethod,
-        shipping_address: shippingMethod !== 'pickup' ? shippingAddress : null,
         payment_method: paymentMethod,
-        total_amount: finalTotal,
         shipping_cost: shippingCost,
-        notes
+        notes: notes.trim() || undefined
       };
 
-      // Generate WhatsApp message
-      if (storeSettings?.whatsapp_number) {
-        const message = generateWhatsAppMessage(orderData);
-        window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
-      }
+      console.log('Dados do pedido preparados:', orderData);
 
-      // TODO: Save order to database
-      console.log('Pedido criado:', orderData);
+      // Salvar pedido no banco de dados
+      createOrder(orderData, {
+        onSuccess: (savedOrder) => {
+          console.log('Pedido salvo com sucesso:', savedOrder);
+          
+          // Enviar para WhatsApp se configurado
+          if (storeSettings?.whatsapp_number) {
+            const message = generateWhatsAppMessage(orderData);
+            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+          }
 
-      clearCart();
-      toast({
-        title: "Pedido enviado!",
-        description: "Seu pedido foi enviado com sucesso via WhatsApp.",
+          // Limpar carrinho e fechar modal
+          clearCart();
+          onClose();
+          
+          toast({
+            title: "Pedido criado!",
+            description: `Seu pedido foi criado com sucesso! ${storeSettings?.whatsapp_number ? 'Você será redirecionado para o WhatsApp.' : ''}`,
+          });
+        },
+        onError: (error) => {
+          console.error('Erro ao criar pedido:', error);
+          toast({
+            title: "Erro ao processar pedido",
+            description: "Não foi possível criar seu pedido. Tente novamente.",
+            variant: "destructive"
+          });
+        }
       });
-      onClose();
+
     } catch (error) {
-      console.error('Erro ao processar pedido:', error);
+      console.error('Erro no processamento do pedido:', error);
       toast({
-        title: "Erro ao processar pedido",
-        description: "Tente novamente em alguns instantes.",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const generateWhatsAppMessage = (orderData: any) => {
     let message = `🛒 *Novo Pedido*\n\n`;
-    message += `👤 *Cliente:* ${orderData.customer.name}\n`;
-    message += `📧 *Email:* ${orderData.customer.email}\n`;
-    message += `📱 *Telefone:* ${orderData.customer.phone}\n\n`;
+    message += `👤 *Cliente:* ${orderData.customer_name}\n`;
+    if (orderData.customer_email) {
+      message += `📧 *Email:* ${orderData.customer_email}\n`;
+    }
+    message += `📱 *Telefone:* ${orderData.customer_phone}\n\n`;
     
     message += `📦 *Itens:*\n`;
     orderData.items.forEach((item: any) => {
@@ -131,7 +185,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     message += `\n🚚 *Entrega:* ${getShippingMethodName(orderData.shipping_method)}`;
     
     if (orderData.shipping_address && orderData.shipping_method !== 'pickup') {
-      message += `\n📍 *Endereço:* ${orderData.shipping_address.street}, ${orderData.shipping_address.number}, ${orderData.shipping_address.neighborhood}, ${orderData.shipping_address.city} - ${orderData.shipping_address.state}`;
+      message += `\n📍 *Endereço:* ${orderData.shipping_address.street}, ${orderData.shipping_address.number}, ${orderData.shipping_address.district}, ${orderData.shipping_address.city} - ${orderData.shipping_address.state}`;
     }
     
     if (orderData.notes) {
@@ -293,7 +347,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                             onBlur={calculateShipping}
                             className="flex-1"
                           />
-                          <Button variant="outline" onClick={calculateShipping} disabled={loading} className="px-4">
+                          <Button variant="outline" onClick={calculateShipping} className="px-4">
                             <Calculator size={16} />
                           </Button>
                         </div>
@@ -441,11 +495,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
                   <Button
                     onClick={handleSubmit}
-                    disabled={loading || !customerData.name || !customerData.phone}
+                    disabled={isCreatingOrder || !customerData.name || !customerData.phone}
                     className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 text-lg rounded-xl shadow-lg transition-all"
                     size="lg"
                   >
-                    {loading ? 'Processando...' : 'Finalizar Pedido'}
+                    {isCreatingOrder ? 'Processando...' : 'Finalizar Pedido'}
                   </Button>
                 </div>
               </div>
@@ -463,11 +517,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
             
             <Button
               onClick={handleSubmit}
-              disabled={loading || !customerData.name || !customerData.phone}
+              disabled={isCreatingOrder || !customerData.name || !customerData.phone}
               className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
               size="lg"
             >
-              {loading ? 'Processando...' : 'Finalizar Pedido'}
+              {isCreatingOrder ? 'Processando...' : 'Finalizar Pedido'}
             </Button>
           </div>
         </div>

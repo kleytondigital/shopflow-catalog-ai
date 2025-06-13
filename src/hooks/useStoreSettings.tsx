@@ -28,9 +28,12 @@ export const useStoreSettings = (storeId?: string) => {
       const targetStoreId = storeId || profile?.store_id;
       
       if (!targetStoreId) {
+        console.log('Nenhum store_id disponível para buscar configurações');
         setLoading(false);
         return;
       }
+
+      console.log('Buscando configurações para store_id:', targetStoreId);
 
       const { data, error } = await supabase
         .from('store_settings')
@@ -38,10 +41,14 @@ export const useStoreSettings = (storeId?: string) => {
         .eq('store_id', targetStoreId)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar configurações:', error);
+        throw error;
+      }
       
       // Se não existir configuração, criar uma padrão
       if (!data) {
+        console.log('Criando configurações padrão para store_id:', targetStoreId);
         const { data: newSettings, error: createError } = await supabase
           .from('store_settings')
           .insert([{
@@ -53,9 +60,14 @@ export const useStoreSettings = (storeId?: string) => {
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('Erro ao criar configurações:', createError);
+          throw createError;
+        }
+        console.log('Configurações criadas:', newSettings);
         setSettings(newSettings);
       } else {
+        console.log('Configurações encontradas:', data);
         setSettings(data);
       }
     } catch (error) {
@@ -63,11 +75,16 @@ export const useStoreSettings = (storeId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [storeId, profile?.store_id]);
+  }, [storeId, profile?.store_id]); // Dependências mínimas necessárias
 
   const updateSettings = useCallback(async (updates: Partial<StoreSettings>) => {
     try {
-      if (!settings) return { data: null, error: 'Configurações não encontradas' };
+      if (!settings) {
+        console.error('Configurações não encontradas para atualizar');
+        return { data: null, error: 'Configurações não encontradas' };
+      }
+
+      console.log('Atualizando configurações:', updates);
 
       const { data, error } = await supabase
         .from('store_settings')
@@ -76,18 +93,25 @@ export const useStoreSettings = (storeId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar configurações:', error);
+        throw error;
+      }
+      
+      console.log('Configurações atualizadas:', data);
       setSettings(data);
       return { data, error: null };
     } catch (error) {
       console.error('Erro ao atualizar configurações:', error);
       return { data: null, error };
     }
-  }, [settings]);
+  }, [settings]); // Apenas settings como dependência
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (profile?.store_id || storeId) {
+      fetchSettings();
+    }
+  }, [profile?.store_id, storeId]); // Dependências mínimas para evitar loops
 
   return {
     settings,
