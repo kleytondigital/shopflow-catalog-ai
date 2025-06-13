@@ -41,16 +41,17 @@ export const useOrders = () => {
   const [error, setError] = useState<string | null>(null);
   const { profile, user } = useAuth();
 
-  // Função para aguardar o profile estar disponível
-  const waitForProfile = useCallback(async (maxAttempts = 10): Promise<void> => {
+  // Função melhorada para aguardar o profile com retry logic mais robusto
+  const waitForProfile = useCallback(async (maxAttempts = 15): Promise<void> => {
     let attempts = 0;
     while (attempts < maxAttempts && (!profile || !profile.store_id)) {
       console.log(`useOrders: Aguardando profile (tentativa ${attempts + 1}/${maxAttempts})`);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       attempts++;
     }
     
     if (!profile || !profile.store_id) {
+      console.warn('useOrders: Profile não disponível após múltiplas tentativas');
       throw new Error('Profile ou Store ID não disponível após aguardar');
     }
   }, [profile]);
@@ -103,19 +104,47 @@ export const useOrders = () => {
       setError(null);
       setIsCreatingOrder(true);
       
-      // Aguardar profile estar disponível
-      await waitForProfile();
+      // Validar dados obrigatórios antes de prosseguir
+      if (!orderData.customer_name?.trim()) {
+        throw new Error('Nome do cliente é obrigatório');
+      }
       
-      if (!profile?.store_id) {
-        throw new Error('Store ID não encontrado. Verifique se você está logado corretamente.');
+      if (!orderData.items?.length) {
+        throw new Error('Pedido deve conter pelo menos um item');
       }
 
-      if (!user) {
-        throw new Error('Usuário não autenticado');
+      console.log('useOrders: Criando pedido com dados:', orderData);
+
+      // Tentar obter store_id do profile, mas permitir criação mesmo sem profile completo
+      let storeId = profile?.store_id;
+      
+      if (!storeId) {
+        console.warn('useOrders: Store ID não encontrado no profile, tentando buscar...');
+        
+        // Tentar aguardar profile por um tempo limitado
+        try {
+          await waitForProfile(5); // Apenas 5 tentativas para não bloquear muito
+          storeId = profile?.store_id;
+        } catch {
+          // Se não conseguir o profile, verificar se há uma store ativa
+          const { data: activeStores } = await supabase
+            .from('stores')
+            .select('id')
+            .eq('is_active', true)
+            .limit(1);
+            
+          if (activeStores?.length) {
+            storeId = activeStores[0].id;
+            console.log('useOrders: Usando store ativa como fallback:', storeId);
+          } else {
+            throw new Error('Nenhuma loja disponível para criar o pedido');
+          }
+        }
       }
 
-      console.log('useOrders: Criando pedido para store_id:', profile.store_id);
-      console.log('useOrders: Dados do pedido:', orderData);
+      if (!storeId) {
+        throw new Error('Store ID não encontrado. Verifique se existe uma loja ativa.');
+      }
 
       // Calcular tempo de expiração da reserva (30 minutos)
       const reservationExpires = new Date();
@@ -123,7 +152,7 @@ export const useOrders = () => {
 
       const newOrder = {
         ...orderData,
-        store_id: profile.store_id,
+        store_id: storeId,
         status: 'pending' as const,
         stock_reserved: true,
         reservation_expires_at: reservationExpires.toISOString()
@@ -144,10 +173,13 @@ export const useOrders = () => {
 
       // Reservar estoque para cada item
       for (const item of orderData.items) {
-        await reserveStock(item.id || item.product_id, item.quantity, data.id);
+        await reserveStock(item.id || item.product_id, item.quantity, data.id, storeId);
       }
 
-      await fetchOrders();
+      // Recarregar pedidos apenas se o profile estiver disponível
+      if (profile?.store_id) {
+        await fetchOrders();
+      }
       
       // Converter o dado para o tipo Order antes de retornar
       const convertedOrder = convertSupabaseToOrder(data);
@@ -171,9 +203,9 @@ export const useOrders = () => {
     return result.data;
   };
 
-  const reserveStock = async (productId: string, quantity: number, orderId: string) => {
+  const reserveStock = async (productId: string, quantity: number, orderId: string, storeId: string) => {
     try {
-      console.log('useOrders: Reservando estoque:', { productId, quantity, orderId });
+      console.log('useOrders: Reservando estoque:', { productId, quantity, orderId, storeId });
 
       // Buscar produto atual
       const { data: product, error: productError } = await supabase
@@ -211,7 +243,7 @@ export const useOrders = () => {
           previous_stock: product.stock,
           new_stock: product.stock,
           notes: `Reserva para pedido ${orderId}`,
-          store_id: profile!.store_id,
+          store_id: storeId,
           expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutos
         }]);
 
@@ -257,12 +289,15 @@ export const useOrders = () => {
       fetchOrders();
     } else if (user) {
       console.log('useOrders: Usuário logado mas profile ainda não disponível');
-      // Aguardar um pouco e tentar novamente
+      // Aguardar um pouco e tentar novamente com timeout reduzido
       const timer = setTimeout(() => {
         if (profile?.store_id) {
           fetchOrders();
+        } else {
+          console.log('useOrders: Profile ainda não disponível após timeout');
+          setLoading(false);
         }
-      }, 2000);
+      }, 1500);
       
       return () => clearTimeout(timer);
     } else {

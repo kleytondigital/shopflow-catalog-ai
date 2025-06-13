@@ -1,263 +1,139 @@
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useMemo } from 'react';
+import { useProducts } from '@/hooks/useProducts';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
-export type CatalogType = 'retail' | 'wholesale';
-
-export interface Store {
-  id: string;
-  name: string;
-  description?: string;
-  logo_url?: string;
-  is_active: boolean;
-}
-
-export type CatalogStore = Store;
-
-export interface CatalogSettings {
-  id: string;
-  store_id: string;
-  business_hours: any;
-  payment_methods: any;
-  shipping_options: any;
-  whatsapp_number: string | null;
-  whatsapp_integration_active: boolean | null;
-  retail_catalog_active: boolean | null;
-  wholesale_catalog_active: boolean | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface FilterOptions {
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
+export interface CatalogFilters {
+  category?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
   inStock?: boolean;
+  search?: string;
 }
 
-// Validação UUID mais rigorosa
-const isValidUUID = (str: string): boolean => {
-  if (!str || typeof str !== 'string') return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-};
-
-export const useCatalog = (identifier?: string) => {
-  const [catalogType, setCatalogType] = useState<CatalogType>('retail');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<FilterOptions>({});
+export const useCatalog = (storeId: string, catalogType: 'retail' | 'wholesale' = 'retail') => {
+  const { products, loading: productsLoading } = useProducts();
+  const { settings, loading: settingsLoading } = useStoreSettings();
   
-  // Cache para evitar re-queries desnecessárias
-  const queryCache = useRef<Map<string, any>>(new Map());
-  const lastIdentifier = useRef<string | null>(null);
+  const [filters, setFilters] = useState<CatalogFilters>({});
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Query para buscar loja por ID ou slug - CORRIGINDO O ERRO 406
-  const storeQuery = useQuery({
-    queryKey: ['store', identifier],
-    queryFn: async (): Promise<Store | null> => {
-      if (!identifier) {
-        console.log('useCatalog: Nenhum identificador fornecido');
-        return null;
-      }
-
-      console.log('useCatalog: Buscando loja para identificador:', identifier);
-
-      // CORREÇÃO CRÍTICA: Detectar corretamente UUID vs slug
-      const isUUID = isValidUUID(identifier);
-      console.log('useCatalog: Tipo detectado:', isUUID ? 'UUID' : 'slug');
-
-      let query = supabase
-        .from('stores')
-        .select('id, name, description, logo_url, is_active')
-        .eq('is_active', true);
-
-      // NUNCA usar UUID como url_slug - isso causa o erro 406
-      if (isUUID) {
-        console.log('useCatalog: Buscando por ID (UUID)');
-        query = query.eq('id', identifier);
-      } else {
-        console.log('useCatalog: Buscando por url_slug');
-        query = query.eq('url_slug', identifier);
-      }
-
-      const { data, error } = await query.maybeSingle();
-
-      if (error) {
-        console.error('useCatalog: Erro ao buscar loja:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.log('useCatalog: Loja não encontrada para:', identifier);
-        return null;
-      }
-
-      console.log('useCatalog: Loja encontrada:', data.name);
-      return data;
-    },
-    enabled: !!identifier,
-    retry: 1,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000
-  });
-
-  // Hook simplificado para configurações - SEM dependência circular
-  const [storeSettings, setStoreSettings] = useState<CatalogSettings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(false);
-
-  const fetchStoreSettings = useCallback(async (storeId: string) => {
-    if (!storeId) return;
-    
-    try {
-      setSettingsLoading(true);
-      console.log('useCatalog: Buscando configurações para store_id:', storeId);
-      
-      const { data, error } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('store_id', storeId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('useCatalog: Erro ao buscar configurações:', error);
-        return;
-      }
-
-      setStoreSettings(data);
-    } catch (error) {
-      console.error('useCatalog: Erro nas configurações:', error);
-    } finally {
-      setSettingsLoading(false);
-    }
-  }, []);
-
-  // Buscar configurações quando store mudar
-  useEffect(() => {
-    if (storeQuery.data?.id) {
-      fetchStoreSettings(storeQuery.data.id);
-    }
-  }, [storeQuery.data?.id, fetchStoreSettings]);
-
-  // Query para produtos com cache otimizado
-  const productsQuery = useQuery({
-    queryKey: ['catalog-products', storeQuery.data?.id, catalogType],
-    queryFn: async () => {
-      if (!storeQuery.data?.id) {
-        console.log('useCatalog: Store ID não disponível');
-        return [];
-      }
-
-      console.log('useCatalog: Buscando produtos para store_id:', storeQuery.data.id);
-
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('store_id', storeQuery.data.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('useCatalog: Erro ao buscar produtos:', error);
-        throw error;
-      }
-
-      console.log('useCatalog: Produtos encontrados:', data?.length || 0);
-      return data || [];
-    },
-    enabled: !!storeQuery.data?.id,
-    retry: 1,
-    refetchOnWindowFocus: false,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000
-  });
-
-  // Filtrar produtos otimizado
+  // Aplicar filtros e busca aos produtos
   const filteredProducts = useMemo(() => {
-    if (!productsQuery.data) return [];
+    console.log('useCatalog: Aplicando filtros:', filters);
+    console.log('useCatalog: Produtos disponíveis:', products.length);
+    
+    if (!products.length) return [];
 
-    let filtered = [...productsQuery.data];
+    let filtered = products.filter(product => {
+      // Filtrar apenas produtos ativos
+      if (!product.is_active) return false;
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(query) ||
-        (product.description && product.description.toLowerCase().includes(query)) ||
-        (product.category && product.category.toLowerCase().includes(query))
-      );
-    }
+      // Filtro de categoria
+      if (filters.category && product.category !== filters.category) {
+        return false;
+      }
 
-    if (filters.category) {
-      filtered = filtered.filter(product => product.category === filters.category);
-    }
+      // Determinar preço baseado no tipo de catálogo
+      const price = catalogType === 'wholesale' 
+        ? (product.wholesale_price || product.retail_price)
+        : product.retail_price;
 
-    if (filters.minPrice !== undefined) {
-      filtered = filtered.filter(product => product.retail_price >= filters.minPrice!);
-    }
+      // Filtro de preço mínimo
+      if (filters.minPrice !== null && filters.minPrice !== undefined) {
+        if (price < filters.minPrice) return false;
+      }
 
-    if (filters.maxPrice !== undefined) {
-      filtered = filtered.filter(product => product.retail_price <= filters.maxPrice!);
-    }
+      // Filtro de preço máximo
+      if (filters.maxPrice !== null && filters.maxPrice !== undefined) {
+        if (price > filters.maxPrice) return false;
+      }
 
-    if (filters.inStock) {
-      filtered = filtered.filter(product => product.stock > 0);
-    }
+      // Filtro de estoque
+      if (filters.inStock) {
+        const availableStock = (product.stock || 0) - (product.reserved_stock || 0);
+        if (availableStock <= 0) return false;
+      }
 
+      // Filtro de busca
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = product.name.toLowerCase().includes(searchLower);
+        const matchesDescription = product.description?.toLowerCase().includes(searchLower);
+        const matchesCategory = product.category?.toLowerCase().includes(searchLower);
+        
+        if (!matchesName && !matchesDescription && !matchesCategory) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    console.log('useCatalog: Produtos após filtros:', filtered.length);
     return filtered;
-  }, [productsQuery.data, searchQuery, filters]);
+  }, [products, filters, searchTerm, catalogType]);
 
-  // Funções otimizadas
-  const initializeCatalog = useCallback(async (storeId: string, type: CatalogType): Promise<boolean> => {
-    console.log('useCatalog: Inicializando catálogo:', storeId, type);
-    setCatalogType(type);
-    return true;
-  }, []);
+  // Obter categorias únicas dos produtos
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(
+      products
+        .filter(product => product.is_active && product.category)
+        .map(product => product.category!)
+    ));
+    
+    return uniqueCategories.sort();
+  }, [products]);
 
-  const searchProducts = useCallback((query: string) => {
-    console.log('useCatalog: Pesquisando:', query);
-    setSearchQuery(query);
-  }, []);
+  // Função para atualizar filtros com validação
+  const updateFilters = (newFilters: Partial<CatalogFilters>) => {
+    console.log('useCatalog: Atualizando filtros:', newFilters);
+    
+    // Sanitizar filtros para evitar valores undefined
+    const sanitizedFilters: CatalogFilters = {};
+    
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        sanitizedFilters[key as keyof CatalogFilters] = value;
+      }
+    });
 
-  const filterProducts = useCallback((filterOptions: FilterOptions) => {
-    console.log('useCatalog: Aplicando filtros:', filterOptions);
-    setFilters(filterOptions);
-  }, []);
+    setFilters(prev => ({
+      ...prev,
+      ...sanitizedFilters
+    }));
+  };
 
-  const loading = storeQuery.isLoading || productsQuery.isLoading;
+  // Função para limpar filtros
+  const clearFilters = () => {
+    console.log('useCatalog: Limpando todos os filtros');
+    setFilters({});
+    setSearchTerm('');
+  };
+
+  // Verificar se o catálogo está ativo nas configurações
+  const isCatalogActive = useMemo(() => {
+    if (!settings) return true; // Default para ativo se não há configurações
+    
+    return catalogType === 'retail' 
+      ? settings.retail_catalog_active !== false
+      : settings.wholesale_catalog_active === true;
+  }, [settings, catalogType]);
+
+  const loading = productsLoading || settingsLoading;
 
   return {
-    // Store data
-    store: storeQuery.data,
-    storeLoading: storeQuery.isLoading,
-    storeError: storeQuery.error,
-    
-    // Products data
-    products: productsQuery.data || [],
-    filteredProducts,
-    productsLoading: productsQuery.isLoading,
-    productsError: productsQuery.error,
-    
-    // Settings data
-    storeSettings,
-    settingsLoading,
-    
-    // Catalog type
-    catalogType,
-    setCatalogType,
-    
-    // Search and filter
-    searchQuery,
+    products: filteredProducts,
+    allProducts: products,
+    categories,
     filters,
+    searchTerm,
     loading,
-    
-    // Actions
-    initializeCatalog,
-    searchProducts,
-    filterProducts,
-    
-    // Refetch functions
-    refetchStore: storeQuery.refetch,
-    refetchProducts: productsQuery.refetch
+    settings,
+    isCatalogActive,
+    updateFilters,
+    setSearchTerm,
+    clearFilters,
+    hasActiveFilters: Object.keys(filters).length > 0 || searchTerm.length > 0
   };
 };
