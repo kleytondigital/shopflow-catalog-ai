@@ -107,6 +107,13 @@ export const useCatalogSettings = (storeId?: string) => {
             delivery: (newSettings.shipping_options as any)?.delivery || false,
             shipping: (newSettings.shipping_options as any)?.shipping || false,
           } : defaultSettings.shipping_options,
+          template_name: newSettings.template_name || 'default',
+          checkout_type: (['whatsapp', 'online', 'both'].includes(newSettings.checkout_type)) ? 
+            newSettings.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
+          show_prices: newSettings.show_prices !== false,
+          show_stock: newSettings.show_stock !== false,
+          allow_categories_filter: newSettings.allow_categories_filter !== false,
+          allow_price_filter: newSettings.allow_price_filter !== false,
         };
         
         setSettings(processedSettings);
@@ -137,7 +144,8 @@ export const useCatalogSettings = (storeId?: string) => {
           seo_title: data.seo_title || null,
           seo_description: data.seo_description || null,
           seo_keywords: data.seo_keywords || null,
-          checkout_type: data.checkout_type || 'both',
+          checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
+            data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
           show_prices: data.show_prices !== false,
           show_stock: data.show_stock !== false,
           allow_categories_filter: data.allow_categories_filter !== false,
@@ -178,6 +186,13 @@ export const useCatalogSettings = (storeId?: string) => {
           delivery: (data.shipping_options as any)?.delivery || false,
           shipping: (data.shipping_options as any)?.shipping || false,
         } : settings.shipping_options,
+        template_name: data.template_name || 'default',
+        checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
+          data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
+        show_prices: data.show_prices !== false,
+        show_stock: data.show_stock !== false,
+        allow_categories_filter: data.allow_categories_filter !== false,
+        allow_price_filter: data.allow_price_filter !== false,
       };
       
       setSettings(processedSettings);
