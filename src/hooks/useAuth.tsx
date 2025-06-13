@@ -132,20 +132,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Evento de autenticação:', event, session?.user?.id);
         
+        // Atualizar o estado imediatamente (síncronamente)
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Buscar perfil do usuário após login
-          await fetchProfile(session.user.id);
+          // Diferir a busca do perfil para evitar loop infinito
+          setTimeout(() => {
+            fetchProfile(session.user.id).finally(() => {
+              setLoading(false);
+            });
+          }, 0);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -157,7 +161,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id).then(() => setLoading(false));
+        // Diferir a busca do perfil para evitar loop infinito
+        setTimeout(() => {
+          fetchProfile(session.user.id).finally(() => {
+            setLoading(false);
+          });
+        }, 0);
       } else {
         setLoading(false);
       }

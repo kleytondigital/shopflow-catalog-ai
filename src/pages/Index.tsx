@@ -43,19 +43,23 @@ const Index = () => {
     );
   }
 
-  // Se não há perfil, mostrar loading
+  // Se não há perfil após loading, algo deu errado
   if (!profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dados do usuário...</p>
+          <h2 className="text-2xl font-bold mb-4">Erro ao carregar perfil</h2>
+          <p className="text-muted-foreground mb-4">
+            Não foi possível carregar suas informações de perfil.
+          </p>
+          <Button onClick={handleLogout}>
+            Fazer Logout
+          </Button>
         </div>
       </div>
     );
   }
 
-  // Log para debug
   console.log('Renderizando Index - Perfil:', profile);
 
   // Para store_admin, verificar se tem loja associada
@@ -100,7 +104,7 @@ const Index = () => {
     );
   }
 
-  // Renderizar dashboard específico baseado no papel do usuário
+  // Para superadmin, mostrar dashboard administrativo
   if (profile.role === 'superadmin') {
     return (
       <div className="flex h-screen">
@@ -132,13 +136,16 @@ const Index = () => {
     );
   } 
 
-  // Fallback - não deveria chegar aqui
+  // Fallback - papel não reconhecido
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-4">Perfil não reconhecido</h2>
         <p className="text-muted-foreground mb-4">
           Seu perfil não está configurado corretamente. Entre em contato com o administrador.
+        </p>
+        <p className="text-sm text-gray-500 mb-4">
+          Papel atual: {profile.role}
         </p>
         <Button onClick={handleLogout}>
           Fazer Logout
