@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Truck, MapPin, CreditCard, Smartphone, Calculator } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Truck, MapPin, CreditCard, Smartphone, Calculator, QrCode, CreditCard as CardIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,7 +16,7 @@ interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   storeSettings: any;
-  storeId?: string; // Novo prop para suportar criação pública
+  storeId?: string;
 }
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSettings, storeId }) => {
@@ -44,6 +44,45 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState('');
+
+  // Configurações de pagamento e envio baseadas no dashboard
+  const availablePaymentMethods = React.useMemo(() => {
+    const methods = [];
+    if (storeSettings?.payment_methods?.pix) {
+      methods.push({ id: 'pix', name: 'PIX', icon: Smartphone });
+    }
+    if (storeSettings?.payment_methods?.credit_card) {
+      methods.push({ id: 'credit_card', name: 'Cartão de Crédito', icon: CreditCard });
+    }
+    if (storeSettings?.payment_methods?.bank_slip) {
+      methods.push({ id: 'bank_slip', name: 'Boleto Bancário', icon: CreditCard });
+    }
+    return methods;
+  }, [storeSettings]);
+
+  const availableShippingMethods = React.useMemo(() => {
+    const methods = [];
+    if (storeSettings?.shipping_options?.pickup) {
+      methods.push({ id: 'pickup', name: 'Retirar na Loja', cost: 0, icon: MapPin });
+    }
+    if (storeSettings?.shipping_options?.delivery) {
+      methods.push({ id: 'delivery', name: 'Entrega Local', cost: 0, icon: Truck });
+    }
+    if (storeSettings?.shipping_options?.shipping) {
+      methods.push({ id: 'shipping', name: 'Correios', cost: shippingCost, icon: Truck });
+    }
+    return methods;
+  }, [storeSettings, shippingCost]);
+
+  // Definir métodos padrão baseados nas configurações
+  useEffect(() => {
+    if (availablePaymentMethods.length > 0) {
+      setPaymentMethod(availablePaymentMethods[0].id);
+    }
+    if (availableShippingMethods.length > 0) {
+      setShippingMethod(availableShippingMethods[0].id);
+    }
+  }, [availablePaymentMethods, availableShippingMethods]);
 
   const finalTotal = totalAmount + shippingCost;
 
@@ -92,7 +131,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         return;
       }
 
-      // Preparar dados do pedido para salvar no banco
+      // Preparar dados do pedido
       const orderData = {
         customer_name: customerData.name.trim(),
         customer_email: customerData.email.trim() || undefined,
@@ -119,30 +158,40 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         payment_method: paymentMethod,
         shipping_cost: shippingCost,
         notes: notes.trim() || undefined,
-        store_id: storeId // Passar store_id para criação pública
+        store_id: storeId
       };
 
       console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
-      // Usar createOrderAsync para obter o resultado diretamente
+      // Criar o pedido
       const savedOrder = await createOrderAsync(orderData);
-      
       console.log('CheckoutModal: Pedido salvo com sucesso:', savedOrder);
       
-      // Enviar para WhatsApp se configurado
-      if (storeSettings?.whatsapp_number) {
+      // Verificar tipo de checkout configurado
+      const checkoutType = storeSettings?.checkout_type || 'both';
+      
+      if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
+        // Enviar para WhatsApp
         const message = generateWhatsAppMessage(orderData);
         window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+        
+        toast({
+          title: "Pedido criado!",
+          description: "Seu pedido foi criado e você será redirecionado para o WhatsApp para finalizar.",
+          duration: 4000,
+        });
+      } else {
+        // Checkout online - será implementado futuramente
+        toast({
+          title: "Pedido criado!",
+          description: "Seu pedido foi criado com sucesso! Em breve você receberá as instruções de pagamento.",
+          duration: 4000,
+        });
       }
 
       // Limpar carrinho e fechar modal
       clearCart();
       onClose();
-      
-      toast({
-        title: "Pedido criado!",
-        description: `Seu pedido foi criado com sucesso! ${storeSettings?.whatsapp_number ? 'Você será redirecionado para o WhatsApp.' : ''}`,
-      });
 
     } catch (error) {
       console.error('CheckoutModal: Erro ao criar pedido:', error);
@@ -208,6 +257,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     };
     return methods[method] || method;
   };
+
+  if (availablePaymentMethods.length === 0 || availableShippingMethods.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configuração Necessária</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <p className="text-gray-600 mb-4">
+              Esta loja ainda não configurou os métodos de pagamento e envio. 
+              Entre em contato diretamente com a loja para fazer seu pedido.
+            </p>
+            <Button onClick={onClose}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -287,37 +355,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                     </CardHeader>
                     <CardContent>
                       <RadioGroup value={shippingMethod} onValueChange={setShippingMethod} className="space-y-3">
-                        <div className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                          <RadioGroupItem value="pickup" id="pickup" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <MapPin size={20} className="text-primary" />
-                              <label htmlFor="pickup" className="font-semibold cursor-pointer text-lg">
-                                Retirar na Loja
-                              </label>
-                              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                                Grátis
-                              </span>
+                        {availableShippingMethods.map((method) => {
+                          const IconComponent = method.icon;
+                          return (
+                            <div key={method.id} className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
+                              <RadioGroupItem value={method.id} id={method.id} />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <IconComponent size={20} className="text-primary" />
+                                  <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
+                                    {method.name}
+                                  </label>
+                                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                    method.cost === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {method.cost === 0 ? 'Grátis' : `R$ ${method.cost.toFixed(2)}`}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-600 mt-1 sm:ml-8">Retire gratuitamente em nossa loja</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                          <RadioGroupItem value="shipping" id="shipping" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <Truck size={20} className="text-primary" />
-                              <label htmlFor="shipping" className="font-semibold cursor-pointer text-lg">
-                                Correios
-                              </label>
-                              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
-                                R$ {shippingCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1 sm:ml-8">Entrega em todo o Brasil</p>
-                          </div>
-                        </div>
+                          );
+                        })}
                       </RadioGroup>
                     </CardContent>
                   </Card>
@@ -334,6 +392,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        {/* ... keep existing code (endereço form) */}
                         <div className="flex gap-2">
                           <Input
                             placeholder="CEP"
@@ -401,21 +460,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                     </CardHeader>
                     <CardContent>
                       <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                        <div className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                          <RadioGroupItem value="pix" id="pix" />
-                          <div className="flex items-center gap-3">
-                            <Smartphone size={20} className="text-primary" />
-                            <label htmlFor="pix" className="font-semibold cursor-pointer text-lg">PIX</label>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
-                          <RadioGroupItem value="credit_card" id="credit_card" />
-                          <div className="flex items-center gap-3">
-                            <CreditCard size={20} className="text-primary" />
-                            <label htmlFor="credit_card" className="font-semibold cursor-pointer text-lg">Cartão de Crédito</label>
-                          </div>
-                        </div>
+                        {availablePaymentMethods.map((method) => {
+                          const IconComponent = method.icon;
+                          return (
+                            <div key={method.id} className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
+                              <RadioGroupItem value={method.id} id={method.id} />
+                              <div className="flex items-center gap-3">
+                                <IconComponent size={20} className="text-primary" />
+                                <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
+                                  {method.name}
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </RadioGroup>
                     </CardContent>
                   </Card>

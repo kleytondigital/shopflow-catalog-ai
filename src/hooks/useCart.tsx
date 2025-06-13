@@ -1,95 +1,80 @@
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { Product } from '@/hooks/useProducts';
-import { CatalogType } from '@/hooks/useCatalog';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export interface CartItem {
   id: string;
-  product: Product;
+  product: {
+    id: string;
+    name: string;
+    retail_price: number;
+    wholesale_price?: number;
+    image_url?: string;
+  };
   quantity: number;
-  catalogType: CatalogType;
   price: number;
   variations?: {
     size?: string;
     color?: string;
   };
+  catalogType: 'retail' | 'wholesale';
 }
 
-interface CartContextType {
-  items: CartItem[];
-  addItem: (product: Product, catalogType: CatalogType, quantity?: number) => void;
-  removeItem: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
-  clearCart: () => void;
-  totalItems: number;
-  totalAmount: number;
-  isOpen: boolean;
-  toggleCart: () => void;
-  openCart: () => void;
-  closeCart: () => void;
-}
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
-
-export const CartProvider = ({ children }: { children: ReactNode }) => {
+export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Carregar carrinho do localStorage
+  // Carregar itens do localStorage
   useEffect(() => {
-    const savedCart = localStorage.getItem('catalog-cart');
-    if (savedCart) {
+    const savedItems = localStorage.getItem('cart-items');
+    if (savedItems) {
       try {
-        setItems(JSON.parse(savedCart));
+        setItems(JSON.parse(savedItems));
       } catch (error) {
         console.error('Erro ao carregar carrinho:', error);
+        localStorage.removeItem('cart-items');
       }
     }
   }, []);
 
-  // Salvar carrinho no localStorage
+  // Salvar no localStorage sempre que items mudarem
   useEffect(() => {
-    localStorage.setItem('catalog-cart', JSON.stringify(items));
+    localStorage.setItem('cart-items', JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product: Product, catalogType: CatalogType, quantity = 1) => {
-    const price = catalogType === 'wholesale' && product.wholesale_price 
-      ? product.wholesale_price 
-      : product.retail_price;
-    
-    const minQuantity = catalogType === 'wholesale' && product.min_wholesale_qty 
-      ? product.min_wholesale_qty 
-      : 1;
-    
-    const finalQuantity = Math.max(quantity, minQuantity);
-    
-    setItems(prev => {
-      const existingItem = prev.find(item => 
-        item.product.id === product.id && item.catalogType === catalogType
+  const addItem = (item: CartItem) => {
+    setItems(current => {
+      const existingIndex = current.findIndex(
+        cartItem => 
+          cartItem.product.id === item.product.id && 
+          cartItem.catalogType === item.catalogType &&
+          JSON.stringify(cartItem.variations) === JSON.stringify(item.variations)
       );
-      
-      if (existingItem) {
-        return prev.map(item =>
-          item.id === existingItem.id
-            ? { ...item, quantity: item.quantity + finalQuantity }
-            : item
-        );
+
+      let newItems;
+      if (existingIndex >= 0) {
+        newItems = [...current];
+        newItems[existingIndex] = {
+          ...newItems[existingIndex],
+          quantity: newItems[existingIndex].quantity + item.quantity
+        };
+      } else {
+        newItems = [...current, item];
       }
-      
-      const newItem: CartItem = {
-        id: `${product.id}-${catalogType}-${Date.now()}`,
-        product,
-        quantity: finalQuantity,
-        catalogType,
-        price
-      };
-      
-      return [...prev, newItem];
+
+      // Mostrar notificação de sucesso
+      toast({
+        title: "Produto adicionado!",
+        description: `${item.product.name} foi adicionado ao carrinho.`,
+        duration: 2000,
+      });
+
+      return newItems;
     });
   };
 
   const removeItem = (itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
+    setItems(current => current.filter(item => item.id !== itemId));
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -97,53 +82,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       removeItem(itemId);
       return;
     }
-    
-    setItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const minQuantity = item.catalogType === 'wholesale' && item.product.min_wholesale_qty 
-          ? item.product.min_wholesale_qty 
-          : 1;
-        return { ...item, quantity: Math.max(quantity, minQuantity) };
-      }
-      return item;
-    }));
+
+    setItems(current =>
+      current.map(item =>
+        item.id === itemId ? { ...item, quantity } : item
+      )
+    );
   };
 
   const clearCart = () => {
     setItems([]);
-    setIsOpen(false);
+    localStorage.removeItem('cart-items');
   };
 
-  const toggleCart = () => setIsOpen(!isOpen);
-  const openCart = () => setIsOpen(true);
-  const closeCart = () => setIsOpen(false);
+  const totalAmount = items.reduce((total, item) => {
+    return total + (item.price * item.quantity);
+  }, 0);
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
 
-  return (
-    <CartContext.Provider value={{
-      items,
-      addItem,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      totalItems,
-      totalAmount,
-      isOpen,
-      toggleCart,
-      openCart,
-      closeCart
-    }}>
-      {children}
-    </CartContext.Provider>
-  );
-};
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart deve ser usado dentro de CartProvider');
-  }
-  return context;
+  return {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalAmount,
+    totalItems
+  };
 };
