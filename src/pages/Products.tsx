@@ -9,8 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategories } from '@/hooks/useCategories';
+import { supabase } from '@/integrations/supabase/client';
 import ProductFormModal from '@/components/products/ProductFormModal';
-import { Plus, Search, Filter, Edit, Trash2, MoreHorizontal, Sparkles } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, MoreHorizontal, Sparkles, Package } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
