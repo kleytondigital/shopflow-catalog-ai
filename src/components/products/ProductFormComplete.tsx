@@ -81,23 +81,13 @@ const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' 
         store_id: initialData?.store_id || ''
       };
 
-      // Criar/atualizar produto primeiro
-      const result = await onSubmit(productData as CreateProductData | UpdateProductData);
-      
-      // Se é criação e temos imagens draft, fazer upload
-      if (mode === 'create' && draftImages.length > 0 && result && typeof result === 'object' && 'data' in result && result.data?.id) {
-        const uploadResult = await uploadDraftImages(result.data.id);
-        if (uploadResult.success && uploadResult.urls.length > 0) {
-          // Atualizar produto com a primeira imagem como imagem principal
-          const updateData = {
-            id: result.data.id,
-            image_url: uploadResult.urls[0]
-          };
-          await onSubmit(updateData as UpdateProductData);
-        }
-      }
+      // Criar/atualizar produto
+      await onSubmit(productData as CreateProductData | UpdateProductData);
 
-      clearDraftImages();
+      // Limpar imagens draft após sucesso
+      if (mode === 'create' && draftImages.length > 0) {
+        clearDraftImages();
+      }
       
       toast({
         title: mode === 'edit' ? 'Produto atualizado' : 'Produto criado',
