@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, Truck, MapPin, CreditCard, Smartphone, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           name: item.product.name,
           quantity: item.quantity,
           price: item.price,
-          variation: item.variation || undefined
+          variation: item.variations ? `${item.variations.size || ''} ${item.variations.color || ''}`.trim() : undefined
         })),
         shipping_address: shippingMethod !== 'pickup' ? {
           street: shippingAddress.street,
