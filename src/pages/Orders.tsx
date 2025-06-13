@@ -52,8 +52,8 @@ interface Order {
 const Orders = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
 
@@ -144,8 +144,8 @@ const Orders = () => {
   const filteredOrders = mockOrders.filter(order => {
     const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        order.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const statusMatch = filterStatus ? order.status === filterStatus : true;
-    const typeMatch = filterType ? order.order_type === filterType : true;
+    const statusMatch = filterStatus === 'all' || order.status === filterStatus;
+    const typeMatch = filterType === 'all' || order.order_type === filterType;
     
     return searchMatch && statusMatch && typeMatch;
   });
@@ -201,7 +201,7 @@ const Orders = () => {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
                   <SelectItem value="preparing">Preparando</SelectItem>
@@ -216,7 +216,7 @@ const Orders = () => {
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="retail">Varejo</SelectItem>
                   <SelectItem value="wholesale">Atacado</SelectItem>
                 </SelectContent>
