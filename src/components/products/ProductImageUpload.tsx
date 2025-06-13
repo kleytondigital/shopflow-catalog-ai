@@ -15,7 +15,7 @@ const ProductImageUpload = ({
   onImageUpload, 
   images, 
   onImageRemove, 
-  maxImages = 3 
+  maxImages = 5 
 }: ProductImageUploadProps) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -82,6 +82,10 @@ const ProductImageUpload = ({
       setUploading(true);
       try {
         await onImageUpload(file, images.length + i + 1);
+        toast({
+          title: "Upload realizado",
+          description: "Imagem adicionada com sucesso!",
+        });
       } catch (error) {
         console.error('Erro no upload:', error);
         toast({
@@ -102,7 +106,7 @@ const ProductImageUpload = ({
             <img
               src={image}
               alt={`Produto ${index + 1}`}
-              className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200"
+              className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200 transition-transform duration-200"
             />
             <button
               onClick={() => onImageRemove(index)}
@@ -132,7 +136,7 @@ const ProductImageUpload = ({
             onClick={() => document.getElementById('image-upload')?.click()}
           >
             {uploading ? (
-              <div className="loading-spinner" />
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
             ) : (
               <Upload size={20} className="text-gray-400" />
             )}
@@ -151,7 +155,7 @@ const ProductImageUpload = ({
 
       <div className="text-sm text-gray-500">
         <p>Adicione até {maxImages} imagens • Máximo 5MB por imagem</p>
-        <p>A primeira imagem será a principal</p>
+        <p>A primeira imagem será a principal • Arraste e solte ou clique para selecionar</p>
       </div>
     </div>
   );

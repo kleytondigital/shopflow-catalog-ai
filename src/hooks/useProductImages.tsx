@@ -27,7 +27,10 @@ export const useProductImages = (productId?: string) => {
   const [loading, setLoading] = useState(true);
 
   const fetchImages = async () => {
-    if (!productId) return;
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -46,34 +49,74 @@ export const useProductImages = (productId?: string) => {
     }
   };
 
-  const uploadImage = async (file: File, productId: string, imageOrder: number = 1) => {
+  const ensureBucketExists = async () => {
     try {
-      // Verificar se o bucket existe, se não, criar
       const { data: buckets } = await supabase.storage.listBuckets();
       const productImagesBucket = buckets?.find(bucket => bucket.name === 'product-images');
       
       if (!productImagesBucket) {
-        await supabase.storage.createBucket('product-images', { public: true });
+        const { error } = await supabase.storage.createBucket('product-images', { 
+          public: true,
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+          fileSizeLimit: 5242880 // 5MB
+        });
+        if (error) {
+          console.error('Erro ao criar bucket:', error);
+        }
       }
+      return true;
+    } catch (error) {
+      console.error('Erro ao verificar bucket:', error);
+      return false;
+    }
+  };
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${productId}/${Date.now()}.${fileExt}`;
+  const uploadImage = async (file: File, productId: string, imageOrder: number = 1) => {
+    try {
+      console.log('Iniciando upload da imagem:', file.name);
       
+      // Garantir que o bucket existe
+      await ensureBucketExists();
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      const fileName = `${productId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      
+      console.log('Nome do arquivo:', fileName);
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload realizado:', uploadData);
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
 
+      console.log('URL pública:', publicUrl);
+
+      // Verificar se é a primeira imagem para definir como principal
+      const existingImages = await supabase
+        .from('product_images')
+        .select('id')
+        .eq('product_id', productId);
+
+      const isPrimary = !existingImages.data || existingImages.data.length === 0;
+
       const imageData: CreateImageData = {
         product_id: productId,
         image_url: publicUrl,
         image_order: imageOrder,
-        is_primary: imageOrder === 1
+        is_primary: isPrimary,
+        alt_text: file.name
       };
 
       const { data, error } = await supabase
@@ -82,11 +125,16 @@ export const useProductImages = (productId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao salvar imagem no banco:', error);
+        throw error;
+      }
+
+      console.log('Imagem salva no banco:', data);
       await fetchImages();
       return { data, error: null };
     } catch (error) {
-      console.error('Erro ao fazer upload da imagem:', error);
+      console.error('Erro completo no upload:', error);
       return { data: null, error };
     }
   };

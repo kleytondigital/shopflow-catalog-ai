@@ -9,16 +9,21 @@ interface ProductDescriptionAIProps {
   productName: string;
   category?: string;
   onDescriptionGenerated: (description: string) => void;
+  onSEOGenerated?: (seo: any) => void;
   disabled?: boolean;
+  showSEOButton?: boolean;
 }
 
 const ProductDescriptionAI = ({ 
   productName, 
   category, 
-  onDescriptionGenerated, 
-  disabled 
+  onDescriptionGenerated,
+  onSEOGenerated,
+  disabled,
+  showSEOButton = false
 }: ProductDescriptionAIProps) => {
   const [loading, setLoading] = useState(false);
+  const [loadingSEO, setLoadingSEO] = useState(false);
   const { toast } = useToast();
 
   const generateDescription = async () => {
@@ -64,22 +69,83 @@ const ProductDescriptionAI = ({
     }
   };
 
+  const generateSEO = async () => {
+    if (!productName.trim()) {
+      toast({
+        title: "Nome do produto obrigatório",
+        description: "Por favor, insira o nome do produto antes de gerar o SEO",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoadingSEO(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          productName: productName.trim(),
+          category: category || undefined
+        }
+      });
+
+      if (error) throw error;
+
+      if (data && onSEOGenerated) {
+        onSEOGenerated(data);
+        toast({
+          title: "SEO gerado",
+          description: "Meta dados SEO foram gerados com sucesso pela IA"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao gerar SEO:', error);
+      toast({
+        title: "Erro ao gerar SEO",
+        description: "Verifique se a OpenAI API está configurada corretamente",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingSEO(false);
+    }
+  };
+
   return (
-    <Button 
-      type="button"
-      variant="outline" 
-      size="sm"
-      onClick={generateDescription}
-      disabled={disabled || loading || !productName.trim()}
-      className="flex items-center gap-2"
-    >
-      {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Sparkles className="h-4 w-4" />
+    <div className="flex gap-2">
+      <Button 
+        type="button"
+        variant="outline" 
+        size="sm"
+        onClick={generateDescription}
+        disabled={disabled || loading || !productName.trim()}
+        className="flex items-center gap-2"
+      >
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="h-4 w-4" />
+        )}
+        {loading ? 'Gerando...' : 'Gerar Descrição'}
+      </Button>
+
+      {showSEOButton && (
+        <Button 
+          type="button"
+          variant="outline" 
+          size="sm"
+          onClick={generateSEO}
+          disabled={disabled || loadingSEO || !productName.trim()}
+          className="flex items-center gap-2"
+        >
+          {loadingSEO ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {loadingSEO ? 'Gerando...' : 'Gerar SEO'}
+        </Button>
       )}
-      {loading ? 'Gerando...' : 'Gerar com IA'}
-    </Button>
+    </div>
   );
 };
 

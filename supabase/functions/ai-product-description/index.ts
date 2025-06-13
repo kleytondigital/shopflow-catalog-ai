@@ -21,13 +21,17 @@ serve(async (req) => {
       )
     }
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    // Usar OPENAI_KEY que é o nome correto do secret
+    const openaiApiKey = Deno.env.get('OPENAI_KEY')
     if (!openaiApiKey) {
+      console.error('OPENAI_KEY não encontrada nas variáveis de ambiente')
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key não configurada' }),
+        JSON.stringify({ error: 'OpenAI API key não configurada. Verifique as configurações no Supabase.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Gerando descrição para produto:', productName, 'categoria:', category)
 
     const prompt = `
 Crie uma descrição comercial persuasiva para o produto "${productName}"${category ? ` da categoria "${category}"` : ''}.
@@ -38,6 +42,7 @@ A descrição deve:
 - Usar linguagem clara e envolvente
 - Ter entre 100-200 palavras
 - Incluir características que despertem interesse de compra
+- Usar linguagem brasileira informal mas profissional
 
 Produto: ${productName}
 ${category ? `Categoria: ${category}` : ''}
@@ -56,7 +61,7 @@ Responda apenas com a descrição, sem formatação adicional.
         messages: [
           {
             role: 'system',
-            content: 'Você é um especialista em copywriting para e-commerce brasileiro. Crie descrições que convertem visitantes em compradores.'
+            content: 'Você é um especialista em copywriting para e-commerce brasileiro. Crie descrições que convertem visitantes em compradores usando linguagem brasileira.'
           },
           {
             role: 'user',
@@ -68,13 +73,16 @@ Responda apenas com a descrição, sem formatação adicional.
       }),
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Erro na API do OpenAI')
+      const errorData = await response.json()
+      console.error('Erro da OpenAI API:', errorData)
+      throw new Error(errorData.error?.message || 'Erro na API do OpenAI')
     }
 
+    const data = await response.json()
     const description = data.choices[0]?.message?.content?.trim()
+
+    console.log('Descrição gerada com sucesso')
 
     return new Response(
       JSON.stringify({ description }),
@@ -84,7 +92,10 @@ Responda apenas com a descrição, sem formatação adicional.
   } catch (error) {
     console.error('Erro ao gerar descrição:', error)
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ 
+        error: 'Erro interno do servidor',
+        details: error.message 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
