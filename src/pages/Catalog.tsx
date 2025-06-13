@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
@@ -216,7 +215,6 @@ const CatalogContent = () => {
           {showFilters && (
             <div className="hidden lg:block w-80 flex-shrink-0">
               <FilterSidebar
-                products={products}
                 onFilter={handleFilter}
                 isOpen={true}
                 onClose={() => {}}
@@ -227,7 +225,6 @@ const CatalogContent = () => {
           {/* Mobile Filter Sidebar */}
           {showFilters && (
             <FilterSidebar
-              products={products}
               onFilter={handleFilter}
               isOpen={filterSidebarOpen}
               onClose={() => setFilterSidebarOpen(false)}
