@@ -1,0 +1,57 @@
+
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Product } from '@/hooks/useProducts';
+import { CatalogType } from '@/hooks/useCatalog';
+import ModernTemplate from './templates/ModernTemplate';
+import MinimalTemplate from './templates/MinimalTemplate';
+import ElegantTemplate from './templates/ElegantTemplate';
+
+interface TemplateSelectorProps {
+  product: Product;
+  catalogType: CatalogType;
+  templateName: string;
+  onAddToCart: (product: Product) => void;
+  onAddToWishlist: (product: Product) => void;
+  onQuickView: (product: Product) => void;
+  isInWishlist: boolean;
+  showPrices: boolean;
+  showStock: boolean;
+}
+
+const TemplateSelector: React.FC<TemplateSelectorProps> = ({
+  product,
+  catalogType,
+  templateName,
+  onAddToCart,
+  onAddToWishlist,
+  onQuickView,
+  isInWishlist,
+  showPrices,
+  showStock
+}) => {
+  const templateProps = {
+    product,
+    catalogType,
+    onAddToCart,
+    onAddToWishlist,
+    onQuickView,
+    isInWishlist,
+    showPrices,
+    showStock
+  };
+
+  switch (templateName) {
+    case 'modern':
+      return <ModernTemplate {...templateProps} />;
+    case 'minimal':
+      return <MinimalTemplate {...templateProps} />;
+    case 'elegant':
+      return <ElegantTemplate {...templateProps} />;
+    default:
+      return <ModernTemplate {...templateProps} />;
+  }
+};
+
+export default TemplateSelector;

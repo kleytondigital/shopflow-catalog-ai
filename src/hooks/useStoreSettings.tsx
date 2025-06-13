@@ -82,11 +82,12 @@ export const useStoreSettings = (storeId?: string) => {
     }
   };
 
+  // Correção: dependências específicas para evitar loop
   useEffect(() => {
-    if (profile) {
+    if (profile?.store_id || storeId) {
       fetchSettings();
     }
-  }, [profile, storeId]);
+  }, [profile?.store_id, storeId]); // Dependências específicas
 
   return {
     settings,

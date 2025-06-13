@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -53,7 +52,7 @@ const StoreInfoSettings = () => {
     }
   });
 
-  // Carregar dados da loja quando disponível
+  // Correção: usar apenas currentStore como dependência
   useEffect(() => {
     if (currentStore) {
       form.reset({
@@ -74,7 +73,7 @@ const StoreInfoSettings = () => {
         }
       });
     }
-  }, [currentStore, form]);
+  }, [currentStore]); // Apenas currentStore
 
   const onSubmit = async (data: StoreInfoFormData) => {
     try {

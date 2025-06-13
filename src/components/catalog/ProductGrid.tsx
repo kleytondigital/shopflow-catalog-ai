@@ -1,9 +1,9 @@
 
 import React, { memo } from 'react';
 import { Loader2 } from 'lucide-react';
-import ProductCard from './ProductCard';
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
+import TemplateSelector from './TemplateSelector';
 
 interface ProductGridProps {
   products: Product[];
@@ -11,7 +11,11 @@ interface ProductGridProps {
   loading: boolean;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
+  onAddToCart: (product: Product) => void;
   wishlist: Product[];
+  templateName?: string;
+  showPrices?: boolean;
+  showStock?: boolean;
 }
 
 // Skeleton component para loading state
@@ -55,7 +59,11 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
   loading,
   onAddToWishlist,
   onQuickView,
-  wishlist
+  onAddToCart,
+  wishlist,
+  templateName = 'modern',
+  showPrices = true,
+  showStock = true
 }) => {
   if (loading) {
     return (
@@ -71,16 +79,31 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
     return <EmptyState />;
   }
 
+  const getGridCols = () => {
+    switch (templateName) {
+      case 'elegant':
+        return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+      case 'minimal':
+        return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+      default:
+        return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className={`grid ${getGridCols()} gap-6`}>
       {products.map((product) => (
         <div key={product.id} className="transition-opacity duration-200">
-          <ProductCard
+          <TemplateSelector
             product={product}
             catalogType={catalogType}
+            templateName={templateName}
+            onAddToCart={onAddToCart}
             onAddToWishlist={onAddToWishlist}
             onQuickView={onQuickView}
             isInWishlist={wishlist.some(item => item.id === product.id)}
+            showPrices={showPrices}
+            showStock={showStock}
           />
         </div>
       ))}
