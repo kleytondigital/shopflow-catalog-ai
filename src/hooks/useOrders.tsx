@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStockMovements } from '@/hooks/useStockMovements';
 import type { Database } from '@/integrations/supabase/types';
 
 export interface OrderItem {
@@ -83,6 +83,7 @@ const convertOrderItemsToJson = (items: OrderItem[]): any => {
 export const useOrders = (filters: OrderFilters = {}) => {
   const { profile, isSuperadmin } = useAuth();
   const queryClient = useQueryClient();
+  const { createStockMovement } = useStockMovements();
 
   // Função para buscar pedidos
   const fetchOrders = async (): Promise<Order[]> => {
@@ -158,12 +159,24 @@ export const useOrders = (filters: OrderFilters = {}) => {
     retry: 1
   });
 
-  // Mutation para atualizar status do pedido
+  // Mutation para atualizar status do pedido com gestão de estoque
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
       console.log('Atualizando status do pedido:', orderId, status);
       
-      const { data, error } = await supabase
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select('*, items')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('Erro ao buscar pedido:', orderError);
+        throw orderError;
+      }
+
+      // Atualizar status do pedido
+      const { data: updatedOrder, error } = await supabase
         .from('orders')
         .update({ 
           status: status as OrderStatus, 
@@ -178,21 +191,93 @@ export const useOrders = (filters: OrderFilters = {}) => {
         throw error;
       }
 
-      return data;
+      // Processar mudanças de estoque baseado no status
+      const items = convertJsonToOrderItems(order.items);
+      
+      if (status === 'confirmed' && !order.stock_reserved) {
+        // Reservar estoque quando pedido é confirmado
+        for (const item of items) {
+          await createStockMovement({
+            product_id: item.id,
+            order_id: orderId,
+            movement_type: 'reservation',
+            quantity: item.quantity,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 horas
+            notes: `Estoque reservado para pedido confirmado`
+          });
+        }
+
+        // Marcar como estoque reservado
+        await supabase
+          .from('orders')
+          .update({ 
+            stock_reserved: true,
+            reservation_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          })
+          .eq('id', orderId);
+      } else if (status === 'delivered') {
+        // Confirmar venda quando pedido é entregue
+        for (const item of items) {
+          await createStockMovement({
+            product_id: item.id,
+            order_id: orderId,
+            movement_type: 'sale',
+            quantity: item.quantity,
+            notes: `Venda confirmada - pedido entregue`
+          });
+        }
+      } else if (status === 'cancelled') {
+        // Liberar estoque reservado quando pedido é cancelado
+        if (order.stock_reserved) {
+          for (const item of items) {
+            await createStockMovement({
+              product_id: item.id,
+              order_id: orderId,
+              movement_type: 'release',
+              quantity: item.quantity,
+              notes: `Estoque liberado - pedido cancelado`
+            });
+          }
+        }
+      }
+
+      return updatedOrder;
     },
     onSuccess: () => {
-      // Invalidar cache para refrescar a lista
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
     }
   });
 
-  // Mutation para criar novo pedido
+  // Mutation para criar novo pedido com gestão de estoque
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: Partial<Order>) => {
       console.log('Criando novo pedido:', orderData);
       
       if (!profile?.store_id) {
         throw new Error('Store ID não encontrado');
+      }
+
+      // Verificar disponibilidade de estoque
+      if (orderData.items) {
+        for (const item of orderData.items) {
+          const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('stock, reserved_stock, allow_negative_stock')
+            .eq('id', item.id)
+            .single();
+
+          if (productError) {
+            console.error('Erro ao verificar produto:', productError);
+            throw new Error(`Produto ${item.name} não encontrado`);
+          }
+
+          const availableStock = product.stock - (product.reserved_stock || 0);
+          if (availableStock < item.quantity && !product.allow_negative_stock) {
+            throw new Error(`Estoque insuficiente para ${item.name}. Disponível: ${availableStock}`);
+          }
+        }
       }
 
       // Preparar dados para inserção no formato esperado pelo banco
@@ -206,6 +291,8 @@ export const useOrders = (filters: OrderFilters = {}) => {
         items: convertOrderItemsToJson(orderData.items || []),
         shipping_address: orderData.shipping_address || null,
         store_id: profile.store_id,
+        stock_reserved: false,
+        reservation_expires_at: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -221,10 +308,37 @@ export const useOrders = (filters: OrderFilters = {}) => {
         throw error;
       }
 
+      // Se o pedido for criado como confirmado, reservar estoque automaticamente
+      if (newOrderData.status === 'confirmed' && orderData.items) {
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+        
+        for (const item of orderData.items) {
+          await createStockMovement({
+            product_id: item.id,
+            order_id: data.id,
+            movement_type: 'reservation',
+            quantity: item.quantity,
+            expires_at: expiresAt.toISOString(),
+            notes: `Estoque reservado automaticamente`
+          });
+        }
+
+        // Atualizar pedido com informações de reserva
+        await supabase
+          .from('orders')
+          .update({ 
+            stock_reserved: true,
+            reservation_expires_at: expiresAt.toISOString()
+          })
+          .eq('id', data.id);
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
     }
   });
 

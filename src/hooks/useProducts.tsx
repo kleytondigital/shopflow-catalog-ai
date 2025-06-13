@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStockMovements } from '@/hooks/useStockMovements';
 
 export interface Product {
   id: string;
@@ -12,9 +12,12 @@ export interface Product {
   retail_price: number;
   wholesale_price: number | null;
   stock: number;
+  reserved_stock: number;
   min_wholesale_qty: number | null;
   image_url: string | null;
   is_active: boolean;
+  allow_negative_stock: boolean;
+  stock_alert_threshold: number | null;
   meta_title: string | null;
   meta_description: string | null;
   keywords: string | null;
@@ -48,6 +51,7 @@ export const useProducts = (storeId?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
+  const { createStockMovement } = useStockMovements();
 
   const fetchProducts = async () => {
     try {
@@ -66,6 +70,111 @@ export const useProducts = (storeId?: string) => {
       console.error('Erro ao buscar produtos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para calcular estoque disponível
+  const getAvailableStock = (product: Product): number => {
+    return product.stock - (product.reserved_stock || 0);
+  };
+
+  // Função para verificar se estoque está baixo
+  const isLowStock = (product: Product): boolean => {
+    const threshold = product.stock_alert_threshold || 5;
+    return getAvailableStock(product) <= threshold;
+  };
+
+  // Função para atualizar estoque com movimentação
+  const updateStock = async (productId: string, newStock: number, notes?: string) => {
+    try {
+      console.log('Atualizando estoque do produto:', productId, 'para:', newStock);
+
+      createStockMovement({
+        product_id: productId,
+        movement_type: 'adjustment',
+        quantity: newStock,
+        notes: notes || 'Ajuste manual de estoque'
+      });
+
+      await fetchProducts();
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('Erro ao atualizar estoque:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Função para reservar estoque
+  const reserveStock = async (productId: string, quantity: number, orderId?: string, expiresInHours: number = 24) => {
+    try {
+      console.log('Reservando estoque:', productId, quantity);
+
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Produto não encontrado');
+      }
+
+      const availableStock = getAvailableStock(product);
+      if (availableStock < quantity && !product.allow_negative_stock) {
+        throw new Error(`Estoque insuficiente. Disponível: ${availableStock}`);
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + expiresInHours);
+
+      createStockMovement({
+        product_id: productId,
+        order_id: orderId,
+        movement_type: 'reservation',
+        quantity: quantity,
+        expires_at: expiresAt.toISOString(),
+        notes: `Reserva para pedido ${orderId || 'manual'}`
+      });
+
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('Erro ao reservar estoque:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Função para confirmar venda (baixa definitiva)
+  const confirmSale = async (productId: string, quantity: number, orderId?: string) => {
+    try {
+      console.log('Confirmando venda:', productId, quantity);
+
+      createStockMovement({
+        product_id: productId,
+        order_id: orderId,
+        movement_type: 'sale',
+        quantity: quantity,
+        notes: `Venda confirmada para pedido ${orderId || 'manual'}`
+      });
+
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('Erro ao confirmar venda:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Função para retornar produto ao estoque
+  const returnStock = async (productId: string, quantity: number, orderId?: string, notes?: string) => {
+    try {
+      console.log('Retornando produto ao estoque:', productId, quantity);
+
+      createStockMovement({
+        product_id: productId,
+        order_id: orderId,
+        movement_type: 'return',
+        quantity: quantity,
+        notes: notes || `Devolução do pedido ${orderId || 'manual'}`
+      });
+
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('Erro ao retornar produto:', error);
+      return { data: null, error };
     }
   };
 
@@ -146,13 +255,25 @@ export const useProducts = (storeId?: string) => {
     }
   }, [profile, storeId]);
 
+  // Produtos com estoque baixo
+  const lowStockProducts = products.filter(isLowStock);
+
   return {
     products,
     loading,
+    lowStockProducts,
     fetchProducts,
     createProduct,
     updateProduct,
     deleteProduct,
-    getProduct
+    getProduct,
+    
+    // Funções de estoque
+    getAvailableStock,
+    isLowStock,
+    updateStock,
+    reserveStock,
+    confirmSale,
+    returnStock
   };
 };

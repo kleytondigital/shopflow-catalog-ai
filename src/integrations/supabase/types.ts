@@ -145,8 +145,10 @@ export type Database = {
           id: string
           items: Json
           order_type: Database["public"]["Enums"]["catalog_type"]
+          reservation_expires_at: string | null
           shipping_address: Json | null
           status: Database["public"]["Enums"]["order_status"]
+          stock_reserved: boolean
           store_id: string
           total_amount: number
           updated_at: string
@@ -159,8 +161,10 @@ export type Database = {
           id?: string
           items?: Json
           order_type?: Database["public"]["Enums"]["catalog_type"]
+          reservation_expires_at?: string | null
           shipping_address?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
+          stock_reserved?: boolean
           store_id: string
           total_amount?: number
           updated_at?: string
@@ -173,8 +177,10 @@ export type Database = {
           id?: string
           items?: Json
           order_type?: Database["public"]["Enums"]["catalog_type"]
+          reservation_expires_at?: string | null
           shipping_address?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
+          stock_reserved?: boolean
           store_id?: string
           total_amount?: number
           updated_at?: string
@@ -286,6 +292,7 @@ export type Database = {
       }
       products: {
         Row: {
+          allow_negative_stock: boolean
           category: string | null
           created_at: string
           description: string | null
@@ -297,14 +304,17 @@ export type Database = {
           meta_title: string | null
           min_wholesale_qty: number | null
           name: string
+          reserved_stock: number
           retail_price: number
           seo_slug: string | null
           stock: number
+          stock_alert_threshold: number | null
           store_id: string
           updated_at: string
           wholesale_price: number | null
         }
         Insert: {
+          allow_negative_stock?: boolean
           category?: string | null
           created_at?: string
           description?: string | null
@@ -316,14 +326,17 @@ export type Database = {
           meta_title?: string | null
           min_wholesale_qty?: number | null
           name: string
+          reserved_stock?: number
           retail_price?: number
           seo_slug?: string | null
           stock?: number
+          stock_alert_threshold?: number | null
           store_id: string
           updated_at?: string
           wholesale_price?: number | null
         }
         Update: {
+          allow_negative_stock?: boolean
           category?: string | null
           created_at?: string
           description?: string | null
@@ -335,9 +348,11 @@ export type Database = {
           meta_title?: string | null
           min_wholesale_qty?: number | null
           name?: string
+          reserved_stock?: number
           retail_price?: number
           seo_slug?: string | null
           stock?: number
+          stock_alert_threshold?: number | null
           store_id?: string
           updated_at?: string
           wholesale_price?: number | null
@@ -386,6 +401,70 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fk_profiles_store_id"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          movement_type: string
+          new_stock: number
+          notes: string | null
+          order_id: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          movement_type: string
+          new_stock: number
+          notes?: string | null
+          order_id?: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          movement_type?: string
+          new_stock?: number
+          notes?: string | null
+          order_id?: string | null
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -528,6 +607,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_available_stock: {
+        Args: { product_uuid: string }
+        Returns: number
+      }
       get_user_store_id: {
         Args: { _user_id: string }
         Returns: string
@@ -546,6 +629,10 @@ export type Database = {
       is_superadmin: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      release_expired_reservations: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
     }
     Enums: {
