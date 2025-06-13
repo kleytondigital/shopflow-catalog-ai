@@ -33,7 +33,7 @@ const Index = () => {
   };
 
   // Mostrar loading enquanto carrega o perfil
-  if (loading || !profile) {
+  if (loading) {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -45,6 +45,23 @@ const Index = () => {
       </ProtectedRoute>
     );
   }
+
+  // Se não há perfil, mostrar loading
+  if (!profile) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando dados do usuário...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Log para debug
+  console.log('Renderizando Index - Perfil:', profile);
 
   // Renderizar dashboard específico baseado no papel do usuário
   if (profile.role === 'superadmin') {
@@ -80,8 +97,11 @@ const Index = () => {
   
   // Para store_admin, verificar se tem loja associada
   if (profile.role === 'store_admin') {
+    console.log('Store admin detectado - store_id:', profile.store_id);
+    
     // Se não tem store_id, mostrar o wizard de configuração
     if (!profile.store_id) {
+      console.log('Store admin sem loja - mostrando StoreSetup');
       return (
         <ProtectedRoute>
           <StoreSetup />
@@ -90,6 +110,7 @@ const Index = () => {
     }
 
     // Se tem store_id, mostrar o dashboard da loja
+    console.log('Store admin com loja - mostrando StoreDashboard');
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-background">

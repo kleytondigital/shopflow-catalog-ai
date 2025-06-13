@@ -23,6 +23,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   createStoreForUser: (userId: string, storeName: string, description?: string) => Promise<{ error: any }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
@@ -55,8 +56,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshProfile = async () => {
+    if (user?.id) {
+      console.log('Recarregando perfil do usuário:', user.id);
+      await fetchProfile(user.id);
+    }
+  };
+
   const createStoreForUser = async (userId: string, storeName: string, description?: string) => {
     try {
+      console.log('Criando loja para usuário:', userId, 'Nome:', storeName);
+
       // Criar a loja
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
@@ -71,7 +81,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
 
-      if (storeError) throw storeError;
+      if (storeError) {
+        console.error('Erro ao criar loja:', storeError);
+        throw storeError;
+      }
+
+      console.log('Loja criada:', storeData);
 
       // Associar o usuário à loja criada
       const { error: profileError } = await supabase
@@ -79,7 +94,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .update({ store_id: storeData.id })
         .eq('id', userId);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Erro ao associar usuário à loja:', profileError);
+        throw profileError;
+      }
+
+      console.log('Usuário associado à loja com sucesso');
 
       // Criar configurações padrão da loja
       const { error: settingsError } = await supabase
@@ -92,7 +112,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           wholesale_catalog_active: false
         }]);
 
-      if (settingsError) throw settingsError;
+      if (settingsError) {
+        console.error('Erro ao criar configurações da loja:', settingsError);
+        throw settingsError;
+      }
+
+      console.log('Configurações da loja criadas com sucesso');
 
       // Atualizar o perfil local
       await fetchProfile(userId);
@@ -115,9 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           // Buscar perfil do usuário após login
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          await fetchProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -134,10 +157,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id).then(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -194,6 +217,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signUp,
     signOut,
     createStoreForUser,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

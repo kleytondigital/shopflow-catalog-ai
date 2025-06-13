@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Store, Sparkles } from 'lucide-react';
 
 const StoreSetup = () => {
-  const { profile, createStoreForUser } = useAuth();
+  const { profile, createStoreForUser, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,6 +25,8 @@ const StoreSetup = () => {
     setLoading(true);
     
     try {
+      console.log('Criando loja no StoreSetup:', formData);
+      
       const { error } = await createStoreForUser(
         profile.id,
         formData.name,
@@ -41,13 +43,15 @@ const StoreSetup = () => {
       } else {
         toast({
           title: "Sucesso!",
-          description: "Sua loja foi criada com sucesso! Redirecionando...",
+          description: "Sua loja foi criada com sucesso!",
         });
         
-        // Aguardar um pouco para o toast aparecer e então recarregar
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // Recarregar o perfil para garantir que o store_id seja atualizado
+        console.log('Recarregando perfil após criação da loja...');
+        await refreshProfile();
+        
+        // O componente pai (Index) vai detectar automaticamente que agora há store_id
+        // e renderizar o dashboard apropriado
       }
     } catch (error) {
       console.error('Erro inesperado ao criar loja:', error);
