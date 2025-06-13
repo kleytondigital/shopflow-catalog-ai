@@ -1,37 +1,23 @@
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
-export type UserRole = 'superadmin' | 'store_admin';
+import { useAuthSession } from '@/hooks/useAuthSession';
 
 export interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
-  role: UserRole;
+  role: 'superadmin' | 'store_admin';
   store_id: string | null;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-interface AuthContextType {
-  user: User | null;
-  profile: UserProfile | null;
-  session: Session | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-  createStoreForUser: (userId: string, storeName: string, description?: string) => Promise<{ error: any }>;
-  refreshProfile: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const useAuth = () => {
+  const { user, session, loading: sessionLoading } = useAuthSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -42,200 +28,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        return;
+        return null;
       }
 
       console.log('Perfil encontrado:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Erro inesperado ao buscar perfil:', error);
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (user?.id) {
-      console.log('Recarregando perfil do usuário:', user.id);
-      await fetchProfile(user.id);
-    }
-  };
-
-  const createStoreForUser = async (userId: string, storeName: string, description?: string) => {
-    try {
-      console.log('Criando loja para usuário:', userId, 'Nome:', storeName);
-
-      // Criar a loja
-      const { data: storeData, error: storeError } = await supabase
-        .from('stores')
-        .insert([{
-          name: storeName,
-          description: description || `Loja de ${storeName}`,
-          owner_id: userId,
-          is_active: true,
-          plan_type: 'basic',
-          monthly_fee: 0
-        }])
-        .select()
-        .single();
-
-      if (storeError) {
-        console.error('Erro ao criar loja:', storeError);
-        throw storeError;
-      }
-
-      console.log('Loja criada:', storeData);
-
-      // Associar o usuário à loja criada
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ store_id: storeData.id })
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error('Erro ao associar usuário à loja:', profileError);
-        throw profileError;
-      }
-
-      console.log('Usuário associado à loja com sucesso');
-
-      // Criar configurações padrão da loja
-      const { error: settingsError } = await supabase
-        .from('store_settings')
-        .insert([{
-          store_id: storeData.id,
-          payment_methods: { pix: true, credit_card: false, bank_slip: false },
-          shipping_options: { pickup: true, delivery: false, shipping: false },
-          retail_catalog_active: true,
-          wholesale_catalog_active: false
-        }]);
-
-      if (settingsError) {
-        console.error('Erro ao criar configurações da loja:', settingsError);
-        throw settingsError;
-      }
-
-      console.log('Configurações da loja criadas com sucesso');
-
-      // Atualizar o perfil local
-      await fetchProfile(userId);
-
-      return { error: null };
-    } catch (error) {
-      console.error('Erro ao criar loja para usuário:', error);
-      return { error };
+      return data;
+    } catch (err) {
+      console.error('Erro inesperado ao buscar perfil:', err);
+      return null;
     }
   };
 
   useEffect(() => {
-    // Configurar listener de mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Evento de autenticação:', event, session?.user?.id);
-        
-        // Atualizar o estado imediatamente (síncronamente)
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Diferir a busca do perfil para evitar loop infinito
-          setTimeout(() => {
-            fetchProfile(session.user.id).finally(() => {
-              setLoading(false);
-            });
-          }, 0);
+    const loadProfile = async () => {
+      if (!sessionLoading) {
+        if (user) {
+          console.log('Usuário autenticado, carregando perfil...');
+          const userProfile = await fetchProfile(user.id);
+          setProfile(userProfile);
         } else {
+          console.log('Usuário não autenticado, limpando perfil');
           setProfile(null);
-          setLoading(false);
         }
-      }
-    );
-
-    // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Sessão existente:', session?.user?.id);
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Diferir a busca do perfil para evitar loop infinito
-        setTimeout(() => {
-          fetchProfile(session.user.id).finally(() => {
-            setLoading(false);
-          });
-        }, 0);
-      } else {
         setLoading(false);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
-  }, []);
+    loadProfile();
+  }, [user, sessionLoading]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!profile) return { data: null, error: 'Perfil não encontrado' };
 
-  const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'store_admin') => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          role: role
-        }
-      }
-    });
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', profile.id)
+        .select()
+        .single();
 
-    // Se o usuário foi criado com sucesso e é um store_admin, criar loja automaticamente
-    if (!error && data.user && role === 'store_admin') {
-      // Aguardar um pouco para garantir que o perfil foi criado pelo trigger
-      setTimeout(async () => {
-        await createStoreForUser(
-          data.user.id, 
-          `Loja de ${fullName}`,
-          `Loja criada automaticamente para ${fullName}`
-        );
-      }, 2000);
+      if (error) throw error;
+      
+      setProfile(data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      return { data: null, error };
     }
-
-    return { error };
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const isSuperadmin = profile?.role === 'superadmin';
+  const isStoreAdmin = profile?.role === 'store_admin';
 
-  const value = {
+  return {
     user,
-    profile,
     session,
+    profile,
     loading,
-    signIn,
-    signUp,
-    signOut,
-    createStoreForUser,
-    refreshProfile,
+    updateProfile,
+    isSuperadmin,
+    isStoreAdmin,
+    refetchProfile: () => user && fetchProfile(user.id).then(setProfile)
   };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
 };

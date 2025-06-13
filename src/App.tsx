@@ -1,100 +1,139 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
-import Customers from "./pages/Customers";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import Coupons from "./pages/Coupons";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import UserManagement from "./pages/UserManagement";
-import Catalog from "./pages/Catalog";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/sonner';
+import { ProtectedLayout } from '@/components/auth/ProtectedLayout';
 
-const queryClient = new QueryClient();
+// Pages
+import Auth from '@/pages/Auth';
+import Index from '@/pages/Index';
+import Products from '@/pages/Products';
+import Orders from '@/pages/Orders';
+import Coupons from '@/pages/Coupons';
+import Customers from '@/pages/Customers';
+import Reports from '@/pages/Reports';
+import Settings from '@/pages/Settings';
+import UserManagement from '@/pages/UserManagement';
+import Catalog from '@/pages/Catalog';
+import NotFound from '@/pages/NotFound';
 
-const App = () => {
-  const { loading } = useAuth();
+import './App.css';
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Rotas públicas do catálogo */}
-            <Route path="/catalog/:storeId" element={<Catalog />} />
-            <Route path="/loja/:storeSlug/:catalogType" element={<Catalog />} />
-            <Route path="/loja/:storeSlug" element={<Catalog />} />
-            
-            {/* Rota de autenticação */}
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Rotas protegidas */}
-            <Route path="/" element={
-              <ProtectedRoute>
+      <Router>
+        <Routes>
+          {/* Rota pública de autenticação */}
+          <Route 
+            path="/auth" 
+            element={
+              <ProtectedLayout requireAuth={false}>
+                <Auth />
+              </ProtectedLayout>
+            } 
+          />
+          
+          {/* Catálogo público */}
+          <Route 
+            path="/catalog/:storeSlug" 
+            element={
+              <ProtectedLayout requireAuth={false}>
+                <Catalog />
+              </ProtectedLayout>
+            } 
+          />
+          
+          {/* Rotas protegidas do dashboard */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedLayout>
                 <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/products" 
+            element={
+              <ProtectedLayout>
                 <Products />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders" element={
-              <ProtectedRoute>
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/orders" 
+            element={
+              <ProtectedLayout>
                 <Orders />
-              </ProtectedRoute>
-            } />
-            <Route path="/customers" element={
-              <ProtectedRoute>
-                <Customers />
-              </ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-              <ProtectedRoute>
-                <Reports />
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
-            <Route path="/coupons" element={
-              <ProtectedRoute>
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/coupons" 
+            element={
+              <ProtectedLayout>
                 <Coupons />
-              </ProtectedRoute>
-            } />
-            <Route path="/user-management" element={
-              <ProtectedRoute allowedRoles={['superadmin']}>
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/customers" 
+            element={
+              <ProtectedLayout>
+                <Customers />
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/reports" 
+            element={
+              <ProtectedLayout>
+                <Reports />
+              </ProtectedLayout>
+            } 
+          />
+          
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedLayout>
+                <Settings />
+              </ProtectedLayout>
+            } 
+          />
+          
+          {/* Rota apenas para superadmins */}
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedLayout allowedRoles={['superadmin']}>
                 <UserManagement />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rota 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              </ProtectedLayout>
+            } 
+          />
+          
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+      <Toaster position="top-right" />
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
