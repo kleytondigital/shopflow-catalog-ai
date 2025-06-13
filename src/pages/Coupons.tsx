@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import CouponForm from '@/components/coupons/CouponForm';
 import CouponsList from '@/components/coupons/CouponsList';
 import AppLayout from '@/components/layout/AppLayout';
-import { useCoupons } from '@/hooks/useCoupons';
+import { useCoupons, Coupon } from '@/hooks/useCoupons';
 import { useToast } from '@/hooks/use-toast';
 
 const Coupons = () => {
   const [showForm, setShowForm] = useState(false);
-  const { createCoupon } = useCoupons();
+  const { coupons, createCoupon, updateCoupon, deleteCoupon } = useCoupons();
   const { toast } = useToast();
 
   const handleCreateCoupon = async (data: any) => {
@@ -29,6 +29,43 @@ const Coupons = () => {
         description: "Cupom criado com sucesso",
       });
       setShowForm(false);
+    }
+  };
+
+  const handleEditCoupon = (coupon: Coupon) => {
+    // Implementar edição posteriormente
+    console.log('Editar cupom:', coupon);
+  };
+
+  const handleDeleteCoupon = async (id: string) => {
+    const { error } = await deleteCoupon(id);
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o cupom",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Sucesso",
+        description: "Cupom excluído com sucesso",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (id: string, isActive: boolean) => {
+    const { error } = await updateCoupon(id, { is_active: isActive });
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status do cupom",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Sucesso",
+        description: `Cupom ${isActive ? 'ativado' : 'desativado'} com sucesso`,
+      });
     }
   };
 
@@ -53,7 +90,12 @@ const Coupons = () => {
             <CardTitle>Cupons Cadastrados</CardTitle>
           </CardHeader>
           <CardContent>
-            <CouponsList />
+            <CouponsList
+              coupons={coupons}
+              onEdit={handleEditCoupon}
+              onDelete={handleDeleteCoupon}
+              onToggleStatus={handleToggleStatus}
+            />
           </CardContent>
         </Card>
 
@@ -64,8 +106,7 @@ const Coupons = () => {
               <DialogTitle>Novo Cupom de Desconto</DialogTitle>
             </DialogHeader>
             <CouponForm 
-              onSubmit={handleCreateCoupon} 
-              onCancel={() => setShowForm(false)} 
+              onSubmit={handleCreateCoupon}
             />
           </DialogContent>
         </Dialog>

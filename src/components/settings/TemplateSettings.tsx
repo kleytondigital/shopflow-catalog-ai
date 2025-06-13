@@ -17,7 +17,7 @@ const TemplateSettings = () => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  // Produto de exemplo para preview
+  // Produto de exemplo para preview com todas as propriedades obrigatórias
   const sampleProduct = products[0] || {
     id: 'sample',
     name: 'Produto de Exemplo',
@@ -25,10 +25,18 @@ const TemplateSettings = () => {
     retail_price: 99.90,
     wholesale_price: 79.90,
     stock: 10,
+    reserved_stock: 0,
+    min_wholesale_qty: 1,
+    allow_negative_stock: false,
+    stock_alert_threshold: 5,
     image_url: '/placeholder.svg',
     store_id: '',
     category: 'Exemplo',
     is_active: true,
+    meta_title: null,
+    meta_description: null,
+    keywords: null,
+    seo_slug: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -39,7 +47,7 @@ const TemplateSettings = () => {
       name: 'Moderno',
       description: 'Design arrojado com gradientes e sombras vibrantes',
       component: ModernTemplate,
-      preview: '/placeholder.svg' // Pode ser uma screenshot do template
+      preview: '/placeholder.svg'
     },
     {
       id: 'minimal',
