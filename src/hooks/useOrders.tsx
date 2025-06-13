@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +17,10 @@ export interface Order {
   reservation_expires_at: string | null;
   created_at: string;
   updated_at: string;
+  shipping_cost: number;
+  payment_method: string | null;
+  shipping_method: string | null;
+  notes: string | null;
 }
 
 export interface CreateOrderData {
