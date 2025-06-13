@@ -4,10 +4,10 @@ import { Search, Heart, ShoppingCart, Menu, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { CatalogStore, CatalogType } from '@/hooks/useCatalog';
+import { Store, CatalogType } from '@/hooks/useCatalog';
 
 interface CatalogHeaderProps {
-  store: CatalogStore;
+  store: Store;
   catalogType: CatalogType;
   onCatalogTypeChange: (type: CatalogType) => void;
   onSearch: (query: string) => void;

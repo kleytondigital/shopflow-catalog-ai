@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Truck, MapPin, CreditCard, Smartphone } from 'lucide-react';
@@ -8,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/hooks/useCart';
-import { CatalogSettings } from '@/hooks/useCatalog';
+import { StoreSettings } from '@/hooks/useStoreSettings';
 import { useToast } from '@/hooks/use-toast';
 
 interface CheckoutProps {
-  settings: CatalogSettings;
+  settings: StoreSettings;
   onClose: () => void;
 }
 

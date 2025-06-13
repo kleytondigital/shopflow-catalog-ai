@@ -3,10 +3,10 @@ import React from 'react';
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CatalogStore } from '@/hooks/useCatalog';
+import { Store } from '@/hooks/useCatalog';
 
 interface CatalogFooterProps {
-  store: CatalogStore;
+  store: Store;
   whatsappNumber?: string;
 }
 
