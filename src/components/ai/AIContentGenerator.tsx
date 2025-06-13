@@ -13,7 +13,7 @@ interface AIContentGeneratorProps {
   onSEOGenerated?: (seo: any) => void;
   disabled?: boolean;
   variant?: 'description' | 'seo' | 'both';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'lg' | 'default';
 }
 
 const AIContentGenerator = ({ 
