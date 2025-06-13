@@ -1,452 +1,354 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useCategories } from '@/hooks/useCategories';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDraftImages } from '@/hooks/useDraftImages';
-import { useProductImages } from '@/hooks/useProductImages';
-import { CreateProductData, UpdateProductData } from '@/hooks/useProducts';
-import { useToast } from '@/hooks/use-toast';
-import SimpleCategoryForm from './SimpleCategoryForm';
-import AIContentGenerator from '@/components/ai/AIContentGenerator';
 import DraftImageUpload from './DraftImageUpload';
-import ProductImageUpload from './ProductImageUpload';
-import { Plus, ArrowLeft, Package, Image, Search } from 'lucide-react';
+import CategoryFormDialog from './CategoryFormDialog';
+import ProductDescriptionAI from '@/components/ai/ProductDescriptionAI';
+import { Package, DollarSign, Hash, Tag, FileText, Image, Loader2 } from 'lucide-react';
+
+const productSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  description: z.string().optional(),
+  category: z.string().min(1, 'Categoria é obrigatória'),
+  retail_price: z.number().min(0, 'Preço deve ser maior que zero'),
+  wholesale_price: z.number().optional(),
+  min_wholesale_qty: z.number().min(1).optional(),
+  stock: z.number().min(0, 'Estoque não pode ser negativo'),
+  is_active: z.boolean(),
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  keywords: z.string().optional(),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormCompleteProps {
-  onSubmit: (data: CreateProductData | UpdateProductData) => void;
-  onCancel: () => void;
+  onSubmit: (data: any) => void;
   initialData?: any;
-  mode?: 'create' | 'edit';
+  mode: 'create' | 'edit';
 }
 
-const ProductFormComplete = ({ onSubmit, onCancel, initialData, mode = 'create' }: ProductFormCompleteProps) => {
-  const [activeTab, setActiveTab] = useState('basic');
-  const [showQuickCategory, setShowQuickCategory] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
+const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormCompleteProps) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
-  const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    description: initialData?.description || '',
-    category: initialData?.category || '',
-    retail_price: initialData?.retail_price || 0,
-    wholesale_price: initialData?.wholesale_price || '',
-    stock: initialData?.stock || 0,
-    min_wholesale_qty: initialData?.min_wholesale_qty || 1,
-    is_active: initialData?.is_active ?? true,
-    meta_title: initialData?.meta_title || '',
-    meta_description: initialData?.meta_description || '',
-    keywords: initialData?.keywords || '',
-    seo_slug: initialData?.seo_slug || ''
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { draftImages, addImage, removeImage, uploadDraftImages, clearDraftImages } = useDraftImages();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    watch,
+    reset
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      category: '',
+      retail_price: 0,
+      wholesale_price: undefined,
+      min_wholesale_qty: 1,
+      stock: 0,
+      is_active: true,
+      meta_title: '',
+      meta_description: '',
+      keywords: '',
+      ...initialData
+    }
   });
 
-  const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
-  const { settings } = useStoreSettings();
-  const { images, uploadImage, deleteImage } = useProductImages(initialData?.id);
-  const {
-    draftImages,
-    uploading: uploadingDraft,
-    addDraftImage,
-    removeDraftImage,
-    uploadDraftImages,
-    clearDraftImages
-  } = useDraftImages();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSaving(true);
-
-    try {
-      const productData = {
-        ...(mode === 'edit' && { id: initialData.id }),
-        name: formData.name,
-        description: formData.description || undefined,
-        category: formData.category || undefined,
-        retail_price: formData.retail_price,
-        wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price.toString()) : undefined,
-        stock: formData.stock,
-        min_wholesale_qty: formData.min_wholesale_qty || undefined,
-        is_active: formData.is_active,
-        meta_title: formData.meta_title || undefined,
-        meta_description: formData.meta_description || undefined,
-        keywords: formData.keywords || undefined,
-        seo_slug: formData.seo_slug || undefined,
-        store_id: initialData?.store_id || ''
-      };
-
-      console.log('ProductFormComplete: Submetendo produto:', productData);
-
-      // Criar/atualizar produto
-      await onSubmit(productData as CreateProductData | UpdateProductData);
-
-      // Limpar imagens draft após sucesso
-      if (mode === 'create' && draftImages.length > 0) {
-        clearDraftImages();
-      }
-      
-      toast({
-        title: mode === 'edit' ? 'Produto atualizado' : 'Produto criado',
-        description: mode === 'edit' ? 'As alterações foram salvas com sucesso' : 'O produto foi criado com sucesso'
-      });
-
-    } catch (error) {
-      console.error('ProductFormComplete: Erro ao salvar produto:', error);
-      toast({
-        title: 'Erro ao salvar',
-        description: 'Ocorreu um erro ao salvar o produto. Tente novamente.',
-        variant: 'destructive'
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCategoryCreated = async (category: any) => {
-    console.log('ProductFormComplete: Categoria criada:', category);
-    setFormData({ ...formData, category: category.name });
-    setShowQuickCategory(false);
-    // Recarregar lista de categorias
-    await fetchCategories();
+  const handleCategoryCreated = (newCategory: any) => {
+    console.log('ProductFormComplete: Nova categoria criada:', newCategory);
+    setValue('category', newCategory.name);
   };
 
   const handleDescriptionGenerated = (description: string) => {
-    setFormData({ ...formData, description });
+    setValue('description', description);
   };
 
-  const handleSEOGenerated = (seoData: any) => {
-    setFormData({
-      ...formData,
-      meta_title: seoData.metaTitle || '',
-      meta_description: seoData.metaDescription || '',
-      keywords: seoData.keywords || '',
-      seo_slug: seoData.seoSlug || ''
-    });
-  };
+  const onFormSubmit = async (data: ProductFormData) => {
+    try {
+      setUploading(true);
+      
+      let imageUrls: string[] = [];
+      
+      if (draftImages.length > 0) {
+        console.log('Fazendo upload das imagens...');
+        imageUrls = await uploadDraftImages();
+        console.log('URLs das imagens:', imageUrls);
+      }
 
-  const handleImageUpload = async (file: File, order: number) => {
-    if (mode === 'edit' && initialData?.id) {
-      await uploadImage(file, initialData.id, order);
+      const productData = {
+        ...data,
+        wholesale_price: data.wholesale_price || null,
+        min_wholesale_qty: data.min_wholesale_qty || 1,
+        image_url: imageUrls[0] || null,
+        additional_images: imageUrls.slice(1)
+      };
+
+      console.log('Dados do produto para envio:', productData);
+      
+      await onSubmit(productData);
+      
+      if (mode === 'create') {
+        reset();
+        clearDraftImages();
+      }
+    } catch (error) {
+      console.error('Erro ao enviar formulário:', error);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleImageRemove = async (index: number) => {
-    if (mode === 'edit' && images[index]?.id) {
-      await deleteImage(images[index].id);
-    }
-  };
+  const watchedName = watch('name');
+  const watchedCategory = watch('category');
 
-  const showRetailFields = settings?.retail_catalog_active !== false;
-  const showWholesaleFields = settings?.wholesale_catalog_active === true;
+  if (categoriesLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando categorias...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+      {/* Informações Básicas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Informações Básicas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nome do Produto *</Label>
+            <Input
+              id="name"
+              {...register('name')}
+              placeholder="Nome do produto"
+            />
+            {errors.name && (
+              <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="description">Descrição</Label>
+              <ProductDescriptionAI
+                productName={watchedName}
+                category={watchedCategory}
+                onDescriptionGenerated={handleDescriptionGenerated}
+                disabled={!watchedName || !watchedCategory}
+              />
+            </div>
+            <Textarea
+              id="description"
+              {...register('description')}
+              placeholder="Descrição detalhada do produto"
+              rows={4}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="category">Categoria *</Label>
+              <CategoryFormDialog onCategoryCreated={handleCategoryCreated} />
+            </div>
+            <Select
+              value={watch('category')}
+              onValueChange={(value) => setValue('category', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.category && (
+              <p className="text-sm text-destructive mt-1">{errors.category.message}</p>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="is_active"
+              checked={watch('is_active')}
+              onCheckedChange={(checked) => setValue('is_active', checked)}
+            />
+            <Label htmlFor="is_active">Produto ativo</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preços e Estoque */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Preços e Estoque
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="retail_price">Preço Varejo (R$) *</Label>
+              <Input
+                id="retail_price"
+                type="number"
+                step="0.01"
+                {...register('retail_price', { valueAsNumber: true })}
+                placeholder="0.00"
+              />
+              {errors.retail_price && (
+                <p className="text-sm text-destructive mt-1">{errors.retail_price.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="wholesale_price">Preço Atacado (R$)</Label>
+              <Input
+                id="wholesale_price"
+                type="number"
+                step="0.01"
+                {...register('wholesale_price', { valueAsNumber: true })}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="stock">Estoque *</Label>
+              <Input
+                id="stock"
+                type="number"
+                {...register('stock', { valueAsNumber: true })}
+                placeholder="0"
+              />
+              {errors.stock && (
+                <p className="text-sm text-destructive mt-1">{errors.stock.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="min_wholesale_qty">Qtd. Mínima Atacado</Label>
+              <Input
+                id="min_wholesale_qty"
+                type="number"
+                {...register('min_wholesale_qty', { valueAsNumber: true })}
+                placeholder="1"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Imagens */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Image className="h-5 w-5" />
+            Imagens do Produto
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DraftImageUpload
+            draftImages={draftImages}
+            onImageAdd={addImage}
+            onImageRemove={removeImage}
+            uploading={uploading}
+          />
+        </CardContent>
+      </Card>
+
+      {/* SEO Avançado */}
+      <Card>
+        <CardHeader>
+          <CardTitle 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <FileText className="h-5 w-5" />
+            SEO e Configurações Avançadas
+            <span className="text-sm text-muted-foreground ml-2">
+              {showAdvanced ? '(Clique para ocultar)' : '(Clique para expandir)'}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        {showAdvanced && (
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="meta_title">Título SEO</Label>
+              <Input
+                id="meta_title"
+                {...register('meta_title')}
+                placeholder="Título otimizado para mecanismos de busca"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="meta_description">Descrição SEO</Label>
+              <Textarea
+                id="meta_description"
+                {...register('meta_description')}
+                placeholder="Descrição otimizada para mecanismos de busca"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="keywords">Palavras-chave</Label>
+              <Input
+                id="keywords"
+                {...register('keywords')}
+                placeholder="palavra1, palavra2, palavra3"
+              />
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Botões de Ação */}
+      <div className="flex gap-4">
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || uploading}
+          className="flex-1"
+        >
+          {(isSubmitting || uploading) ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {uploading ? 'Enviando imagens...' : mode === 'create' ? 'Criando...' : 'Atualizando...'}
+            </>
+          ) : (
+            mode === 'create' ? 'Criar Produto' : 'Atualizar Produto'
+          )}
         </Button>
-        <div>
-          <h2 className="text-2xl font-bold gradient-text">
-            {mode === 'edit' ? 'Editar Produto' : 'Novo Produto'}
-          </h2>
-          <p className="text-muted-foreground">
-            Complete todas as informações do produto
-          </p>
-        </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Básico
-            </TabsTrigger>
-            <TabsTrigger value="images" className="flex items-center gap-2">
-              <Image className="h-4 w-4" />
-              Imagens
-            </TabsTrigger>
-            <TabsTrigger value="seo" className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              SEO
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Aba Básico */}
-          <TabsContent value="basic" className="space-y-6">
-            <Card className="border-2 border-gray-200 bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle>Informações Básicas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nome do Produto *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Camiseta Premium Cotton"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <AIContentGenerator
-                      productName={formData.name}
-                      category={formData.category}
-                      onDescriptionGenerated={handleDescriptionGenerated}
-                      disabled={!formData.name.trim()}
-                      variant="description"
-                    />
-                  </div>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descrição detalhada do produto..."
-                    rows={4}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="category">Categoria</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowQuickCategory(!showQuickCategory)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Nova
-                    </Button>
-                  </div>
-
-                  {showQuickCategory && (
-                    <div className="mb-4">
-                      <SimpleCategoryForm
-                        onCategoryCreated={handleCategoryCreated}
-                        onCancel={() => setShowQuickCategory(false)}
-                      />
-                    </div>
-                  )}
-
-                  <Select 
-                    value={formData.category} 
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    disabled={categoriesLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <Label htmlFor="is_active">Produto ativo</Label>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-gray-200 bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle>Preços e Estoque</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {showRetailFields && (
-                    <div>
-                      <Label htmlFor="retail_price">Preço Varejo (R$) *</Label>
-                      <Input
-                        id="retail_price"
-                        type="number"
-                        step="0.01"
-                        value={formData.retail_price}
-                        onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) || 0 })}
-                        required
-                      />
-                    </div>
-                  )}
-
-                  {showWholesaleFields && (
-                    <div>
-                      <Label htmlFor="wholesale_price">Preço Atacado (R$)</Label>
-                      <Input
-                        id="wholesale_price"
-                        type="number"
-                        step="0.01"
-                        value={formData.wholesale_price}
-                        onChange={(e) => setFormData({ ...formData, wholesale_price: e.target.value })}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="stock">Estoque *</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
-                      required
-                    />
-                  </div>
-
-                  {showWholesaleFields && (
-                    <div>
-                      <Label htmlFor="min_wholesale_qty">Qtd. Mín. Atacado</Label>
-                      <Input
-                        id="min_wholesale_qty"
-                        type="number"
-                        value={formData.min_wholesale_qty}
-                        onChange={(e) => setFormData({ ...formData, min_wholesale_qty: parseInt(e.target.value) || 1 })}
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Aba Imagens */}
-          <TabsContent value="images" className="space-y-6">
-            <Card className="border-2 border-gray-200 bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle>Imagens do Produto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {mode === 'create' ? (
-                  <DraftImageUpload
-                    draftImages={draftImages}
-                    onImageAdd={addDraftImage}
-                    onImageRemove={removeDraftImage}
-                    uploading={uploadingDraft}
-                    maxImages={5}
-                  />
-                ) : (
-                  <ProductImageUpload
-                    onImageUpload={handleImageUpload}
-                    images={images.map(img => img.image_url)}
-                    onImageRemove={handleImageRemove}
-                    maxImages={5}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Aba SEO */}
-          <TabsContent value="seo" className="space-y-6">
-            <Card className="border-2 border-gray-200 bg-white shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Otimização SEO</CardTitle>
-                  <AIContentGenerator
-                    productName={formData.name}
-                    category={formData.category}
-                    description={formData.description}
-                    onSEOGenerated={handleSEOGenerated}
-                    disabled={!formData.name.trim()}
-                    variant="seo"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="meta_title">Título SEO</Label>
-                  <Input
-                    id="meta_title"
-                    value={formData.meta_title}
-                    onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
-                    placeholder="Título otimizado para buscadores"
-                    maxLength={60}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.meta_title.length}/60 caracteres
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="meta_description">Meta Descrição</Label>
-                  <Textarea
-                    id="meta_description"
-                    value={formData.meta_description}
-                    onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
-                    placeholder="Descrição que aparece nos resultados de busca"
-                    maxLength={160}
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.meta_description.length}/160 caracteres
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="keywords">Palavras-chave</Label>
-                  <Input
-                    id="keywords"
-                    value={formData.keywords}
-                    onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                    placeholder="palavra1, palavra2, palavra3"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Separe as palavras-chave com vírgulas
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="seo_slug">URL Amigável (Slug)</Label>
-                  <Input
-                    id="seo_slug"
-                    value={formData.seo_slug}
-                    onChange={(e) => setFormData({ ...formData, seo_slug: e.target.value })}
-                    placeholder="produto-exemplo"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Deixe vazio para gerar automaticamente baseado no nome
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Botões de Ação */}
-        <div className="flex gap-4 sticky bottom-0 bg-background p-4 border-t">
-          <Button type="submit" className="flex-1 btn-primary" disabled={saving || uploadingDraft}>
-            {(saving || uploadingDraft) ? 'Salvando...' : (mode === 'edit' ? 'Atualizar' : 'Criar')} Produto
-          </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={saving || uploadingDraft}>
-            Cancelar
-          </Button>
-        </div>
-      </form>
-    </div>
+    </form>
   );
 };
 
