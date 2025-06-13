@@ -9,7 +9,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Products from '@/pages/Products';
-import Orders from '@/pages/Orders';
+import OrdersImproved from '@/pages/OrdersImproved';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
 import NotFound from '@/pages/NotFound';
@@ -49,7 +49,7 @@ function App() {
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <Header title="Pedidos" />
                     <main className="flex-1 overflow-auto">
-                      <Orders />
+                      <OrdersImproved />
                     </main>
                   </div>
                 </div>

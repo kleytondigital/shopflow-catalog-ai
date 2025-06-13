@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,8 +43,8 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [uploading, setUploading] = useState(false);
   
-  const { categories, loading: categoriesLoading } = useCategories();
-  const { draftImages, addImage, removeImage, uploadDraftImages, clearDraftImages } = useDraftImages();
+  const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
+  const { draftImages, addDraftImage, removeDraftImage, uploadDraftImages, clearDraftImages } = useDraftImages();
 
   const {
     register,
@@ -70,8 +71,11 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
     }
   });
 
-  const handleCategoryCreated = (newCategory: any) => {
+  const handleCategoryCreated = async (newCategory: any) => {
     console.log('ProductFormComplete: Nova categoria criada:', newCategory);
+    // Recarregar categorias para atualizar a lista
+    await fetchCategories();
+    // Definir a nova categoria como selecionada
     setValue('category', newCategory.name);
   };
 
@@ -87,8 +91,11 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
       
       if (draftImages.length > 0) {
         console.log('Fazendo upload das imagens...');
-        imageUrls = await uploadDraftImages();
-        console.log('URLs das imagens:', imageUrls);
+        const uploadResult = await uploadDraftImages();
+        if (uploadResult.success) {
+          imageUrls = uploadResult.urls;
+          console.log('URLs das imagens:', imageUrls);
+        }
       }
 
       const productData = {
@@ -277,8 +284,8 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
         <CardContent>
           <DraftImageUpload
             draftImages={draftImages}
-            onImageAdd={addImage}
-            onImageRemove={removeImage}
+            onImageAdd={addDraftImage}
+            onImageRemove={removeDraftImage}
             uploading={uploading}
           />
         </CardContent>

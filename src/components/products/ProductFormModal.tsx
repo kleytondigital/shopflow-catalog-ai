@@ -24,17 +24,12 @@ const ProductFormModal = ({
     onOpenChange(false);
   };
 
-  const handleCancel = () => {
-    onOpenChange(false);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
-        <div className="overflow-y-auto max-h-[95vh]">
+        <div className="overflow-y-auto max-h-[95vh] p-6">
           <ProductFormComplete
             onSubmit={handleSubmit}
-            onCancel={handleCancel}
             initialData={initialData}
             mode={mode}
           />
