@@ -7,6 +7,7 @@ interface PaymentMethod {
   id: string;
   name: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
+  description?: string;
 }
 
 interface PaymentMethodCardProps {
@@ -35,18 +36,35 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           {paymentMethods.map((method) => {
             const IconComponent = method.icon;
             return (
-              <div key={method.id} className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 hover:border-primary transition-all cursor-pointer">
+              <div 
+                key={method.id} 
+                className={`flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-blue-50 transition-all cursor-pointer ${
+                  selectedMethod === method.id ? 'border-primary bg-blue-50' : 'border-gray-200'
+                }`}
+              >
                 <RadioGroupItem value={method.id} id={method.id} />
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <IconComponent size={20} className="text-primary" />
-                  <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
-                    {method.name}
-                  </label>
+                  <div>
+                    <label htmlFor={method.id} className="font-semibold cursor-pointer text-lg">
+                      {method.name}
+                    </label>
+                    {method.description && (
+                      <p className="text-sm text-gray-600 mt-1">{method.description}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </RadioGroup>
+        
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm flex items-center gap-2">
+            <span className="text-blue-600">🔒</span>
+            Todos os pagamentos são processados de forma segura pelo Mercado Pago
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

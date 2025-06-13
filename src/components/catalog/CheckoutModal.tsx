@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Truck, MapPin, CreditCard, Smartphone } from 'lucide-react';
+import { Truck, MapPin, CreditCard, Smartphone, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +13,7 @@ import ShippingMethodCard from './checkout/ShippingMethodCard';
 import ShippingAddressForm from './checkout/ShippingAddressForm';
 import PaymentMethodCard from './checkout/PaymentMethodCard';
 import OrderSummary from './checkout/OrderSummary';
+import MercadoPagoPayment from './checkout/MercadoPagoPayment';
 import { generateWhatsAppMessage } from './checkout/checkoutUtils';
 
 interface CheckoutModalProps {
@@ -48,17 +48,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState('');
+  const [currentStep, setCurrentStep] = useState<'checkout' | 'payment'>('checkout');
+  const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const availablePaymentMethods = React.useMemo(() => {
     const methods = [];
     if (storeSettings?.payment_methods?.pix) {
-      methods.push({ id: 'pix', name: 'PIX', icon: Smartphone });
+      methods.push({ 
+        id: 'pix', 
+        name: 'PIX', 
+        icon: Smartphone,
+        description: 'Pagamento instantâneo'
+      });
     }
     if (storeSettings?.payment_methods?.credit_card) {
-      methods.push({ id: 'credit_card', name: 'Cartão de Crédito', icon: CreditCard });
+      methods.push({ 
+        id: 'credit_card', 
+        name: 'Cartão de Crédito', 
+        icon: CreditCard,
+        description: 'Parcelamento em até 12x'
+      });
     }
     if (storeSettings?.payment_methods?.bank_slip) {
-      methods.push({ id: 'bank_slip', name: 'Boleto Bancário', icon: CreditCard });
+      methods.push({ 
+        id: 'bank_slip', 
+        name: 'Boleto Bancário', 
+        icon: FileText,
+        description: 'Vencimento em 3 dias úteis'
+      });
     }
     return methods;
   }, [storeSettings]);
@@ -100,8 +117,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     }
   };
 
-  const handleSubmit = async () => {
-    console.log('CheckoutModal: Iniciando processamento do pedido...');
+  const handleCreateOrder = async () => {
+    console.log('CheckoutModal: Iniciando criação do pedido...');
     
     try {
       if (!customerData.name.trim()) {
@@ -163,37 +180,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
       toast({
-        title: "Processando pedido...",
+        title: "Criando pedido...",
         description: "Aguarde enquanto criamos seu pedido.",
       });
 
       const savedOrder = await createOrderAsync(orderData);
-      console.log('CheckoutModal: Pedido salvo com sucesso:', savedOrder);
+      console.log('CheckoutModal: Pedido criado com sucesso:', savedOrder);
       
-      const checkoutType = storeSettings?.checkout_type || 'both';
+      setCreatedOrder(savedOrder);
       
-      if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
-        const message = generateWhatsAppMessage(orderData);
-        
-        toast({
-          title: "✅ Pedido criado com sucesso!",
-          description: `Pedido #${savedOrder.id.slice(-8)} criado. Você será redirecionado para o WhatsApp para finalizar.`,
-          duration: 5000,
-        });
-
-        setTimeout(() => {
-          window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
-        }, 1000);
+      // Se for um método do Mercado Pago, ir para o pagamento
+      if (['pix', 'credit_card', 'bank_slip'].includes(paymentMethod)) {
+        setCurrentStep('payment');
       } else {
-        toast({
-          title: "✅ Pedido criado com sucesso!",
-          description: `Pedido #${savedOrder.id.slice(-8)} foi criado. Em breve você receberá as instruções de pagamento.`,
-          duration: 5000,
-        });
+        // Para outros métodos, finalizar com WhatsApp
+        handleWhatsAppCheckout(savedOrder);
       }
-
-      clearCart();
-      onClose();
 
     } catch (error) {
       console.error('CheckoutModal: Erro ao criar pedido:', error);
@@ -201,12 +203,67 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
       toast({
-        title: "❌ Erro ao processar pedido",
+        title: "❌ Erro ao criar pedido",
         description: `Não foi possível criar seu pedido: ${errorMessage}. Tente novamente.`,
         variant: "destructive",
         duration: 7000,
       });
     }
+  };
+
+  const handleWhatsAppCheckout = (order: any) => {
+    const checkoutType = storeSettings?.checkout_type || 'both';
+    
+    if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
+      const orderData = {
+        customer_name: customerData.name,
+        customer_phone: customerData.phone,
+        total_amount: finalTotal,
+        items: items.map(item => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shipping_method: shippingMethod,
+        payment_method: paymentMethod,
+        notes: notes
+      };
+      
+      const message = generateWhatsAppMessage(orderData);
+      
+      toast({
+        title: "✅ Pedido criado com sucesso!",
+        description: `Pedido #${order.id.slice(-8)} criado. Redirecionando para WhatsApp...`,
+        duration: 5000,
+      });
+
+      setTimeout(() => {
+        window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+      }, 1000);
+    }
+
+    clearCart();
+    onClose();
+  };
+
+  const handlePaymentSuccess = () => {
+    toast({
+      title: "✅ Pagamento processado!",
+      description: `Pedido #${createdOrder?.id.slice(-8)} foi processado com sucesso.`,
+      duration: 5000,
+    });
+    
+    clearCart();
+    onClose();
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "❌ Erro no pagamento",
+      description: error,
+      variant: "destructive",
+      duration: 7000,
+    });
   };
 
   if (availablePaymentMethods.length === 0 || availableShippingMethods.length === 0) {
@@ -233,86 +290,120 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 gap-0">
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
           <DialogTitle className="text-2xl font-bold text-white text-center">
-            Finalizar Pedido
+            {currentStep === 'checkout' ? 'Finalizar Pedido' : 'Pagamento'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
-          <div className="h-full lg:grid lg:grid-cols-3 lg:gap-0">
-            <div className="lg:col-span-2 h-full">
-              <ScrollArea className="h-full">
-                <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
-                  <CustomerDataForm
-                    customerData={customerData}
-                    onDataChange={setCustomerData}
-                  />
-
-                  <ShippingMethodCard
-                    shippingMethods={availableShippingMethods}
-                    selectedMethod={shippingMethod}
-                    onMethodChange={setShippingMethod}
-                  />
-
-                  {shippingMethod === 'shipping' && (
-                    <ShippingAddressForm
-                      address={shippingAddress}
-                      onAddressChange={setShippingAddress}
-                      onCalculateShipping={calculateShipping}
+          {currentStep === 'checkout' ? (
+            <div className="h-full lg:grid lg:grid-cols-3 lg:gap-0">
+              <div className="lg:col-span-2 h-full">
+                <ScrollArea className="h-full">
+                  <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
+                    <CustomerDataForm
+                      customerData={customerData}
+                      onDataChange={setCustomerData}
                     />
-                  )}
 
-                  <PaymentMethodCard
-                    paymentMethods={availablePaymentMethods}
-                    selectedMethod={paymentMethod}
-                    onMethodChange={setPaymentMethod}
-                  />
+                    <ShippingMethodCard
+                      shippingMethods={availableShippingMethods}
+                      selectedMethod={shippingMethod}
+                      onMethodChange={setShippingMethod}
+                    />
 
-                  <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg">Observações</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Textarea
-                        placeholder="Observações sobre o pedido (opcional)"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        rows={3}
+                    {shippingMethod === 'shipping' && (
+                      <ShippingAddressForm
+                        address={shippingAddress}
+                        onAddressChange={setShippingAddress}
+                        onCalculateShipping={calculateShipping}
                       />
-                    </CardContent>
-                  </Card>
+                    )}
+
+                    <PaymentMethodCard
+                      paymentMethods={availablePaymentMethods}
+                      selectedMethod={paymentMethod}
+                      onMethodChange={setPaymentMethod}
+                    />
+
+                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg">Observações</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea
+                          placeholder="Observações sobre o pedido (opcional)"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          rows={3}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
+              </div>
+
+              <OrderSummary
+                items={items}
+                totalAmount={totalAmount}
+                shippingCost={shippingCost}
+                finalTotal={finalTotal}
+                isProcessing={isCreatingOrder}
+                isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
+                onSubmit={handleCreateOrder}
+              />
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center p-6">
+              <div className="max-w-lg w-full">
+                <MercadoPagoPayment
+                  items={items}
+                  totalAmount={finalTotal}
+                  customerData={customerData}
+                  paymentMethod={paymentMethod as 'pix' | 'credit_card' | 'bank_slip'}
+                  orderId={createdOrder?.id}
+                  onPaymentSuccess={handlePaymentSuccess}
+                  onPaymentError={handlePaymentError}
+                />
+                
+                <div className="mt-6 text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep('checkout')}
+                    className="mr-3"
+                  >
+                    ← Voltar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={onClose}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
-              </ScrollArea>
+              </div>
             </div>
-
-            <OrderSummary
-              items={items}
-              totalAmount={totalAmount}
-              shippingCost={shippingCost}
-              finalTotal={finalTotal}
-              isProcessing={isCreatingOrder}
-              isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
-              onSubmit={handleSubmit}
-            />
-          </div>
+          )}
         </div>
 
-        <div className="lg:hidden shrink-0 bg-white border-t p-4">
-          <div className="space-y-4">
-            <div className="flex justify-between text-xl font-bold">
-              <span>Total:</span>
-              <span className="text-primary">R$ {finalTotal.toFixed(2)}</span>
+        {currentStep === 'checkout' && (
+          <div className="lg:hidden shrink-0 bg-white border-t p-4">
+            <div className="space-y-4">
+              <div className="flex justify-between text-xl font-bold">
+                <span>Total:</span>
+                <span className="text-primary">R$ {finalTotal.toFixed(2)}</span>
+              </div>
+              
+              <Button
+                onClick={handleCreateOrder}
+                disabled={isCreatingOrder || !customerData.name || !customerData.phone}
+                className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
+                size="lg"
+              >
+                {isCreatingOrder ? 'Processando...' : 'Continuar para Pagamento'}
+              </Button>
             </div>
-            
-            <Button
-              onClick={handleSubmit}
-              disabled={isCreatingOrder || !customerData.name || !customerData.phone}
-              className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
-              size="lg"
-            >
-              {isCreatingOrder ? 'Processando...' : 'Finalizar Pedido'}
-            </Button>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
