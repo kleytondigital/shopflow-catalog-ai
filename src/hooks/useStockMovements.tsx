@@ -54,7 +54,20 @@ export const useStockMovements = () => {
       throw error;
     }
 
-    return data || [];
+    // Converter dados do banco para nossa interface tipada
+    return (data || []).map(item => ({
+      id: item.id,
+      product_id: item.product_id,
+      order_id: item.order_id || undefined,
+      movement_type: item.movement_type as StockMovement['movement_type'],
+      quantity: item.quantity,
+      previous_stock: item.previous_stock,
+      new_stock: item.new_stock,
+      notes: item.notes || undefined,
+      created_at: item.created_at,
+      expires_at: item.expires_at || undefined,
+      store_id: item.store_id
+    }));
   };
 
   // Query para buscar movimentações
