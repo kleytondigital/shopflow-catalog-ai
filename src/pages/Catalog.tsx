@@ -152,6 +152,13 @@ const CatalogContent = () => {
     });
   };
 
+  const handleAddToCart = (product: Product) => {
+    toast({
+      title: "Produto adicionado!",
+      description: `${product.name} foi adicionado ao carrinho.`,
+    });
+  };
+
   const getSortedProducts = () => {
     const sorted = [...filteredProducts];
     
@@ -291,6 +298,7 @@ const CatalogContent = () => {
               loading={loading}
               onAddToWishlist={handleAddToWishlist}
               onQuickView={handleQuickView}
+              onAddToCart={handleAddToCart}
               wishlist={wishlist}
             />
           </div>

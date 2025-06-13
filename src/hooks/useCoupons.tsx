@@ -49,7 +49,14 @@ export const useCoupons = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCoupons(data || []);
+      
+      // Cast discount_type para o tipo correto
+      const typedCoupons = (data || []).map(coupon => ({
+        ...coupon,
+        discount_type: coupon.discount_type as 'percentage' | 'fixed'
+      }));
+      
+      setCoupons(typedCoupons);
     } catch (error) {
       console.error('Erro ao buscar cupons:', error);
     } finally {
