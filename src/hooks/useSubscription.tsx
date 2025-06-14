@@ -55,18 +55,25 @@ export const useSubscription = () => {
     }
 
     try {
-      // Buscar assinatura da loja com plano e features
+      // Buscar assinatura da loja com plano
       const { data: subscriptionData, error: subError } = await supabase
         .from('store_subscriptions')
         .select(`
           *,
-          plan:subscription_plans(*),
-          features:plan_features(*)
+          plan:subscription_plans(*)
         `)
         .eq('store_id', profile.store_id)
         .single();
 
       if (subError) throw subError;
+
+      // Buscar features do plano separadamente
+      const { data: featuresData, error: featuresError } = await supabase
+        .from('plan_features')
+        .select('*')
+        .eq('plan_id', subscriptionData.plan_id);
+
+      if (featuresError) throw featuresError;
 
       // Buscar uso atual das features
       const { data: usageData, error: usageError } = await supabase
@@ -76,11 +83,17 @@ export const useSubscription = () => {
 
       if (usageError) throw usageError;
 
-      setSubscription(subscriptionData);
+      // Montar objeto de assinatura com features
+      const subscriptionWithFeatures: StoreSubscription = {
+        ...subscriptionData,
+        features: featuresData || []
+      };
+
+      setSubscription(subscriptionWithFeatures);
 
       // Calcular porcentagem de uso para cada feature
       const usageWithPercentage = (usageData || []).map(usage => {
-        const feature = subscriptionData.features.find(f => f.feature_type === usage.feature_type);
+        const feature = featuresData?.find(f => f.feature_type === usage.feature_type);
         const limit = feature?.feature_value || '0';
         const limitNum = parseInt(limit);
         const percentage = limitNum > 0 ? (usage.current_usage / limitNum) * 100 : 0;
