@@ -136,6 +136,47 @@ export type Database = {
           },
         ]
       }
+      feature_usage: {
+        Row: {
+          created_at: string
+          current_usage: number
+          feature_type: Database["public"]["Enums"]["feature_type"]
+          id: string
+          period_end: string
+          period_start: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_usage?: number
+          feature_type: Database["public"]["Enums"]["feature_type"]
+          id?: string
+          period_end?: string
+          period_start?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_usage?: number
+          feature_type?: Database["public"]["Enums"]["feature_type"]
+          id?: string
+          period_end?: string
+          period_start?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_usage_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           content_declaration_printed_at: string | null
@@ -333,6 +374,41 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_features: {
+        Row: {
+          created_at: string
+          feature_type: Database["public"]["Enums"]["feature_type"]
+          feature_value: string | null
+          id: string
+          is_enabled: boolean
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature_type: Database["public"]["Enums"]["feature_type"]
+          feature_value?: string | null
+          id?: string
+          is_enabled?: boolean
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          feature_type?: Database["public"]["Enums"]["feature_type"]
+          feature_value?: string | null
+          id?: string
+          is_enabled?: boolean
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -709,6 +785,63 @@ export type Database = {
           },
         ]
       }
+      store_subscriptions: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          ends_at: string | null
+          id: string
+          mercadopago_subscription_id: string | null
+          plan_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          store_id: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          mercadopago_subscription_id?: string | null
+          plan_id: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          mercadopago_subscription_id?: string | null
+          plan_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_subscriptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string | null
@@ -771,6 +904,48 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_monthly: number
+          price_yearly: number | null
+          sort_order: number | null
+          trial_days: number | null
+          type: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_monthly: number
+          price_yearly?: number | null
+          sort_order?: number | null
+          trial_days?: number | null
+          type: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_monthly?: number
+          price_yearly?: number | null
+          sort_order?: number | null
+          trial_days?: number | null
+          type?: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -780,9 +955,23 @@ export type Database = {
         Args: { product_uuid: string }
         Returns: number
       }
+      get_feature_limit: {
+        Args: {
+          _store_id: string
+          _feature_type: Database["public"]["Enums"]["feature_type"]
+        }
+        Returns: string
+      }
       get_user_store_id: {
         Args: { _user_id: string }
         Returns: string
+      }
+      has_feature_access: {
+        Args: {
+          _store_id: string
+          _feature_type: Database["public"]["Enums"]["feature_type"]
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -815,6 +1004,23 @@ export type Database = {
     }
     Enums: {
       catalog_type: "retail" | "wholesale"
+      feature_type:
+        | "max_products"
+        | "max_images_per_product"
+        | "max_team_members"
+        | "whatsapp_integration"
+        | "payment_pix"
+        | "payment_credit_card"
+        | "custom_domain"
+        | "api_access"
+        | "ai_agent"
+        | "discount_coupons"
+        | "abandoned_cart_recovery"
+        | "multi_variations"
+        | "shipping_calculator"
+        | "dedicated_support"
+        | "team_management"
+        | "pickup_points"
       order_status:
         | "pending"
         | "confirmed"
@@ -822,6 +1028,13 @@ export type Database = {
         | "shipping"
         | "delivered"
         | "cancelled"
+      subscription_plan_type: "basic" | "premium" | "enterprise"
+      subscription_status:
+        | "active"
+        | "inactive"
+        | "canceled"
+        | "past_due"
+        | "trialing"
       user_role: "superadmin" | "store_admin"
     }
     CompositeTypes: {
@@ -939,6 +1152,24 @@ export const Constants = {
   public: {
     Enums: {
       catalog_type: ["retail", "wholesale"],
+      feature_type: [
+        "max_products",
+        "max_images_per_product",
+        "max_team_members",
+        "whatsapp_integration",
+        "payment_pix",
+        "payment_credit_card",
+        "custom_domain",
+        "api_access",
+        "ai_agent",
+        "discount_coupons",
+        "abandoned_cart_recovery",
+        "multi_variations",
+        "shipping_calculator",
+        "dedicated_support",
+        "team_management",
+        "pickup_points",
+      ],
       order_status: [
         "pending",
         "confirmed",
@@ -946,6 +1177,14 @@ export const Constants = {
         "shipping",
         "delivered",
         "cancelled",
+      ],
+      subscription_plan_type: ["basic", "premium", "enterprise"],
+      subscription_status: [
+        "active",
+        "inactive",
+        "canceled",
+        "past_due",
+        "trialing",
       ],
       user_role: ["superadmin", "store_admin"],
     },
