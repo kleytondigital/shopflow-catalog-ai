@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Edit, Trash2, Eye, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, Eye, Sparkles, MoreHorizontal, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AIProductToolsModal from './AIProductToolsModal';
+import { useIsMobile } from '@/hooks/use-mobile';
+import ProductMobileCard from './ProductMobileCard';
 
 interface Product {
   id: string;
@@ -32,6 +35,8 @@ const ProductList = ({ products, onEdit, onDelete, onGenerateDescription }: Prod
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [iaModalProduct, setIaModalProduct] = useState<any | null>(null);
 
+  const isMobile = useIsMobile();
+
   const toggleProductSelection = (id: string) => {
     setSelectedProducts(prev => 
       prev.includes(id) 
@@ -40,127 +45,144 @@ const ProductList = ({ products, onEdit, onDelete, onGenerateDescription }: Prod
     );
   };
 
+  // Layout para mobile (cards) ou desktop (tabela)
   return (
     <div className="card-modern">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-4 px-4">
-                <input
-                  type="checkbox"
-                  className="rounded border-border"
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedProducts(products.map(p => p.id));
-                    } else {
-                      setSelectedProducts([]);
-                    }
-                  }}
-                />
-              </th>
-              <th className="text-left py-4 px-4 font-semibold">Produto</th>
-              <th className="text-left py-4 px-4 font-semibold">Categoria</th>
-              <th className="text-left py-4 px-4 font-semibold">Preço Varejo</th>
-              <th className="text-left py-4 px-4 font-semibold">Preço Atacado</th>
-              <th className="text-left py-4 px-4 font-semibold">Estoque</th>
-              <th className="text-left py-4 px-4 font-semibold">Status</th>
-              <th className="text-left py-4 px-4 font-semibold">IA</th>
-              <th className="text-left py-4 px-4 font-semibold">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                <td className="py-4 px-4">
+      {isMobile ? (
+        <div>
+          {products.map(product => (
+            <ProductMobileCard
+              key={product.id}
+              product={product}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onGenerateDescription={onGenerateDescription}
+              onOpenIAModal={setIaModalProduct}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-4 px-4">
                   <input
                     type="checkbox"
                     className="rounded border-border"
-                    checked={selectedProducts.includes(product.id)}
-                    onChange={() => toggleProductSelection(product.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedProducts(products.map(p => p.id));
+                      } else {
+                        setSelectedProducts([]);
+                      }
+                    }}
                   />
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-12 h-12 rounded-lg object-cover bg-muted"
-                    />
-                    <div>
-                      <p className="font-medium text-foreground">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">ID: {product.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <span className="text-sm text-muted-foreground">{product.category}</span>
-                </td>
-                <td className="py-4 px-4">
-                  <span className="font-medium">R$ {product.price.toFixed(2)}</span>
-                </td>
-                <td className="py-4 px-4">
-                  <span className="font-medium">
-                    {product.wholesalePrice ? `R$ ${product.wholesalePrice.toFixed(2)}` : '-'}
-                  </span>
-                </td>
-                <td className="py-4 px-4">
-                  <span className={`font-medium ${product.stock <= 5 ? 'text-destructive' : 'text-foreground'}`}>
-                    {product.stock}
-                  </span>
-                </td>
-                <td className="py-4 px-4">
-                  <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                    {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                </td>
-                <td className="py-4 px-4">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => setIaModalProduct(product)}
-                    title="Ferramentas de IA"
-                  >
-                    🤖
-                  </Button>
-                </td>
-                <td className="py-4 px-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(product)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onGenerateDescription(product.id)}>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Gerar Descrição IA
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Visualizar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(product.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
+                </th>
+                <th className="text-left py-4 px-4 font-semibold">Produto</th>
+                <th className="text-left py-4 px-4 font-semibold">Categoria</th>
+                <th className="text-left py-4 px-4 font-semibold">Preço Varejo</th>
+                <th className="text-left py-4 px-4 font-semibold">Preço Atacado</th>
+                <th className="text-left py-4 px-4 font-semibold">Estoque</th>
+                <th className="text-left py-4 px-4 font-semibold">Status</th>
+                <th className="text-left py-4 px-4 font-semibold">IA</th>
+                <th className="text-left py-4 px-4 font-semibold">Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                  <td className="py-4 px-4">
+                    <input
+                      type="checkbox"
+                      className="rounded border-border"
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                    />
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={product.image} 
+                        alt={product.name}
+                        className="w-12 h-12 rounded-lg object-cover bg-muted"
+                      />
+                      <div>
+                        <p className="font-medium text-foreground">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">ID: {product.id}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className="text-sm text-muted-foreground">{product.category}</span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className="font-medium">R$ {product.price.toFixed(2)}</span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className="font-medium">
+                      {product.wholesalePrice ? `R$ ${product.wholesalePrice.toFixed(2)}` : '-'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className={`font-medium ${product.stock <= 5 ? 'text-destructive' : 'text-foreground'}`}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
+                      {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </td>
+                  <td className="py-4 px-4">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setIaModalProduct(product)}
+                      title="Ferramentas de IA"
+                      className="flex items-center justify-center"
+                    >
+                      <Brain className="h-5 w-5" />
+                    </Button>
+                  </td>
+                  <td className="py-4 px-4">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(product)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onGenerateDescription(product.id)}>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Gerar Descrição IA
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Visualizar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDelete(product.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       
-      {selectedProducts.length > 0 && (
+      {selectedProducts.length > 0 && !isMobile && (
         <div className="mt-4 p-4 bg-primary-50 rounded-lg border-l-4 border-primary">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-primary">

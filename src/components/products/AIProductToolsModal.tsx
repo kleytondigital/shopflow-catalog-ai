@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,28 +60,31 @@ const AIProductToolsModal: React.FC<AIProductToolsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white max-w-md w-full rounded-xl p-6 shadow-xl relative">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={onClose}>×</button>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold">Ferramentas de IA</h2>
-          <p className="text-gray-600 text-sm">
-            Geração de conteúdo avançada para <span className="font-semibold">{product.name}</span>
+        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={onClose} aria-label="Fechar">×</button>
+        <div className="flex flex-col items-center mb-4">
+          <span className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-2 text-blue-700">
+            <Brain className="w-7 h-7" />
+          </span>
+          <h2 className="text-xl font-bold mb-0.5">Ferramentas de IA</h2>
+          <p className="text-gray-600 text-sm text-center">
+            Conteúdo automático para <span className="font-semibold">{product.name}</span>
           </p>
         </div>
-        <ul className="space-y-3">
+        <div className="flex flex-col items-center space-y-2">
           {IA_OPTIONS.map((opt) => (
-            <li key={opt.key} className="flex items-center justify-between">
-              <span>{opt.label}</span>
-              <Button
-                size="sm"
-                onClick={() => handleGenerate(opt.key)}
-                disabled={!!loadingKey}
-                className="ml-2"
-              >
-                {loadingKey === opt.key ? <Loader2 className="animate-spin h-4 w-4" /> : "Gerar"}
-              </Button>
-            </li>
+            <Button
+              key={opt.key}
+              block
+              size="sm"
+              className="w-full shadow-sm flex justify-center"
+              onClick={() => handleGenerate(opt.key)}
+              disabled={!!loadingKey}
+            >
+              {loadingKey === opt.key ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Brain className="h-4 w-4 mr-1" />}
+              {opt.label}
+            </Button>
           ))}
-        </ul>
+        </div>
         <div className="mt-6 space-y-2">
           {Object.entries(results).map(([k, v]) => (
             <div key={k}>
