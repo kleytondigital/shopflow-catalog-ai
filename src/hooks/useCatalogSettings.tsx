@@ -14,6 +14,8 @@ export interface CatalogSettingsData {
     pix: boolean;
     bank_slip: boolean;
     credit_card: boolean;
+    mercadopago_access_token?: string;
+    mercadopago_public_key?: string;
   };
   shipping_options: {
     pickup: boolean;
@@ -175,16 +177,19 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           allow_price_filter: true,
         };
       } else {
+        // Processar dados existentes incluindo credenciais do Mercado Pago
+        const existingPaymentMethods = typeof data.payment_methods === 'object' && data.payment_methods !== null 
+          ? data.payment_methods as any 
+          : {};
+
         processedSettings = {
           ...data,
-          payment_methods: typeof data.payment_methods === 'object' && data.payment_methods !== null ? {
-            pix: (data.payment_methods as any)?.pix || false,
-            bank_slip: (data.payment_methods as any)?.bank_slip || false,
-            credit_card: (data.payment_methods as any)?.credit_card || false,
-          } : {
-            pix: false,
-            bank_slip: false,
-            credit_card: false,
+          payment_methods: {
+            pix: existingPaymentMethods?.pix || false,
+            bank_slip: existingPaymentMethods?.bank_slip || false,
+            credit_card: existingPaymentMethods?.credit_card || false,
+            mercadopago_access_token: existingPaymentMethods?.mercadopago_access_token || undefined,
+            mercadopago_public_key: existingPaymentMethods?.mercadopago_public_key || undefined,
           },
           shipping_options: typeof data.shipping_options === 'object' && data.shipping_options !== null ? {
             pickup: (data.shipping_options as any)?.pickup || false,
@@ -233,13 +238,20 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
 
       if (error) throw error;
       
+      // Processar dados atualizados incluindo credenciais do Mercado Pago
+      const updatedPaymentMethods = typeof data.payment_methods === 'object' && data.payment_methods !== null 
+        ? data.payment_methods as any 
+        : settings.payment_methods;
+
       const processedSettings: CatalogSettingsData = {
         ...data,
-        payment_methods: typeof data.payment_methods === 'object' && data.payment_methods !== null ? {
-          pix: (data.payment_methods as any)?.pix || false,
-          bank_slip: (data.payment_methods as any)?.bank_slip || false,
-          credit_card: (data.payment_methods as any)?.credit_card || false,
-        } : settings.payment_methods,
+        payment_methods: {
+          pix: updatedPaymentMethods?.pix || false,
+          bank_slip: updatedPaymentMethods?.bank_slip || false,
+          credit_card: updatedPaymentMethods?.credit_card || false,
+          mercadopago_access_token: updatedPaymentMethods?.mercadopago_access_token || undefined,
+          mercadopago_public_key: updatedPaymentMethods?.mercadopago_public_key || undefined,
+        },
         shipping_options: typeof data.shipping_options === 'object' && data.shipping_options !== null ? {
           pickup: (data.shipping_options as any)?.pickup || false,
           delivery: (data.shipping_options as any)?.delivery || false,

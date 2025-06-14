@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
+import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import CustomerDataForm from './checkout/CustomerDataForm';
 import ShippingMethodCard from './checkout/ShippingMethodCard';
 import ShippingAddressForm from './checkout/ShippingAddressForm';
@@ -29,6 +30,7 @@ interface CheckoutModalProps {
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSettings, storeId }) => {
   const { items, totalAmount, clearCart } = useCart();
   const { createOrderAsync, isCreatingOrder } = useOrders();
+  const { settings: catalogSettings } = useCatalogSettings(storeId);
   const { toast } = useToast();
   
   const [customerData, setCustomerData] = useState({
@@ -55,19 +57,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
+  // Usar configurações do catalogSettings se disponível, senão usar storeSettings
+  const effectiveSettings = catalogSettings || storeSettings;
+
   // Verificar se as credenciais do Mercado Pago estão configuradas
   const hasMercadoPagoCredentials = React.useMemo(() => {
-    const paymentMethods = storeSettings?.payment_methods as any;
+    const paymentMethods = effectiveSettings?.payment_methods;
     return !!(paymentMethods?.mercadopago_access_token?.trim() && paymentMethods?.mercadopago_public_key?.trim());
-  }, [storeSettings]);
+  }, [effectiveSettings]);
 
   // Verificar se está em ambiente de teste
   const isTestEnvironment = React.useMemo(() => {
-    const paymentMethods = storeSettings?.payment_methods as any;
+    const paymentMethods = effectiveSettings?.payment_methods;
     const accessToken = paymentMethods?.mercadopago_access_token || '';
     const publicKey = paymentMethods?.mercadopago_public_key || '';
     return accessToken.startsWith('TEST-') || publicKey.startsWith('TEST-');
-  }, [storeSettings]);
+  }, [effectiveSettings]);
 
   const availablePaymentMethods = React.useMemo(() => {
     if (!hasMercadoPagoCredentials) {
@@ -75,7 +80,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     }
 
     const methods = [];
-    if (storeSettings?.payment_methods?.pix) {
+    if (effectiveSettings?.payment_methods?.pix) {
       methods.push({ 
         id: 'pix', 
         name: 'PIX', 
@@ -83,7 +88,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         description: 'Pagamento instantâneo'
       });
     }
-    if (storeSettings?.payment_methods?.credit_card) {
+    if (effectiveSettings?.payment_methods?.credit_card) {
       methods.push({ 
         id: 'credit_card', 
         name: 'Cartão de Crédito', 
@@ -91,7 +96,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         description: 'Parcelamento em até 12x'
       });
     }
-    if (storeSettings?.payment_methods?.bank_slip) {
+    if (effectiveSettings?.payment_methods?.bank_slip) {
       methods.push({ 
         id: 'bank_slip', 
         name: 'Boleto Bancário', 
@@ -100,12 +105,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       });
     }
     return methods;
-  }, [storeSettings, hasMercadoPagoCredentials]);
+  }, [effectiveSettings, hasMercadoPagoCredentials]);
 
   // ... keep existing code (availableShippingMethods useMemo)
   const availableShippingMethods = React.useMemo(() => {
     const methods = [];
-    if (storeSettings?.shipping_options?.pickup) {
+    if (effectiveSettings?.shipping_options?.pickup) {
       methods.push({ 
         id: 'pickup', 
         name: 'Retirar na Loja', 
@@ -113,15 +118,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         icon: MapPin 
       });
     }
-    if (storeSettings?.shipping_options?.delivery) {
+    if (effectiveSettings?.shipping_options?.delivery) {
       methods.push({ 
         id: 'delivery', 
         name: 'Entrega Local', 
-        cost: storeSettings.shipping_options.delivery_fee || 0, 
+        cost: effectiveSettings.shipping_options.delivery_fee || 0, 
         icon: Truck 
       });
     }
-    if (storeSettings?.shipping_options?.shipping) {
+    if (effectiveSettings?.shipping_options?.shipping) {
       methods.push({ 
         id: 'shipping', 
         name: 'Correios', 
@@ -130,7 +135,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       });
     }
     return methods;
-  }, [storeSettings]);
+  }, [effectiveSettings]);
 
   useEffect(() => {
     if (availablePaymentMethods.length > 0) {
@@ -158,7 +163,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     const selectedOption = shippingOptions.find(opt => opt.id === methodId);
     if (selectedOption) {
       // Verificar se é frete grátis
-      const freeDeliveryAmount = storeSettings?.shipping_options?.free_delivery_amount || 0;
+      const freeDeliveryAmount = effectiveSettings?.shipping_options?.free_delivery_amount || 0;
       const isFreeDelivery = freeDeliveryAmount > 0 && 
                            totalAmount >= freeDeliveryAmount && 
                            methodId === 'delivery';
@@ -262,9 +267,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   };
 
   const handleWhatsAppCheckout = (order: any) => {
-    const checkoutType = storeSettings?.checkout_type || 'both';
+    const checkoutType = effectiveSettings?.checkout_type || 'both';
     
-    if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && storeSettings?.whatsapp_number)) {
+    if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && effectiveSettings?.whatsapp_number)) {
       const orderData = {
         customer_name: customerData.name,
         customer_phone: customerData.phone,
@@ -288,7 +293,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       });
 
       setTimeout(() => {
-        window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+        window.open(`https://wa.me/${effectiveSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
       }, 1000);
     }
 
@@ -380,7 +385,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                         options={shippingOptions}
                         selectedOption={shippingMethod}
                         onOptionChange={handleShippingMethodChange}
-                        freeDeliveryAmount={storeSettings?.shipping_options?.free_delivery_amount}
+                        freeDeliveryAmount={effectiveSettings?.shipping_options?.free_delivery_amount}
                         cartTotal={totalAmount}
                       />
                     )}
@@ -391,7 +396,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                         onAddressChange={setShippingAddress}
                         onCalculateShipping={() => {}}
                         onShippingCalculated={handleShippingCalculated}
-                        storeSettings={storeSettings}
+                        storeSettings={effectiveSettings}
                       />
                     )}
 
