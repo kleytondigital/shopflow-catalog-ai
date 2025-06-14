@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
@@ -11,7 +10,6 @@ interface ProductGridProps {
   loading?: boolean;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
-  onAddToCart?: (product: Product) => void; // Mantém para compatibilidade, mas não é mais usado
   wishlist: Product[];
 }
 

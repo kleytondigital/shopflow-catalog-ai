@@ -7,7 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
 import { useProductVariations } from '@/hooks/useProductVariations';
+import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/use-toast';
+import { createCartItem } from '@/utils/cartHelpers';
 import ProductDetailsModal from './ProductDetailsModal';
 
 interface ProductCardProps {
@@ -29,6 +31,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
   const [imageError, setImageError] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const { variations } = useProductVariations(product.id);
+  const { addItem } = useCart();
   const { toast } = useToast();
 
   const price = catalogType === 'wholesale' && product.wholesale_price 
@@ -67,9 +70,14 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
       setShowDetailsModal(true);
     } else {
       // Se não tem variações, adicionar diretamente ao carrinho
-      onQuickView(product); // Mantém compatibilidade
+      const minQuantity = catalogType === 'wholesale' && product.min_wholesale_qty 
+        ? product.min_wholesale_qty 
+        : 1;
+
+      const cartItem = createCartItem(product, catalogType, minQuantity);
+      addItem(cartItem);
     }
-  }, [variations.length, product, onQuickView]);
+  }, [variations.length, product, catalogType, addItem]);
 
   const handleAddToWishlist = useCallback(() => {
     onAddToWishlist(product);
