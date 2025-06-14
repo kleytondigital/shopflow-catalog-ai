@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,6 +31,10 @@ export interface Order {
   content_declaration_printed_by: string | null;
   receipt_printed_at: string | null;
   receipt_printed_by: string | null;
+  delivery_status: 'preparing' | 'in_transit' | 'delivered' | 'problem';
+  estimated_delivery_date: string | null;
+  carrier: string | null;
+  delivery_address: any;
 }
 
 export interface Payment {
@@ -89,7 +92,11 @@ export const useOrders = () => {
   const convertSupabaseToOrder = (supabaseData: any): Order => {
     return {
       ...supabaseData,
-      items: Array.isArray(supabaseData.items) ? supabaseData.items : []
+      items: Array.isArray(supabaseData.items) ? supabaseData.items : [],
+      delivery_status: supabaseData.delivery_status || 'preparing',
+      estimated_delivery_date: supabaseData.estimated_delivery_date,
+      carrier: supabaseData.carrier,
+      delivery_address: supabaseData.delivery_address
     };
   };
 
@@ -108,7 +115,13 @@ export const useOrders = () => {
 
       const { data, error: fetchError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          delivery_status,
+          estimated_delivery_date,
+          carrier,
+          delivery_address
+        `)
         .eq('store_id', profile.store_id)
         .order('created_at', { ascending: false });
 
@@ -293,9 +306,17 @@ export const useOrders = () => {
 
       console.log('📋 useOrders: Atualizando status do pedido:', { orderId, status });
 
+      // Determinar delivery_status baseado no status do pedido
+      let deliveryStatus = currentOrder.delivery_status || 'preparing';
+      if (status === 'shipping') deliveryStatus = 'in_transit';
+      if (status === 'delivered') deliveryStatus = 'delivered';
+
       const { data, error } = await supabase
         .from('orders')
-        .update({ status })
+        .update({ 
+          status,
+          delivery_status: deliveryStatus
+        })
         .eq('id', orderId)
         .select()
         .single();
@@ -303,7 +324,6 @@ export const useOrders = () => {
       if (error) throw error;
       
       // Processar mudança de estoque baseada no novo status
-      // Garantir que items seja sempre um array válido
       const orderItems = Array.isArray(currentOrder.items) ? currentOrder.items : [];
       await handleOrderStatusChange(orderId, status, orderItems);
       

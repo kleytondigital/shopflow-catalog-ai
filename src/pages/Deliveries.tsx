@@ -17,59 +17,28 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { useDeliveries } from '@/hooks/useDeliveries';
+import { Loader2 } from 'lucide-react';
 
 const Deliveries = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { deliveries, loading, error, getDeliveryStats } = useDeliveries();
 
   const breadcrumbs = [
     { href: '/', label: 'Dashboard' },
     { label: 'Gestão de Entregas', current: true },
   ];
 
-  // Dados mock para demonstração
-  const deliveries = [
-    {
-      id: '001',
-      orderId: 'PED-2024-001',
-      customer: 'Maria Silva',
-      address: 'Rua das Flores, 123 - Centro, São Paulo - SP',
-      status: 'em_transito',
-      estimatedDelivery: '2024-06-15',
-      trackingCode: 'TR123456789BR',
-      carrier: 'Correios'
-    },
-    {
-      id: '002',
-      orderId: 'PED-2024-002',
-      customer: 'João Santos',
-      address: 'Av. Paulista, 456 - Bela Vista, São Paulo - SP',
-      status: 'entregue',
-      estimatedDelivery: '2024-06-14',
-      trackingCode: 'TR987654321BR',
-      carrier: 'Sedex'
-    },
-    {
-      id: '003',
-      orderId: 'PED-2024-003',
-      customer: 'Ana Costa',
-      address: 'Rua da Esperança, 789 - Vila Madalena, São Paulo - SP',
-      status: 'preparando',
-      estimatedDelivery: '2024-06-17',
-      trackingCode: 'TR456789123BR',
-      carrier: 'PAC'
-    }
-  ];
-
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      preparando: { label: 'Preparando', variant: 'secondary' as const, icon: Clock },
-      em_transito: { label: 'Em Trânsito', variant: 'default' as const, icon: Package },
-      entregue: { label: 'Entregue', variant: 'default' as const, icon: CheckCircle },
-      problema: { label: 'Problema', variant: 'destructive' as const, icon: AlertTriangle }
+      preparing: { label: 'Preparando', variant: 'secondary' as const, icon: Clock },
+      in_transit: { label: 'Em Trânsito', variant: 'default' as const, icon: Package },
+      delivered: { label: 'Entregue', variant: 'default' as const, icon: CheckCircle },
+      problem: { label: 'Problema', variant: 'destructive' as const, icon: AlertTriangle }
     };
 
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.preparando;
+    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.preparing;
     const Icon = statusInfo.icon;
 
     return (
@@ -82,19 +51,53 @@ const Deliveries = () => {
 
   const getStatusColor = (status: string) => {
     const colorMap = {
-      preparando: 'bg-yellow-50 border-yellow-200',
-      em_transito: 'bg-blue-50 border-blue-200',
-      entregue: 'bg-green-50 border-green-200',
-      problema: 'bg-red-50 border-red-200'
+      preparing: 'bg-yellow-50 border-yellow-200',
+      in_transit: 'bg-blue-50 border-blue-200',
+      delivered: 'bg-green-50 border-green-200',
+      problem: 'bg-red-50 border-red-200'
     };
-    return colorMap[status as keyof typeof colorMap] || colorMap.preparando;
+    return colorMap[status as keyof typeof colorMap] || colorMap.preparing;
   };
 
   const filteredDeliveries = deliveries.filter(delivery =>
-    delivery.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    delivery.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     delivery.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    delivery.trackingCode.toLowerCase().includes(searchQuery.toLowerCase())
+    (delivery.tracking_code && delivery.tracking_code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const stats = getDeliveryStats();
+
+  if (loading) {
+    return (
+      <AppLayout 
+        title="Gestão de Entregas" 
+        subtitle="Acompanhe e gerencie todas as entregas em andamento"
+        breadcrumbs={breadcrumbs}
+      >
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout 
+        title="Gestão de Entregas" 
+        subtitle="Acompanhe e gerencie todas as entregas em andamento"
+        breadcrumbs={breadcrumbs}
+      >
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-red-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro ao carregar entregas</h3>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout 
@@ -138,7 +141,7 @@ const Deliveries = () => {
                   <Clock className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-2xl font-bold">{stats.preparing}</p>
                   <p className="text-sm text-gray-600">Preparando</p>
                 </div>
               </div>
@@ -151,7 +154,7 @@ const Deliveries = () => {
                   <Package className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-2xl font-bold">{stats.in_transit}</p>
                   <p className="text-sm text-gray-600">Em Trânsito</p>
                 </div>
               </div>
@@ -164,7 +167,7 @@ const Deliveries = () => {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-2xl font-bold">{stats.delivered}</p>
                   <p className="text-sm text-gray-600">Entregue</p>
                 </div>
               </div>
@@ -177,7 +180,7 @@ const Deliveries = () => {
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-2xl font-bold">{stats.problem}</p>
                   <p className="text-sm text-gray-600">Problemas</p>
                 </div>
               </div>
@@ -198,36 +201,47 @@ const Deliveries = () => {
               {filteredDeliveries.map((delivery) => (
                 <div
                   key={delivery.id}
-                  className={`p-4 rounded-xl border transition-all duration-200 hover:shadow-md ${getStatusColor(delivery.status)}`}
+                  className={`p-4 rounded-xl border transition-all duration-200 hover:shadow-md ${getStatusColor(delivery.delivery_status)}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-gray-900">{delivery.customer}</h3>
-                        {getStatusBadge(delivery.status)}
+                        <h3 className="font-semibold text-gray-900">{delivery.customer_name}</h3>
+                        {getStatusBadge(delivery.delivery_status)}
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-gray-400" />
                           <span className="text-gray-600">Pedido:</span>
-                          <span className="font-medium">{delivery.orderId}</span>
+                          <span className="font-medium">#{delivery.orderId.slice(-8)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className="text-gray-600">Previsão:</span>
-                          <span className="font-medium">{new Date(delivery.estimatedDelivery).toLocaleDateString('pt-BR')}</span>
-                        </div>
+                        {delivery.estimated_delivery_date && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className="text-gray-600">Previsão:</span>
+                            <span className="font-medium">{new Date(delivery.estimated_delivery_date).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        )}
                       </div>
                       
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                        <span className="text-gray-700">{delivery.address}</span>
-                      </div>
+                      {delivery.delivery_address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                          <span className="text-gray-700">
+                            {delivery.delivery_address.street && `${delivery.delivery_address.street}, `}
+                            {delivery.delivery_address.city} - {delivery.delivery_address.state}
+                          </span>
+                        </div>
+                      )}
                       
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600">Transportadora: <span className="font-medium">{delivery.carrier}</span></span>
-                        <span className="text-gray-600">Código: <span className="font-mono font-medium">{delivery.trackingCode}</span></span>
+                        {delivery.carrier && (
+                          <span className="text-gray-600">Transportadora: <span className="font-medium">{delivery.carrier}</span></span>
+                        )}
+                        {delivery.tracking_code && (
+                          <span className="text-gray-600">Código: <span className="font-mono font-medium">{delivery.tracking_code}</span></span>
+                        )}
                       </div>
                     </div>
                     

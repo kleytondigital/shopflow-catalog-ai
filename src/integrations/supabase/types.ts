@@ -179,12 +179,16 @@ export type Database = {
       }
       orders: {
         Row: {
+          carrier: string | null
           content_declaration_printed_at: string | null
           content_declaration_printed_by: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          delivery_address: Json | null
+          delivery_status: string | null
+          estimated_delivery_date: string | null
           id: string
           items: Json
           label_generated_at: string | null
@@ -208,12 +212,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          carrier?: string | null
           content_declaration_printed_at?: string | null
           content_declaration_printed_by?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          delivery_address?: Json | null
+          delivery_status?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           items?: Json
           label_generated_at?: string | null
@@ -237,12 +245,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          carrier?: string | null
           content_declaration_printed_at?: string | null
           content_declaration_printed_by?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          delivery_address?: Json | null
+          delivery_status?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           items?: Json
           label_generated_at?: string | null
