@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Truck, MapPin, Package, Loader2 } from 'lucide-react';
+import { Truck, MapPin, Package, Loader2, Info } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { Badge } from '@/components/ui/badge';
 
 interface ShippingFormData {
   pickup: boolean;
@@ -18,6 +19,8 @@ interface ShippingFormData {
   delivery_radius: string;
   free_delivery_amount: string;
   pickup_address: string;
+  origin_zipcode: string;
+  default_weight: string;
 }
 
 const ShippingSettings = () => {
@@ -33,7 +36,9 @@ const ShippingSettings = () => {
       delivery_fee: '0',
       delivery_radius: '10',
       free_delivery_amount: '0',
-      pickup_address: ''
+      pickup_address: '',
+      origin_zipcode: '',
+      default_weight: '0.5'
     }
   });
 
@@ -64,7 +69,9 @@ const ShippingSettings = () => {
         delivery_fee: parseFloat(data.delivery_fee),
         delivery_radius: parseFloat(data.delivery_radius),
         free_delivery_amount: parseFloat(data.free_delivery_amount),
-        pickup_address: data.pickup_address
+        pickup_address: data.pickup_address,
+        origin_zipcode: data.origin_zipcode,
+        default_weight: parseFloat(data.default_weight)
       };
 
       const { error } = await updateSettings({
@@ -76,13 +83,13 @@ const ShippingSettings = () => {
       }
 
       toast({
-        title: "Configurações salvas",
+        title: "✅ Configurações salvas",
         description: "As configurações de envio foram atualizadas com sucesso",
       });
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast({
-        title: "Erro ao salvar",
+        title: "❌ Erro ao salvar",
         description: "Não foi possível salvar as configurações. Tente novamente.",
         variant: "destructive",
       });
@@ -118,7 +125,10 @@ const ShippingSettings = () => {
                 name="pickup"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
-                    <FormLabel>Retirada no Local</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Retirada no Local</FormLabel>
+                      <Badge variant="secondary" className="text-xs">Grátis</Badge>
+                    </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -134,7 +144,10 @@ const ShippingSettings = () => {
                 name="delivery"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
-                    <FormLabel>Entrega Local</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Entrega Local</FormLabel>
+                      <Badge variant="outline" className="text-xs">Configurável</Badge>
+                    </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -150,7 +163,10 @@ const ShippingSettings = () => {
                 name="shipping"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
-                    <FormLabel>Envio pelos Correios</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Envio pelos Correios</FormLabel>
+                      <Badge variant="outline" className="text-xs">PAC/SEDEX</Badge>
+                    </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -163,12 +179,12 @@ const ShippingSettings = () => {
             </CardContent>
           </Card>
 
-          {/* Configurações de Entrega */}
+          {/* Configurações de Entrega Local */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Configurações de Entrega
+                Entrega Local
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -231,6 +247,53 @@ const ShippingSettings = () => {
           </Card>
         </div>
 
+        {/* Configurações dos Correios */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Configurações dos Correios
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="origin_zipcode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CEP de Origem</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="00000-000"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="default_weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Peso Padrão (kg)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="0.5"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
         {/* Endereço de Retirada */}
         <Card>
           <CardHeader>
@@ -256,6 +319,24 @@ const ShippingSettings = () => {
                 </FormItem>
               )}
             />
+          </CardContent>
+        </Card>
+
+        {/* Informações Importantes */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="space-y-2">
+                <h4 className="font-medium text-blue-800">Informações sobre o Frete</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• O cálculo dos Correios é feito automaticamente via API</li>
+                  <li>• Configure o CEP de origem para cálculos precisos</li>
+                  <li>• O peso padrão é usado quando não especificado no produto</li>
+                  <li>• Frete grátis se aplica apenas à entrega local</li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

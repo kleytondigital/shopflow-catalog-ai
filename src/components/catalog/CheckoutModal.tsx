@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Truck, MapPin, CreditCard, Smartphone, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import CustomerDataForm from './checkout/CustomerDataForm';
 import ShippingMethodCard from './checkout/ShippingMethodCard';
 import ShippingAddressForm from './checkout/ShippingAddressForm';
+import ShippingOptionsCard from './checkout/ShippingOptionsCard';
 import PaymentMethodCard from './checkout/PaymentMethodCard';
 import OrderSummary from './checkout/OrderSummary';
 import MercadoPagoPayment from './checkout/MercadoPagoPayment';
@@ -50,6 +52,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const [notes, setNotes] = useState('');
   const [currentStep, setCurrentStep] = useState<'checkout' | 'payment'>('checkout');
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
   const availablePaymentMethods = React.useMemo(() => {
     const methods = [];
@@ -81,18 +84,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   }, [storeSettings]);
 
   const availableShippingMethods = React.useMemo(() => {
-    const methods = [];
-    if (storeSettings?.shipping_options?.pickup) {
-      methods.push({ id: 'pickup', name: 'Retirar na Loja', cost: 0, icon: MapPin });
-    }
-    if (storeSettings?.shipping_options?.delivery) {
-      methods.push({ id: 'delivery', name: 'Entrega Local', cost: 0, icon: Truck });
-    }
-    if (storeSettings?.shipping_options?.shipping) {
-      methods.push({ id: 'shipping', name: 'Correios', cost: shippingCost, icon: Truck });
-    }
-    return methods;
-  }, [storeSettings, shippingCost]);
+    return shippingOptions.length > 0 ? shippingOptions : [];
+  }, [shippingOptions]);
 
   useEffect(() => {
     if (availablePaymentMethods.length > 0) {
@@ -105,15 +98,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
   const finalTotal = totalAmount + shippingCost;
 
-  const calculateShipping = async () => {
-    if (shippingMethod === 'shipping' && shippingAddress.zipCode.length === 8) {
-      try {
-        setTimeout(() => {
-          setShippingCost(15.50);
-        }, 1000);
-      } catch (error) {
-        console.error('Erro ao calcular frete:', error);
-      }
+  const handleShippingCalculated = (options: any[]) => {
+    setShippingOptions(options);
+    
+    // Auto-selecionar primeira opção se não houver seleção
+    if (options.length > 0 && !shippingMethod) {
+      setShippingMethod(options[0].id);
+      setShippingCost(options[0].price);
+    }
+  };
+
+  const handleShippingMethodChange = (methodId: string) => {
+    setShippingMethod(methodId);
+    const selectedOption = shippingOptions.find(opt => opt.id === methodId);
+    if (selectedOption) {
+      // Verificar se é frete grátis
+      const freeDeliveryAmount = storeSettings?.shipping_options?.free_delivery_amount || 0;
+      const isFreeDelivery = freeDeliveryAmount > 0 && 
+                           totalAmount >= freeDeliveryAmount && 
+                           methodId === 'delivery';
+      
+      setShippingCost(isFreeDelivery ? 0 : selectedOption.price);
     }
   };
 
@@ -305,17 +310,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                       onDataChange={setCustomerData}
                     />
 
-                    <ShippingMethodCard
-                      shippingMethods={availableShippingMethods}
-                      selectedMethod={shippingMethod}
-                      onMethodChange={setShippingMethod}
-                    />
+                    {/* Usar ShippingMethodCard apenas para opções básicas ou ShippingOptionsCard para opções calculadas */}
+                    {shippingOptions.length === 0 ? (
+                      <ShippingMethodCard
+                        shippingMethods={[
+                          ...(storeSettings?.shipping_options?.pickup ? [{ id: 'pickup', name: 'Retirar na Loja', cost: 0, icon: MapPin }] : []),
+                          ...(storeSettings?.shipping_options?.delivery ? [{ id: 'delivery', name: 'Entrega Local', cost: storeSettings.shipping_options.delivery_fee || 0, icon: Truck }] : []),
+                          ...(storeSettings?.shipping_options?.shipping ? [{ id: 'shipping', name: 'Correios', cost: 0, icon: Truck }] : [])
+                        ]}
+                        selectedMethod={shippingMethod}
+                        onMethodChange={setShippingMethod}
+                      />
+                    ) : (
+                      <ShippingOptionsCard
+                        options={shippingOptions}
+                        selectedOption={shippingMethod}
+                        onOptionChange={handleShippingMethodChange}
+                        freeDeliveryAmount={storeSettings?.shipping_options?.free_delivery_amount}
+                        cartTotal={totalAmount}
+                      />
+                    )}
 
-                    {shippingMethod === 'shipping' && (
+                    {(shippingMethod === 'shipping' || shippingMethod === 'delivery') && (
                       <ShippingAddressForm
                         address={shippingAddress}
                         onAddressChange={setShippingAddress}
-                        onCalculateShipping={calculateShipping}
+                        onCalculateShipping={() => {}}
+                        onShippingCalculated={handleShippingCalculated}
+                        storeSettings={storeSettings}
                       />
                     )}
 
