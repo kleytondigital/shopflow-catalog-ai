@@ -81,7 +81,7 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
     setValue('description', description);
   };
 
-  // Corrigido: Função que aceita array de arquivos
+  // Corrigido: Função wrapper para aceitar array de arquivos do DraftImageUpload
   const handleImageAdd = (files: File[]) => {
     addDraftImages(files);
   };
