@@ -25,68 +25,82 @@ const ResponsiveDashboardCard = ({
   onClick 
 }: ResponsiveDashboardCardProps) => {
   const getCardClass = () => {
-    switch (variant) {
-      case 'primary':
-        return 'bg-gradient-to-r from-blue-500 to-blue-600';
-      case 'secondary':
-        return 'bg-gradient-to-r from-gray-500 to-gray-600';
-      case 'success':
-        return 'bg-gradient-to-r from-green-500 to-green-600';
-      case 'warning':
-        return 'bg-gradient-to-r from-yellow-500 to-orange-500';
-      default:
-        return 'bg-gradient-to-r from-blue-500 to-blue-600';
-    }
+    const baseClasses = "card-modern-dashboard";
+    const variantClasses = {
+      primary: 'card-variant-primary',
+      secondary: 'card-variant-secondary', 
+      success: 'card-variant-success',
+      warning: 'card-variant-warning'
+    };
+    
+    return `${baseClasses} ${variantClasses[variant]}`;
+  };
+
+  const getIconContainerClass = () => {
+    return "icon-container-modern";
   };
 
   return (
     <div 
-      className={`${getCardClass()} rounded-xl p-4 md:p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 ${
-        onClick ? 'cursor-pointer hover:scale-105' : ''
-      }`}
+      className={`${getCardClass()} ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''} 
+                  transition-all duration-300 ease-out transform-gpu touch-target`}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between">
+      {/* Header com título e ícone */}
+      <div className="flex items-start justify-between mb-3 md:mb-4">
         <div className="flex-1 min-w-0">
-          <p className="text-white/80 text-xs md:text-sm font-medium mb-1 md:mb-2 truncate">
+          <p className="card-title-text truncate">
             {title}
           </p>
-          <div className="flex items-end gap-2 mb-1">
-            <h3 className="text-xl md:text-3xl font-bold text-white truncate">
-              {value}
-            </h3>
-            {trend && (
-              <span className={`text-xs md:text-sm font-medium ${
-                trend.isPositive ? 'text-green-200' : 'text-red-200'
-              }`}>
-                {trend.isPositive ? '+' : ''}{trend.value}%
-              </span>
-            )}
-          </div>
-          {subtitle && (
-            <p className="text-white/70 text-xs md:text-sm truncate">
-              {subtitle}
-            </p>
-          )}
         </div>
-        <div className="ml-2 md:ml-4 flex-shrink-0">
-          <div className="bg-white/20 p-2 md:p-3 rounded-lg">
-            <Icon size={20} className="text-white md:w-6 md:h-6" />
-          </div>
+        <div className={getIconContainerClass()}>
+          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
         </div>
       </div>
-      
-      {trend && (
-        <div className="mt-3 md:mt-4">
-          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-            <div 
-              className={`h-full transition-all duration-300 ${
-                trend.isPositive ? 'bg-green-300' : 'bg-red-300'
-              }`}
-              style={{ width: `${Math.min(Math.abs(trend.value), 100)}%` }}
-            />
-          </div>
+
+      {/* Valor principal e trend */}
+      <div className="flex items-end justify-between mb-2 md:mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="card-value-text truncate">
+            {value}
+          </h3>
         </div>
+        {trend && (
+          <div className="flex items-center ml-3">
+            <span className={`card-trend-text ${
+              trend.isPositive ? 'text-green-200' : 'text-red-200'
+            }`}>
+              {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Subtitle */}
+      {subtitle && (
+        <p className="card-subtitle-text truncate mb-3 md:mb-4">
+          {subtitle}
+        </p>
+      )}
+      
+      {/* Progress bar para trend */}
+      {trend && (
+        <div className="card-progress-container">
+          <div 
+            className={`card-progress-bar ${
+              trend.isPositive ? 'bg-green-300' : 'bg-red-300'
+            }`}
+            style={{ 
+              width: `${Math.min(Math.abs(trend.value), 100)}%`,
+              transition: 'width 0.6s ease-out'
+            }}
+          />
+        </div>
+      )}
+
+      {/* Efeito de hover overlay */}
+      {onClick && (
+        <div className="card-hover-overlay" />
       )}
     </div>
   );

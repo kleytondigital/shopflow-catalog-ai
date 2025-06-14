@@ -173,8 +173,8 @@ const StoreDashboard = () => {
         <QuickActions onNewProduct={() => setShowProductForm(true)} />
       </div>
 
-      {/* Cards de Métricas - Responsive */}
-      <div className="grid-dashboard">
+      {/* Cards de Métricas - Grid Melhorado */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 animate-scale-in">
         <ResponsiveDashboardCard
           title="Total de Produtos"
           value={totalProducts}
@@ -214,7 +214,7 @@ const StoreDashboard = () => {
       </div>
 
       {/* Mobile Navigation Panel */}
-      <div className="md:hidden">
+      <div className="md:hidden animate-slide-up">
         <h2 className="text-lg font-semibold mb-4">Acesso Rápido</h2>
         <MobileNavigationPanel />
       </div>
@@ -238,8 +238,8 @@ const StoreDashboard = () => {
       {/* Produtos e Pedidos Recentes - Mobile Stack, Desktop Grid */}
       <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
         {/* Lista de Produtos Recentes */}
-        <Card className="card-modern">
-          <CardHeader>
+        <Card className="card-modern overflow-hidden">
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Package className="h-5 w-5 text-blue-600" />
               Produtos Recentes
@@ -250,7 +250,7 @@ const StoreDashboard = () => {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {productsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="loading-spinner"></div>
@@ -259,15 +259,15 @@ const StoreDashboard = () => {
             ) : (
               <div className="space-y-3 md:space-y-4">
                 {filteredProducts.slice(0, 5).map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer touch-friendly"
+                  <div key={product.id} className="flex items-center justify-between p-3 md:p-4 border rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer touch-friendly hover:shadow-md"
                        onClick={() => handleProductSelect(product.id)}>
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                      <div className="w-11 h-11 md:w-12 md:h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
                         <Package className="h-5 w-5 md:h-6 md:w-6 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-xs md:text-sm truncate">{product.name}</h3>
+                          <h3 className="font-semibold text-sm md:text-base truncate">{product.name}</h3>
                           <Badge variant={product.is_active ? "default" : "secondary"} className="text-xs">
                             {product.is_active ? "Ativo" : "Inativo"}
                           </Badge>
@@ -277,13 +277,13 @@ const StoreDashboard = () => {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
                           {product.category || "Sem categoria"} • {product.stock} unidades
                         </p>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-2">
-                      <p className="font-medium text-xs md:text-sm">R$ {product.retail_price.toFixed(2)}</p>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="font-semibold text-sm md:text-base">R$ {product.retail_price.toFixed(2)}</p>
                       {product.wholesale_price && (
                         <p className="text-xs text-muted-foreground hidden md:block">
                           Atacado: R$ {product.wholesale_price.toFixed(2)}
@@ -316,14 +316,14 @@ const StoreDashboard = () => {
         </Card>
 
         {/* Pedidos Recentes */}
-        <Card className="card-modern">
-          <CardHeader>
+        <Card className="card-modern overflow-hidden">
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <ShoppingCart className="h-5 w-5 text-green-600" />
               Pedidos Recentes
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {ordersLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="loading-spinner"></div>
@@ -332,15 +332,15 @@ const StoreDashboard = () => {
             ) : (
               <div className="space-y-3 md:space-y-4">
                 {orders.slice(0, 5).map((order) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer touch-friendly"
+                  <div key={order.id} className="flex items-center justify-between p-3 md:p-4 border rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer touch-friendly hover:shadow-md"
                        onClick={() => handleOrderSelect(order.id)}>
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-400 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                      <div className="w-11 h-11 md:w-12 md:h-12 bg-gradient-to-br from-green-400 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
                         <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-xs md:text-sm truncate">{order.customer_name}</h3>
+                          <h3 className="font-semibold text-sm md:text-base truncate">{order.customer_name}</h3>
                           <Badge 
                             variant={order.status === 'pending' ? "secondary" : order.status === 'delivered' ? "default" : "outline"} 
                             className="text-xs"
@@ -350,13 +350,13 @@ const StoreDashboard = () => {
                              order.status === 'delivered' ? 'Entregue' : order.status}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
                           {order.items?.length || 0} item(s) • #{order.id.slice(-8)}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-2">
-                      <p className="font-medium text-xs md:text-sm">R$ {order.total_amount.toFixed(2)}</p>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="font-semibold text-sm md:text-base">R$ {order.total_amount.toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(order.created_at).toLocaleDateString('pt-BR')}
                       </p>
