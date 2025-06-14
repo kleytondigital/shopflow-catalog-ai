@@ -6,20 +6,30 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { StoreData } from '@/hooks/useStoreData';
 
+export type CatalogType = 'retail' | 'wholesale';
+
 interface CatalogHeaderProps {
   store: StoreData;
-  itemCount: number;
-  onCartClick: () => void;
+  catalogType?: CatalogType;
+  onCatalogTypeChange?: (type: CatalogType) => void;
+  cartItemsCount?: number;
+  wishlistCount?: number;
+  whatsappNumber?: string;
   onSearch?: (query: string) => void;
   onToggleFilters?: () => void;
+  onCartClick: () => void;
 }
 
 const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   store,
-  itemCount,
-  onCartClick,
+  catalogType,
+  onCatalogTypeChange,
+  cartItemsCount = 0,
+  wishlistCount = 0,
+  whatsappNumber,
   onSearch,
-  onToggleFilters
+  onToggleFilters,
+  onCartClick
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -86,12 +96,12 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
             className="relative"
           >
             <ShoppingCart className="h-5 w-5" />
-            {itemCount > 0 && (
+            {cartItemsCount > 0 && (
               <Badge 
                 variant="destructive" 
                 className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
               >
-                {itemCount}
+                {cartItemsCount}
               </Badge>
             )}
             <span className="ml-2 hidden sm:inline">Carrinho</span>

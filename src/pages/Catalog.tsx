@@ -251,6 +251,7 @@ const CatalogContent = () => {
         wishlistCount={wishlist.length}
         whatsappNumber={settings?.whatsapp_number || undefined}
         onCartClick={() => setShowCheckout(true)}
+        onToggleFilters={() => setFilterSidebarOpen(true)}
       />
 
       {/* Main Content */}
