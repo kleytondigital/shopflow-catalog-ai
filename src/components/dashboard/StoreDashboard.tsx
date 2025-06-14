@@ -49,6 +49,7 @@ const StoreDashboard = () => {
         title: "Sucesso",
         description: "Produto criado com sucesso",
       });
+      setShowProductForm(false);
     }
   };
 
@@ -256,6 +257,7 @@ const StoreDashboard = () => {
         open={showProductForm}
         onOpenChange={setShowProductForm}
         onSubmit={handleCreateProduct}
+        mode="create"
       />
     </div>
   );
