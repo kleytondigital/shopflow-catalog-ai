@@ -30,7 +30,7 @@ const ProductFilters = ({ categories, filters, onFiltersChange, onClearFilters }
   const handleFilterChange = (key: string, value: any) => {
     onFiltersChange({
       ...filters,
-      [key]: value === '' ? undefined : value
+      [key]: value === 'all' ? undefined : value
     });
   };
 
@@ -66,14 +66,14 @@ const ProductFilters = ({ categories, filters, onFiltersChange, onClearFilters }
           <div>
             <Label htmlFor="category-filter">Categoria</Label>
             <Select
-              value={filters.category || ''}
+              value={filters.category || 'all'}
               onValueChange={(value) => handleFilterChange('category', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todas as categorias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as categorias</SelectItem>
+                <SelectItem value="all">Todas as categorias</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
