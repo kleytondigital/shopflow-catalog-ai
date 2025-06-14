@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +25,7 @@ interface MercadoPagoPaymentProps {
   customerData: CustomerData;
   paymentMethod: 'pix' | 'credit_card' | 'bank_slip';
   orderId?: string;
+  storeId?: string;
   onPaymentStarted?: (preferenceId: string) => void;
   onPaymentSuccess?: () => void;
   onPaymentError?: (error: string) => void;
@@ -37,11 +37,12 @@ const MercadoPagoPayment: React.FC<MercadoPagoPaymentProps> = ({
   customerData,
   paymentMethod,
   orderId,
+  storeId,
   onPaymentStarted,
   onPaymentSuccess,
   onPaymentError
 }) => {
-  const { createPixPayment, createCardPayment, createBankSlipPayment, loading, error, hasCredentials } = useMercadoPago();
+  const { createPixPayment, createCardPayment, createBankSlipPayment, loading, error, hasCredentials } = useMercadoPago(storeId);
   const { toast } = useToast();
   const [paymentResult, setPaymentResult] = useState<any>(null);
   const [showPixModal, setShowPixModal] = useState(false);

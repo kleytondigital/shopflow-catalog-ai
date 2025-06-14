@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 
 interface MercadoPagoItem {
   id: string;
@@ -41,10 +40,10 @@ interface PaymentResult {
   preference_id: string;
 }
 
-export const useMercadoPago = () => {
+export const useMercadoPago = (storeId?: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { settings } = useStoreSettings();
+  const { settings } = useCatalogSettings(storeId);
 
   const getAccessToken = (): string | null => {
     const paymentMethods = settings?.payment_methods as any;

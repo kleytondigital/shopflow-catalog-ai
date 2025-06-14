@@ -345,7 +345,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 gap-0">
+      <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
           <DialogTitle className="text-2xl font-bold text-white text-center flex items-center justify-center gap-3">
             {currentStep === 'checkout' ? 'Finalizar Pedido' : 'Pagamento'}
@@ -357,10 +357,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           {currentStep === 'checkout' ? (
             <div className="h-full lg:grid lg:grid-cols-3 lg:gap-0">
-              <div className="lg:col-span-2 h-full">
+              <div className="lg:col-span-2 h-full overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
                     {/* Alerta de ambiente de teste */}
@@ -434,7 +434,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
               />
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center p-6">
+            <div className="h-full flex items-center justify-center p-6 overflow-auto">
               <div className="max-w-lg w-full">
                 <MercadoPagoPayment
                   items={items}
@@ -442,6 +442,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                   customerData={customerData}
                   paymentMethod={paymentMethod as 'pix' | 'credit_card' | 'bank_slip'}
                   orderId={createdOrder?.id}
+                  storeId={storeId}
                   onPaymentSuccess={handlePaymentSuccess}
                   onPaymentError={handlePaymentError}
                 />
