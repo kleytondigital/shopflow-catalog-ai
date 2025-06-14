@@ -13,16 +13,22 @@ import AIContentGenerator from '@/components/ai/AIContentGenerator';
 
 interface CategoryFormDialogProps {
   onCategoryCreated: (category: any) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const CategoryFormDialog = ({ onCategoryCreated }: CategoryFormDialogProps) => {
-  const [open, setOpen] = useState(false);
+const CategoryFormDialog = ({ onCategoryCreated, open: controlledOpen, onOpenChange }: CategoryFormDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const { createCategory } = useCategories();
   const { profile } = useAuth();
   const { toast } = useToast();
+
+  // Use controlled open state if provided, otherwise use internal state
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const handleDescriptionGenerated = (generatedDescription: string) => {
     setDescription(generatedDescription);
@@ -117,13 +123,15 @@ const CategoryFormDialog = ({ onCategoryCreated }: CategoryFormDialogProps) => {
     setDescription('');
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      resetForm();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      setOpen(newOpen);
-      if (!newOpen) {
-        resetForm();
-      }
-    }}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button 
           type="button" 

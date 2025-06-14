@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +22,7 @@ import PaymentPending from "./pages/PaymentPending";
 import Categories from "./pages/Categories";
 import OrdersImproved from "./pages/OrdersImproved";
 import Customers from "./pages/Customers";
-import AppLayout from "./components/AppLayout";
+import AppLayout from "./components/layout/AppLayout";
 
 const queryClient = new QueryClient();
 
