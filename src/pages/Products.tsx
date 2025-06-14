@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import ProductFormModal from '@/components/products/ProductFormModal';
 import { Button } from '@/components/ui/button';
 import { useProducts, CreateProductData, UpdateProductData } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
+import QuickSearch from '@/components/dashboard/QuickSearch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,6 +208,18 @@ const Products = () => {
       breadcrumbs={breadcrumbs}
     >
       <div className="space-y-6">
+        <div>
+          {/* Busca inteligente no topo */}
+          <QuickSearch
+            onProductSelect={async (productId) => {
+              // Localiza o produto e abre modal de edição
+              const product = formattedProducts.find((p) => p.id === productId);
+              if (product) {
+                await handleEditProduct(product);
+              }
+            }}
+          />
+        </div>
         <div className="flex justify-end">
           <Button onClick={handleNewProduct} disabled={loading} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />

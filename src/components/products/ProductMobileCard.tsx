@@ -1,8 +1,14 @@
 
 import React from "react";
-import { MoreHorizontal, Brain } from "lucide-react";
+import { MoreHorizontal, Brain, Edit, Trash2, Sparkles, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 interface ProductMobileCardProps {
   product: {
@@ -69,27 +75,39 @@ const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
           >
             <Brain className="h-5 w-5" />
           </Button>
-          {/* Botão de opções */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            title="Opções"
-            onClick={() => {
-              // Menu de opções: Ações no card
-              const wrapper = document.getElementById(`actions-menu-${product.id}`);
-              wrapper?.focus();
-              wrapper?.click();
-            }}
-          >
-            <MoreHorizontal />
-          </Button>
-          {/* Menu de opções fora (hidden, para acessibilidade) */}
-          <div id={`actions-menu-${product.id}`} tabIndex={-1} style={{display: "none"}}>
-            <button onClick={() => onEdit(product)}>Editar</button>
-            <button onClick={() => onGenerateDescription(product.id)}>Gerar Descrição IA</button>
-            <button onClick={() => onDelete(product.id)} className="text-destructive">Excluir</button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                title="Opções"
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(product)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onGenerateDescription(product.id)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Gerar Descrição IA
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onDelete(product.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>
