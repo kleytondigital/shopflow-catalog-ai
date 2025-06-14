@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProductList from '@/components/products/ProductList';
 import ProductFormModal from '@/components/products/ProductFormModal';
@@ -24,6 +25,7 @@ const Products = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const { products, createProduct, updateProduct, deleteProduct, loading, getProduct } = useProducts();
   const { toast } = useToast();
@@ -205,50 +207,58 @@ const Products = () => {
       subtitle="Gerencie o catálogo de produtos da sua loja"
       breadcrumbs={breadcrumbs}
     >
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
-          <p className="text-muted-foreground">
-            {products.length} produto{products.length !== 1 ? 's' : ''} cadastrado{products.length !== 1 ? 's' : ''}
-          </p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
+              <p className="text-muted-foreground">
+                {products.length} produto{products.length !== 1 ? 's' : ''} cadastrado{products.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <Button onClick={handleNewProduct} disabled={loading} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Produto
+          </Button>
         </div>
-        <Button onClick={handleNewProduct} disabled={loading}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Produto
-        </Button>
+
+        <ProductList 
+          products={formattedProducts}
+          onEdit={handleEditProduct}
+          onDelete={handleDeleteProduct}
+          onGenerateDescription={handleGenerateDescription}
+        />
+
+        <ProductFormModal
+          open={modalOpen}
+          onOpenChange={handleCloseModal}
+          onSubmit={handleSubmit}
+          initialData={editingProduct}
+          mode={editingProduct ? 'edit' : 'create'}
+        />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      <ProductList 
-        products={formattedProducts}
-        onEdit={handleEditProduct}
-        onDelete={handleDeleteProduct}
-        onGenerateDescription={handleGenerateDescription}
-      />
-
-      <ProductFormModal
-        open={modalOpen}
-        onOpenChange={handleCloseModal}
-        onSubmit={handleSubmit}
-        initialData={editingProduct}
-        mode={editingProduct ? 'edit' : 'create'}
-      />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppLayout>
   );
 };

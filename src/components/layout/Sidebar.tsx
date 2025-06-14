@@ -11,7 +11,8 @@ import {
   BarChart3,
   Store,
   UserCheck,
-  Grid3X3
+  Grid3X3,
+  Truck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -26,6 +27,7 @@ const Sidebar = () => {
     { path: '/orders', icon: ShoppingCart, label: 'Pedidos', roles: ['store_admin'] },
     { path: '/customers', icon: Users, label: 'Clientes', roles: ['store_admin'] },
     { path: '/coupons', icon: Tag, label: 'Cupons', roles: ['store_admin'] },
+    { path: '/shipping', icon: Truck, label: 'Envios', roles: ['store_admin'] },
     { path: '/reports', icon: BarChart3, label: 'Relatórios', roles: ['superadmin', 'store_admin'] },
     { path: '/stores', icon: Store, label: 'Lojas', roles: ['superadmin'] },
     { path: '/users', icon: UserCheck, label: 'Usuários', roles: ['superadmin'] },

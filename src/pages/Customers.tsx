@@ -1,25 +1,67 @@
 
 import React from 'react';
-import AppLayout from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users } from 'lucide-react';
+import { Users, ArrowLeft, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
 
 const Customers = () => {
+  const navigate = useNavigate();
+
+  const breadcrumbs = [
+    { href: '/', label: 'Dashboard' },
+    { label: 'Clientes', current: true },
+  ];
+
   return (
-    <AppLayout title="Clientes" subtitle="Gerencie a base de clientes da sua loja">
+    <AppLayout 
+      title="Clientes" 
+      subtitle="Gerencie a base de clientes da sua loja"
+      breadcrumbs={breadcrumbs}
+    >
       <div className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Base de Clientes</h2>
+            </div>
+          </div>
+          <Button className="btn-primary" disabled>
+            <UserPlus className="mr-2 h-5 w-5" />
+            Adicionar Cliente
+          </Button>
+        </div>
+
         <Card className="card-modern">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-6 w-6 text-blue-600" />
-              Base de Clientes
+              Clientes Cadastrados
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Nenhum cliente cadastrado ainda. Os clientes aparecerão aqui quando realizarem pedidos.
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Nenhum cliente cadastrado
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Os clientes aparecerão aqui automaticamente quando realizarem pedidos através do seu catálogo online.
               </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Dica:</strong> Compartilhe o link do seu catálogo para começar a receber pedidos e clientes.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

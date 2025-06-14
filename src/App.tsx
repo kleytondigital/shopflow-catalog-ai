@@ -22,6 +22,7 @@ import PaymentPending from "./pages/PaymentPending";
 import Categories from "./pages/Categories";
 import OrdersImproved from "./pages/OrdersImproved";
 import Customers from "./pages/Customers";
+import Shipping from "./pages/Shipping";
 import AppLayout from "./components/layout/AppLayout";
 
 const queryClient = new QueryClient();

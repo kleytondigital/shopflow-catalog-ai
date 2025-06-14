@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Tag } from 'lucide-react';
+import { Plus, Tag, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 import CouponForm from '@/components/coupons/CouponForm';
 import CouponsList from '@/components/coupons/CouponsList';
 import AppLayout from '@/components/layout/AppLayout';
@@ -14,6 +14,12 @@ const Coupons = () => {
   const [showForm, setShowForm] = useState(false);
   const { coupons, createCoupon, updateCoupon, deleteCoupon } = useCoupons();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const breadcrumbs = [
+    { href: '/', label: 'Dashboard' },
+    { label: 'Cupons de Desconto', current: true },
+  ];
 
   const handleCreateCoupon = async (data: any) => {
     const { error } = await createCoupon(data);
@@ -70,13 +76,23 @@ const Coupons = () => {
   };
 
   return (
-    <AppLayout title="Cupons de Desconto" subtitle="Gerencie cupons e promoções da sua loja">
+    <AppLayout 
+      title="Cupons de Desconto" 
+      subtitle="Gerencie cupons e promoções da sua loja"
+      breadcrumbs={breadcrumbs}
+    >
       <div className="space-y-6">
         {/* Header Actions */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Tag className="h-6 w-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Cupons Ativos</h2>
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
+            <div className="flex items-center gap-2">
+              <Tag className="h-6 w-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Cupons Ativos</h2>
+            </div>
           </div>
           <Button onClick={() => setShowForm(true)} className="btn-primary">
             <Plus className="mr-2 h-5 w-5" />
