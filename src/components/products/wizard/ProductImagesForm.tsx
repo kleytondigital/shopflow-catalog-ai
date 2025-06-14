@@ -16,10 +16,23 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { draftImages, addDraftImage, removeDraftImage, uploading } = useDraftImages();
   
-  // Para modo edição, buscar imagens existentes
+  // Para modo edição, buscar imagens existentes apenas se houver ID
   const formValues = form.getValues();
   const productId = formValues.id;
-  const { images: existingImages, loading: loadingExisting } = useProductImages(productId);
+  const isEditMode = !!productId;
+  
+  // Só buscar imagens se estivermos no modo edição e o productId existir
+  const { images: existingImages, loading: loadingExisting } = useProductImages(isEditMode ? productId : undefined);
+
+  // Log para debug - mais controlado
+  useEffect(() => {
+    if (isEditMode && productId) {
+      console.log('ProductImagesForm - Modo edição detectado, ID:', productId);
+      console.log('ProductImagesForm - Imagens existentes encontradas:', existingImages.length);
+    } else {
+      console.log('ProductImagesForm - Modo criação');
+    }
+  }, [isEditMode, productId, existingImages.length]);
 
   // Combinar imagens existentes + draft images para exibição
   const allImages = [
@@ -88,21 +101,10 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
     if (allImages.length > 0) {
       const primaryImage = allImages.find(img => img.isPrimary) || allImages[0];
       if (primaryImage && primaryImage.url !== form.getValues('image_url')) {
-        console.log('Atualizando image_url principal:', primaryImage.url);
         form.setValue('image_url', primaryImage.url);
       }
     }
   }, [allImages, form]);
-
-  // Log para debug
-  useEffect(() => {
-    if (productId) {
-      console.log('ProductImagesForm - Produto ID:', productId);
-      console.log('ProductImagesForm - Imagens existentes:', existingImages);
-      console.log('ProductImagesForm - Draft images:', draftImages);
-      console.log('ProductImagesForm - Todas as imagens:', allImages);
-    }
-  }, [productId, existingImages, draftImages, allImages]);
 
   return (
     <div className="space-y-6">
@@ -154,8 +156,8 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
         disabled={uploading}
       />
 
-      {/* Loading State */}
-      {loadingExisting && (
+      {/* Loading State - só mostrar se estivermos realmente carregando no modo edição */}
+      {isEditMode && loadingExisting && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
           <span className="text-muted-foreground">Carregando imagens existentes...</span>
@@ -167,7 +169,7 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
         <div className="space-y-4">
           <h4 className="font-medium">
             Imagens ({allImages.length})
-            {existingImages.length > 0 && (
+            {isEditMode && existingImages.length > 0 && (
               <span className="text-sm text-muted-foreground ml-2">
                 • {existingImages.length} existente{existingImages.length !== 1 ? 's' : ''}
               </span>

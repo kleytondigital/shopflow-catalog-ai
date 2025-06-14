@@ -24,26 +24,36 @@ export interface CreateImageData {
 
 export const useProductImages = (productId?: string) => {
   const [images, setImages] = useState<ProductImage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchImages = async () => {
     if (!productId) {
+      console.log('useProductImages: sem productId, pulando busca');
+      setImages([]);
       setLoading(false);
       return;
     }
     
     try {
+      console.log('useProductImages: buscando imagens para produto:', productId);
       setLoading(true);
+      
       const { data, error } = await supabase
         .from('product_images')
         .select('*')
         .eq('product_id', productId)
         .order('image_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('useProductImages: erro na busca:', error);
+        throw error;
+      }
+      
+      console.log('useProductImages: imagens encontradas:', data?.length || 0);
       setImages(data || []);
     } catch (error) {
       console.error('Erro ao buscar imagens:', error);
+      setImages([]);
     } finally {
       setLoading(false);
     }
@@ -173,8 +183,13 @@ export const useProductImages = (productId?: string) => {
   };
 
   useEffect(() => {
+    // Só buscar se houver productId válido
     if (productId) {
       fetchImages();
+    } else {
+      // Se não há productId, limpar estado
+      setImages([]);
+      setLoading(false);
     }
   }, [productId]);
 

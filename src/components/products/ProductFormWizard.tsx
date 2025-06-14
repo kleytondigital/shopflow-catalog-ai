@@ -258,7 +258,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
 
       {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="space-y-6">
           <div className="min-h-[400px]">
             <CurrentStepComponent form={form} />
           </div>
@@ -287,7 +287,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={() => form.handleSubmit(handleSubmit)()}
                   disabled={isSubmitting}
                 >
                   <Save className="mr-2 h-4 w-4" />
@@ -296,7 +297,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
               )}
             </div>
           </div>
-        </form>
+        </div>
       </Form>
     </div>
   );
