@@ -17,7 +17,8 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
   const { draftImages, addDraftImage, removeDraftImage, uploading } = useDraftImages();
   
   // Para modo edição, buscar imagens existentes
-  const productId = form.getValues('id');
+  const formValues = form.getValues();
+  const productId = formValues.id;
   const { images: existingImages, loading: loadingExisting } = useProductImages(productId);
 
   // Combinar imagens existentes + draft images para exibição
@@ -27,12 +28,14 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
       url: img.image_url,
       uploaded: true,
       existing: true,
-      isPrimary: img.is_primary
+      isPrimary: img.is_primary,
+      altText: img.alt_text || `Imagem ${img.image_order}`
     })),
-    ...draftImages.map(img => ({
+    ...draftImages.map((img, index) => ({
       ...img,
       existing: false,
-      isPrimary: false
+      isPrimary: false,
+      altText: `Nova imagem ${index + 1}`
     }))
   ];
 
@@ -74,6 +77,7 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
     if (isExisting) {
       // Para imagens existentes, marcar para remoção (implementar depois se necessário)
       console.log('Remover imagem existente:', imageId);
+      // TODO: Implementar remoção de imagens existentes
     } else {
       removeDraftImage(imageId);
     }
@@ -83,11 +87,22 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
   useEffect(() => {
     if (allImages.length > 0) {
       const primaryImage = allImages.find(img => img.isPrimary) || allImages[0];
-      form.setValue('image_url', primaryImage.url);
-    } else {
-      form.setValue('image_url', '');
+      if (primaryImage && primaryImage.url !== form.getValues('image_url')) {
+        console.log('Atualizando image_url principal:', primaryImage.url);
+        form.setValue('image_url', primaryImage.url);
+      }
     }
   }, [allImages, form]);
+
+  // Log para debug
+  useEffect(() => {
+    if (productId) {
+      console.log('ProductImagesForm - Produto ID:', productId);
+      console.log('ProductImagesForm - Imagens existentes:', existingImages);
+      console.log('ProductImagesForm - Draft images:', draftImages);
+      console.log('ProductImagesForm - Todas as imagens:', allImages);
+    }
+  }, [productId, existingImages, draftImages, allImages]);
 
   return (
     <div className="space-y-6">
@@ -139,10 +154,30 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
         disabled={uploading}
       />
 
+      {/* Loading State */}
+      {loadingExisting && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+          <span className="text-muted-foreground">Carregando imagens existentes...</span>
+        </div>
+      )}
+
       {/* Images Grid */}
       {allImages.length > 0 && (
         <div className="space-y-4">
-          <h4 className="font-medium">Imagens Adicionadas ({allImages.length})</h4>
+          <h4 className="font-medium">
+            Imagens ({allImages.length})
+            {existingImages.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                • {existingImages.length} existente{existingImages.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {draftImages.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                • {draftImages.length} nova{draftImages.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </h4>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {allImages.map((image, index) => (
               <Card key={image.id} className="relative overflow-hidden">
@@ -150,12 +185,13 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
                   <div className="relative aspect-square">
                     <img
                       src={image.url}
-                      alt={`Produto ${index + 1}`}
+                      alt={image.altText || `Produto ${index + 1}`}
                       className="w-full h-full object-cover rounded"
+                      loading="lazy"
                     />
                     
-                    {/* Status Badge */}
-                    <div className="absolute top-2 left-2">
+                    {/* Status Badges */}
+                    <div className="absolute top-2 left-2 flex flex-col gap-1">
                       {image.isPrimary && (
                         <span className="bg-green-500 text-white text-xs px-2 py-1 rounded">
                           Principal
@@ -164,6 +200,11 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
                       {!image.existing && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
                           Nova
+                        </span>
+                      )}
+                      {image.existing && (
+                        <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded">
+                          Existente
                         </span>
                       )}
                     </div>
@@ -197,6 +238,7 @@ const ProductImagesForm = ({ form }: ProductImagesFormProps) => {
               <li>• Mostre o produto de diferentes ângulos</li>
               <li>• A primeira imagem será usada como capa do produto</li>
               <li>• Imagens quadradas (1:1) funcionam melhor</li>
+              <li>• No modo edição, as imagens existentes são preservadas</li>
             </ul>
           </div>
         </div>

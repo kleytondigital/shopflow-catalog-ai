@@ -87,14 +87,15 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
   // Carregar dados iniciais quando em modo edição
   useEffect(() => {
     if (mode === 'edit' && initialData) {
-      console.log('Carregando dados iniciais:', initialData);
+      console.log('Carregando dados iniciais para edição:', initialData);
       
-      form.reset({
+      // Resetar o formulário com os dados iniciais
+      const formData = {
         name: initialData.name || '',
         description: initialData.description || '',
         category: initialData.category || '',
         retail_price: Number(initialData.retail_price) || 0,
-        wholesale_price: Number(initialData.wholesale_price) || 0,
+        wholesale_price: initialData.wholesale_price ? Number(initialData.wholesale_price) : undefined,
         stock: Number(initialData.stock) || 0,
         min_wholesale_qty: Number(initialData.min_wholesale_qty) || 1,
         is_active: initialData.is_active ?? true,
@@ -104,7 +105,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
         keywords: initialData.keywords || '',
         seo_slug: initialData.seo_slug || '',
         image_url: initialData.image_url || '',
-      });
+      };
+      
+      console.log('Dados processados para o formulário:', formData);
+      form.reset(formData);
     }
   }, [initialData, mode, form]);
 
@@ -129,18 +133,23 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
         return values.retail_price > 0 && values.stock >= 0;
       case 3:
         // Para edição, não exigir imagens (pode já ter ou não)
-        // Para criação, exigir pelo menos uma imagem
+        // Para criação, aceitar tanto draft images quanto image_url
         if (mode === 'edit') return true;
         return draftImages.length > 0 || !!values.image_url;
       case 4:
-        return true; // Configurações avançadas são opcionais
+        // Passo 4 sempre é válido - configurações avançadas são opcionais
+        return true;
       default:
         return true;
     }
   };
 
+  const canProceedToNext = (): boolean => {
+    return validateCurrentStep();
+  };
+
   const handleNext = () => {
-    if (validateCurrentStep() && currentStep < steps.length) {
+    if (canProceedToNext() && currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -164,9 +173,11 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
       let imageUrl = data.image_url;
       
       if (draftImages.length > 0) {
+        console.log('Fazendo upload das imagens draft...');
         const uploadResult = await uploadDraftImages();
         if (uploadResult.success && uploadResult.urls.length > 0) {
           imageUrl = uploadResult.urls[0]; // Primeira imagem como principal
+          console.log('Upload concluído, URL principal:', imageUrl);
         }
       }
 
@@ -181,6 +192,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
         min_wholesale_qty: data.min_wholesale_qty ? Number(data.min_wholesale_qty) : 1,
       };
 
+      console.log('Submetendo dados do produto:', productData);
       await onSubmit(productData);
       
       // Limpar imagens draft apenas em caso de sucesso
@@ -268,7 +280,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
                 <Button
                   type="button"
                   onClick={handleNext}
-                  disabled={!validateCurrentStep()}
+                  disabled={!canProceedToNext()}
                 >
                   Próximo
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -276,7 +288,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
               ) : (
                 <Button
                   type="submit"
-                  disabled={!validateCurrentStep() || isSubmitting}
+                  disabled={isSubmitting}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   {isSubmitting ? 'Salvando...' : mode === 'edit' ? 'Atualizar Produto' : 'Criar Produto'}

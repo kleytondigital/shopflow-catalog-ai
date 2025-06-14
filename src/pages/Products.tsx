@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
@@ -24,7 +25,7 @@ const Products = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { products, createProduct, updateProduct, deleteProduct, loading } = useProducts();
+  const { products, createProduct, updateProduct, deleteProduct, loading, getProduct } = useProducts();
   const { toast } = useToast();
 
   const breadcrumbs = [
@@ -35,6 +36,7 @@ const Products = () => {
   const handleCreateProduct = async (data: CreateProductData) => {
     setIsSubmitting(true);
     try {
+      console.log('Criando produto com dados:', data);
       const result = await createProduct(data);
       if (result.error) {
         toast({
@@ -65,6 +67,7 @@ const Products = () => {
   const handleUpdateProduct = async (data: UpdateProductData) => {
     setIsSubmitting(true);
     try {
+      console.log('Atualizando produto com dados:', data);
       const result = await updateProduct(data);
       if (result.error) {
         toast({
@@ -100,9 +103,34 @@ const Products = () => {
     }
   };
 
-  const handleEditProduct = (product: any) => {
-    setEditingProduct(product);
-    setModalOpen(true);
+  const handleEditProduct = async (product: any) => {
+    console.log('Iniciando edição do produto:', product);
+    
+    try {
+      // Buscar dados completos do produto
+      const { data: fullProductData, error } = await getProduct(product.id);
+      
+      if (error || !fullProductData) {
+        console.error('Erro ao buscar dados completos do produto:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar dados do produto para edição.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Dados completos do produto carregados:', fullProductData);
+      setEditingProduct(fullProductData);
+      setModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao preparar edição:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao preparar edição do produto.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteProduct = (id: string) => {
