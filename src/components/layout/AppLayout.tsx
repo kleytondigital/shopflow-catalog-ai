@@ -1,6 +1,7 @@
 
 import React from 'react';
 import Header from './Header';
+import Sidebar from './Sidebar';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -25,7 +26,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle, breadc
   return (
     <div className="min-h-screen bg-background">
       <Header title={title} subtitle={subtitle} />
-      <main className="pt-16">
+      <Sidebar />
+      <main className="pl-64 pt-16">
         <div className="p-6">
           {breadcrumbs && breadcrumbs.length > 0 && (
             <div className="mb-6">

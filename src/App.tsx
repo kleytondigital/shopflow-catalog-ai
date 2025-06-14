@@ -24,7 +24,6 @@ import OrdersImproved from "./pages/OrdersImproved";
 import Customers from "./pages/Customers";
 import Shipping from "./pages/Shipping";
 import Deliveries from "./pages/Deliveries";
-import AppLayout from "./components/layout/AppLayout";
 
 const queryClient = new QueryClient();
 
@@ -46,22 +45,20 @@ function App() {
                 path="/*"
                 element={
                   <ProtectedRoute>
-                    <AppLayout title="Dashboard">
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/categories" element={<Categories />} />
-                        <Route path="/orders" element={<OrdersImproved />} />
-                        <Route path="/coupons" element={<Coupons />} />
-                        <Route path="/customers" element={<Customers />} />
-                        <Route path="/deliveries" element={<Deliveries />} />
-                        <Route path="/shipping" element={<Shipping />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/users" element={<UserManagement />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </AppLayout>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/categories" element={<Categories />} />
+                      <Route path="/orders" element={<OrdersImproved />} />
+                      <Route path="/coupons" element={<Coupons />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/deliveries" element={<Deliveries />} />
+                      <Route path="/shipping" element={<Shipping />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/users" element={<UserManagement />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
                   </ProtectedRoute>
                 }
               />
