@@ -11,16 +11,48 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import AIContentGenerator from '@/components/ai/AIContentGenerator';
 
 interface ProductAdvancedFormProps {
   form: UseFormReturn<any>;
 }
 
 const ProductAdvancedForm = ({ form }: ProductAdvancedFormProps) => {
+  const productName = form.watch('name');
+  const category = form.watch('category');
+  const description = form.watch('description');
+
+  const handleSEOGenerated = (seoData: any) => {
+    if (seoData.metaTitle) {
+      form.setValue('meta_title', seoData.metaTitle);
+    }
+    if (seoData.metaDescription) {
+      form.setValue('meta_description', seoData.metaDescription);
+    }
+    if (seoData.keywords) {
+      form.setValue('keywords', seoData.keywords);
+    }
+    if (seoData.slug) {
+      form.setValue('seo_slug', seoData.slug);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h4 className="font-medium text-gray-900">Otimização para Mecanismos de Busca (SEO)</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium text-gray-900">Otimização para Mecanismos de Busca (SEO)</h4>
+          <AIContentGenerator
+            productName={productName}
+            category={category}
+            description={description}
+            onSEOGenerated={handleSEOGenerated}
+            disabled={!productName?.trim()}
+            variant="seo"
+            size="sm"
+          />
+        </div>
         
         <FormField
           control={form.control}
@@ -73,6 +105,31 @@ const ProductAdvancedForm = ({ form }: ProductAdvancedFormProps) => {
                 Palavras-chave separadas por vírgula para melhorar a busca
               </FormDescription>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <h4 className="font-medium text-gray-900">Configurações do Produto</h4>
+        
+        <FormField
+          control={form.control}
+          name="is_featured"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Produto Destaque</FormLabel>
+                <FormDescription>
+                  Produtos em destaque aparecem com prioridade no catálogo
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
             </FormItem>
           )}
         />

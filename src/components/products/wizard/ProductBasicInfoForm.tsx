@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
   FormControl,
@@ -11,24 +11,31 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { useCategories } from '@/hooks/useCategories';
+import SimpleCategoryDialog from '@/components/products/SimpleCategoryDialog';
+import AIContentGenerator from '@/components/ai/AIContentGenerator';
 
 interface ProductBasicInfoFormProps {
   form: UseFormReturn<any>;
 }
 
 const ProductBasicInfoForm = ({ form }: ProductBasicInfoFormProps) => {
-  const categories = [
-    'Roupas',
-    'Calçados',
-    'Acessórios',
-    'Eletrônicos',
-    'Casa & Decoração',
-    'Beleza & Cuidados',
-    'Esportes',
-    'Livros',
-    'Brinquedos',
-    'Outros'
-  ];
+  const { categories, loading: categoriesLoading } = useCategories();
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+
+  const productName = form.watch('name');
+  const selectedCategory = form.watch('category');
+
+  const handleCategoryCreated = (newCategory: any) => {
+    form.setValue('category', newCategory.name);
+    setShowCategoryDialog(false);
+  };
+
+  const handleDescriptionGenerated = (description: string) => {
+    form.setValue('description', description);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -51,21 +58,37 @@ const ProductBasicInfoForm = ({ form }: ProductBasicInfoFormProps) => {
         name="category"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Categoria</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FormLabel>Categoria *</FormLabel>
+            <div className="flex gap-2">
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {categoriesLoading ? (
+                    <SelectItem value="" disabled>Carregando...</SelectItem>
+                  ) : categories.length === 0 ? (
+                    <SelectItem value="" disabled>Nenhuma categoria encontrada</SelectItem>
+                  ) : (
+                    categories.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowCategoryDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             <FormMessage />
           </FormItem>
         )}
@@ -90,7 +113,17 @@ const ProductBasicInfoForm = ({ form }: ProductBasicInfoFormProps) => {
         name="description"
         render={({ field }) => (
           <FormItem className="md:col-span-2">
-            <FormLabel>Descrição</FormLabel>
+            <div className="flex items-center justify-between mb-2">
+              <FormLabel>Descrição</FormLabel>
+              <AIContentGenerator
+                productName={productName}
+                category={selectedCategory}
+                onDescriptionGenerated={handleDescriptionGenerated}
+                disabled={!productName?.trim()}
+                variant="description"
+                size="sm"
+              />
+            </div>
             <FormControl>
               <Textarea
                 placeholder="Descreva detalhadamente o produto..."
@@ -101,6 +134,12 @@ const ProductBasicInfoForm = ({ form }: ProductBasicInfoFormProps) => {
             <FormMessage />
           </FormItem>
         )}
+      />
+
+      <SimpleCategoryDialog
+        open={showCategoryDialog}
+        onOpenChange={setShowCategoryDialog}
+        onCategoryCreated={handleCategoryCreated}
       />
     </div>
   );
