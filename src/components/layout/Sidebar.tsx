@@ -10,7 +10,8 @@ import {
   Tag, 
   BarChart3,
   Store,
-  UserCheck
+  UserCheck,
+  Grid3X3
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,6 +22,7 @@ const Sidebar = () => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Dashboard', roles: ['superadmin', 'store_admin'] },
     { path: '/products', icon: Package, label: 'Produtos', roles: ['store_admin'] },
+    { path: '/categories', icon: Grid3X3, label: 'Categorias', roles: ['store_admin'] },
     { path: '/orders', icon: ShoppingCart, label: 'Pedidos', roles: ['store_admin'] },
     { path: '/customers', icon: Users, label: 'Clientes', roles: ['store_admin'] },
     { path: '/coupons', icon: Tag, label: 'Cupons', roles: ['store_admin'] },
