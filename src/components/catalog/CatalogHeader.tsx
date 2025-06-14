@@ -40,7 +40,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo e Nome da Loja */}
@@ -49,20 +49,23 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={onToggleFilters}
-              className="md:hidden"
+              className="md:hidden rounded-full hover:bg-gray-100"
             >
               <Menu className="h-5 w-5" />
             </Button>
             
             <div className="flex items-center gap-3">
               {store.logo_url ? (
-                <img 
-                  src={store.logo_url} 
-                  alt={`Logo ${store.name}`}
-                  className="w-10 h-10 rounded-lg object-cover"
-                />
+                <div className="relative">
+                  <img 
+                    src={store.logo_url} 
+                    alt={`Logo ${store.name}`}
+                    className="w-10 h-10 rounded-xl object-cover shadow-sm"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-2 ring-primary/20"></div>
+                </div>
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-white font-bold shadow-sm">
                   {store.name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -84,7 +87,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                 placeholder="Buscar produtos..."
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="pl-10 pr-4 py-2 w-full"
+                className="pl-10 pr-4 py-2 w-full rounded-xl border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-gray-50/50 backdrop-blur-sm"
               />
             </div>
           </div>
@@ -93,13 +96,13 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
           <Button
             variant="outline"
             onClick={onCartClick}
-            className="relative"
+            className="relative rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
           >
             <ShoppingCart className="h-5 w-5" />
             {cartItemsCount > 0 && (
               <Badge 
                 variant="destructive" 
-                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg animate-pulse"
               >
                 {cartItemsCount}
               </Badge>
@@ -117,7 +120,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
               placeholder="Buscar produtos..."
               value={searchQuery}
               onChange={handleSearchChange}
-              className="pl-10 pr-4 py-2 w-full"
+              className="pl-10 pr-4 py-2 w-full rounded-xl border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-gray-50/50"
             />
           </div>
         </div>
