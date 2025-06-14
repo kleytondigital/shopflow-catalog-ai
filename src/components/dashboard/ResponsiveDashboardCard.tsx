@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
@@ -25,19 +24,18 @@ const ResponsiveDashboardCard = ({
   onClick 
 }: ResponsiveDashboardCardProps) => {
   const getCardClass = () => {
-    const baseClasses = "card-dashboard-modern";
+    const baseClasses = "relative overflow-hidden rounded-2xl md:rounded-3xl p-5 md:p-8 lg:p-10 text-white shadow-xl hover:shadow-2xl backdrop-blur-sm border border-white/20 transition-all duration-300 ease-out transform-gpu";
     const variantClasses = {
       primary: 'bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600',
       secondary: 'bg-gradient-to-br from-slate-500 via-slate-600 to-gray-700', 
       success: 'bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600',
       warning: 'bg-gradient-to-br from-orange-500 via-amber-600 to-red-500'
     };
-    
     return `${baseClasses} ${variantClasses[variant]}`;
   };
 
   const getIconContainerClass = () => {
-    return "icon-container-dashboard";
+    return "flex-shrink-0 w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/30 transition-all duration-300 ease-out hover:bg-white/30 hover:scale-105";
   };
 
   return (
@@ -46,7 +44,7 @@ const ResponsiveDashboardCard = ({
                   transition-all duration-300 ease-out transform-gpu touch-target group`}
       onClick={onClick}
     >
-      {/* Header com título e ícone */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-4 md:mb-5">
         <div className="flex-1 min-w-0">
           <p className="text-white/90 text-sm md:text-base font-semibold truncate mb-1">
@@ -97,7 +95,7 @@ const ResponsiveDashboardCard = ({
         </div>
       )}
 
-      {/* Efeito de hover overlay */}
+      {/* Overlay Hover Effect */}
       {onClick && (
         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all duration-300 rounded-2xl pointer-events-none" />
       )}
