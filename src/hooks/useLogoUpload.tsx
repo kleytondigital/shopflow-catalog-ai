@@ -36,42 +36,9 @@ export const useLogoUpload = () => {
       const fileName = `${user.id}/logo-${Date.now()}.${fileExt}`;
 
       console.log('useLogoUpload: Iniciando upload do arquivo:', fileName);
+      console.log('useLogoUpload: Usuário autenticado:', user.id);
 
-      // Verificar se o bucket existe com retry
-      let bucketExists = false;
-      let retryCount = 0;
-      const maxRetries = 3;
-
-      while (!bucketExists && retryCount < maxRetries) {
-        try {
-          const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-          
-          if (bucketsError) {
-            console.error('useLogoUpload: Erro ao listar buckets:', bucketsError);
-            if (retryCount === maxRetries - 1) throw bucketsError;
-          } else {
-            const storeLogosBucket = buckets?.find(bucket => bucket.id === 'store-logos');
-            if (storeLogosBucket) {
-              bucketExists = true;
-              console.log('useLogoUpload: Bucket store-logos encontrado');
-            } else if (retryCount === maxRetries - 1) {
-              throw new Error('Bucket store-logos não encontrado. Entre em contato com o administrador.');
-            }
-          }
-          
-          if (!bucketExists) {
-            retryCount++;
-            console.log(`useLogoUpload: Tentativa ${retryCount}/${maxRetries} - Aguardando bucket...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        } catch (error) {
-          if (retryCount === maxRetries - 1) throw error;
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-
-      // Upload para o Supabase Storage
+      // Upload direto para o Supabase Storage sem verificação prévia
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('store-logos')
         .upload(fileName, file, {
@@ -81,8 +48,20 @@ export const useLogoUpload = () => {
 
       if (uploadError) {
         console.error('useLogoUpload: Erro no upload:', uploadError);
-        throw new Error(`Erro no upload: ${uploadError.message}`);
+        
+        // Tratar diferentes tipos de erro
+        if (uploadError.message.includes('Bucket not found')) {
+          throw new Error('Bucket de armazenamento não encontrado. Verifique a configuração do projeto.');
+        } else if (uploadError.message.includes('Unauthorized')) {
+          throw new Error('Sem permissão para upload. Verifique suas credenciais.');
+        } else if (uploadError.message.includes('size')) {
+          throw new Error('Arquivo muito grande. Máximo permitido: 5MB');
+        } else {
+          throw new Error(`Erro no upload: ${uploadError.message}`);
+        }
       }
+
+      console.log('useLogoUpload: Upload bem-sucedido:', uploadData);
 
       // Obter URL pública da imagem
       const { data: urlData } = supabase.storage
@@ -90,7 +69,7 @@ export const useLogoUpload = () => {
         .getPublicUrl(fileName);
 
       const logoUrl = urlData.publicUrl;
-      console.log('useLogoUpload: Upload concluído, URL:', logoUrl);
+      console.log('useLogoUpload: URL pública gerada:', logoUrl);
 
       toast({
         title: "Upload concluído",
@@ -112,7 +91,10 @@ export const useLogoUpload = () => {
   };
 
   const deleteLogo = async (logoUrl: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) {
+      console.error('useLogoUpload: Usuário não autenticado para deletar');
+      return false;
+    }
 
     try {
       // Extrair caminho do arquivo da URL
@@ -128,8 +110,17 @@ export const useLogoUpload = () => {
 
       if (error) {
         console.error('useLogoUpload: Erro ao deletar:', error);
-        throw error;
+        
+        if (error.message.includes('Bucket not found')) {
+          throw new Error('Bucket de armazenamento não encontrado.');
+        } else if (error.message.includes('Unauthorized')) {
+          throw new Error('Sem permissão para deletar arquivo.');
+        } else {
+          throw new Error(`Erro ao deletar: ${error.message}`);
+        }
       }
+
+      console.log('useLogoUpload: Arquivo deletado com sucesso');
 
       toast({
         title: "Logo removido",
@@ -141,7 +132,7 @@ export const useLogoUpload = () => {
       console.error('useLogoUpload: Erro ao deletar logo:', error);
       toast({
         title: "Erro ao remover logo",
-        description: "Não foi possível remover o logo da loja",
+        description: error instanceof Error ? error.message : "Não foi possível remover o logo da loja",
         variant: "destructive",
       });
       return false;
