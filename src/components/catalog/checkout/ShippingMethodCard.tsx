@@ -2,12 +2,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { LucideIcon } from 'lucide-react';
 
 interface ShippingMethod {
   id: string;
   name: string;
   cost: number;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
 }
 
 interface ShippingMethodCardProps {

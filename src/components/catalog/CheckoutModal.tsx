@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Truck, MapPin, CreditCard, Smartphone, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,8 +83,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   }, [storeSettings]);
 
   const availableShippingMethods = React.useMemo(() => {
-    return shippingOptions.length > 0 ? shippingOptions : [];
-  }, [shippingOptions]);
+    const methods = [];
+    if (storeSettings?.shipping_options?.pickup) {
+      methods.push({ 
+        id: 'pickup', 
+        name: 'Retirar na Loja', 
+        cost: 0, 
+        icon: MapPin 
+      });
+    }
+    if (storeSettings?.shipping_options?.delivery) {
+      methods.push({ 
+        id: 'delivery', 
+        name: 'Entrega Local', 
+        cost: storeSettings.shipping_options.delivery_fee || 0, 
+        icon: Truck 
+      });
+    }
+    if (storeSettings?.shipping_options?.shipping) {
+      methods.push({ 
+        id: 'shipping', 
+        name: 'Correios', 
+        cost: 0, 
+        icon: Truck 
+      });
+    }
+    return methods;
+  }, [storeSettings]);
 
   useEffect(() => {
     if (availablePaymentMethods.length > 0) {
@@ -313,11 +337,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                     {/* Usar ShippingMethodCard apenas para opções básicas ou ShippingOptionsCard para opções calculadas */}
                     {shippingOptions.length === 0 ? (
                       <ShippingMethodCard
-                        shippingMethods={[
-                          ...(storeSettings?.shipping_options?.pickup ? [{ id: 'pickup', name: 'Retirar na Loja', cost: 0, icon: MapPin }] : []),
-                          ...(storeSettings?.shipping_options?.delivery ? [{ id: 'delivery', name: 'Entrega Local', cost: storeSettings.shipping_options.delivery_fee || 0, icon: Truck }] : []),
-                          ...(storeSettings?.shipping_options?.shipping ? [{ id: 'shipping', name: 'Correios', cost: 0, icon: Truck }] : [])
-                        ]}
+                        shippingMethods={availableShippingMethods}
                         selectedMethod={shippingMethod}
                         onMethodChange={setShippingMethod}
                       />
