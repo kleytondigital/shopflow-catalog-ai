@@ -16,6 +16,7 @@ interface CheckoutModalProps {
   onClose: () => void;
   storeSettings: any;
   storeId?: string;
+  storeData?: any; // Dados da loja para contexto público
 }
 
 const CheckoutModalContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -182,11 +183,21 @@ const CheckoutModalContent: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   );
 };
 
-const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSettings, storeId }) => {
+const CheckoutModal: React.FC<CheckoutModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  storeSettings, 
+  storeId, 
+  storeData 
+}) => {
   if (!isOpen) return null;
 
   return (
-    <CheckoutProvider storeSettings={storeSettings} storeId={storeId}>
+    <CheckoutProvider 
+      storeSettings={storeSettings} 
+      storeId={storeId}
+      storeData={storeData}
+    >
       <CheckoutModalContent onClose={onClose} />
     </CheckoutProvider>
   );

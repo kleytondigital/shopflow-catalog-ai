@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Smartphone, CreditCard, FileText, MapPin, Truck } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
@@ -68,7 +69,7 @@ interface CheckoutContextType {
   canUseOnlinePayment: boolean;
   hasWhatsAppConfigured: boolean;
   
-  // Adicionar currentStore ao contexto
+  // Store data (público ou autenticado)
   currentStore: any;
 }
 
@@ -86,18 +87,31 @@ interface CheckoutProviderProps {
   children: ReactNode;
   storeId?: string;
   storeSettings: any;
+  storeData?: any; // Dados da loja no contexto público
 }
 
 export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ 
   children, 
   storeId, 
-  storeSettings 
+  storeSettings,
+  storeData 
 }) => {
   const { items: cartItems, totalAmount, clearCart } = useCart();
   const { createOrderAsync, isCreatingOrder } = useOrders();
   const { settings, loading: catalogLoading } = useCatalogSettings(storeId);
   const { toast } = useToast();
-  const { currentStore } = useStores();
+  
+  // No contexto público, usar storeData passado como prop
+  // No contexto autenticado, usar useStores()
+  const { currentStore: authenticatedStore } = useStores();
+  const currentStore = storeData || authenticatedStore;
+  
+  console.log('CheckoutProvider - Store data:', {
+    'storeData (prop)': storeData,
+    'authenticatedStore': authenticatedStore,
+    'currentStore (final)': currentStore,
+    'currentStore?.phone': currentStore?.phone
+  });
   
   const {
     checkoutOptions,
@@ -281,7 +295,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     canUseOnlinePayment,
     hasWhatsAppConfigured,
     
-    // Adicionar currentStore
+    // Store data (público ou autenticado)
     currentStore,
   };
 

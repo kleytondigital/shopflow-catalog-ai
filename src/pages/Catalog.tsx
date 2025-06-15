@@ -372,12 +372,13 @@ const CatalogContent = () => {
       {/* Floating Cart */}
       <FloatingCart onCheckout={() => setShowCheckout(true)} />
 
-      {/* Checkout Modal */}
+      {/* Checkout Modal - Passando dados da loja */}
       <CheckoutModal
         isOpen={showCheckout}
         onClose={() => setShowCheckout(false)}
         storeSettings={settings}
         storeId={store?.id}
+        storeData={store} // Passar dados da loja para contexto público
       />
     </div>
   );
