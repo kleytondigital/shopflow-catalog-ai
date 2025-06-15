@@ -22,10 +22,14 @@ const StoreDashboard = () => {
 
   const handleCreateProduct = async (data: any) => {
     try {
-      await createProduct.mutateAsync(data);
+      const result = await createProduct(data);
+      if (result.error) {
+        throw new Error(result.error);
+      }
       toast.success('Produto criado com sucesso!');
       setShowProductModal(false);
     } catch (error) {
+      console.error('Erro ao criar produto:', error);
       toast.error('Erro ao criar produto');
     }
   };
