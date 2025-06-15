@@ -42,13 +42,13 @@ interface StoreInfoFormData {
 const BR_PHONE_REGEX = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
 const BR_CNPJ_REGEX = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 
-const businessHourSchema = yup.object({
+const businessHourSchema = yup.object().shape({
   open: yup.string().required('Horário obrigatório'),
   close: yup.string().required('Horário obrigatório'),
   closed: yup.boolean().required(),
 });
 
-const storeInfoSchema = yup.object({
+const storeInfoSchema = yup.object().shape({
   storeName: yup.string().required('Nome é obrigatório'),
   description: yup.string().required('Descrição é obrigatória'),
   address: yup.string().required('Endereço é obrigatório'),
@@ -67,7 +67,7 @@ const storeInfoSchema = yup.object({
   facebookUrl: yup.string().required('URL do Facebook é obrigatória'),
   instagramUrl: yup.string().required('URL do Instagram é obrigatória'),
   twitterUrl: yup.string().required('URL do Twitter é obrigatória'),
-  businessHours: yup.object({
+  businessHours: yup.object().shape({
     monday: businessHourSchema.required(),
     tuesday: businessHourSchema.required(),
     wednesday: businessHourSchema.required(),
@@ -95,7 +95,7 @@ const StoreInfoSettings: React.FC = () => {
   };
 
   const form = useForm<StoreInfoFormData>({
-    resolver: yupResolver(storeInfoSchema),
+    resolver: yupResolver(storeInfoSchema) as any,
     defaultValues: {
       storeName: '',
       description: '',
@@ -433,7 +433,7 @@ const StoreInfoSettings: React.FC = () => {
                 <FormField
                   key={day.key}
                   control={form.control}
-                  name={`businessHours.${day.key}`}
+                  name={`businessHours.${day.key}` as const}
                   render={({ field }) => (
                     <div className="flex items-center gap-4 p-4 border rounded-lg">
                       <div className="w-32">
