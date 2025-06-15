@@ -342,6 +342,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     });
   };
 
+  // NOVA LÓGICA: separação por plano - premium pode tudo, básico só WhatsApp
+  // Já garantido pelo hook useCheckoutOptions (que lê plano pelo storeId via usePlanPermissions)
+  // Ajuste extra: se básico (não premium), NUNCA renderizar métodos online ou de entrega paga.
+
+  // Verifica se deve mostrar apenas WhatsApp (basic)
+  const isWhatsappOnly = !canUseOnlinePayment;
+
   // Aguardar carregamento das configurações do catálogo antes de renderizar
   if (catalogLoading) {
     return (
@@ -407,17 +414,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                       onDataChange={setCustomerData}
                     />
 
-                    {/* Seletor de tipo de checkout */}
+                    {/* Seletor de tipo de checkout só mostra online/pay se premium */}
                     <CheckoutTypeSelector
-                      options={checkoutOptions}
+                      options={isWhatsappOnly ? [checkoutOptions[0]] : checkoutOptions}
                       selectedType={checkoutType}
-                      onTypeChange={(type) => setCheckoutType(type as 'whatsapp_only' | 'online_payment')}
+                      onTypeChange={
+                        (type) => setCheckoutType(type as 'whatsapp_only' | 'online_payment')
+                      }
                       isPremiumRequired={isPremiumRequired}
                       onUpgradeClick={handleUpgradeClick}
                     />
-
-                    {/* Checkout via WhatsApp */}
-                    {checkoutType === 'whatsapp_only' && effectiveSettings?.whatsapp_number && (
+                    {/* WHATSAPP checkout BASICO */}
+                    {isWhatsappOnly && effectiveSettings?.whatsapp_number && (
                       <WhatsAppCheckout
                         whatsappNumber={effectiveSettings.whatsapp_number}
                         onConfirmOrder={handleCreateOrder}
@@ -427,11 +435,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                         itemsCount={items.length}
                       />
                     )}
-
-                    {/* Checkout online - mostrar apenas se for o tipo selecionado */}
-                    {checkoutType === 'online_payment' && (
+                    {/* PREMIUM: online payment+entregas */}
+                    {!isWhatsappOnly && checkoutType === 'online_payment' && (
                       <>
-                        {/* Usar ShippingMethodCard apenas para opções básicas ou ShippingOptionsCard para opções calculadas */}
+                        {/* Métodos de entrega só premium */}
                         {shippingOptions.length === 0 ? (
                           <ShippingMethodCard
                             shippingMethods={availableShippingMethods}
@@ -484,9 +491,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                   </div>
                 </ScrollArea>
               </div>
-
-              {/* OrderSummary apenas para checkout online */}
-              {checkoutType === 'online_payment' && (
+              {/* Summary só aparece para premium+online */}
+              {!isWhatsappOnly && checkoutType === 'online_payment' && (
                 <div className="hidden lg:block border-l bg-gray-50">
                   <OrderSummary
                     items={items}
@@ -536,8 +542,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           )}
         </div>
 
-        {/* Footer mobile apenas para checkout online */}
-        {currentStep === 'checkout' && checkoutType === 'online_payment' && (
+        {/* Footer mobile apenas para checkout premium/online */}
+        {currentStep === 'checkout' && !isWhatsappOnly && checkoutType === 'online_payment' && (
           <div className="lg:hidden shrink-0 bg-white border-t p-4">
             <div className="space-y-4">
               <div className="flex justify-between text-xl font-bold">

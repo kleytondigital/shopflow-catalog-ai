@@ -36,52 +36,59 @@ export const useProductsPublic = (storeIdentifier?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      // Resetar produtos para loading visual imediato
+      setProducts([]);
+
       console.log('useProductsPublic: Resolvendo store ID para:', identifier);
-      
-      // Timeout de segurança
-      const timeoutPromise = new Promise((_, reject) => 
+
+      // Timeout seguro e tratamento de erro detalhado
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout: Resolução do store ID demorou mais de 5 segundos')), 5000)
       );
-
-      // Resolver store ID com timeout
       const storeIdPromise = resolveStoreId(identifier);
       const storeId = await Promise.race([storeIdPromise, timeoutPromise]) as string | null;
-      
+
       if (!storeId) {
         setError('Loja não encontrada');
         setProducts([]);
         return;
       }
 
-      console.log('useProductsPublic: Buscando produtos para loja:', storeId);
+      // Buscar produtos
+      console.log('useProductsPublic: Buscando produtos ativos para store:', storeId);
 
-      // Timeout para busca de produtos
-      const productsTimeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout: Busca de produtos demorou mais de 10 segundos')), 10000)
-      );
-
-      const productsPromise = supabase
+      // Importante: select campos explicitamente para maximizar compatibilidade
+      const { data, error: fetchError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          id, store_id, name, description, category, retail_price, wholesale_price,
+          stock, reserved_stock, min_wholesale_qty, image_url, is_active,
+          allow_negative_stock, stock_alert_threshold,
+          meta_title, meta_description, keywords, seo_slug, created_at, updated_at
+        `)
         .eq('store_id', storeId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      const { data, error: fetchError } = await Promise.race([productsPromise, productsTimeoutPromise]) as any;
-
       if (fetchError) {
         console.error('useProductsPublic: Erro ao buscar produtos:', fetchError);
-        throw fetchError;
+        setError(fetchError.message || 'Erro ao buscar produtos');
+        setProducts([]);
+        return;
       }
 
-      console.log('useProductsPublic: Produtos encontrados:', data?.length || 0);
       setProducts(data || []);
+      console.log('useProductsPublic: Produtos carregados:', data?.length || 0);
+
+      if (!data || data.length === 0) {
+        setError('Nenhum produto encontrado para esta loja.');
+      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar produtos';
-      console.error('useProductsPublic: Erro geral:', err);
-      setError(errorMessage);
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar produtos';
+      setError(msg);
       setProducts([]);
+      console.error('useProductsPublic: Erro geral:', err);
     } finally {
       setLoading(false);
     }
@@ -95,6 +102,7 @@ export const useProductsPublic = (storeIdentifier?: string) => {
       setLoading(false);
       setError(null);
     }
+    // eslint-disable-next-line
   }, [storeIdentifier]);
 
   return {
