@@ -1,11 +1,9 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Smartphone, CreditCard, FileText, MapPin, Truck } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
 import { useStores } from '@/hooks/useStores';
 
 interface CustomerData {
@@ -90,36 +88,64 @@ interface CheckoutProviderProps {
   storeData?: any; // Dados da loja no contexto público
 }
 
-export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ 
-  children, 
-  storeId, 
+export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
+  children,
+  storeId,
   storeSettings,
-  storeData 
+  storeData
 }) => {
   const { items: cartItems, totalAmount, clearCart } = useCart();
   const { createOrderAsync, isCreatingOrder } = useOrders();
   const { settings, loading: catalogLoading } = useCatalogSettings(storeId);
   const { toast } = useToast();
-  
-  // No contexto público, usar storeData passado como prop
-  // No contexto autenticado, usar useStores()
   const { currentStore: authenticatedStore } = useStores();
+
+  // Preferir storeData (catálogo público), senão o contexto autenticado
   const currentStore = storeData || authenticatedStore;
-  
+
   console.log('CheckoutProvider - Store data:', {
     'storeData (prop)': storeData,
     'authenticatedStore': authenticatedStore,
     'currentStore (final)': currentStore,
     'currentStore?.phone': currentStore?.phone
   });
-  
-  const {
-    checkoutOptions,
-    availableOptions,
-    defaultOption,
-    canUseOnlinePayment,
-    hasWhatsAppConfigured,
-  } = useCheckoutOptions(storeId);
+
+  // ===== Implementação local da lógica de checkoutOptions (evitando hook que usa storeId) ======
+  // Os dados do WhatsApp podem estar em settings.whatsapp_number OU em currentStore.phone
+  // O online depende de configurações de pagamento ativas
+  const whatsAppNumber = settings?.whatsapp_number?.trim() || currentStore?.phone?.trim() || '';
+  const hasWhatsAppConfigured = Boolean(whatsAppNumber);
+
+  // Verificação de pagamentos online
+  const paymentMethods = settings?.payment_methods || storeSettings?.payment_methods || {};
+  const hasMercadoPagoCredentials =
+    !!paymentMethods?.mercadopago_access_token?.trim() && !!paymentMethods?.mercadopago_public_key?.trim();
+
+  // Plano premium permite ambos, basic só WhatsApp
+  let checkoutOptions: Array<{ key: string; label: string; type: 'whatsapp_only' | 'online_payment' }> = [];
+  let canUseOnlinePayment = false;
+
+  if (hasMercadoPagoCredentials && (paymentMethods?.pix || paymentMethods?.credit_card || paymentMethods?.bank_slip)) {
+    canUseOnlinePayment = true;
+    checkoutOptions.push({
+      key: 'online_payment',
+      label: 'Pagamento Online',
+      type: 'online_payment'
+    });
+  }
+
+  if (hasWhatsAppConfigured) {
+    checkoutOptions.push({
+      key: 'whatsapp_only',
+      label: 'WhatsApp',
+      type: 'whatsapp_only'
+    });
+  }
+
+  // availableOptions, defaultOption (mantendo compatibilidade anterior)
+  const availableOptions = checkoutOptions.map(opt => opt.type);
+  // Prioriza o online se disponível, senão WhatsApp
+  const defaultOption = canUseOnlinePayment ? 'online_payment' : hasWhatsAppConfigured ? 'whatsapp_only' : '';
 
   // Estado local
   const [customerData, setCustomerData] = useState<CustomerData>({
@@ -127,7 +153,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     email: '',
     phone: ''
   });
-  
+
   const [checkoutType, setCheckoutType] = useState<'whatsapp_only' | 'online_payment'>('whatsapp_only');
   const [shippingMethod, setShippingMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState('pix');
@@ -140,7 +166,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     city: '',
     state: ''
   });
-  
+
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState('');
   const [currentStep, setCurrentStep] = useState<'checkout' | 'payment'>('checkout');
@@ -149,7 +175,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
 
   // Configurações efetivas
   const effectiveSettings = settings || storeSettings || {};
-  
+
   // Verificar credenciais do Mercado Pago apenas para checkout online
   const hasMercadoPagoCredentials = React.useMemo(() => {
     if (catalogLoading || !effectiveSettings || checkoutType === 'whatsapp_only') {
