@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useBenefitsCache } from '@/hooks/useBenefitsCache';
+import { useRealtimeBenefits } from '@/hooks/useRealtimeBenefits';
 
 export interface PlanBenefit {
   id: string;
@@ -34,9 +36,27 @@ export interface UpdatePlanBenefitData {
 export const usePlanBenefits = () => {
   const [planBenefits, setPlanBenefits] = useState<Record<string, PlanBenefit[]>>({});
   const [loading, setLoading] = useState(true);
+  const { 
+    getPlanBenefits: getCachedPlanBenefits, 
+    setPlanBenefits: setCachedPlanBenefits,
+    invalidatePlan,
+    invalidateAll 
+  } = useBenefitsCache();
 
-  const fetchPlanBenefits = useCallback(async (planId?: string) => {
+  const fetchPlanBenefits = useCallback(async (planId?: string, useCache = true) => {
     console.log(`🔄 Fetching plan benefits${planId ? ` for plan: ${planId}` : ' (all)'}`);
+    
+    // Tentar usar cache primeiro para plano específico
+    if (planId && useCache) {
+      const cachedBenefits = getCachedPlanBenefits(planId);
+      if (cachedBenefits) {
+        setPlanBenefits(prev => ({
+          ...prev,
+          [planId]: cachedBenefits
+        }));
+        return;
+      }
+    }
     
     try {
       let query = supabase
@@ -61,10 +81,14 @@ export const usePlanBenefits = () => {
       console.log(`✅ Fetched ${data?.length || 0} plan benefits`, data);
 
       if (planId) {
+        const benefitsData = data || [];
         setPlanBenefits(prev => ({
           ...prev,
-          [planId]: data || []
+          [planId]: benefitsData
         }));
+        
+        // Atualizar cache
+        setCachedPlanBenefits(planId, benefitsData);
       } else {
         // Agrupar por plan_id
         const groupedBenefits = (data || []).reduce((acc, benefit) => {
@@ -76,6 +100,11 @@ export const usePlanBenefits = () => {
         }, {} as Record<string, PlanBenefit[]>);
 
         setPlanBenefits(groupedBenefits);
+        
+        // Atualizar cache para cada plano
+        Object.entries(groupedBenefits).forEach(([pId, benefits]) => {
+          setCachedPlanBenefits(pId, benefits);
+        });
       }
     } catch (error) {
       console.error('💥 Error in fetchPlanBenefits:', error);
@@ -83,7 +112,17 @@ export const usePlanBenefits = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getCachedPlanBenefits, setCachedPlanBenefits]);
+
+  // Setup realtime updates
+  useRealtimeBenefits(
+    undefined, // Não precisa reagir a system_benefits aqui
+    useCallback(() => {
+      console.log('🔄 Realtime trigger: refreshing plan benefits');
+      invalidateAll();
+      fetchPlanBenefits(undefined, false); // Force fresh fetch for all plans
+    }, [fetchPlanBenefits, invalidateAll])
+  );
 
   const addBenefitToPlan = useCallback(async (data: CreatePlanBenefitData) => {
     console.log('➕ Adding benefit to plan:', data);
@@ -141,12 +180,16 @@ export const usePlanBenefits = () => {
         ) || [newBenefit]
       }));
 
+      // Invalidar cache e atualizar
+      invalidatePlan(data.plan_id);
+      setTimeout(() => fetchPlanBenefits(data.plan_id, false), 100);
+
       return { data: newBenefit, error: null };
     } catch (error) {
       console.error('💥 Error in addBenefitToPlan:', error);
       return { data: null, error };
     }
-  }, []);
+  }, [invalidatePlan, fetchPlanBenefits]);
 
   const updatePlanBenefit = useCallback(async (id: string, data: UpdatePlanBenefitData) => {
     console.log(`🔄 Updating plan benefit ${id}:`, data);
@@ -194,12 +237,16 @@ export const usePlanBenefits = () => {
         return newBenefits;
       });
 
+      // Invalidar cache e forçar refresh
+      invalidateAll();
+      setTimeout(() => fetchPlanBenefits(updatedBenefit.plan_id, false), 100);
+
       return { data: updatedBenefit, error: null };
     } catch (error) {
       console.error('💥 Error in updatePlanBenefit:', error);
       return { data: null, error };
     }
-  }, [planBenefits]);
+  }, [planBenefits, invalidateAll, fetchPlanBenefits]);
 
   const removeBenefitFromPlan = useCallback(async (id: string) => {
     console.log(`🗑️ Removing plan benefit: ${id}`);

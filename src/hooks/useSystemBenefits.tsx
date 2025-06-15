@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useBenefitsCache } from '@/hooks/useBenefitsCache';
+import { useRealtimeBenefits } from '@/hooks/useRealtimeBenefits';
 
 export interface SystemBenefit {
   id: string;
@@ -19,11 +21,13 @@ export interface CreateSystemBenefitData {
   description?: string;
   benefit_key: string;
   category: string;
+  is_active?: boolean;
 }
 
 export interface UpdateSystemBenefitData {
   name?: string;
   description?: string;
+  benefit_key?: string;
   category?: string;
   is_active?: boolean;
 }
@@ -31,26 +35,67 @@ export interface UpdateSystemBenefitData {
 export const useSystemBenefits = () => {
   const [benefits, setBenefits] = useState<SystemBenefit[]>([]);
   const [loading, setLoading] = useState(true);
+  const { 
+    getSystemBenefits, 
+    setSystemBenefits,
+    invalidateAll 
+  } = useBenefitsCache();
 
-  const fetchBenefits = useCallback(async () => {
+  const fetchBenefits = useCallback(async (useCache = true) => {
+    console.log('🔄 Fetching system benefits...');
+    
+    // Tentar usar cache primeiro
+    if (useCache) {
+      const cachedBenefits = getSystemBenefits();
+      if (cachedBenefits) {
+        setBenefits(cachedBenefits);
+        setLoading(false);
+        return;
+      }
+    }
+    
     try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('system_benefits')
         .select('*')
         .order('category', { ascending: true })
         .order('name', { ascending: true });
 
-      if (error) throw error;
-      setBenefits(data || []);
+      if (error) {
+        console.error('❌ Error fetching system benefits:', error);
+        throw error;
+      }
+
+      console.log(`✅ Fetched ${data?.length || 0} system benefits`);
+      
+      const benefitsData = data || [];
+      setBenefits(benefitsData);
+      
+      // Atualizar cache
+      setSystemBenefits(benefitsData);
+      
     } catch (error) {
-      console.error('Erro ao buscar benefícios:', error);
+      console.error('💥 Error in fetchBenefits:', error);
       toast.error('Erro ao carregar benefícios do sistema');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getSystemBenefits, setSystemBenefits]);
+
+  // Setup realtime updates
+  useRealtimeBenefits(
+    useCallback(() => {
+      console.log('🔄 Realtime trigger: refreshing system benefits');
+      invalidateAll();
+      fetchBenefits(false); // Force fresh fetch
+    }, [fetchBenefits, invalidateAll])
+  );
 
   const createBenefit = useCallback(async (data: CreateSystemBenefitData) => {
+    console.log('➕ Creating system benefit:', data);
+    
     try {
       const { data: newBenefit, error } = await supabase
         .from('system_benefits')
@@ -58,19 +103,27 @@ export const useSystemBenefits = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error creating system benefit:', error);
+        throw error;
+      }
 
-      setBenefits(prev => [...prev, newBenefit]);
-      toast.success('Benefício criado com sucesso');
+      console.log('✅ System benefit created successfully:', newBenefit);
+      
+      // Invalidar cache e recarregar
+      invalidateAll();
+      await fetchBenefits(false);
+      
       return { data: newBenefit, error: null };
     } catch (error) {
-      console.error('Erro ao criar benefício:', error);
-      toast.error('Erro ao criar benefício');
+      console.error('💥 Error in createBenefit:', error);
       return { data: null, error };
     }
-  }, []);
+  }, [fetchBenefits, invalidateAll]);
 
   const updateBenefit = useCallback(async (id: string, data: UpdateSystemBenefitData) => {
+    console.log(`🔄 Updating system benefit ${id}:`, data);
+    
     try {
       const { data: updatedBenefit, error } = await supabase
         .from('system_benefits')
@@ -79,46 +132,50 @@ export const useSystemBenefits = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error updating system benefit:', error);
+        throw error;
+      }
 
-      setBenefits(prev => prev.map(b => b.id === id ? updatedBenefit : b));
-      toast.success('Benefício atualizado com sucesso');
+      console.log('✅ System benefit updated successfully:', updatedBenefit);
+      
+      // Invalidar cache e recarregar
+      invalidateAll();
+      await fetchBenefits(false);
+      
       return { data: updatedBenefit, error: null };
     } catch (error) {
-      console.error('Erro ao atualizar benefício:', error);
-      toast.error('Erro ao atualizar benefício');
+      console.error('💥 Error in updateBenefit:', error);
       return { data: null, error };
     }
-  }, []);
+  }, [fetchBenefits, invalidateAll]);
 
   const deleteBenefit = useCallback(async (id: string) => {
+    console.log(`🗑️ Deleting system benefit: ${id}`);
+    
     try {
       const { error } = await supabase
         .from('system_benefits')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error deleting system benefit:', error);
+        throw error;
+      }
 
-      setBenefits(prev => prev.filter(b => b.id !== id));
-      toast.success('Benefício removido com sucesso');
+      console.log('✅ System benefit deleted successfully');
+      
+      // Invalidar cache e recarregar
+      invalidateAll();
+      await fetchBenefits(false);
+      
       return { error: null };
     } catch (error) {
-      console.error('Erro ao remover benefício:', error);
-      toast.error('Erro ao remover benefício');
+      console.error('💥 Error in deleteBenefit:', error);
       return { error };
     }
-  }, []);
-
-  const getBenefitsByCategory = useCallback(() => {
-    return benefits.reduce((acc, benefit) => {
-      if (!acc[benefit.category]) {
-        acc[benefit.category] = [];
-      }
-      acc[benefit.category].push(benefit);
-      return acc;
-    }, {} as Record<string, SystemBenefit[]>);
-  }, [benefits]);
+  }, [fetchBenefits, invalidateAll]);
 
   useEffect(() => {
     fetchBenefits();
@@ -130,7 +187,6 @@ export const useSystemBenefits = () => {
     createBenefit,
     updateBenefit,
     deleteBenefit,
-    getBenefitsByCategory,
-    refetch: fetchBenefits
+    refetch: useCallback(() => fetchBenefits(false), [fetchBenefits])
   };
 };

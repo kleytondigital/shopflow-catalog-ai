@@ -5,6 +5,10 @@ import { useSystemBenefits } from '@/hooks/useSystemBenefits';
 import { usePlanBenefits } from '@/hooks/usePlanBenefits';
 import { usePlanBenefitsAutoSave } from '@/hooks/usePlanBenefitsAutoSave';
 import { BenefitsCategoryCard } from '@/components/admin/BenefitsCategoryCard';
+import { BenefitPropagationIndicator } from '@/components/admin/BenefitPropagationIndicator';
+import { useRealtimeBenefits } from '@/hooks/useRealtimeBenefits';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface PlanBenefitsToggleListProps {
@@ -29,22 +33,26 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     loadingPlan
   });
 
+  // Setup realtime updates com notificações melhoradas
+  useRealtimeBenefits(
+    () => {
+      console.log('🔄 System benefits changed via realtime');
+      refetchSystemBenefits();
+      toast.info('Benefícios do sistema atualizados automaticamente');
+    },
+    () => {
+      console.log('🔄 Plan benefits changed via realtime');
+      refetchPlanBenefits(planId);
+      toast.info('Configurações do plano sincronizadas');
+    }
+  );
+
   // Refresh data when component mounts or planId changes
   useEffect(() => {
     console.log(`🔄 Refreshing data for plan: ${planId}`);
     refetchSystemBenefits();
     refetchPlanBenefits(planId);
   }, [planId, refetchSystemBenefits, refetchPlanBenefits]);
-
-  // Auto-refresh dos dados a cada 5 segundos se houver operações em andamento
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log(`⏰ Auto-refresh data for plan: ${planId}`);
-      refetchPlanBenefits(planId);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [planId, refetchPlanBenefits]);
 
   const categories = [
     { value: 'ai', label: 'Inteligência Artificial', icon: <Sparkles className="h-5 w-5 text-purple-600" /> },
@@ -69,6 +77,18 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     [planBenefits]
   );
 
+  const benefitPropagationData = useMemo(() => {
+    return activeBenefits.map(benefit => {
+      const planBenefit = planBenefits.find(pb => pb.benefit_id === benefit.id && pb.is_enabled);
+      return {
+        benefit,
+        isEnabled: !!planBenefit,
+        affectedStores: planBenefit ? 1 : 0, // Simulated - seria calculado com dados reais
+        totalStores: 10 // Simulated - seria obtido dos dados reais
+      };
+    });
+  }, [activeBenefits, planBenefits]);
+
   if (loadingSystem || loadingPlan) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -88,6 +108,11 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     console.log(`🎯 PlanBenefitsToggleList: Handling toggle for benefit ${benefitId} to ${isEnabled}`);
     try {
       await toggleBenefit(benefitId, isEnabled, existingPlanBenefitId);
+      toast.success(
+        isEnabled 
+          ? 'Benefício ativado! Esta mudança será propagada para todas as lojas deste plano.' 
+          : 'Benefício desativado! Esta mudança será propagada para todas as lojas deste plano.'
+      );
     } catch (error) {
       console.error('❌ Error in handleToggleBenefit:', error);
       toast.error('Erro ao atualizar benefício. Tente novamente.');
@@ -110,7 +135,34 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
             Configure quais benefícios este plano oferece ({enabledBenefits.length}/{activeBenefits.length} ativos)
           </p>
         </div>
+        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+          Sistema Multi-Tenant Ativo
+        </Badge>
       </div>
+
+      {/* Indicador de Propagação */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Impacto das Mudanças</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {benefitPropagationData.slice(0, 3).map((item) => (
+              <BenefitPropagationIndicator
+                key={item.benefit.id}
+                benefitName={item.benefit.name}
+                plansAffected={1}
+                storesAffected={item.affectedStores}
+                totalStores={item.totalStores}
+                lastUpdated={new Date()}
+              />
+            ))}
+          </div>
+          <div className="text-xs text-gray-500 mt-3">
+            💡 Todas as mudanças são propagadas automaticamente para as lojas que usam este plano
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map((category) => {
