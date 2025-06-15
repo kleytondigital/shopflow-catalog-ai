@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanPermissions } from '@/hooks/usePlanPermissions';
+import { useStores } from '@/hooks/useStores';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
@@ -28,6 +30,27 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { hasBenefit, isSuperadmin } = usePlanPermissions();
+  const { currentStore } = useStores();
+
+  const handleViewCatalog = () => {
+    if (!currentStore) {
+      toast.error('Loja não encontrada');
+      return;
+    }
+
+    // Priorizar slug da loja, fallback para ID
+    const storeIdentifier = currentStore.url_slug || currentStore.id;
+    const catalogUrl = `/catalog/${storeIdentifier}`;
+    
+    console.log('QuickActions: Abrindo catálogo:', { 
+      storeId: currentStore.id, 
+      urlSlug: currentStore.url_slug, 
+      finalIdentifier: storeIdentifier, 
+      catalogUrl 
+    });
+    
+    window.open(catalogUrl, '_blank');
+  };
 
   const actions = [
     {
@@ -43,11 +66,7 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
       description: 'Visualizar como cliente',
       icon: Eye,
       color: 'bg-green-100 text-green-600',
-      onClick: () => {
-        if (profile?.store_id) {
-          window.open(`/catalog/${profile.store_id}`, '_blank');
-        }
-      },
+      onClick: handleViewCatalog,
       requiresBenefit: null
     },
     {

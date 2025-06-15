@@ -82,7 +82,14 @@ const ShareableLinks = () => {
     if (!currentStore) return { retailUrl: '', wholesaleUrl: '' };
 
     const baseUrl = window.location.origin;
+    // Priorizar slug da loja, fallback para ID
     const identifier = currentStore.url_slug || currentStore.id;
+    
+    console.log('ShareableLinks: Gerando URLs:', { 
+      storeId: currentStore.id, 
+      urlSlug: currentStore.url_slug, 
+      finalIdentifier: identifier 
+    });
     
     return {
       retailUrl: `${baseUrl}/catalog/${identifier}?type=retail`,
@@ -108,6 +115,7 @@ const ShareableLinks = () => {
   };
 
   const openPreview = (url: string) => {
+    console.log('ShareableLinks: Abrindo preview:', url);
     window.open(url, '_blank');
   };
 
