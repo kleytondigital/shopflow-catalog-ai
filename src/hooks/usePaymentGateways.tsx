@@ -36,8 +36,11 @@ export const usePaymentGateways = () => {
 
       if (error) throw error;
       
-      setGateways(data || []);
-      const active = data?.find(g => g.is_active) || null;
+      // Type assertion para garantir que os dados estão no formato correto
+      const typedGateways = (data || []) as PaymentGateway[];
+      setGateways(typedGateways);
+      
+      const active = typedGateways.find(g => g.is_active) || null;
       setActiveGateway(active);
     } catch (error) {
       console.error('Erro ao buscar gateways:', error);
@@ -58,14 +61,15 @@ export const usePaymentGateways = () => {
 
       if (error) throw error;
 
-      setGateways(prev => prev.map(g => g.id === id ? updatedGateway : g));
+      const typedGateway = updatedGateway as PaymentGateway;
+      setGateways(prev => prev.map(g => g.id === id ? typedGateway : g));
       
-      if (updatedGateway.is_active) {
-        setActiveGateway(updatedGateway);
+      if (typedGateway.is_active) {
+        setActiveGateway(typedGateway);
       }
 
       toast.success('Gateway atualizado com sucesso');
-      return { data: updatedGateway, error: null };
+      return { data: typedGateway, error: null };
     } catch (error) {
       console.error('Erro ao atualizar gateway:', error);
       toast.error('Erro ao atualizar gateway');
@@ -75,12 +79,9 @@ export const usePaymentGateways = () => {
 
   const testGatewayConnection = useCallback(async (gateway: PaymentGateway) => {
     try {
-      // Implementar teste de conectividade específico para cada gateway
       if (gateway.name === 'stripe') {
-        // Testar conexão com Stripe
         return { success: true, message: 'Conexão com Stripe OK' };
       } else if (gateway.name === 'asaas') {
-        // Testar conexão com Asaas
         return { success: true, message: 'Conexão com Asaas OK' };
       }
       

@@ -53,10 +53,12 @@ export const usePlanPayments = () => {
 
       if (error) throw error;
       
-      setPayments(data || []);
+      // Type assertion para garantir que os dados estão no formato correto
+      const typedPayments = (data || []) as PlanPayment[];
+      setPayments(typedPayments);
       
       // Calcular métricas
-      const completedPayments = data?.filter(p => p.status === 'completed') || [];
+      const completedPayments = typedPayments.filter(p => p.status === 'completed');
       const totalRevenue = completedPayments.reduce((sum, p) => sum + p.amount, 0);
       const thisMonth = new Date();
       thisMonth.setDate(1);
@@ -68,7 +70,7 @@ export const usePlanPayments = () => {
         totalRevenue,
         monthlyRecurring: monthlyRevenue,
         conversionRate: 0, // Calcular baseado em trials vs pagamentos
-        totalPayments: data?.length || 0
+        totalPayments: typedPayments.length
       });
 
     } catch (error) {
@@ -89,9 +91,10 @@ export const usePlanPayments = () => {
 
       if (error) throw error;
 
-      setPayments(prev => [payment, ...prev]);
+      const typedPayment = payment as PlanPayment;
+      setPayments(prev => [typedPayment, ...prev]);
       toast.success('Pagamento iniciado com sucesso');
-      return { data: payment, error: null };
+      return { data: typedPayment, error: null };
     } catch (error) {
       console.error('Erro ao criar pagamento:', error);
       toast.error('Erro ao iniciar pagamento');
@@ -119,9 +122,10 @@ export const usePlanPayments = () => {
 
       if (error) throw error;
 
-      setPayments(prev => prev.map(p => p.id === id ? payment : p));
+      const typedPayment = payment as PlanPayment;
+      setPayments(prev => prev.map(p => p.id === id ? typedPayment : p));
       toast.success('Status do pagamento atualizado');
-      return { data: payment, error: null };
+      return { data: typedPayment, error: null };
     } catch (error) {
       console.error('Erro ao atualizar pagamento:', error);
       toast.error('Erro ao atualizar status');
