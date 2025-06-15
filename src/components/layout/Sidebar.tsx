@@ -13,7 +13,8 @@ import {
   Store,
   Crown,
   CreditCard,
-  Zap
+  Zap,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,7 +38,8 @@ const Sidebar = () => {
     { name: 'Lojas', href: '/stores', icon: Store },
     { name: 'Usuários', href: '/users', icon: Users },
     { name: 'Gestão de Planos', href: '/plan-management', icon: Crown },
-    { name: 'Faturamento', href: '/billing', icon: CreditCard },
+    { name: 'Financeiro', href: '/billing', icon: CreditCard },
+    { name: 'Integrações Globais', href: '/global-integrations', icon: Globe },
     { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   ];
 

@@ -21,6 +21,7 @@ import PaymentPending from '@/pages/PaymentPending';
 import NotFound from '@/pages/NotFound';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
+import Stores from '@/pages/Stores';
 import PlanManagement from '@/pages/PlanManagement';
 import GlobalIntegrations from '@/pages/GlobalIntegrations';
 
@@ -37,6 +38,7 @@ function App() {
         <Route path="/shipping" element={<ProtectedRoute><Shipping /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/stores" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         <Route path="/plan-management" element={<ProtectedRoute><PlanManagement /></ProtectedRoute>} />
         <Route path="/global-integrations" element={<ProtectedRoute><GlobalIntegrations /></ProtectedRoute>} />
