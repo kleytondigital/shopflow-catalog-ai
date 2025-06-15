@@ -19,7 +19,6 @@ export const useCheckoutLogic = () => {
     checkoutType,
     shippingAddress,
     notes,
-    createOrderAsync,
     clearCart,
     toast,
     setCreatedOrder,
@@ -56,25 +55,31 @@ export const useCheckoutLogic = () => {
     }
   }, [shippingOptions, settings, totalAmount, setShippingCost]);
 
-  const createPublicOrder = React.useCallback(async (orderData: any) => {
-    console.log('🔨 createPublicOrder: Criando pedido público', orderData);
+  const createOrderViaEdgeFunction = React.useCallback(async (orderData: any) => {
+    console.log('🔨 createOrderViaEdgeFunction: Criando pedido via Edge Function', orderData);
     
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select()
-        .single();
+      const { data: functionResult, error: functionError } = await supabase.functions.invoke(
+        'create-public-order',
+        {
+          body: { orderData }
+        }
+      );
 
-      if (error) {
-        console.error('❌ createPublicOrder: Erro na inserção', error);
-        throw error;
+      if (functionError) {
+        console.error('❌ createOrderViaEdgeFunction: Erro na Edge Function:', functionError);
+        throw new Error(`Erro ao processar pedido: ${functionError.message}`);
       }
 
-      console.log('✅ createPublicOrder: Pedido criado com sucesso', data);
-      return data;
+      if (!functionResult?.success) {
+        console.error('❌ createOrderViaEdgeFunction: Edge Function retornou erro:', functionResult?.error);
+        throw new Error(functionResult?.error || 'Erro desconhecido ao criar pedido');
+      }
+
+      console.log('✅ createOrderViaEdgeFunction: Pedido criado com sucesso via Edge Function:', functionResult.order);
+      return functionResult.order;
     } catch (error) {
-      console.error('❌ createPublicOrder: Erro geral', error);
+      console.error('❌ createOrderViaEdgeFunction: Erro geral', error);
       throw error;
     }
   }, []);
@@ -89,7 +94,8 @@ export const useCheckoutLogic = () => {
       storeId: currentStore?.id || basicStoreData?.id,
       currentStorePhone: currentStore?.phone,
       basicStorePhone: basicStoreData?.phone,
-      settingsWhatsApp: settings?.whatsapp_number
+      settingsWhatsApp: settings?.whatsapp_number,
+      isMobile
     });
 
     try {
@@ -218,15 +224,15 @@ export const useCheckoutLogic = () => {
         store_id: storeId
       };
 
-      console.log('📋 handleCreateOrder: Criando pedido com dados', {
+      console.log('📋 handleCreateOrder: Criando pedido via Edge Function', {
         customer_name: orderData.customer_name,
         total_amount: orderData.total_amount,
         items_count: orderData.items.length,
         store_id: orderData.store_id
       });
 
-      // Criar pedido
-      const savedOrder = await createPublicOrder(orderData);
+      // Criar pedido via Edge Function
+      const savedOrder = await createOrderViaEdgeFunction(orderData);
       setCreatedOrder(savedOrder);
       console.log('✅ handleCreateOrder: Pedido criado com sucesso', savedOrder.id);
 
@@ -253,10 +259,14 @@ export const useCheckoutLogic = () => {
       const message = generateWhatsAppMessage(whatsappOrderData);
       console.log('💬 handleCreateOrder: Mensagem WhatsApp gerada', { messageLength: message.length });
 
+      // Limpar carrinho antes de abrir WhatsApp
+      clearCart();
+      console.log('🛒 handleCreateOrder: Carrinho limpo');
+
       // Abrir WhatsApp
       toast({
         title: "Pedido criado com sucesso!",
-        description: "Redirecionando para o WhatsApp...",
+        description: isMobile ? "Redirecionando para o WhatsApp..." : "Abrindo WhatsApp em nova aba...",
         duration: 3000
       });
 
@@ -265,21 +275,16 @@ export const useCheckoutLogic = () => {
       if (success) {
         console.log('✅ handleCreateOrder: WhatsApp aberto com sucesso');
         
-        // Limpar carrinho e fechar modal
-        clearCart();
-        console.log('🛒 handleCreateOrder: Carrinho limpo');
-        
+        // Fechar modal imediatamente após sucesso
         if (onClose) {
           console.log('🚪 handleCreateOrder: Fechando modal');
-          setTimeout(() => {
-            onClose();
-          }, 1000);
+          onClose();
         }
       } else {
         console.error('❌ handleCreateOrder: Falha ao abrir WhatsApp');
         toast({
           title: "Erro ao abrir WhatsApp",
-          description: "Não foi possível abrir o WhatsApp.",
+          description: "Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.",
           variant: "destructive"
         });
       }
@@ -303,14 +308,15 @@ export const useCheckoutLogic = () => {
     notes,
     shippingAddress,
     saveCustomer,
-    createPublicOrder,
+    createOrderViaEdgeFunction,
     setCreatedOrder,
     currentStore,
     basicStoreData,
     settings,
     openWhatsApp,
     clearCart,
-    toast
+    toast,
+    isMobile
   ]);
 
   return {

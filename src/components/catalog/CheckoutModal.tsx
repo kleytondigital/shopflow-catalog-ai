@@ -3,6 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CheckoutProvider, useCheckoutContext } from './checkout/context/CheckoutProvider';
 import CheckoutContent from './checkout/components/CheckoutContent';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface CheckoutModalProps {
 
 const CheckoutModalContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { catalogLoading } = useCheckoutContext();
+  const isMobile = useIsMobile();
 
   if (catalogLoading) {
     return (
@@ -32,9 +34,15 @@ const CheckoutModalContent: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+      <DialogContent 
+        className={`${
+          isMobile 
+            ? 'max-w-full w-full h-full m-0 rounded-none' 
+            : 'max-w-4xl w-[95vw] h-[90vh]'
+        } p-0 gap-0 flex flex-col overflow-hidden`}
+      >
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
-          <DialogTitle className="text-2xl font-bold text-white text-center">
+          <DialogTitle className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white text-center`}>
             🛒 Finalizar Pedido
           </DialogTitle>
         </DialogHeader>

@@ -24,7 +24,6 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
     setShippingMethod,
     notes,
     createdOrder,
-    toast,
     settings,
     currentStore
   } = useCheckoutContext();
@@ -66,53 +65,59 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
   const finalTotal = totalAmount + shippingCost;
 
   return (
-    <div className="flex flex-col lg:flex-row h-full">
-      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-        <EnhancedCustomerDataForm 
-          customerData={customerData}
-          onDataChange={setCustomerData}
-        />
-        
-        <ShippingOptionsCard 
-          options={[
-            {
-              id: 'pickup',
-              name: 'Retirar na loja',
-              price: 0,
-              deliveryTime: 'Imediato',
-              carrier: 'Retirada'
-            }
-          ]}
-          selectedOption={shippingMethod}
-          onOptionChange={setShippingMethod}
-          freeDeliveryAmount={settings?.shipping_options?.free_delivery_amount || 0}
-          cartTotal={totalAmount}
-        />
-        
-        {checkoutType === 'whatsapp_only' && (
-          <EnhancedWhatsAppCheckout
-            whatsappNumber={currentStore?.phone || settings?.whatsapp_number || "00000000000"}
-            onConfirmOrder={handleOrderCreation}
-            isProcessing={false}
+    <div className="flex flex-col h-full">
+      {/* Layout Mobile: Vertical Stack */}
+      <div className={`flex-1 ${isMobile ? 'flex flex-col' : 'flex flex-row'} h-full`}>
+        {/* Formulário principal */}
+        <div className={`${isMobile ? 'flex-1' : 'flex-1'} p-6 space-y-6 overflow-y-auto`}>
+          <EnhancedCustomerDataForm 
             customerData={customerData}
+            onDataChange={setCustomerData}
+          />
+          
+          <ShippingOptionsCard 
+            options={[
+              {
+                id: 'pickup',
+                name: 'Retirar na loja',
+                price: 0,
+                deliveryTime: 'Imediato',
+                carrier: 'Retirada'
+              }
+            ]}
+            selectedOption={shippingMethod}
+            onOptionChange={setShippingMethod}
+            freeDeliveryAmount={settings?.shipping_options?.free_delivery_amount || 0}
+            cartTotal={totalAmount}
+          />
+          
+          {checkoutType === 'whatsapp_only' && (
+            <EnhancedWhatsAppCheckout
+              whatsappNumber={currentStore?.phone || settings?.whatsapp_number || "00000000000"}
+              onConfirmOrder={handleOrderCreation}
+              isProcessing={false}
+              customerData={customerData}
+              items={cartItems}
+              totalAmount={totalAmount}
+              shippingCost={shippingCost}
+              notes={notes}
+            />
+          )}
+        </div>
+
+        {/* Resumo do Pedido */}
+        <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 ${isMobile ? 'p-4' : 'p-6'}`}>
+          <OrderSummary 
             items={cartItems}
             totalAmount={totalAmount}
             shippingCost={shippingCost}
-            notes={notes}
+            finalTotal={finalTotal}
+            isProcessing={false}
+            isDisabled={!customerData.name || !customerData.phone}
+            onSubmit={handleOrderCreation}
+            isMobile={isMobile}
           />
-        )}
-      </div>
-
-      <div className="w-full lg:w-80 bg-gray-50 border-l border-gray-200 p-6 overflow-y-auto">
-        <OrderSummary 
-          items={cartItems}
-          totalAmount={totalAmount}
-          shippingCost={shippingCost}
-          finalTotal={finalTotal}
-          isProcessing={false}
-          isDisabled={!customerData.name || !customerData.phone}
-          onSubmit={handleOrderCreation}
-        />
+        </div>
       </div>
     </div>
   );
