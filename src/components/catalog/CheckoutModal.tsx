@@ -71,9 +71,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
-  // SEMPRE usar catalogSettings como prioridade, fallback para storeSettings apenas se não houver catalogSettings
-  const effectiveSettings = catalogSettings || storeSettings;
+  // Certifique-se de que effectiveSettings NÃO é undefined antes de acessar propriedades
+  const effectiveSettings = React.useMemo(() => {
+    return catalogSettings || storeSettings || {};
+  }, [catalogSettings, storeSettings]);
 
+  // Ajuste dos hooks useMemo para evitar uso inválido
+  const showWhatsAppSuggestion = React.useMemo(() => {
+    // Somente se effectiveSettings está seguro
+    return (
+      availableOptions.length === 0 &&
+      !canUseOnlinePayment &&
+      (!effectiveSettings.whatsapp_number || effectiveSettings.whatsapp_number.trim() === "")
+    );
+  }, [availableOptions, canUseOnlinePayment, effectiveSettings.whatsapp_number]);
+
+  const showPaymentSuggestion = React.useMemo(() => {
+    // Premium, mas sem métodos de pagamento ativos/configurados
+    const pm = effectiveSettings.payment_methods || {};
+    return (
+      availableOptions.length === 0 &&
+      canUseOnlinePayment &&
+      (
+        (!pm.pix && !pm.credit_card && !pm.bank_slip)
+      )
+    );
+  }, [availableOptions, canUseOnlinePayment, effectiveSettings.payment_methods]);
+  
   // Definir tipo de checkout padrão baseado nas opções disponíveis
   useEffect(() => {
     if (availableOptions.length > 0) {
@@ -631,5 +655,4 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     </Dialog>
   );
 };
-
 export default CheckoutModal;
