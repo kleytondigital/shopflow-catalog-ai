@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -23,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { PlanUpgradeModal } from './PlanUpgradeModal';
+import PlanUpgradeModal from './PlanUpgradeModal';
 
 const ProfileDropdown: React.FC = () => {
   const { profile } = useAuth();

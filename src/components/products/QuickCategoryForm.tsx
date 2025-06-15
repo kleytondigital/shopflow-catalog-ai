@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Loader2, Sparkles } from 'lucide-react';
 import { usePlanPermissions } from '@/hooks/usePlanPermissions';
-import { PlanUpgradeModal } from '@/components/billing/PlanUpgradeModal';
+import PlanUpgradeModal from '@/components/billing/PlanUpgradeModal';
 
 interface QuickCategoryFormProps {
   onCategoryCreated: (category: any) => void;

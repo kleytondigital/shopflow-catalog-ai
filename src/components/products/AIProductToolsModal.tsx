@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { Loader2, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useBenefitValidation } from "@/hooks/useBenefitValidation";
-import { PlanUpgradeModal } from "@/components/billing/PlanUpgradeModal";
+import PlanUpgradeModal from "@/components/billing/PlanUpgradeModal";
 
 interface AIProductToolsModalProps {
   product: any;
