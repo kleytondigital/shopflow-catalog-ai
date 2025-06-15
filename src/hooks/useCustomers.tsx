@@ -19,7 +19,7 @@ export const useCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const fetchCustomers = async () => {
     try {
@@ -32,8 +32,8 @@ export const useCustomers = () => {
         .order('created_at', { ascending: false });
 
       // Se não for superadmin, filtrar pela loja do usuário
-      if (user?.role !== 'superadmin' && user?.store_id) {
-        query = query.eq('store_id', user.store_id);
+      if (profile?.role !== 'superadmin' && profile?.store_id) {
+        query = query.eq('store_id', profile.store_id);
       }
 
       const { data, error } = await query;
@@ -65,8 +65,10 @@ export const useCustomers = () => {
 
   // Carregar clientes ao montar o componente
   useEffect(() => {
-    fetchCustomers();
-  }, [user]);
+    if (profile) {
+      fetchCustomers();
+    }
+  }, [profile]);
 
   return {
     customers: filteredCustomers,
