@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -49,8 +50,8 @@ const businessHourSchema = yup.object({
 
 const storeInfoSchema = yup.object({
   storeName: yup.string().required('Nome é obrigatório'),
-  description: yup.string().required(),
-  address: yup.string().required(),
+  description: yup.string().required('Descrição é obrigatória'),
+  address: yup.string().required('Endereço é obrigatório'),
   phone: yup
     .string()
     .required('Telefone é obrigatório')
@@ -58,22 +59,22 @@ const storeInfoSchema = yup.object({
   email: yup
     .string()
     .email('E-mail inválido')
-    .required(),
+    .required('E-mail é obrigatório'),
   cnpj: yup
     .string()
     .test('is-cnpj', 'Formato inválido (00.000.000/0000-00)', v => !v || BR_CNPJ_REGEX.test(v || ''))
-    .required(),
-  facebookUrl: yup.string().required(),
-  instagramUrl: yup.string().required(),
-  twitterUrl: yup.string().required(),
+    .required('CNPJ é obrigatório'),
+  facebookUrl: yup.string().required('URL do Facebook é obrigatória'),
+  instagramUrl: yup.string().required('URL do Instagram é obrigatória'),
+  twitterUrl: yup.string().required('URL do Twitter é obrigatória'),
   businessHours: yup.object({
-    monday: businessHourSchema,
-    tuesday: businessHourSchema,
-    wednesday: businessHourSchema,
-    thursday: businessHourSchema,
-    friday: businessHourSchema,
-    saturday: businessHourSchema,
-    sunday: businessHourSchema,
+    monday: businessHourSchema.required(),
+    tuesday: businessHourSchema.required(),
+    wednesday: businessHourSchema.required(),
+    thursday: businessHourSchema.required(),
+    friday: businessHourSchema.required(),
+    saturday: businessHourSchema.required(),
+    sunday: businessHourSchema.required(),
   }).required(),
 });
 
@@ -106,7 +107,8 @@ const StoreInfoSettings: React.FC = () => {
       instagramUrl: '',
       twitterUrl: '',
       businessHours: defaultBusinessHours
-    }
+    },
+    mode: 'onChange'
   });
 
   useEffect(() => {
@@ -354,6 +356,7 @@ const StoreInfoSettings: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
         {/* Redes Sociais */}
         <Card>
           <CardHeader>
@@ -415,6 +418,7 @@ const StoreInfoSettings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
         {/* Horário de Funcionamento */}
         <Card>
           <CardHeader>
@@ -429,7 +433,7 @@ const StoreInfoSettings: React.FC = () => {
                 <FormField
                   key={day.key}
                   control={form.control}
-                  name={`businessHours.${day.key}` as const}
+                  name={`businessHours.${day.key}`}
                   render={({ field }) => (
                     <div className="flex items-center gap-4 p-4 border rounded-lg">
                       <div className="w-32">
@@ -465,6 +469,7 @@ const StoreInfoSettings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
         <Button
           type="submit"
           className={cn(
