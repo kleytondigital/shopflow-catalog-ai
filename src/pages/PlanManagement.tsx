@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/components/layout/AppLayout';
 import { SystemBenefitsManager } from '@/components/admin/SystemBenefitsManager';
-import { PlanBenefitsManager } from '@/components/admin/PlanBenefitsManager';
+import { PlanBenefitsSelector } from '@/components/admin/PlanBenefitsSelector';
 import SubscriptionPlansManager from '@/components/admin/SubscriptionPlansManager';
 
 const PlanManagement = () => {
@@ -92,7 +92,7 @@ const PlanManagement = () => {
           </TabsContent>
 
           <TabsContent value="plan-benefits" className="space-y-6">
-            <PlanBenefitsManager />
+            <PlanBenefitsSelector />
           </TabsContent>
         </Tabs>
       </div>

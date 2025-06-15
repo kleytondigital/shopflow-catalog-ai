@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Auth from '@/pages/Auth';
@@ -18,7 +19,7 @@ import PaymentSuccess from '@/pages/PaymentSuccess';
 import PaymentFailure from '@/pages/PaymentFailure';
 import PaymentPending from '@/pages/PaymentPending';
 import NotFound from '@/pages/NotFound';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 import PlanManagement from '@/pages/PlanManagement';
 
