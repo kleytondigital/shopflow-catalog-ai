@@ -5,11 +5,11 @@ export const generateWhatsAppMessage = (orderData: any) => {
   
   // Dados do cliente
   message += `👤 *CLIENTE*\n`;
-  message += `▸ Nome: ${orderData.customer_name}\n`;
+  message += `• Nome: ${orderData.customer_name}\n`;
   if (orderData.customer_email) {
-    message += `▸ Email: ${orderData.customer_email}\n`;
+    message += `• Email: ${orderData.customer_email}\n`;
   }
-  message += `▸ WhatsApp: ${orderData.customer_phone}\n\n`;
+  message += `• WhatsApp: ${orderData.customer_phone}\n\n`;
   
   // Itens do pedido
   message += `📦 *PRODUTOS*\n`;
@@ -17,11 +17,11 @@ export const generateWhatsAppMessage = (orderData: any) => {
     const itemTotal = item.price * item.quantity;
     message += `${index + 1}. *${item.name}*\n`;
     if (item.variation) {
-      message += `   ▫️ ${item.variation}\n`;
+      message += `   • ${item.variation}\n`;
     }
-    message += `   ▫️ Qtd: ${item.quantity}x\n`;
-    message += `   ▫️ Valor: R$ ${item.price.toFixed(2)} cada\n`;
-    message += `   ▫️ Subtotal: R$ ${itemTotal.toFixed(2)}\n\n`;
+    message += `   • Qtd: ${item.quantity}x\n`;
+    message += `   • Valor: R$ ${item.price.toFixed(2)} cada\n`;
+    message += `   • Subtotal: R$ ${itemTotal.toFixed(2)}\n\n`;
   });
   
   // Resumo financeiro
@@ -31,31 +31,31 @@ export const generateWhatsAppMessage = (orderData: any) => {
     sum + (item.price * item.quantity), 0
   );
   
-  message += `▸ Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+  message += `• Subtotal: R$ ${subtotal.toFixed(2)}\n`;
   
   if (orderData.shipping_cost && orderData.shipping_cost > 0) {
-    message += `▸ Frete: R$ ${orderData.shipping_cost.toFixed(2)}\n`;
+    message += `• Frete: R$ ${orderData.shipping_cost.toFixed(2)}\n`;
   }
   
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `▸ *TOTAL: R$ ${orderData.total_amount.toFixed(2)}*\n`;
+  message += `• *TOTAL: R$ ${orderData.total_amount.toFixed(2)}*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   
   // Método de entrega
   message += `🚚 *ENTREGA*\n`;
-  message += `▸ Método: ${getShippingMethodName(orderData.shipping_method)}\n`;
+  message += `• Método: ${getShippingMethodName(orderData.shipping_method)}\n`;
   
   if (orderData.shipping_address && orderData.shipping_method !== 'pickup') {
-    message += `▸ Endereço: ${orderData.shipping_address.street}, ${orderData.shipping_address.number}\n`;
-    message += `▸ Bairro: ${orderData.shipping_address.district}\n`;
-    message += `▸ Cidade: ${orderData.shipping_address.city} - ${orderData.shipping_address.state}\n`;
-    message += `▸ CEP: ${orderData.shipping_address.zip_code}\n`;
+    message += `• Endereço: ${orderData.shipping_address.street}, ${orderData.shipping_address.number}\n`;
+    message += `• Bairro: ${orderData.shipping_address.district}\n`;
+    message += `• Cidade: ${orderData.shipping_address.city} - ${orderData.shipping_address.state}\n`;
+    message += `• CEP: ${orderData.shipping_address.zip_code}\n`;
   }
   message += `\n`;
   
   // Pagamento
   message += `💳 *PAGAMENTO*\n`;
-  message += `▸ Método: ${getPaymentMethodName(orderData.payment_method)}\n\n`;
+  message += `• Método: ${getPaymentMethodName(orderData.payment_method)}\n\n`;
   
   // Observações
   if (orderData.notes) {
