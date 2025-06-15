@@ -95,8 +95,8 @@ const Sidebar = () => {
               name={item.name}
               href={item.href}
               icon={item.icon}
-              benefitKey={item.benefitKey}
-              requiresPremium={item.requiresPremium}
+              benefitKey={(item as any).benefitKey}
+              requiresPremium={(item as any).requiresPremium}
             />
           ))}
         </nav>
