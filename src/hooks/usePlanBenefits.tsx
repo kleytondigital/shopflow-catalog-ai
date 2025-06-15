@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -89,6 +88,29 @@ export const usePlanBenefits = () => {
   const addBenefitToPlan = useCallback(async (data: CreatePlanBenefitData) => {
     console.log('➕ Adding benefit to plan:', data);
     
+    // Optimistic update
+    const tempBenefit = {
+      id: `temp-${Date.now()}`,
+      plan_id: data.plan_id,
+      benefit_id: data.benefit_id,
+      limit_value: data.limit_value || null,
+      is_enabled: data.is_enabled ?? true,
+      created_at: new Date().toISOString(),
+      benefit: {
+        id: data.benefit_id,
+        name: 'Carregando...',
+        description: null,
+        benefit_key: '',
+        category: '',
+        is_active: true
+      }
+    };
+
+    setPlanBenefits(prev => ({
+      ...prev,
+      [data.plan_id]: [...(prev[data.plan_id] || []), tempBenefit]
+    }));
+    
     try {
       const { data: newBenefit, error } = await supabase
         .from('plan_benefits')
@@ -101,14 +123,22 @@ export const usePlanBenefits = () => {
 
       if (error) {
         console.error('❌ Error adding benefit to plan:', error);
+        // Reverter optimistic update
+        setPlanBenefits(prev => ({
+          ...prev,
+          [data.plan_id]: prev[data.plan_id]?.filter(b => b.id !== tempBenefit.id) || []
+        }));
         throw error;
       }
 
       console.log('✅ Benefit added successfully:', newBenefit);
 
+      // Substituir benefit temporário pelo real
       setPlanBenefits(prev => ({
         ...prev,
-        [data.plan_id]: [...(prev[data.plan_id] || []), newBenefit]
+        [data.plan_id]: prev[data.plan_id]?.map(b => 
+          b.id === tempBenefit.id ? newBenefit : b
+        ) || [newBenefit]
       }));
 
       return { data: newBenefit, error: null };
@@ -120,6 +150,18 @@ export const usePlanBenefits = () => {
 
   const updatePlanBenefit = useCallback(async (id: string, data: UpdatePlanBenefitData) => {
     console.log(`🔄 Updating plan benefit ${id}:`, data);
+    
+    // Optimistic update
+    const previousBenefits = { ...planBenefits };
+    setPlanBenefits(prev => {
+      const newBenefits = { ...prev };
+      Object.keys(newBenefits).forEach(planId => {
+        newBenefits[planId] = newBenefits[planId].map(b => 
+          b.id === id ? { ...b, ...data } : b
+        );
+      });
+      return newBenefits;
+    });
     
     try {
       const { data: updatedBenefit, error } = await supabase
@@ -134,11 +176,14 @@ export const usePlanBenefits = () => {
 
       if (error) {
         console.error('❌ Error updating plan benefit:', error);
+        // Reverter optimistic update
+        setPlanBenefits(previousBenefits);
         throw error;
       }
 
       console.log('✅ Benefit updated successfully:', updatedBenefit);
 
+      // Atualizar com dados reais do servidor
       setPlanBenefits(prev => {
         const newBenefits = { ...prev };
         Object.keys(newBenefits).forEach(planId => {
@@ -154,7 +199,7 @@ export const usePlanBenefits = () => {
       console.error('💥 Error in updatePlanBenefit:', error);
       return { data: null, error };
     }
-  }, []);
+  }, [planBenefits]);
 
   const removeBenefitFromPlan = useCallback(async (id: string) => {
     console.log(`🗑️ Removing plan benefit: ${id}`);

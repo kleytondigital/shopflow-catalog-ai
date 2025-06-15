@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Sparkles, Zap, Users, Plug, CreditCard, Palette, Megaphone, Truck, Headphones, Settings } from 'lucide-react';
 import { useSystemBenefits } from '@/hooks/useSystemBenefits';
 import { usePlanBenefits } from '@/hooks/usePlanBenefits';
@@ -20,7 +20,7 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
   const { getPlanBenefits, loading: loadingPlan, refetch: refetchPlanBenefits } = usePlanBenefits();
   const { toggleBenefit, updateBenefitLimit } = usePlanBenefitsAutoSave(planId);
 
-  const planBenefits = getPlanBenefits(planId);
+  const planBenefits = useMemo(() => getPlanBenefits(planId), [getPlanBenefits, planId]);
 
   console.log(`📊 PlanBenefitsToggleList - Plan: ${planId}`, {
     systemBenefits: systemBenefits.length,
@@ -36,6 +36,16 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     refetchPlanBenefits(planId);
   }, [planId, refetchSystemBenefits, refetchPlanBenefits]);
 
+  // Auto-refresh dos dados a cada 5 segundos se houver operações em andamento
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log(`⏰ Auto-refresh data for plan: ${planId}`);
+      refetchPlanBenefits(planId);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [planId, refetchPlanBenefits]);
+
   const categories = [
     { value: 'ai', label: 'Inteligência Artificial', icon: <Sparkles className="h-5 w-5 text-purple-600" /> },
     { value: 'products', label: 'Produtos', icon: <Zap className="h-5 w-5 text-blue-600" /> },
@@ -48,6 +58,16 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     { value: 'support', label: 'Suporte', icon: <Headphones className="h-5 w-5 text-teal-600" /> },
     { value: 'general', label: 'Geral', icon: <Settings className="h-5 w-5 text-gray-600" /> }
   ];
+
+  const activeBenefits = useMemo(() => 
+    systemBenefits.filter(b => b.is_active),
+    [systemBenefits]
+  );
+
+  const enabledBenefits = useMemo(() => 
+    planBenefits.filter(pb => pb.is_enabled),
+    [planBenefits]
+  );
 
   if (loadingSystem || loadingPlan) {
     return (
@@ -65,7 +85,7 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
     isEnabled: boolean, 
     existingPlanBenefitId?: string
   ) => {
-    console.log(`🎯 PlanBenefitsToggleList: Handling toggle for benefit ${benefitId}`);
+    console.log(`🎯 PlanBenefitsToggleList: Handling toggle for benefit ${benefitId} to ${isEnabled}`);
     try {
       await toggleBenefit(benefitId, isEnabled, existingPlanBenefitId);
     } catch (error) {
@@ -80,9 +100,6 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
       updateBenefitLimit(planBenefitId, limitValue);
     }, 1000);
   };
-
-  const activeBenefits = systemBenefits.filter(b => b.is_active);
-  const enabledBenefits = planBenefits.filter(pb => pb.is_enabled);
 
   return (
     <div className="space-y-6">
@@ -105,7 +122,7 @@ export const PlanBenefitsToggleList: React.FC<PlanBenefitsToggleListProps> = ({
 
           return (
             <BenefitsCategoryCard
-              key={category.value}
+              key={`${category.value}-${planBenefits.length}`}
               category={category}
               benefits={systemBenefits}
               planBenefits={planBenefits}

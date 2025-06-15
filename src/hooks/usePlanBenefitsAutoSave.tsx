@@ -26,7 +26,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
         if (result.data) {
           console.log('✅ Benefit added successfully:', result.data);
           toast.success('Benefício adicionado ao plano');
-          await refetch(planId); // Refresh data
+          // Força refresh dos dados para garantir sincronização
+          setTimeout(() => refetch(planId), 100);
         } else {
           console.error('❌ Failed to add benefit:', result.error);
           throw new Error('Falha ao adicionar benefício');
@@ -39,7 +40,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
         if (result.data) {
           console.log('✅ Benefit disabled successfully:', result.data);
           toast.success('Benefício desativado');
-          await refetch(planId); // Refresh data
+          // Força refresh dos dados para garantir sincronização
+          setTimeout(() => refetch(planId), 100);
         } else {
           console.error('❌ Failed to disable benefit:', result.error);
           throw new Error('Falha ao desativar benefício');
@@ -52,7 +54,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
         if (result.data) {
           console.log('✅ Benefit enabled successfully:', result.data);
           toast.success('Benefício ativado');
-          await refetch(planId); // Refresh data
+          // Força refresh dos dados para garantir sincronização
+          setTimeout(() => refetch(planId), 100);
         } else {
           console.error('❌ Failed to enable benefit:', result.error);
           throw new Error('Falha ao ativar benefício');
@@ -61,6 +64,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
     } catch (error) {
       console.error('💥 Error in toggleBenefit:', error);
       toast.error(`Erro ao atualizar benefício: ${error.message || 'Erro desconhecido'}`);
+      // Força refresh dos dados em caso de erro para reverter estado
+      setTimeout(() => refetch(planId), 100);
     }
   }, [planId, addBenefitToPlan, removeBenefitFromPlan, updatePlanBenefit, refetch]);
 
@@ -78,7 +83,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
       if (result.data) {
         console.log('✅ Limit updated successfully:', result.data);
         toast.success('Limite atualizado');
-        await refetch(planId); // Refresh data
+        // Força refresh dos dados para garantir sincronização
+        setTimeout(() => refetch(planId), 100);
       } else {
         console.error('❌ Failed to update limit:', result.error);
         throw new Error('Falha ao atualizar limite');
@@ -86,6 +92,8 @@ export const usePlanBenefitsAutoSave = (planId: string) => {
     } catch (error) {
       console.error('💥 Error in updateBenefitLimit:', error);
       toast.error(`Erro ao atualizar limite: ${error.message || 'Erro desconhecido'}`);
+      // Força refresh dos dados em caso de erro
+      setTimeout(() => refetch(planId), 100);
     }
   }, [updatePlanBenefit, refetch, planId]);
 

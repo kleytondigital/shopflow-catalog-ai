@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -29,14 +29,34 @@ export const BenefitsCategoryCard: React.FC<BenefitsCategoryCardProps> = ({
 }) => {
   const [loadingBenefits, setLoadingBenefits] = useState<Set<string>>(new Set());
 
-  const categoryBenefits = benefits.filter(b => b.category === category.value);
-  const enabledCount = categoryBenefits.filter(benefit => {
-    const planBenefit = planBenefits.find(pb => pb.benefit_id === benefit.id);
-    return planBenefit?.is_enabled;
-  }).length;
+  const categoryBenefits = useMemo(() => 
+    benefits.filter(b => b.category === category.value),
+    [benefits, category.value]
+  );
 
-  const handleToggleBenefit = async (benefitId: string, isEnabled: boolean, existingPlanBenefitId?: string) => {
-    console.log(`🎯 BenefitsCategoryCard: Toggling benefit ${benefitId}`);
+  const enabledCount = useMemo(() => 
+    categoryBenefits.filter(benefit => {
+      const planBenefit = planBenefits.find(pb => pb.benefit_id === benefit.id);
+      return planBenefit?.is_enabled;
+    }).length,
+    [categoryBenefits, planBenefits]
+  );
+
+  const getBenefitState = useCallback((benefitId: string) => {
+    const planBenefit = planBenefits.find(pb => pb.benefit_id === benefitId);
+    return {
+      planBenefit,
+      isEnabled: planBenefit?.is_enabled || false,
+      isLoading: loadingBenefits.has(benefitId)
+    };
+  }, [planBenefits, loadingBenefits]);
+
+  const handleToggleBenefit = useCallback(async (
+    benefitId: string, 
+    isEnabled: boolean, 
+    existingPlanBenefitId?: string
+  ) => {
+    console.log(`🎯 BenefitsCategoryCard: Toggling benefit ${benefitId} to ${isEnabled}`);
     
     setLoadingBenefits(prev => new Set(prev).add(benefitId));
     
@@ -51,7 +71,7 @@ export const BenefitsCategoryCard: React.FC<BenefitsCategoryCardProps> = ({
         return newSet;
       });
     }
-  };
+  }, [onToggleBenefit]);
 
   return (
     <Card className="h-full">
@@ -68,18 +88,10 @@ export const BenefitsCategoryCard: React.FC<BenefitsCategoryCardProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {categoryBenefits.map((benefit) => {
-          const planBenefit = planBenefits.find(pb => pb.benefit_id === benefit.id);
-          const isEnabled = planBenefit?.is_enabled || false;
-          const isLoading = loadingBenefits.has(benefit.id);
-
-          console.log(`🔍 Benefit ${benefit.name}:`, {
-            planBenefit,
-            isEnabled,
-            isLoading
-          });
+          const { planBenefit, isEnabled, isLoading } = getBenefitState(benefit.id);
 
           return (
-            <div key={benefit.id} className="flex flex-col space-y-2 p-3 border rounded-lg">
+            <div key={`${benefit.id}-${isEnabled}-${planBenefit?.id || 'none'}`} className="flex flex-col space-y-2 p-3 border rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <Label htmlFor={`benefit-${benefit.id}`} className="font-medium">
