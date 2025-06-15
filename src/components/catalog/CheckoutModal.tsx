@@ -365,6 +365,30 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     );
   }
 
+  // BLOCO NOVO: sugestões dinâmicas conforme configuração do checkout
+  const showWhatsAppSuggestion = React.useMemo(() => {
+    // Plano Básico, WhatsApp ausência
+    return (
+      availableOptions.length === 0 &&
+      !canUseOnlinePayment &&
+      (!effectiveSettings?.whatsapp_number || effectiveSettings.whatsapp_number.trim() === "")
+    );
+  }, [availableOptions, canUseOnlinePayment, effectiveSettings]);
+
+  const showPaymentSuggestion = React.useMemo(() => {
+    // Premium, mas sem métodos de pagamento ativos/configurados
+    return (
+      availableOptions.length === 0 &&
+      canUseOnlinePayment &&
+      (
+        !effectiveSettings?.payment_methods ||
+        !effectiveSettings.payment_methods.pix &&
+        !effectiveSettings.payment_methods.credit_card &&
+        !effectiveSettings.payment_methods.bank_slip
+      )
+    );
+  }, [availableOptions, canUseOnlinePayment, effectiveSettings]);
+
   // Renderizar modal de configuração se não houver opções disponíveis
   if (availableOptions.length === 0) {
     return (
@@ -374,10 +398,51 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
             <DialogTitle>Configuração Necessária</DialogTitle>
           </DialogHeader>
           <div className="text-center py-6">
-            <p className="text-gray-600 mb-4">
-              Esta loja ainda não configurou métodos de finalização de pedido. Entre em contato diretamente com a loja para fazer seu pedido.
-            </p>
-            <Button onClick={onClose}>Fechar</Button>
+            {/* WhatsApp não configurado */}
+            {showWhatsAppSuggestion && (
+              <>
+                <p className="text-gray-600 mb-2">
+                  Para receber pedidos pelo Plano Básico, configure um número de WhatsApp.
+                </p>
+                <a
+                  href="/settings?tab=whatsapp"
+                  target="_blank"
+                  className="text-blue-600 underline font-medium"
+                >
+                  👉 Ir para configurações do WhatsApp
+                </a>
+                <div className="mt-4">
+                  <Button onClick={onClose}>Fechar</Button>
+                </div>
+              </>
+            )}
+            {/* Métodos de pagamento não configurados no Premium */}
+            {showPaymentSuggestion && (
+              <>
+                <p className="text-gray-600 mb-2">
+                  Você possui plano Premium, mas ainda não configurou nenhum método de pagamento online.
+                </p>
+                <a
+                  href="/settings?tab=payments"
+                  target="_blank"
+                  className="text-blue-600 underline font-medium"
+                >
+                  👉 Configurar pagamentos online
+                </a>
+                <div className="mt-4">
+                  <Button onClick={onClose}>Fechar</Button>
+                </div>
+              </>
+            )}
+            {/* Fallback padrão */}
+            {!showWhatsAppSuggestion && !showPaymentSuggestion && (
+              <>
+                <p className="text-gray-600 mb-4">
+                  Esta loja ainda não configurou métodos de finalização de pedido. Entre em contato diretamente com a loja para fazer seu pedido.
+                </p>
+                <Button onClick={onClose}>Fechar</Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
