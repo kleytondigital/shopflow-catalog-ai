@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -12,6 +11,10 @@ import { useStores } from '@/hooks/useStores';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import LogoUpload from './LogoUpload';
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { MaskedInput } from 'react-hook-mask';
+import { cn } from '@/lib/utils'; // para classes condicionais
 
 interface StoreInfoFormData {
   storeName: string;
@@ -34,13 +37,41 @@ interface StoreInfoFormData {
   };
 }
 
+// Esquema de validação com regras brasileiras
+const BR_PHONE_REGEX = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
+const BR_CNPJ_REGEX = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
+
+const storeInfoSchema = yup.object().shape({
+  storeName: yup.string().required('Nome é obrigatório'),
+  description: yup.string().nullable(),
+  address: yup.string().nullable(),
+  phone: yup
+    .string()
+    .required('Telefone é obrigatório')
+    .matches(BR_PHONE_REGEX, 'Formato inválido. Ex: (11) 91234-5678'),
+  email: yup
+    .string()
+    .nullable()
+    .email('E-mail inválido'),
+  cnpj: yup
+    .string()
+    .nullable()
+    .test('is-cnpj', 'Formato inválido (00.000.000/0000-00)', v => !v || BR_CNPJ_REGEX.test(v)),
+  facebookUrl: yup.string().nullable(),
+  instagramUrl: yup.string().nullable(),
+  twitterUrl: yup.string().nullable(),
+  businessHours: yup.object(),
+});
+
 const StoreInfoSettings = () => {
   const { toast } = useToast();
   const { currentStore, updateCurrentStore, loading, error } = useStores();
   const { settings: catalogSettings, updateSettings: updateCatalogSettings } = useCatalogSettings();
   const [saving, setSaving] = React.useState(false);
 
+  // Iniciar formulário com validação YUP
   const form = useForm<StoreInfoFormData>({
+    resolver: yupResolver(storeInfoSchema),
     defaultValues: {
       storeName: '',
       description: '',
@@ -194,34 +225,36 @@ const StoreInfoSettings = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo da Loja */}
           <LogoUpload />
 
           {/* Informações Básicas */}
-          <Card>
+          <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-b from-blue-50 to-white p-1">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-blue-700">
                 <Building className="h-5 w-5" />
                 Informações Básicas
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Nome */}
               <FormField
                 control={form.control}
                 name="storeName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Loja</FormLabel>
+                    <FormLabel>Nome da Loja <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="Minha Loja Incrível" {...field} />
+                      <Input placeholder="Minha Loja Incrível" {...field} className="border-blue-300 focus:ring-2 focus:ring-blue-400"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Descrição */}
               <FormField
                 control={form.control}
                 name="description"
@@ -229,17 +262,14 @@ const StoreInfoSettings = () => {
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Descreva sua loja e produtos..."
-                        className="min-h-20"
-                        {...field} 
-                      />
+                      <Textarea {...field} className="min-h-20 border-blue-200" placeholder="Descreva sua loja e produtos..." />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* CNPJ */}
               <FormField
                 control={form.control}
                 name="cnpj"
@@ -247,7 +277,25 @@ const StoreInfoSettings = () => {
                   <FormItem>
                     <FormLabel>CNPJ</FormLabel>
                     <FormControl>
-                      <Input placeholder="00.000.000/0000-00" {...field} />
+                      <Input {...field}
+                        className="border-blue-200"
+                        placeholder="00.000.000/0000-00"
+                        maxLength={18}
+                        onChange={e => {
+                          // Mudança: auto-máscara para CNPJ
+                          let v = e.target.value.replace(/\D/g, '').slice(0,14);
+                          if (v.length > 12) {
+                            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, "$1.$2.$3/$4-$5");
+                          } else if (v.length > 8) {
+                            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, "$1.$2.$3/$4");
+                          } else if (v.length > 5) {
+                            v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, "$1.$2.$3");
+                          } else if (v.length > 2) {
+                            v = v.replace(/^(\d{2})(\d{0,3})/, "$1.$2");
+                          }
+                          field.onChange(v);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -256,29 +304,51 @@ const StoreInfoSettings = () => {
             </CardContent>
           </Card>
 
-          {/* Contato */}
-          <Card>
+          {/* Contato: Telefone destacado como WhatsApp básico */}
+          <Card className="rounded-2xl shadow-lg border-0 bg-gradient-to-tr from-green-50 to-white p-1">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-green-700">
                 <Phone className="h-5 w-5" />
-                Informações de Contato
+                Telefone de contato <span className="text-xs font-normal text-gray-500">(usado para WhatsApp no plano básico)</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Telefone com máscara e dica de uso */}
               <FormField
                 control={form.control}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefone</FormLabel>
+                    <FormLabel>
+                      Telefone / WhatsApp&nbsp;
+                      <span className="text-red-500">*</span>
+                      <span className="ml-2 text-xs text-gray-600">(ex: (11) 91234-5678)</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="(11) 99999-9999" {...field} />
+                      <Input
+                        {...field}
+                        className="border-green-300"
+                        placeholder="(11) 91234-5678"
+                        maxLength={15}
+                        onChange={e => {
+                          // Máscara simples de telefone
+                          let v = e.target.value.replace(/\D/g, '').slice(0,11);
+                          if (v.length > 10) {
+                            v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+                          } else if (v.length > 6) {
+                            v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+                          } else if (v.length > 2) {
+                            v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+                          }
+                          field.onChange(v);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
+              {/* ... resto dos campos de contato (email, endereço) ... */}
               <FormField
                 control={form.control}
                 name="email"
@@ -286,7 +356,7 @@ const StoreInfoSettings = () => {
                   <FormItem>
                     <FormLabel>E-mail</FormLabel>
                     <FormControl>
-                      <Input placeholder="contato@minhaloja.com" type="email" {...field} />
+                      <Input placeholder="contato@minhaloja.com" type="email" {...field} className="border-green-200"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -300,11 +370,7 @@ const StoreInfoSettings = () => {
                   <FormItem>
                     <FormLabel>Endereço</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Rua, número, bairro, cidade - UF"
-                        className="min-h-20"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Rua, número, bairro, cidade - UF" className="min-h-20 border-green-200" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -313,7 +379,7 @@ const StoreInfoSettings = () => {
             </CardContent>
           </Card>
         </div>
-
+        {/* Continuação: redes sociais, horário... */}
         {/* Redes Sociais */}
         <Card>
           <CardHeader>
@@ -419,7 +485,10 @@ const StoreInfoSettings = () => {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="btn-primary w-full" disabled={saving}>
+        <Button type="submit" className={cn(
+          "btn-primary w-full py-4 text-lg font-bold rounded-xl shadow-lg transition-all",
+          saving && "opacity-70 pointer-events-none"
+        )} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Salvar Configurações da Loja
         </Button>

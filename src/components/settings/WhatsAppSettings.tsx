@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Phone, Bot } from 'lucide-react';
 import { WhatsAppIntegration } from '@/components/settings/WhatsAppIntegration';
+import { Badge } from '@/components/ui/badge';
 
 const WhatsAppSettings = () => {
   return (
@@ -17,7 +17,31 @@ const WhatsAppSettings = () => {
       
       <Separator />
 
-      {/* Configurações manuais (mantidas para compatibilidade) */}
+      {/* Aviso sobre diferença: */}
+      <Card className="bg-yellow-50 border-yellow-300">
+        <CardHeader>
+          <CardTitle>
+            <span className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-green-600" />
+              Atenção: diferença entre WhatsApp Básico e Integração Premium
+              <Badge className="ml-2 bg-green-200 text-green-800 border-green-300">Básico</Badge>
+              <Badge className="ml-2 bg-blue-200 text-blue-800 border-blue-300">Premium</Badge>
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <div>
+            <span className="font-bold text-green-700">Plano Básico:</span>{" "}
+            O checkout via WhatsApp usará o <strong>telefone cadastrado nos Dados da Loja</strong> para receber pedidos dos clientes.
+          </div>
+          <div>
+            <span className="font-bold text-blue-700">Integração Premium:</span>{" "}
+            Ative a integração automática para notificações e automações pelo WhatsApp. O número usado será o configurado da integração, as notificações de status e automações (recuperação de carrinho, etc) <strong>só funcionam nesta modalidade.</strong>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configurações manuais (legacy) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

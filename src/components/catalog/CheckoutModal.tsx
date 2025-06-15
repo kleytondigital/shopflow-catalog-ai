@@ -22,6 +22,7 @@ import WhatsAppCheckout from './checkout/WhatsAppCheckout';
 import MercadoPagoPayment from './checkout/MercadoPagoPayment';
 import TestEnvironmentInfo from './checkout/TestEnvironmentInfo';
 import { generateWhatsAppMessage } from './checkout/checkoutUtils';
+import { useStoreData } from '@/hooks/useStoreData';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -306,6 +307,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     }
   };
 
+  const { store: basicStoreData } = useStoreData(storeId);
+
   const handleWhatsAppCheckout = (order: any) => {
     const orderData = {
       customer_name: customerData.name,
@@ -320,9 +323,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       payment_method: 'whatsapp',
       notes: notes
     };
-    
+
     const message = generateWhatsAppMessage(orderData);
-    
+
+    // Definir número correto: plano básico = telefone cadastrado na loja
+    const basicPhoneRaw = basicStoreData?.phone || '';
+    // Limpar caracteres não numéricos
+    const formattedPhone = basicPhoneRaw.replace(/\D/g, '');
+    // Por padrão, adicionar DDI +55 se não existir
+    const phoneForLink = formattedPhone.length >= 10
+      ? (formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`)
+      : '';
+
+    const destinationNumber = isWhatsappOnly
+      ? phoneForLink // Plano básico usa telefone da loja
+      : (effectiveSettings.whatsapp_number?.replace(/\D/g, '') || ''); // Premium
+
     toast({
       title: "✅ Pedido criado com sucesso!",
       description: `Pedido #${order.id.slice(-8)} criado. Redirecionando para WhatsApp...`,
@@ -330,7 +346,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     });
 
     setTimeout(() => {
-      window.open(`https://wa.me/${effectiveSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+      if (!destinationNumber) {
+        toast({
+          title: 'Telefone/WhatsApp não configurado',
+          description: 'Atenção: configure o número da loja (Dados da Loja) para receber pedidos por WhatsApp no plano básico.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      window.open(`https://wa.me/${destinationNumber}?text=${encodeURIComponent(message)}`, '_blank');
     }, 1000);
 
     clearCart();
@@ -488,9 +512,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                       onUpgradeClick={handleUpgradeClick}
                     />
                     {/* WHATSAPP checkout BASICO */}
-                    {isWhatsappOnly && effectiveSettings?.whatsapp_number && (
+                    {isWhatsappOnly && (
                       <WhatsAppCheckout
-                        whatsappNumber={effectiveSettings.whatsapp_number}
+                        whatsappNumber={basicStoreData?.phone || ''}
                         onConfirmOrder={handleCreateOrder}
                         isProcessing={isCreatingOrder}
                         customerData={customerData}
