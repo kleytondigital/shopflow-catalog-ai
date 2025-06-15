@@ -1,3 +1,5 @@
+
+import React from 'react';
 import { useCallback } from 'react';
 import { generateWhatsAppMessage } from '../checkoutUtils';
 import { useStoreData } from '@/hooks/useStoreData';
