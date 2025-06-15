@@ -16,7 +16,15 @@ import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { cn } from '@/lib/utils'; // para classes condicionais
 
-// Definição tipada usada para validação e formulário
+// Dias da semana para tipagem e renderização
+type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+type BusinessHourValue = {
+  open: string;
+  close: string;
+  closed: boolean;
+};
+
 interface StoreInfoFormData {
   storeName: string;
   description: string;
@@ -27,86 +35,64 @@ interface StoreInfoFormData {
   facebookUrl: string;
   instagramUrl: string;
   twitterUrl: string;
-  businessHours: {
-    monday: { open: string; close: string; closed: boolean };
-    tuesday: { open: string; close: string; closed: boolean };
-    wednesday: { open: string; close: string; closed: boolean };
-    thursday: { open: string; close: string; closed: boolean };
-    friday: { open: string; close: string; closed: boolean };
-    saturday: { open: string; close: string; closed: boolean };
-    sunday: { open: string; close: string; closed: boolean };
-  };
+  businessHours: Record<WeekDay, BusinessHourValue>;
 }
 
 // Regex Brasil
 const BR_PHONE_REGEX = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
 const BR_CNPJ_REGEX = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 
-const storeInfoSchema = yup.object({
+const businessHourSchema = yup.object({
+  open: yup.string().required('Horário obrigatório'),
+  close: yup.string().required('Horário obrigatório'),
+  closed: yup.boolean().required(),
+});
+
+const storeInfoSchema: yup.SchemaOf<StoreInfoFormData> = yup.object({
   storeName: yup.string().required('Nome é obrigatório'),
-  description: yup.string().nullable().default(''),
-  address: yup.string().nullable().default(''),
+  description: yup.string().defined(),
+  address: yup.string().defined(),
   phone: yup
     .string()
     .required('Telefone é obrigatório')
     .matches(BR_PHONE_REGEX, 'Formato inválido. Ex: (11) 91234-5678'),
   email: yup
     .string()
-    .nullable()
     .email('E-mail inválido')
-    .default(''),
+    .defined(),
   cnpj: yup
     .string()
-    .nullable()
     .test('is-cnpj', 'Formato inválido (00.000.000/0000-00)', v => !v || BR_CNPJ_REGEX.test(v || ''))
-    .default(''),
-  facebookUrl: yup.string().nullable().default(''),
-  instagramUrl: yup.string().nullable().default(''),
-  twitterUrl: yup.string().nullable().default(''),
+    .defined(),
+  facebookUrl: yup.string().defined(),
+  instagramUrl: yup.string().defined(),
+  twitterUrl: yup.string().defined(),
   businessHours: yup.object({
-    monday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    tuesday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    wednesday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    thursday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    friday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    saturday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-    sunday: yup.object({
-      open: yup.string().required(),
-      close: yup.string().required(),
-      closed: yup.boolean().required(),
-    }),
-  })
-}).required();
+    monday: businessHourSchema,
+    tuesday: businessHourSchema,
+    wednesday: businessHourSchema,
+    thursday: businessHourSchema,
+    friday: businessHourSchema,
+    saturday: businessHourSchema,
+    sunday: businessHourSchema,
+  }).required() as yup.ObjectSchema<Record<WeekDay, BusinessHourValue>>,
+});
 
 const StoreInfoSettings: React.FC = () => {
   const { toast } = useToast();
   const { currentStore, updateCurrentStore, loading, error } = useStores();
   const { settings: catalogSettings, updateSettings: updateCatalogSettings } = useCatalogSettings();
   const [saving, setSaving] = React.useState(false);
+
+  const defaultBusinessHours: Record<WeekDay, BusinessHourValue> = {
+    monday: { open: '09:00', close: '18:00', closed: false },
+    tuesday: { open: '09:00', close: '18:00', closed: false },
+    wednesday: { open: '09:00', close: '18:00', closed: false },
+    thursday: { open: '09:00', close: '18:00', closed: false },
+    friday: { open: '09:00', close: '18:00', closed: false },
+    saturday: { open: '09:00', close: '14:00', closed: false },
+    sunday: { open: '09:00', close: '14:00', closed: true }
+  };
 
   const form = useForm<StoreInfoFormData>({
     resolver: yupResolver(storeInfoSchema),
@@ -120,15 +106,7 @@ const StoreInfoSettings: React.FC = () => {
       facebookUrl: '',
       instagramUrl: '',
       twitterUrl: '',
-      businessHours: {
-        monday: { open: '09:00', close: '18:00', closed: false },
-        tuesday: { open: '09:00', close: '18:00', closed: false },
-        wednesday: { open: '09:00', close: '18:00', closed: false },
-        thursday: { open: '09:00', close: '18:00', closed: false },
-        friday: { open: '09:00', close: '18:00', closed: false },
-        saturday: { open: '09:00', close: '14:00', closed: false },
-        sunday: { open: '09:00', close: '14:00', closed: true }
-      }
+      businessHours: defaultBusinessHours
     }
   });
 
@@ -144,15 +122,7 @@ const StoreInfoSettings: React.FC = () => {
         facebookUrl: catalogSettings.facebook_url || '',
         instagramUrl: catalogSettings.instagram_url || '',
         twitterUrl: catalogSettings.twitter_url || '',
-        businessHours: {
-          monday: { open: '09:00', close: '18:00', closed: false },
-          tuesday: { open: '09:00', close: '18:00', closed: false },
-          wednesday: { open: '09:00', close: '18:00', closed: false },
-          thursday: { open: '09:00', close: '18:00', closed: false },
-          friday: { open: '09:00', close: '18:00', closed: false },
-          saturday: { open: '09:00', close: '14:00', closed: false },
-          sunday: { open: '09:00', close: '14:00', closed: true }
-        }
+        businessHours: defaultBusinessHours
       });
     }
   }, [currentStore, catalogSettings, form]);
@@ -198,7 +168,7 @@ const StoreInfoSettings: React.FC = () => {
     }
   };
 
-  const days = [
+  const days: { key: WeekDay; label: string }[] = [
     { key: 'monday', label: 'Segunda-feira' },
     { key: 'tuesday', label: 'Terça-feira' },
     { key: 'wednesday', label: 'Quarta-feira' },
@@ -457,31 +427,41 @@ const StoreInfoSettings: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {days.map((day) => (
-                <div key={day.key} className="flex items-center gap-4 p-4 border rounded-lg">
-                  <div className="w-32">
-                    <span className="font-medium">{day.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      className="w-24"
-                      {...form.register(`businessHours.${day.key}.open` as const)}
-                    />
-                    <span>às</span>
-                    <Input
-                      type="time"
-                      className="w-24"
-                      {...form.register(`businessHours.${day.key}.close` as const)}
-                    />
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        {...form.register(`businessHours.${day.key}.closed` as const)}
-                      />
-                      <span className="text-sm">Fechado</span>
-                    </label>
-                  </div>
-                </div>
+                <FormField
+                  key={day.key}
+                  control={form.control}
+                  name={`businessHours.${day.key}` as const}
+                  render={({ field }) => (
+                    <div className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="w-32">
+                        <span className="font-medium">{day.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          className="w-24"
+                          value={field.value.open}
+                          onChange={e => field.onChange({ ...field.value, open: e.target.value })}
+                        />
+                        <span>às</span>
+                        <Input
+                          type="time"
+                          className="w-24"
+                          value={field.value.close}
+                          onChange={e => field.onChange({ ...field.value, close: e.target.value })}
+                        />
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={field.value.closed}
+                            onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
+                          />
+                          <span className="text-sm">Fechado</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                />
               ))}
             </div>
           </CardContent>
