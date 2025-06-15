@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
@@ -22,7 +23,11 @@ const CatalogContent = () => {
   const { toast } = useToast();
   const { totalItems } = useCart();
   
-  console.log('Catalog: Parâmetros da URL:', { storeIdentifier, pathname: location.pathname });
+  console.log('Catalog: Parâmetros da URL:', { 
+    storeIdentifier, 
+    pathname: location.pathname, 
+    search: location.search 
+  });
   
   const getCatalogTypeFromUrl = (): CatalogType => {
     const params = new URLSearchParams(location.search);
@@ -75,7 +80,7 @@ const CatalogContent = () => {
         }
       });
     } else {
-      console.log('Catalog: storeIdentifier não disponível');
+      console.error('Catalog: storeIdentifier não disponível - URL pode estar malformada');
     }
   }, [storeIdentifier, catalogType, initializeCatalog, toast]);
 
@@ -180,23 +185,30 @@ const CatalogContent = () => {
 
   // Verificar se não há storeIdentifier
   if (!storeIdentifier) {
+    console.error('Catalog: storeIdentifier ausente - URL inválida');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">URL inválida</h1>
           <p className="text-gray-600">O identificador da loja não foi encontrado na URL.</p>
+          <p className="text-sm text-gray-500 mt-2">
+            URL atual: {window.location.pathname}
+          </p>
         </div>
       </div>
     );
   }
 
   if (storeError) {
-    console.log('Catalog: Erro da loja:', storeError);
+    console.error('Catalog: Erro da loja:', storeError);
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Erro ao carregar loja</h1>
-          <p className="text-gray-600">{storeError}</p>
+          <p className="text-gray-600 mb-2">{storeError}</p>
+          <p className="text-sm text-gray-500">
+            Identificador: {storeIdentifier}
+          </p>
         </div>
       </div>
     );
@@ -216,7 +228,7 @@ const CatalogContent = () => {
   }
 
   if (!loading && !store) {
-    console.log('Catalog: Loja não encontrada');
+    console.error('Catalog: Loja não encontrada após carregamento');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
