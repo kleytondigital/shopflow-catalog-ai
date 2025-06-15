@@ -1,108 +1,138 @@
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
-
-interface StatCardProps {
-  title: string;
-  value: string;
-  change: string;
-  changeType: 'increase' | 'decrease';
-  icon: React.ReactNode;
-}
-
-const StatCard = ({ title, value, change, changeType, icon }: StatCardProps) => {
-  return (
-    <div className="card-modern animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
-          <div className="flex items-center gap-1 mt-2">
-            {changeType === 'increase' ? (
-              <TrendingUp className="text-green-500" size={16} />
-            ) : (
-              <TrendingDown className="text-red-500" size={16} />
-            )}
-            <span className={`text-sm font-medium ${
-              changeType === 'increase' ? 'text-green-500' : 'text-red-500'
-            }`}>
-              {change}
-            </span>
-            <span className="text-sm text-muted-foreground">vs mês anterior</span>
-          </div>
-        </div>
-        <div className="bg-primary-50 p-3 rounded-lg">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-};
+import { TrendingUp, Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import ResponsiveDashboardCard from './ResponsiveDashboardCard';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useSuperadminMetrics } from '@/hooks/useSuperadminMetrics';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardCardsProps {
   userRole: 'superadmin' | 'admin';
 }
 
 const DashboardCards = ({ userRole }: DashboardCardsProps) => {
-  const superadminStats = [
-    {
-      title: 'Total de Lojas',
-      value: '127',
-      change: '+12%',
-      changeType: 'increase' as const,
-      icon: <Users className="text-primary" size={24} />
-    },
-    {
-      title: 'Receita Total',
-      value: 'R$ 45.230',
-      change: '+8%',
-      changeType: 'increase' as const,
-      icon: <DollarSign className="text-primary" size={24} />
-    },
-    {
-      title: 'Pedidos Hoje',
-      value: '892',
-      change: '+15%',
-      changeType: 'increase' as const,
-      icon: <ShoppingCart className="text-primary" size={24} />
-    },
-    {
-      title: 'Produtos Cadastrados',
-      value: '12.456',
-      change: '+23%',
-      changeType: 'increase' as const,
-      icon: <Package className="text-primary" size={24} />
-    }
-  ];
+  const { data: storeMetrics, isLoading: storeLoading, error: storeError } = useDashboardMetrics();
+  const { data: adminMetrics, isLoading: adminLoading, error: adminError } = useSuperadminMetrics();
+
+  const isLoading = userRole === 'superadmin' ? adminLoading : storeLoading;
+  const error = userRole === 'superadmin' ? adminError : storeError;
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {[1, 2, 3, 4].map((index) => (
+          <div key={index} className="rounded-2xl p-6 space-y-4">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Erro ao carregar métricas:', error);
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   const adminStats = [
     {
       title: 'Vendas do Mês',
-      value: 'R$ 12.450',
-      change: '+18%',
-      changeType: 'increase' as const,
-      icon: <DollarSign className="text-primary" size={24} />
+      value: storeMetrics ? formatCurrency(storeMetrics.salesThisMonth) : 'R$ 0,00',
+      subtitle: 'vendas confirmadas',
+      icon: DollarSign,
+      trend: storeMetrics ? {
+        value: Math.round(storeMetrics.salesGrowth),
+        isPositive: storeMetrics.salesGrowth >= 0
+      } : undefined,
+      variant: 'success' as const
     },
     {
       title: 'Pedidos Hoje',
-      value: '23',
-      change: '+12%',
-      changeType: 'increase' as const,
-      icon: <ShoppingCart className="text-primary" size={24} />
+      value: storeMetrics?.ordersToday || 0,
+      subtitle: 'novos pedidos',
+      icon: ShoppingCart,
+      trend: storeMetrics ? {
+        value: Math.round(storeMetrics.ordersGrowth),
+        isPositive: storeMetrics.ordersGrowth >= 0
+      } : undefined,
+      variant: 'primary' as const
     },
     {
       title: 'Produtos Ativos',
-      value: '156',
-      change: '+5%',
-      changeType: 'increase' as const,
-      icon: <Package className="text-primary" size={24} />
+      value: storeMetrics?.activeProducts || 0,
+      subtitle: 'produtos disponíveis',
+      icon: Package,
+      trend: storeMetrics ? {
+        value: Math.round(storeMetrics.productsGrowth),
+        isPositive: storeMetrics.productsGrowth >= 0
+      } : undefined,
+      variant: 'secondary' as const
     },
     {
       title: 'Visitantes',
-      value: '1.247',
-      change: '-3%',
-      changeType: 'decrease' as const,
-      icon: <Users className="text-primary" size={24} />
+      value: storeMetrics?.visitors || 0,
+      subtitle: 'acessos hoje',
+      icon: Users,
+      trend: storeMetrics ? {
+        value: Math.round(storeMetrics.visitorsGrowth),
+        isPositive: storeMetrics.visitorsGrowth >= 0
+      } : undefined,
+      variant: 'warning' as const
+    }
+  ];
+
+  const superadminStats = [
+    {
+      title: 'Total de Lojas',
+      value: adminMetrics?.totalStores || 0,
+      subtitle: 'lojas ativas',
+      icon: Users,
+      trend: adminMetrics ? {
+        value: adminMetrics.storesGrowth,
+        isPositive: adminMetrics.storesGrowth >= 0
+      } : undefined,
+      variant: 'primary' as const
+    },
+    {
+      title: 'Receita Total',
+      value: adminMetrics ? formatCurrency(adminMetrics.totalRevenue) : 'R$ 0,00',
+      subtitle: 'receita mensal',
+      icon: DollarSign,
+      trend: adminMetrics ? {
+        value: adminMetrics.revenueGrowth,
+        isPositive: adminMetrics.revenueGrowth >= 0
+      } : undefined,
+      variant: 'success' as const
+    },
+    {
+      title: 'Pedidos Hoje',
+      value: adminMetrics?.ordersToday || 0,
+      subtitle: 'pedidos no sistema',
+      icon: ShoppingCart,
+      trend: adminMetrics ? {
+        value: adminMetrics.ordersGrowth,
+        isPositive: adminMetrics.ordersGrowth >= 0
+      } : undefined,
+      variant: 'warning' as const
+    },
+    {
+      title: 'Produtos Cadastrados',
+      value: adminMetrics?.totalProducts || 0,
+      subtitle: 'produtos no sistema',
+      icon: Package,
+      trend: adminMetrics ? {
+        value: adminMetrics.productsGrowth,
+        isPositive: adminMetrics.productsGrowth >= 0
+      } : undefined,
+      variant: 'secondary' as const
     }
   ];
 
@@ -111,13 +141,14 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {stats.map((stat, index) => (
-        <StatCard
+        <ResponsiveDashboardCard
           key={index}
           title={stat.title}
           value={stat.value}
-          change={stat.change}
-          changeType={stat.changeType}
+          subtitle={stat.subtitle}
           icon={stat.icon}
+          trend={stat.trend}
+          variant={stat.variant}
         />
       ))}
     </div>
