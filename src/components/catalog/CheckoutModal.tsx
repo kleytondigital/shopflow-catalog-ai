@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Truck, MapPin, CreditCard, Smartphone, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +10,15 @@ import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
+import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
 import CustomerDataForm from './checkout/CustomerDataForm';
+import CheckoutTypeSelector from './checkout/CheckoutTypeSelector';
 import ShippingMethodCard from './checkout/ShippingMethodCard';
 import ShippingAddressForm from './checkout/ShippingAddressForm';
 import ShippingOptionsCard from './checkout/ShippingOptionsCard';
 import PaymentMethodCard from './checkout/PaymentMethodCard';
 import OrderSummary from './checkout/OrderSummary';
+import WhatsAppCheckout from './checkout/WhatsAppCheckout';
 import MercadoPagoPayment from './checkout/MercadoPagoPayment';
 import TestEnvironmentInfo from './checkout/TestEnvironmentInfo';
 import { generateWhatsAppMessage } from './checkout/checkoutUtils';
@@ -34,12 +36,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const { settings: catalogSettings, loading: catalogLoading } = useCatalogSettings(storeId);
   const { toast } = useToast();
   
+  // Usar hook para opções de checkout
+  const {
+    checkoutOptions,
+    availableOptions,
+    defaultOption,
+    canUseOnlinePayment,
+    hasWhatsAppConfigured,
+    isPremiumRequired
+  } = useCheckoutOptions(storeId);
+  
   const [customerData, setCustomerData] = useState({
     name: '',
     email: '',
     phone: ''
   });
   
+  const [checkoutType, setCheckoutType] = useState<'whatsapp_only' | 'online_payment'>('whatsapp_only');
   const [shippingMethod, setShippingMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState('pix');
   const [shippingAddress, setShippingAddress] = useState({
@@ -61,32 +74,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   // SEMPRE usar catalogSettings como prioridade, fallback para storeSettings apenas se não houver catalogSettings
   const effectiveSettings = catalogSettings || storeSettings;
 
-  // Log para debug das credenciais
-  console.log('CheckoutModal Debug:', {
-    catalogSettings: catalogSettings?.payment_methods,
-    storeSettings: storeSettings?.payment_methods,
-    effectiveSettings: effectiveSettings?.payment_methods,
-    catalogLoading
-  });
+  // Definir tipo de checkout padrão baseado nas opções disponíveis
+  useEffect(() => {
+    if (availableOptions.length > 0) {
+      setCheckoutType(defaultOption as 'whatsapp_only' | 'online_payment');
+    }
+  }, [availableOptions, defaultOption]);
 
-  // Verificar credenciais do Mercado Pago - SEMPRE usar catalogSettings primeiro
+  // Verificar credenciais do Mercado Pago apenas para checkout online
   const hasMercadoPagoCredentials = React.useMemo(() => {
-    if (catalogLoading || !effectiveSettings) {
-      console.log('CheckoutModal: Ainda carregando configurações...');
+    if (catalogLoading || !effectiveSettings || checkoutType === 'whatsapp_only') {
       return false;
     }
 
     const paymentMethods = effectiveSettings?.payment_methods;
     const hasCredentials = !!(paymentMethods?.mercadopago_access_token?.trim() && paymentMethods?.mercadopago_public_key?.trim());
     
-    console.log('CheckoutModal: Verificação de credenciais MP:', {
-      accessToken: paymentMethods?.mercadopago_access_token ? 'presente' : 'ausente',
-      publicKey: paymentMethods?.mercadopago_public_key ? 'presente' : 'ausente',
-      hasCredentials
-    });
-    
     return hasCredentials;
-  }, [effectiveSettings, catalogLoading]);
+  }, [effectiveSettings, catalogLoading, checkoutType]);
 
   // Verificar se está em ambiente de teste
   const isTestEnvironment = React.useMemo(() => {
@@ -97,8 +102,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   }, [effectiveSettings]);
 
   const availablePaymentMethods = React.useMemo(() => {
-    if (!hasMercadoPagoCredentials) {
-      console.log('CheckoutModal: Sem credenciais MP, nenhum método disponível');
+    if (checkoutType === 'whatsapp_only' || !hasMercadoPagoCredentials) {
       return [];
     }
 
@@ -128,9 +132,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       });
     }
     
-    console.log('CheckoutModal: Métodos de pagamento disponíveis:', methods.length);
     return methods;
-  }, [effectiveSettings, hasMercadoPagoCredentials]);
+  }, [effectiveSettings, hasMercadoPagoCredentials, checkoutType]);
 
   const availableShippingMethods = React.useMemo(() => {
     const methods = [];
@@ -197,8 +200,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   };
 
   const handleCreateOrder = async () => {
-    console.log('CheckoutModal: Iniciando criação do pedido...');
-    
     try {
       if (!customerData.name.trim()) {
         toast({
@@ -250,13 +251,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           zip_code: shippingAddress.zipCode
         } : undefined,
         shipping_method: shippingMethod,
-        payment_method: paymentMethod,
+        payment_method: checkoutType === 'whatsapp_only' ? 'whatsapp' : paymentMethod,
         shipping_cost: shippingCost,
         notes: notes.trim() || undefined,
         store_id: storeId
       };
-
-      console.log('CheckoutModal: Dados do pedido preparados:', orderData);
 
       toast({
         title: "Criando pedido...",
@@ -264,21 +263,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
       });
 
       const savedOrder = await createOrderAsync(orderData);
-      console.log('CheckoutModal: Pedido criado com sucesso:', savedOrder);
-      
       setCreatedOrder(savedOrder);
       
-      // Se for um método do Mercado Pago, ir para o pagamento
-      if (['pix', 'credit_card', 'bank_slip'].includes(paymentMethod)) {
-        setCurrentStep('payment');
-      } else {
-        // Para outros métodos, finalizar com WhatsApp
+      // Lógica baseada no tipo de checkout
+      if (checkoutType === 'whatsapp_only') {
         handleWhatsAppCheckout(savedOrder);
+      } else if (['pix', 'credit_card', 'bank_slip'].includes(paymentMethod)) {
+        setCurrentStep('payment');
       }
 
     } catch (error) {
-      console.error('CheckoutModal: Erro ao criar pedido:', error);
-      
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
       toast({
@@ -291,35 +285,31 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   };
 
   const handleWhatsAppCheckout = (order: any) => {
-    const checkoutType = effectiveSettings?.checkout_type || 'both';
+    const orderData = {
+      customer_name: customerData.name,
+      customer_phone: customerData.phone,
+      total_amount: finalTotal,
+      items: items.map(item => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      shipping_method: shippingMethod,
+      payment_method: 'whatsapp',
+      notes: notes
+    };
     
-    if (checkoutType === 'whatsapp_only' || (checkoutType === 'both' && effectiveSettings?.whatsapp_number)) {
-      const orderData = {
-        customer_name: customerData.name,
-        customer_phone: customerData.phone,
-        total_amount: finalTotal,
-        items: items.map(item => ({
-          name: item.product.name,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        shipping_method: shippingMethod,
-        payment_method: paymentMethod,
-        notes: notes
-      };
-      
-      const message = generateWhatsAppMessage(orderData);
-      
-      toast({
-        title: "✅ Pedido criado com sucesso!",
-        description: `Pedido #${order.id.slice(-8)} criado. Redirecionando para WhatsApp...`,
-        duration: 5000,
-      });
+    const message = generateWhatsAppMessage(orderData);
+    
+    toast({
+      title: "✅ Pedido criado com sucesso!",
+      description: `Pedido #${order.id.slice(-8)} criado. Redirecionando para WhatsApp...`,
+      duration: 5000,
+    });
 
-      setTimeout(() => {
-        window.open(`https://wa.me/${effectiveSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
-      }, 1000);
-    }
+    setTimeout(() => {
+      window.open(`https://wa.me/${effectiveSettings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
+    }, 1000);
 
     clearCart();
     onClose();
@@ -345,6 +335,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     });
   };
 
+  const handleUpgradeClick = () => {
+    toast({
+      title: "Upgrade para Premium",
+      description: "Entre em contato para fazer upgrade e liberar pagamentos online!",
+    });
+  };
+
   // Aguardar carregamento das configurações do catálogo antes de renderizar
   if (catalogLoading) {
     return (
@@ -361,8 +358,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     );
   }
 
-  // Renderizar modal de configuração se não houver métodos disponíveis
-  if (!hasMercadoPagoCredentials || (availablePaymentMethods.length === 0 || availableShippingMethods.length === 0)) {
+  // Renderizar modal de configuração se não houver opções disponíveis
+  if (availableOptions.length === 0) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
@@ -371,10 +368,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           </DialogHeader>
           <div className="text-center py-6">
             <p className="text-gray-600 mb-4">
-              {!hasMercadoPagoCredentials 
-                ? "As credenciais do Mercado Pago não foram configuradas. Acesse as configurações de pagamento para configurar o Access Token e Public Key."
-                : "Esta loja ainda não configurou os métodos de pagamento e envio. Entre em contato diretamente com a loja para fazer seu pedido."
-              }
+              Esta loja ainda não configurou métodos de finalização de pedido. Entre em contato diretamente com a loja para fazer seu pedido.
             </p>
             <Button onClick={onClose}>Fechar</Button>
           </div>
@@ -389,7 +383,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
           <DialogTitle className="text-2xl font-bold text-white text-center flex items-center justify-center gap-3">
             {currentStep === 'checkout' ? 'Finalizar Pedido' : 'Pagamento'}
-            {isTestEnvironment && (
+            {isTestEnvironment && checkoutType === 'online_payment' && (
               <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 font-bold">
                 🧪 TESTE
               </Badge>
@@ -404,7 +398,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                 <ScrollArea className="h-full w-full">
                   <div className="p-4 sm:p-6 space-y-6 pb-24 lg:pb-6">
                     {/* Alerta de ambiente de teste */}
-                    {isTestEnvironment && (
+                    {isTestEnvironment && checkoutType === 'online_payment' && (
                       <TestEnvironmentInfo />
                     )}
 
@@ -413,67 +407,98 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                       onDataChange={setCustomerData}
                     />
 
-                    {/* Usar ShippingMethodCard apenas para opções básicas ou ShippingOptionsCard para opções calculadas */}
-                    {shippingOptions.length === 0 ? (
-                      <ShippingMethodCard
-                        shippingMethods={availableShippingMethods}
-                        selectedMethod={shippingMethod}
-                        onMethodChange={setShippingMethod}
-                      />
-                    ) : (
-                      <ShippingOptionsCard
-                        options={shippingOptions}
-                        selectedOption={shippingMethod}
-                        onOptionChange={handleShippingMethodChange}
-                        freeDeliveryAmount={effectiveSettings?.shipping_options?.free_delivery_amount}
-                        cartTotal={totalAmount}
-                      />
-                    )}
-
-                    {(shippingMethod === 'shipping' || shippingMethod === 'delivery') && (
-                      <ShippingAddressForm
-                        address={shippingAddress}
-                        onAddressChange={setShippingAddress}
-                        onCalculateShipping={() => {}}
-                        onShippingCalculated={handleShippingCalculated}
-                        storeSettings={effectiveSettings}
-                      />
-                    )}
-
-                    <PaymentMethodCard
-                      paymentMethods={availablePaymentMethods}
-                      selectedMethod={paymentMethod}
-                      onMethodChange={setPaymentMethod}
+                    {/* Seletor de tipo de checkout */}
+                    <CheckoutTypeSelector
+                      options={checkoutOptions}
+                      selectedType={checkoutType}
+                      onTypeChange={(type) => setCheckoutType(type as 'whatsapp_only' | 'online_payment')}
+                      isPremiumRequired={isPremiumRequired}
+                      onUpgradeClick={handleUpgradeClick}
                     />
 
-                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg">Observações</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Textarea
-                          placeholder="Observações sobre o pedido (opcional)"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          rows={3}
-                        />
-                      </CardContent>
-                    </Card>
+                    {/* Checkout via WhatsApp */}
+                    {checkoutType === 'whatsapp_only' && effectiveSettings?.whatsapp_number && (
+                      <WhatsAppCheckout
+                        whatsappNumber={effectiveSettings.whatsapp_number}
+                        onConfirmOrder={handleCreateOrder}
+                        isProcessing={isCreatingOrder}
+                        customerData={customerData}
+                        totalAmount={finalTotal}
+                        itemsCount={items.length}
+                      />
+                    )}
+
+                    {/* Checkout online - mostrar apenas se for o tipo selecionado */}
+                    {checkoutType === 'online_payment' && (
+                      <>
+                        {/* Usar ShippingMethodCard apenas para opções básicas ou ShippingOptionsCard para opções calculadas */}
+                        {shippingOptions.length === 0 ? (
+                          <ShippingMethodCard
+                            shippingMethods={availableShippingMethods}
+                            selectedMethod={shippingMethod}
+                            onMethodChange={setShippingMethod}
+                          />
+                        ) : (
+                          <ShippingOptionsCard
+                            options={shippingOptions}
+                            selectedOption={shippingMethod}
+                            onOptionChange={handleShippingMethodChange}
+                            freeDeliveryAmount={effectiveSettings?.shipping_options?.free_delivery_amount}
+                            cartTotal={totalAmount}
+                          />
+                        )}
+
+                        {(shippingMethod === 'shipping' || shippingMethod === 'delivery') && (
+                          <ShippingAddressForm
+                            address={shippingAddress}
+                            onAddressChange={setShippingAddress}
+                            onCalculateShipping={() => {}}
+                            onShippingCalculated={handleShippingCalculated}
+                            storeSettings={effectiveSettings}
+                          />
+                        )}
+
+                        {availablePaymentMethods.length > 0 && (
+                          <PaymentMethodCard
+                            paymentMethods={availablePaymentMethods}
+                            selectedMethod={paymentMethod}
+                            onMethodChange={setPaymentMethod}
+                          />
+                        )}
+
+                        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                          <CardHeader className="pb-4">
+                            <CardTitle className="text-lg">Observações</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <Textarea
+                              placeholder="Observações sobre o pedido (opcional)"
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              rows={3}
+                            />
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
                   </div>
                 </ScrollArea>
               </div>
 
-              <div className="hidden lg:block border-l bg-gray-50">
-                <OrderSummary
-                  items={items}
-                  totalAmount={totalAmount}
-                  shippingCost={shippingCost}
-                  finalTotal={finalTotal}
-                  isProcessing={isCreatingOrder}
-                  isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
-                  onSubmit={handleCreateOrder}
-                />
-              </div>
+              {/* OrderSummary apenas para checkout online */}
+              {checkoutType === 'online_payment' && (
+                <div className="hidden lg:block border-l bg-gray-50">
+                  <OrderSummary
+                    items={items}
+                    totalAmount={totalAmount}
+                    shippingCost={shippingCost}
+                    finalTotal={finalTotal}
+                    isProcessing={isCreatingOrder}
+                    isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
+                    onSubmit={handleCreateOrder}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div className="h-full flex items-center justify-center p-6">
@@ -511,8 +536,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
           )}
         </div>
 
-        {/* Footer mobile apenas para checkout */}
-        {currentStep === 'checkout' && (
+        {/* Footer mobile apenas para checkout online */}
+        {currentStep === 'checkout' && checkoutType === 'online_payment' && (
           <div className="lg:hidden shrink-0 bg-white border-t p-4">
             <div className="space-y-4">
               <div className="flex justify-between text-xl font-bold">
