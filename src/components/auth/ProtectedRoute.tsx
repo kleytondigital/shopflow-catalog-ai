@@ -1,14 +1,15 @@
 
-import { useEffect } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth, UserRole } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
+  children: ReactNode;
   allowedRoles?: UserRole[];
 }
 
-const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -43,7 +44,7 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return null;
   }
 
-  return <Outlet />;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
