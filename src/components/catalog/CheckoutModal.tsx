@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, MapPin, CreditCard, Smartphone, FileText } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
-import CustomerDataForm from './checkout/CustomerDataForm';
+import { useStoreData } from '@/hooks/useStoreData';
+import EnhancedCustomerDataForm from './checkout/EnhancedCustomerDataForm';
+import EnhancedWhatsAppCheckout from './checkout/EnhancedWhatsAppCheckout';
 import CheckoutTypeSelector from './checkout/CheckoutTypeSelector';
 import ShippingMethodCard from './checkout/ShippingMethodCard';
 import ShippingAddressForm from './checkout/ShippingAddressForm';
 import ShippingOptionsCard from './checkout/ShippingOptionsCard';
 import PaymentMethodCard from './checkout/PaymentMethodCard';
 import OrderSummary from './checkout/OrderSummary';
-import WhatsAppCheckout from './checkout/WhatsAppCheckout';
 import MercadoPagoPayment from './checkout/MercadoPagoPayment';
 import TestEnvironmentInfo from './checkout/TestEnvironmentInfo';
 import { generateWhatsAppMessage } from './checkout/checkoutUtils';
-import { useStoreData } from '@/hooks/useStoreData';
+import { Button } from '@/components/ui/button';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -72,7 +69,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
-  // Certifique-se de que effectiveSettings NÃO é undefined antes de acessar propriedades
+  // Configurações efetivas
   const effectiveSettings = React.useMemo(() => {
     return catalogSettings || storeSettings || {};
   }, [catalogSettings, storeSettings]);
@@ -257,7 +254,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
         customer_phone: customerData.phone.trim(),
         status: 'pending' as const,
         order_type: items[0]?.catalogType || 'retail' as const,
-        total_amount: finalTotal,
+        total_amount: totalAmount + shippingCost,
         items: items.map(item => ({
           id: item.product.id,
           name: item.product.name,
@@ -313,14 +310,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     const orderData = {
       customer_name: customerData.name,
       customer_phone: customerData.phone,
-      total_amount: finalTotal,
+      customer_email: customerData.email,
+      total_amount: totalAmount + shippingCost,
       items: items.map(item => ({
         name: item.product.name,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        variation: item.variations ? `${item.variations.size || ''} ${item.variations.color || ''}`.trim() : undefined
       })),
       shipping_method: shippingMethod,
       payment_method: 'whatsapp',
+      shipping_cost: shippingCost,
       notes: notes
     };
 
@@ -328,16 +328,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
     // Definir número correto: plano básico = telefone cadastrado na loja
     const basicPhoneRaw = basicStoreData?.phone || '';
-    // Limpar caracteres não numéricos
     const formattedPhone = basicPhoneRaw.replace(/\D/g, '');
-    // Por padrão, adicionar DDI +55 se não existir
     const phoneForLink = formattedPhone.length >= 10
       ? (formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`)
       : '';
 
-    const destinationNumber = isWhatsappOnly
-      ? phoneForLink // Plano básico usa telefone da loja
-      : (effectiveSettings.whatsapp_number?.replace(/\D/g, '') || ''); // Premium
+    const destinationNumber = phoneForLink;
 
     toast({
       title: "✅ Pedido criado com sucesso!",
@@ -473,10 +469,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-[98vw] h-[95vh] p-0 gap-0 flex flex-col overflow-auto">
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0 px-6 py-4 border-b bg-gradient-to-r from-primary to-accent">
           <DialogTitle className="text-2xl font-bold text-white text-center flex items-center justify-center gap-3">
-            {currentStep === 'checkout' ? 'Finalizar Pedido' : 'Pagamento'}
+            {currentStep === 'checkout' ? '🛒 Finalizar Pedido' : '💳 Pagamento'}
             {isTestEnvironment && checkoutType === 'online_payment' && (
               <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 font-bold">
                 🧪 TESTE
@@ -496,88 +492,94 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                       <TestEnvironmentInfo />
                     )}
 
-                    <CustomerDataForm
+                    <EnhancedCustomerDataForm
                       customerData={customerData}
                       onDataChange={setCustomerData}
                     />
 
-                    {/* Seletor de tipo de checkout só mostra online/pay se premium */}
-                    <CheckoutTypeSelector
-                      options={isWhatsappOnly ? [checkoutOptions[0]] : checkoutOptions}
-                      selectedType={checkoutType}
-                      onTypeChange={
-                        (type) => setCheckoutType(type as 'whatsapp_only' | 'online_payment')
-                      }
-                      isPremiumRequired={isPremiumRequired}
-                      onUpgradeClick={handleUpgradeClick}
-                    />
                     {/* WHATSAPP checkout BASICO */}
                     {isWhatsappOnly && (
-                      <WhatsAppCheckout
+                      <EnhancedWhatsAppCheckout
                         whatsappNumber={basicStoreData?.phone || ''}
                         onConfirmOrder={handleCreateOrder}
                         isProcessing={isCreatingOrder}
                         customerData={customerData}
-                        totalAmount={finalTotal}
-                        itemsCount={items.length}
+                        items={items}
+                        totalAmount={totalAmount}
+                        shippingCost={shippingCost}
+                        notes={notes}
                       />
                     )}
+
                     {/* PREMIUM: online payment+entregas */}
-                    {!isWhatsappOnly && checkoutType === 'online_payment' && (
+                    {!isWhatsappOnly && (
                       <>
-                        {/* Métodos de entrega só premium */}
-                        {shippingOptions.length === 0 ? (
-                          <ShippingMethodCard
-                            shippingMethods={availableShippingMethods}
-                            selectedMethod={shippingMethod}
-                            onMethodChange={setShippingMethod}
-                          />
-                        ) : (
-                          <ShippingOptionsCard
-                            options={shippingOptions}
-                            selectedOption={shippingMethod}
-                            onOptionChange={handleShippingMethodChange}
-                            freeDeliveryAmount={effectiveSettings?.shipping_options?.free_delivery_amount}
-                            cartTotal={totalAmount}
-                          />
-                        )}
+                        <CheckoutTypeSelector
+                          options={checkoutOptions}
+                          selectedType={checkoutType}
+                          onTypeChange={(type) => setCheckoutType(type as 'whatsapp_only' | 'online_payment')}
+                          isPremiumRequired={isPremiumRequired}
+                          onUpgradeClick={() => {}}
+                        />
 
-                        {(shippingMethod === 'shipping' || shippingMethod === 'delivery') && (
-                          <ShippingAddressForm
-                            address={shippingAddress}
-                            onAddressChange={setShippingAddress}
-                            onCalculateShipping={() => {}}
-                            onShippingCalculated={handleShippingCalculated}
-                            storeSettings={effectiveSettings}
-                          />
-                        )}
+                        {checkoutType === 'online_payment' && (
+                          <>
+                            {/* Métodos de entrega só premium */}
+                            {shippingOptions.length === 0 ? (
+                              <ShippingMethodCard
+                                shippingMethods={availableShippingMethods}
+                                selectedMethod={shippingMethod}
+                                onMethodChange={setShippingMethod}
+                              />
+                            ) : (
+                              <ShippingOptionsCard
+                                options={shippingOptions}
+                                selectedOption={shippingMethod}
+                                onOptionChange={handleShippingMethodChange}
+                                freeDeliveryAmount={effectiveSettings?.shipping_options?.free_delivery_amount}
+                                cartTotal={totalAmount}
+                              />
+                            )}
 
-                        {availablePaymentMethods.length > 0 && (
-                          <PaymentMethodCard
-                            paymentMethods={availablePaymentMethods}
-                            selectedMethod={paymentMethod}
-                            onMethodChange={setPaymentMethod}
-                          />
-                        )}
+                            {(shippingMethod === 'shipping' || shippingMethod === 'delivery') && (
+                              <ShippingAddressForm
+                                address={shippingAddress}
+                                onAddressChange={setShippingAddress}
+                                onCalculateShipping={() => {}}
+                                onShippingCalculated={handleShippingCalculated}
+                                storeSettings={effectiveSettings}
+                              />
+                            )}
 
-                        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg">Observações</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <Textarea
-                              placeholder="Observações sobre o pedido (opcional)"
-                              value={notes}
-                              onChange={(e) => setNotes(e.target.value)}
-                              rows={3}
-                            />
-                          </CardContent>
-                        </Card>
+                            {availablePaymentMethods.length > 0 && (
+                              <PaymentMethodCard
+                                paymentMethods={availablePaymentMethods}
+                                selectedMethod={paymentMethod}
+                                onMethodChange={setPaymentMethod}
+                              />
+                            )}
+
+                            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                              <CardHeader className="pb-4">
+                                <CardTitle className="text-lg">Observações</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <Textarea
+                                  placeholder="Observações sobre o pedido (opcional)"
+                                  value={notes}
+                                  onChange={(e) => setNotes(e.target.value)}
+                                  rows={3}
+                                />
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
                 </ScrollArea>
               </div>
+
               {/* Summary só aparece para premium+online */}
               {!isWhatsappOnly && checkoutType === 'online_payment' && (
                 <div className="hidden lg:block border-l bg-gray-50">
@@ -585,7 +587,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                     items={items}
                     totalAmount={totalAmount}
                     shippingCost={shippingCost}
-                    finalTotal={finalTotal}
+                    finalTotal={totalAmount + shippingCost}
                     isProcessing={isCreatingOrder}
                     isDisabled={isCreatingOrder || !customerData.name || !customerData.phone}
                     onSubmit={handleCreateOrder}
@@ -599,13 +601,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
                 <div className="max-w-lg mx-auto">
                   <MercadoPagoPayment
                     items={items}
-                    totalAmount={finalTotal}
+                    totalAmount={totalAmount + shippingCost}
                     customerData={customerData}
                     paymentMethod={paymentMethod as 'pix' | 'credit_card' | 'bank_slip'}
                     orderId={createdOrder?.id}
                     storeId={storeId}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={handlePaymentError}
+                    onPaymentSuccess={() => {}}
+                    onPaymentError={() => {}}
                   />
                   
                   <div className="mt-6 text-center">
@@ -635,7 +637,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
             <div className="space-y-4">
               <div className="flex justify-between text-xl font-bold">
                 <span>Total:</span>
-                <span className="text-primary">R$ {finalTotal.toFixed(2)}</span>
+                <span className="text-primary">R$ {(totalAmount + shippingCost).toFixed(2)}</span>
               </div>
               
               <Button
@@ -653,4 +655,5 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, storeSet
     </Dialog>
   );
 };
+
 export default CheckoutModal;

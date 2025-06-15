@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import LogoUpload from './LogoUpload';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { cn } from '@/lib/utils'; // para classes condicionais
+import { cn } from '@/lib/utils';
 
 // Dias da semana para tipagem e renderização
 type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -48,10 +47,10 @@ const businessHourSchema = yup.object({
   closed: yup.boolean().required(),
 });
 
-const storeInfoSchema: yup.SchemaOf<StoreInfoFormData> = yup.object({
+const storeInfoSchema = yup.object({
   storeName: yup.string().required('Nome é obrigatório'),
-  description: yup.string().defined(),
-  address: yup.string().defined(),
+  description: yup.string().required(),
+  address: yup.string().required(),
   phone: yup
     .string()
     .required('Telefone é obrigatório')
@@ -59,14 +58,14 @@ const storeInfoSchema: yup.SchemaOf<StoreInfoFormData> = yup.object({
   email: yup
     .string()
     .email('E-mail inválido')
-    .defined(),
+    .required(),
   cnpj: yup
     .string()
     .test('is-cnpj', 'Formato inválido (00.000.000/0000-00)', v => !v || BR_CNPJ_REGEX.test(v || ''))
-    .defined(),
-  facebookUrl: yup.string().defined(),
-  instagramUrl: yup.string().defined(),
-  twitterUrl: yup.string().defined(),
+    .required(),
+  facebookUrl: yup.string().required(),
+  instagramUrl: yup.string().required(),
+  twitterUrl: yup.string().required(),
   businessHours: yup.object({
     monday: businessHourSchema,
     tuesday: businessHourSchema,
@@ -75,7 +74,7 @@ const storeInfoSchema: yup.SchemaOf<StoreInfoFormData> = yup.object({
     friday: businessHourSchema,
     saturday: businessHourSchema,
     sunday: businessHourSchema,
-  }).required() as yup.ObjectSchema<Record<WeekDay, BusinessHourValue>>,
+  }).required(),
 });
 
 const StoreInfoSettings: React.FC = () => {
@@ -469,7 +468,7 @@ const StoreInfoSettings: React.FC = () => {
         <Button
           type="submit"
           className={cn(
-            "w-full py-3 text-base font-semibold rounded-xl shadow-lg transition-all",
+            "w-full py-3 text-sm font-semibold rounded-xl shadow-lg transition-all",
             saving ? "opacity-70 pointer-events-none" : "bg-primary text-white hover:bg-primary/90"
           )}
           disabled={saving}

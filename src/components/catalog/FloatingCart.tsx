@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import CartItemThumbnail from './checkout/CartItemThumbnail';
 
 interface FloatingCartProps {
   onCheckout?: () => void;
@@ -57,7 +58,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
           <div className="flex flex-col h-full">
             <SheetHeader className="px-6 py-4 bg-gradient-to-r from-primary to-accent">
               <SheetTitle className="text-xl font-bold text-white text-center">
-                Carrinho de Compras
+                🛒 Carrinho de Compras
               </SheetTitle>
             </SheetHeader>
 
@@ -75,32 +76,41 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
               ) : (
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl border shadow-sm p-4 hover:shadow-md transition-shadow">
+                    <div key={item.id} className="bg-white rounded-xl border shadow-sm p-4 hover:shadow-md transition-all">
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <div className="text-2xl">📦</div>
-                        </div>
+                        <CartItemThumbnail 
+                          imageUrl={item.product.image_url}
+                          productName={item.product.name}
+                          size="md"
+                        />
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900 truncate">
                             {item.product.name}
                           </h4>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {item.catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {item.catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
+                            </Badge>
+                            {item.variations && (
+                              <span className="text-xs text-gray-500">
+                                {item.variations.size} {item.variations.color}
+                              </span>
+                            )}
+                          </div>
                           
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="h-8 w-8 p-0 rounded-full"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:border-red-300"
                               >
                                 <Minus size={12} />
                               </Button>
                               
-                              <span className="font-semibold min-w-[2rem] text-center">
+                              <span className="font-semibold min-w-[2rem] text-center bg-gray-50 px-2 py-1 rounded">
                                 {item.quantity}
                               </span>
                               
@@ -108,7 +118,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="h-8 w-8 p-0 rounded-full"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-green-50 hover:border-green-300"
                               >
                                 <Plus size={12} />
                               </Button>
@@ -126,7 +136,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
                         </div>
                         
                         <div className="text-right">
-                          <p className="font-bold text-primary">
+                          <p className="font-bold text-primary text-lg">
                             R$ {(item.price * item.quantity).toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-500">
@@ -141,7 +151,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
             </div>
 
             {items.length > 0 && (
-              <div className="border-t bg-gray-50 p-6 space-y-4">
+              <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-6 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold">Total:</span>
                   <span className="text-2xl font-bold text-primary">
@@ -151,9 +161,10 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
                 
                 <Button
                   onClick={handleCheckout}
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
+                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all transform hover:scale-105"
                   size="lg"
                 >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
                   Finalizar Pedido
                 </Button>
               </div>
