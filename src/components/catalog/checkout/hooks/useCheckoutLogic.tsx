@@ -1,8 +1,8 @@
-
 import { useCallback } from 'react';
 import { generateWhatsAppMessage } from '../checkoutUtils';
 import { useStoreData } from '@/hooks/useStoreData';
 import { useCheckoutContext } from '../context/CheckoutProvider';
+import { usePublicCustomer } from "./usePublicCustomer";
 
 export const useCheckoutLogic = () => {
   const {
@@ -27,6 +27,8 @@ export const useCheckoutLogic = () => {
   } = useCheckoutContext();
 
   const { store: basicStoreData } = useStoreData();
+
+  const { saveCustomer } = usePublicCustomer();
 
   const handleShippingCalculated = useCallback((options: any[]) => {
     setShippingOptions(options);
@@ -81,9 +83,17 @@ export const useCheckoutLogic = () => {
         return;
       }
 
+      // SALVA O CLIENTE antes do pedido!
+      await saveCustomer({
+        name: customerData.name.trim(),
+        email: customerData.email?.trim() || undefined,
+        phone: customerData.phone.trim(),
+        storeId: basicStoreData?.id
+      });
+
       const orderData = {
         customer_name: customerData.name.trim(),
-        customer_email: customerData.email.trim() || undefined,
+        customer_email: customerData.email?.trim() || undefined,
         customer_phone: customerData.phone.trim(),
         status: 'pending' as const,
         order_type: cartItems[0]?.catalogType || 'retail' as const,
@@ -109,15 +119,16 @@ export const useCheckoutLogic = () => {
         notes: notes.trim() || undefined
       };
 
+      // Cria o pedido normalmente
       toast({
-        title: "Criando pedido...",
-        description: "Aguarde enquanto criamos seu pedido.",
+        title: "Enviando seu pedido...",
+        description: "Só um instante: vamos lhe direcionar ao WhatsApp.",
       });
 
       const savedOrder = await createOrderAsync(orderData);
       setCreatedOrder(savedOrder);
-      
-      // Lógica baseada no tipo de checkout
+
+      // Tudo no BASICO (checkoutType whatsapp_only), já abre whatsapp
       if (checkoutType === 'whatsapp_only') {
         handleWhatsAppCheckout(savedOrder);
       } else if (['pix', 'credit_card', 'bank_slip'].includes(paymentMethod)) {
@@ -126,7 +137,6 @@ export const useCheckoutLogic = () => {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
       toast({
         title: "❌ Erro ao criar pedido",
         description: `Não foi possível criar seu pedido: ${errorMessage}. Tente novamente.`,
@@ -147,7 +157,10 @@ export const useCheckoutLogic = () => {
     createOrderAsync,
     toast,
     setCreatedOrder,
-    setCurrentStep
+    setCurrentStep,
+    saveCustomer, // novo!
+    basicStoreData,
+    handleWhatsAppCheckout
   ]);
 
   const handleWhatsAppCheckout = useCallback((order: any) => {
@@ -180,16 +193,16 @@ export const useCheckoutLogic = () => {
     const destinationNumber = phoneForLink;
 
     toast({
-      title: "✅ Pedido criado com sucesso!",
-      description: `Pedido #${order.id.slice(-8)} criado. Redirecionando para WhatsApp...`,
+      title: "Pedido enviado!",
+      description: "Seu pedido foi registrado, agora abra seu WhatsApp para finalizá-lo.",
       duration: 5000,
     });
 
     setTimeout(() => {
       if (!destinationNumber) {
         toast({
-          title: 'Telefone/WhatsApp não configurado',
-          description: 'Atenção: configure o número da loja (Dados da Loja) para receber pedidos por WhatsApp no plano básico.',
+          title: 'WhatsApp da loja não configurado',
+          description: 'A loja não configurou o WhatsApp corretamente.',
           variant: 'destructive',
         });
         return;
@@ -197,7 +210,7 @@ export const useCheckoutLogic = () => {
       window.open(`https://wa.me/${destinationNumber}?text=${encodeURIComponent(message)}`, '_blank');
     }, 1000);
 
-    clearCart();
+    clearCart(); // Limpa o carrinho sempre!
   }, [customerData, cartItems, totalAmount, shippingCost, shippingMethod, notes, basicStoreData, toast, clearCart]);
 
   return {
