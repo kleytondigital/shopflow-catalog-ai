@@ -67,6 +67,12 @@ export const PlanBenefitsDisplay = () => {
 
   const planName = planLabels[subscription.plan.type] || subscription.plan.type;
 
+  // Converter o objeto benefits em array para renderização
+  const benefitsArray = Object.entries(benefits).map(([key, benefit]) => ({
+    key,
+    ...benefit
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -79,26 +85,26 @@ export const PlanBenefitsDisplay = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {benefits.length === 0 ? (
+          {benefitsArray.length === 0 ? (
             <p className="text-sm text-gray-600">
               Nenhum benefício configurado para este plano.
             </p>
           ) : (
-            benefits.map((benefit) => (
-              <div key={benefit.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+            benefitsArray.map((benefit) => (
+              <div key={benefit.key} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
                 <div className="flex items-center gap-2">
-                  {benefit.is_enabled ? (
+                  {benefit.hasAccess ? (
                     <Check className="h-4 w-4 text-green-600" />
                   ) : (
                     <X className="h-4 w-4 text-red-600" />
                   )}
                   <span className="text-sm font-medium">
-                    {benefit.benefit?.name}
+                    {benefit.name}
                   </span>
                 </div>
-                {benefit.limit_value && benefit.limit_value !== 'unlimited' && (
+                {benefit.limit && benefit.limit !== 'unlimited' && (
                   <Badge variant="outline" className="text-xs">
-                    Limite: {benefit.limit_value}
+                    Limite: {benefit.limit}
                   </Badge>
                 )}
               </div>
