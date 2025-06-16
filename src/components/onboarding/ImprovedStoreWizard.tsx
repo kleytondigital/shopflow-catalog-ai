@@ -107,26 +107,26 @@ export const ImprovedStoreWizard: React.FC<ImprovedStoreWizardProps> = ({
   const getStepTitle = () => {
     const titles = [
       '',
-      'Bem-vindo!',
-      'Informações Básicas',
+      'Bem-vindo ao Assistente de Configuração!',
+      'Informações Básicas da Sua Loja',
       'Identidade Visual',
       'Contato e WhatsApp',
-      'Escolha Seu Plano',
+      'Escolha Seu Plano - 7 Dias Grátis',
       'Formas de Pagamento',
       'Opções de Entrega',
-      'Revisão Final'
+      'Revisão Final e Confirmação'
     ];
-    return titles[currentStep] || '';
+    return titles[currentStep] || 'Configuração da Loja';
   };
 
   return (
     <Dialog open={open} onOpenChange={() => {}} modal>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        {currentStep > 1 && (
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">
-              {getStepTitle()}
-            </DialogTitle>
+        <DialogHeader>
+          <DialogTitle className="text-center text-xl">
+            {getStepTitle()}
+          </DialogTitle>
+          {currentStep > 1 && (
             <div className="space-y-2 mt-4">
               <Progress value={getProgress()} className="w-full" />
               <div className="flex justify-between text-xs text-gray-500">
@@ -134,8 +134,8 @@ export const ImprovedStoreWizard: React.FC<ImprovedStoreWizardProps> = ({
                 <span>{Math.round(getProgress())}% concluído</span>
               </div>
             </div>
-          </DialogHeader>
-        )}
+          )}
+        </DialogHeader>
 
         <div className="mt-6">
           {renderCurrentStep()}

@@ -31,14 +31,14 @@ export const useLogoUpload = () => {
         throw new Error('A imagem deve ter no máximo 5MB');
       }
 
-      // Gerar nome único para o arquivo
+      // Gerar nome único para o arquivo com pasta do usuário
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/logo-${Date.now()}.${fileExt}`;
 
       console.log('useLogoUpload: Iniciando upload do arquivo:', fileName);
       console.log('useLogoUpload: Usuário autenticado:', user.id);
 
-      // Upload direto para o Supabase Storage sem verificação prévia
+      // Upload para o Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('store-logos')
         .upload(fileName, file, {
@@ -48,17 +48,7 @@ export const useLogoUpload = () => {
 
       if (uploadError) {
         console.error('useLogoUpload: Erro no upload:', uploadError);
-        
-        // Tratar diferentes tipos de erro
-        if (uploadError.message.includes('Bucket not found')) {
-          throw new Error('Bucket de armazenamento não encontrado. Verifique a configuração do projeto.');
-        } else if (uploadError.message.includes('Unauthorized')) {
-          throw new Error('Sem permissão para upload. Verifique suas credenciais.');
-        } else if (uploadError.message.includes('size')) {
-          throw new Error('Arquivo muito grande. Máximo permitido: 5MB');
-        } else {
-          throw new Error(`Erro no upload: ${uploadError.message}`);
-        }
+        throw new Error(`Erro no upload: ${uploadError.message}`);
       }
 
       console.log('useLogoUpload: Upload bem-sucedido:', uploadData);
@@ -110,14 +100,7 @@ export const useLogoUpload = () => {
 
       if (error) {
         console.error('useLogoUpload: Erro ao deletar:', error);
-        
-        if (error.message.includes('Bucket not found')) {
-          throw new Error('Bucket de armazenamento não encontrado.');
-        } else if (error.message.includes('Unauthorized')) {
-          throw new Error('Sem permissão para deletar arquivo.');
-        } else {
-          throw new Error(`Erro ao deletar: ${error.message}`);
-        }
+        throw new Error(`Erro ao deletar: ${error.message}`);
       }
 
       console.log('useLogoUpload: Arquivo deletado com sucesso');

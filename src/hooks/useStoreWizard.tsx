@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,7 +52,7 @@ export const useStoreWizard = () => {
   const [loading, setLoading] = useState(false);
   
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 7; // Atualizado: 1 welcome + 6 configurações
+  const totalSteps = 7; // 7 etapas efetivas: Basic, Visual, Contact, Plan, Payment, Delivery, Final
   
   const [data, setData] = useState<StoreWizardData>({
     store_name: '',
@@ -64,7 +63,7 @@ export const useStoreWizard = () => {
     store_phone: '',
     store_email: '',
     whatsapp_number: '',
-    selected_plan_id: '', // NOVO campo
+    selected_plan_id: '', // NOVA campo
     accepts_pix: true,
     accepts_credit_card: false,
     accepts_cash: true,
@@ -98,14 +97,23 @@ export const useStoreWizard = () => {
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     try {
+      console.log('🖼️ useStoreWizard: Iniciando upload de logo');
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile?.id}_${Date.now()}.${fileExt}`;
+      const fileName = `${profile?.id}/logo-${Date.now()}.${fileExt}`;
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('store-logos')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('❌ useStoreWizard: Erro no upload do logo:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('✅ useStoreWizard: Logo enviado com sucesso:', uploadData.path);
 
       const { data: urlData } = supabase.storage
         .from('store-logos')
@@ -113,13 +121,14 @@ export const useStoreWizard = () => {
 
       return urlData.publicUrl;
     } catch (error) {
-      console.error('Erro ao fazer upload do logo:', error);
+      console.error('❌ useStoreWizard: Erro ao fazer upload do logo:', error);
       return null;
     }
   };
 
   const createStoreSubscription = async (storeId: string, planId: string) => {
     try {
+      console.log('💳 useStoreWizard: Criando assinatura com trial');
       // Criar assinatura com trial de 7 dias
       const trialEndsAt = new Date();
       trialEndsAt.setDate(trialEndsAt.getDate() + 7);
@@ -136,9 +145,9 @@ export const useStoreWizard = () => {
 
       if (subscriptionError) throw subscriptionError;
 
-      console.log('✅ Assinatura criada com trial de 7 dias');
+      console.log('✅ useStoreWizard: Assinatura criada com trial de 7 dias');
     } catch (error) {
-      console.error('❌ Erro ao criar assinatura:', error);
+      console.error('❌ useStoreWizard: Erro ao criar assinatura:', error);
       throw error;
     }
   };
@@ -165,15 +174,17 @@ export const useStoreWizard = () => {
     setLoading(true);
     
     try {
-      console.log('🚀 Iniciando criação da loja completa:', data);
+      console.log('🚀 useStoreWizard: Iniciando criação da loja completa');
 
       // 1. Upload do logo se necessário
       let logoUrl = data.logo_url;
       if (data.logo_file && !logoUrl) {
+        console.log('🖼️ useStoreWizard: Fazendo upload do logo');
         logoUrl = await uploadLogo(data.logo_file) || '';
       }
 
       // 2. Criar a loja
+      console.log('🏪 useStoreWizard: Criando loja');
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .insert([{
@@ -188,22 +199,30 @@ export const useStoreWizard = () => {
         .select()
         .single();
 
-      if (storeError) throw storeError;
+      if (storeError) {
+        console.error('❌ useStoreWizard: Erro ao criar loja:', storeError);
+        throw storeError;
+      }
 
-      console.log('✅ Loja criada:', storeData);
+      console.log('✅ useStoreWizard: Loja criada:', storeData.name);
 
       // 3. Criar assinatura com trial
       await createStoreSubscription(storeData.id, data.selected_plan_id);
 
       // 4. Atualizar perfil com store_id
+      console.log('👤 useStoreWizard: Atualizando perfil');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ store_id: storeData.id })
         .eq('id', profile.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('❌ useStoreWizard: Erro ao atualizar perfil:', profileError);
+        throw profileError;
+      }
 
       // 5. Criar configurações da loja
+      console.log('⚙️ useStoreWizard: Criando configurações');
       const storeSettings = {
         store_id: storeData.id,
         retail_catalog_active: true,
@@ -228,23 +247,27 @@ export const useStoreWizard = () => {
         .from('store_settings')
         .insert([storeSettings]);
 
-      if (settingsError) throw settingsError;
+      if (settingsError) {
+        console.error('❌ useStoreWizard: Erro ao criar configurações:', settingsError);
+        throw settingsError;
+      }
 
-      console.log('✅ Configurações da loja criadas');
+      console.log('✅ useStoreWizard: Configurações da loja criadas');
 
       // 6. Recarregar perfil
       await refreshProfile();
 
       toast({
         title: "🎉 Parabéns!",
-        description: `Sua loja foi criada com sucesso! Você tem 7 dias de teste gratuito para explorar todos os recursos.`,
+        description: `Sua loja "${data.store_name}" foi criada com sucesso! Você tem 7 dias de teste gratuito para explorar todos os recursos.`,
         duration: 5000,
       });
 
+      console.log('🎉 useStoreWizard: Wizard concluído com sucesso!');
       return true;
 
     } catch (error) {
-      console.error('❌ Erro ao criar loja:', error);
+      console.error('❌ useStoreWizard: Erro ao criar loja:', error);
       toast({
         title: "Erro na configuração",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -284,7 +307,7 @@ export const useStoreWizard = () => {
   const getProgress = useCallback(() => {
     if (currentStep === 1) return 0; // Welcome step não conta no progresso
     const actualStep = currentStep - 1; // Ajustar para não contar welcome
-    return (actualStep / totalSteps) * 100;
+    return Math.min((actualStep / totalSteps) * 100, 100);
   }, [currentStep, totalSteps]);
 
   return {
