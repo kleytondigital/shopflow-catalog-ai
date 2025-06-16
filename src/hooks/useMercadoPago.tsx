@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
@@ -157,12 +158,16 @@ export const useMercadoPago = (storeId?: string) => {
       if (functionError) {
         console.error('❌ Erro na edge function:', functionError);
         
-        // Traduzir erros comuns
+        // Traduzir erros comuns para português
         let userFriendlyError = functionError.message;
         if (functionError.message.includes('Invalid access_token')) {
           userFriendlyError = 'Token de acesso inválido. Verifique suas credenciais nas configurações.';
         } else if (functionError.message.includes('unauthorized')) {
           userFriendlyError = 'Credenciais não autorizadas. Verifique se o token está ativo.';
+        } else if (functionError.message.includes('bad_request')) {
+          userFriendlyError = 'Dados inválidos para criação do checkout. Verifique os dados do produto.';
+        } else if (functionError.message.includes('forbidden')) {
+          userFriendlyError = 'Acesso negado. Verifique suas permissões no Mercado Pago.';
         }
         
         setError(userFriendlyError);
