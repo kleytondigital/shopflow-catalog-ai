@@ -8,10 +8,11 @@ import { SystemBenefitsManager } from '@/components/admin/SystemBenefitsManager'
 import { PlanBenefitsSelector } from '@/components/admin/PlanBenefitsSelector';
 import PaymentGatewayConfig from '@/components/admin/PaymentGatewayConfig';
 import PlanPaymentsTable from '@/components/admin/PlanPaymentsTable';
+import SubscriptionManagement from '@/components/admin/SubscriptionManagement';
 
 const PlanManagement = () => {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState("plans");
+  const [activeTab, setActiveTab] = useState("subscriptions");
 
   if (profile?.role !== 'superadmin') {
     return (
@@ -38,13 +39,18 @@ const PlanManagement = () => {
       breadcrumbs={breadcrumbs}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
           <TabsTrigger value="plans">Planos</TabsTrigger>
           <TabsTrigger value="benefits">Benefícios</TabsTrigger>
           <TabsTrigger value="config">Configuração</TabsTrigger>
           <TabsTrigger value="gateways">Gateways</TabsTrigger>
           <TabsTrigger value="payments">Pagamentos</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="subscriptions" className="mt-6">
+          <SubscriptionManagement />
+        </TabsContent>
         
         <TabsContent value="plans" className="mt-6">
           <SubscriptionPlansManager />

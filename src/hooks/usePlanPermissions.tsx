@@ -22,25 +22,21 @@ export const usePlanPermissions = () => {
     // Superadmin tem acesso total
     if (isSuperadmin) return true;
 
-    // Mapear feature para benefit_key
+    // Primeiro tentar pelo novo sistema de benefícios
     const benefitKey = mapFeatureToBenefit(featureType);
-    
-    if (benefitKey) {
-      const hasAccess = hasBenefit(benefitKey);
-      
-      if (!hasAccess && showUpgradeMessage) {
-        const planName = subscription?.plan.type === 'basic' ? 'Premium' : 'Enterprise';
-        toast.error(`Esta funcionalidade está disponível apenas no plano ${planName}. Faça upgrade para ter acesso!`);
-      }
-      
-      return hasAccess;
+    if (benefitKey && hasBenefit(benefitKey)) {
+      return true;
     }
     
-    // Se não tem mapeamento, bloquear por padrão (segurança)
-    if (showUpgradeMessage) {
-      toast.error('Esta funcionalidade requer um plano premium. Entre em contato para mais informações.');
+    // Fallback para o sistema de features antigo
+    const hasAccess = hasFeature(featureType);
+    
+    if (!hasAccess && showUpgradeMessage) {
+      const planName = subscription?.plan?.type === 'basic' ? 'Premium' : 'Enterprise';
+      toast.error(`Esta funcionalidade está disponível apenas no plano ${planName}. Faça upgrade para ter acesso!`);
     }
-    return false;
+    
+    return hasAccess;
   };
 
   const checkFeatureUsage = (featureType: string, currentUsage?: number, showLimitMessage = true): boolean => {
@@ -91,7 +87,7 @@ export const usePlanPermissions = () => {
   };
 
   const getPlanBadgeInfo = () => {
-    if (!subscription) return { label: 'Carregando...', variant: 'secondary' as const };
+    if (!subscription?.plan) return { label: 'Carregando...', variant: 'secondary' as const };
 
     const planLabels = {
       basic: 'Básico',

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useStoreSubscription } from './useStoreSubscription';
+import { useAuth } from './useAuth';
 
 export interface SubscriptionPlan {
   id: string;
@@ -14,26 +14,6 @@ export interface SubscriptionPlan {
   trial_days: number;
 }
 
-export interface PlanFeature {
-  id: string;
-  feature_type: string;
-  feature_value: string;
-  is_enabled: boolean;
-}
-
-export interface StoreSubscription {
-  id: string;
-  store_id: string;
-  plan_id: string;
-  status: 'active' | 'inactive' | 'canceled' | 'past_due' | 'trialing';
-  starts_at: string;
-  ends_at?: string;
-  trial_ends_at?: string;
-  canceled_at?: string;
-  plan: SubscriptionPlan;
-  features: PlanFeature[];
-}
-
 export interface FeatureUsage {
   feature_type: string;
   current_usage: number;
@@ -42,89 +22,47 @@ export interface FeatureUsage {
 }
 
 export const useSubscription = () => {
-  const [subscription, setSubscription] = useState<StoreSubscription | null>(null);
+  const { profile } = useAuth();
+  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useStoreSubscription();
   const [featureUsage, setFeatureUsage] = useState<FeatureUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { profile } = useAuth();
 
-  const fetchSubscription = async () => {
-    if (!profile?.store_id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Buscar assinatura da loja com plano
-      const { data: subscriptionData, error: subError } = await supabase
-        .from('store_subscriptions')
-        .select(`
-          *,
-          plan:subscription_plans(*)
-        `)
-        .eq('store_id', profile.store_id)
-        .single();
-
-      if (subError) throw subError;
-
-      // Buscar features do plano separadamente
-      const { data: featuresData, error: featuresError } = await supabase
-        .from('plan_features')
-        .select('*')
-        .eq('plan_id', subscriptionData.plan_id);
-
-      if (featuresError) throw featuresError;
-
-      // Buscar uso atual das features
-      const { data: usageData, error: usageError } = await supabase
-        .from('feature_usage')
-        .select('*')
-        .eq('store_id', profile.store_id);
-
-      if (usageError) throw usageError;
-
-      // Montar objeto de assinatura com features
-      const subscriptionWithFeatures: StoreSubscription = {
-        ...subscriptionData,
-        features: featuresData || []
-      };
-
-      setSubscription(subscriptionWithFeatures);
-
-      // Calcular porcentagem de uso para cada feature
-      const usageWithPercentage = (usageData || []).map(usage => {
-        const feature = featuresData?.find(f => f.feature_type === usage.feature_type);
-        const limit = feature?.feature_value || '0';
-        const limitNum = parseInt(limit);
-        const percentage = limitNum > 0 ? (usage.current_usage / limitNum) * 100 : 0;
-
-        return {
-          feature_type: usage.feature_type,
-          current_usage: usage.current_usage,
-          limit,
-          percentage: Math.min(percentage, 100)
-        };
-      });
-
-      setFeatureUsage(usageWithPercentage);
-      setError(null);
-    } catch (err) {
-      console.error('Erro ao carregar assinatura:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    setLoading(subscriptionLoading);
+    setError(subscriptionError);
+  }, [subscriptionLoading, subscriptionError]);
 
   const hasFeature = (featureType: string): boolean => {
-    return subscription?.features.some(
-      f => f.feature_type === featureType && f.is_enabled
-    ) || false;
+    if (profile?.role === 'superadmin') return true;
+    if (!subscription?.plan) return false;
+    
+    // Verificação básica por tipo de plano
+    const planType = subscription.plan.type;
+    
+    const featureMatrix: Record<string, string[]> = {
+      'basic': ['max_images_per_product', 'basic_support'],
+      'premium': ['max_images_per_product', 'ai_agent', 'whatsapp_integration', 'payment_pix', 'payment_credit_card'],
+      'enterprise': ['*'] // Todas as features
+    };
+
+    if (planType === 'enterprise') return true;
+    return featureMatrix[planType]?.includes(featureType) || false;
   };
 
   const getFeatureLimit = (featureType: string): number => {
-    const feature = subscription?.features.find(f => f.feature_type === featureType);
-    return parseInt(feature?.feature_value || '0');
+    if (profile?.role === 'superadmin') return 0; // Ilimitado
+    if (!subscription?.plan) return 0;
+    
+    const planType = subscription.plan.type;
+    
+    const limitMatrix: Record<string, Record<string, number>> = {
+      'basic': { 'max_images_per_product': 3, 'max_team_members': 1 },
+      'premium': { 'max_images_per_product': 10, 'max_team_members': 5 },
+      'enterprise': { 'max_images_per_product': 0, 'max_team_members': 0 } // Ilimitado
+    };
+
+    return limitMatrix[planType]?.[featureType] || 0;
   };
 
   const canUseFeature = (featureType: string, currentUsage?: number): boolean => {
@@ -133,12 +71,8 @@ export const useSubscription = () => {
     const limit = getFeatureLimit(featureType);
     if (limit === 0) return true; // Ilimitado
     
-    if (currentUsage !== undefined) {
-      return currentUsage < limit;
-    }
-
-    const usage = featureUsage.find(u => u.feature_type === featureType);
-    return !usage || usage.current_usage < limit;
+    const usage = currentUsage || featureUsage.find(u => u.feature_type === featureType)?.current_usage || 0;
+    return usage < limit;
   };
 
   const isTrialing = (): boolean => {
@@ -156,10 +90,6 @@ export const useSubscription = () => {
     return Math.max(0, diffDays);
   };
 
-  useEffect(() => {
-    fetchSubscription();
-  }, [profile?.store_id]);
-
   return {
     subscription,
     featureUsage,
@@ -170,6 +100,6 @@ export const useSubscription = () => {
     canUseFeature,
     isTrialing,
     getTrialDaysLeft,
-    refetch: fetchSubscription
+    refetch: () => {} // Implementar se necessário
   };
 };
