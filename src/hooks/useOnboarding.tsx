@@ -10,27 +10,34 @@ export const useOnboarding = () => {
 
   const checkOnboardingStatus = async () => {
     try {
+      console.log('🔒 [SECURITY] Verificando status do onboarding - Profile:', profile);
+
+      // SEGURANÇA CRÍTICA: Se não tem store_id, SEMPRE precisa de onboarding
       if (!profile?.store_id) {
+        console.log('🚨 [SECURITY] Usuário sem store_id - forçando onboarding');
+        setNeedsOnboarding(true);
         setLoading(false);
         return;
       }
 
-      console.log('🔍 Verificando status do onboarding para store:', profile.store_id);
+      console.log('🔍 Verificando loja existente:', profile.store_id);
 
-      // Verificar se a loja tem configurações básicas
+      // Verificar se a loja realmente existe e pertence ao usuário
       const { data: store, error: storeError } = await supabase
         .from('stores')
-        .select('name, description')
+        .select('id, name, description, owner_id')
         .eq('id', profile.store_id)
+        .eq('owner_id', profile.id) // CRITICAL: Validar ownership
         .single();
 
-      if (storeError) {
-        console.error('Erro ao buscar loja:', storeError);
+      if (storeError || !store) {
+        console.log('🚨 [SECURITY] Loja não encontrada ou não pertence ao usuário - forçando onboarding');
+        setNeedsOnboarding(true);
         setLoading(false);
         return;
       }
 
-      // Verificar se tem configurações do catálogo
+      // Verificar se tem configurações básicas
       const { data: settings, error: settingsError } = await supabase
         .from('store_settings')
         .select('retail_catalog_active, payment_methods, shipping_options')
@@ -51,13 +58,17 @@ export const useOnboarding = () => {
         hasBasicInfo,
         hasSettings,
         shouldShowOnboarding,
-        storeName: store?.name
+        storeName: store?.name,
+        storeOwner: store?.owner_id,
+        currentUser: profile.id
       });
 
       setNeedsOnboarding(shouldShowOnboarding);
       
     } catch (error) {
-      console.error('Erro na verificação do onboarding:', error);
+      console.error('🚨 [SECURITY] Erro na verificação do onboarding - forçando onboarding:', error);
+      // EM CASO DE ERRO, SEMPRE FORÇAR ONBOARDING (fail-safe)
+      setNeedsOnboarding(true);
     } finally {
       setLoading(false);
     }
@@ -68,12 +79,12 @@ export const useOnboarding = () => {
   };
 
   useEffect(() => {
-    if (profile?.store_id) {
+    if (profile) {
       checkOnboardingStatus();
     } else {
       setLoading(false);
     }
-  }, [profile?.store_id]);
+  }, [profile?.store_id, profile?.id]);
 
   return {
     needsOnboarding,

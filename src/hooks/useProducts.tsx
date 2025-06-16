@@ -56,18 +56,36 @@ export const useProducts = (storeId?: string) => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('products').select('*');
       
-      if (storeId) {
-        query = query.eq('store_id', storeId);
+      // SEGURANÇA CRÍTICA: Determinar store_id válido
+      const targetStoreId = storeId || profile?.store_id;
+      
+      // BLOQUEAR COMPLETAMENTE se não há store_id
+      if (!targetStoreId) {
+        console.log('🚨 [SECURITY] Tentativa de buscar produtos sem store_id válido - BLOQUEADO');
+        setProducts([]);
+        setLoading(false);
+        return;
       }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('🔒 [SECURITY] Buscando produtos para store_id:', targetStoreId);
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('store_id', targetStoreId) // SEMPRE filtrar por store_id
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('🚨 [SECURITY] Erro ao buscar produtos:', error);
+        throw error;
+      }
+
+      console.log('✅ [SECURITY] Produtos carregados com segurança:', data?.length || 0);
       setProducts(data || []);
     } catch (error) {
-      console.error('Erro ao buscar produtos:', error);
+      console.error('🚨 [SECURITY] Erro crítico ao buscar produtos:', error);
+      setProducts([]); // Limpar produtos em caso de erro
     } finally {
       setLoading(false);
     }
@@ -81,7 +99,8 @@ export const useProducts = (storeId?: string) => {
   // Função para verificar se estoque está baixo
   const isLowStock = (product: Product): boolean => {
     const threshold = product.stock_alert_threshold || 5;
-    return getAvailableStock(product) <= threshold;
+    const availableStock = product.stock - (product.reserved_stock || 0);
+    return availableStock <= threshold;
   };
 
   // Função para atualizar estoque com movimentação
@@ -180,11 +199,19 @@ export const useProducts = (storeId?: string) => {
 
   const createProduct = async (productData: CreateProductData) => {
     try {
+      // VALIDAÇÃO CRÍTICA: Verificar store_id
+      const targetStoreId = profile?.store_id || productData.store_id;
+      
+      if (!targetStoreId) {
+        console.log('🚨 [SECURITY] Tentativa de criar produto sem store_id - BLOQUEADO');
+        return { data: null, error: 'Store ID é obrigatório' };
+      }
+
       const { data, error } = await supabase
         .from('products')
         .insert([{
           ...productData,
-          store_id: profile?.store_id || productData.store_id
+          store_id: targetStoreId // SEMPRE usar store_id validado
         }])
         .select()
         .single();
@@ -193,18 +220,25 @@ export const useProducts = (storeId?: string) => {
       await fetchProducts();
       return { data, error: null };
     } catch (error) {
-      console.error('Erro ao criar produto:', error);
+      console.error('🚨 [SECURITY] Erro ao criar produto:', error);
       return { data: null, error };
     }
   };
 
   const updateProduct = async (productData: UpdateProductData) => {
     try {
+      // VALIDAÇÃO: Verificar se o produto pertence à loja do usuário
+      if (!profile?.store_id) {
+        console.log('🚨 [SECURITY] Tentativa de atualizar produto sem store_id - BLOQUEADO');
+        return { data: null, error: 'Store ID é obrigatório' };
+      }
+
       const { id, ...updates } = productData;
       const { data, error } = await supabase
         .from('products')
         .update(updates)
         .eq('id', id)
+        .eq('store_id', profile.store_id) // VALIDAR ownership
         .select()
         .single();
 
@@ -212,51 +246,71 @@ export const useProducts = (storeId?: string) => {
       await fetchProducts();
       return { data, error: null };
     } catch (error) {
-      console.error('Erro ao atualizar produto:', error);
+      console.error('🚨 [SECURITY] Erro ao atualizar produto:', error);
       return { data: null, error };
     }
   };
 
   const deleteProduct = async (id: string) => {
     try {
+      if (!profile?.store_id) {
+        console.log('🚨 [SECURITY] Tentativa de deletar produto sem store_id - BLOQUEADO');
+        return { error: 'Store ID é obrigatório' };
+      }
+
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('store_id', profile.store_id); // VALIDAR ownership
 
       if (error) throw error;
       await fetchProducts();
       return { error: null };
     } catch (error) {
-      console.error('Erro ao deletar produto:', error);
+      console.error('🚨 [SECURITY] Erro ao deletar produto:', error);
       return { error };
     }
   };
 
   const getProduct = async (id: string) => {
     try {
+      if (!profile?.store_id) {
+        console.log('🚨 [SECURITY] Tentativa de buscar produto sem store_id - BLOQUEADO');
+        return { data: null, error: 'Store ID é obrigatório' };
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('id', id)
+        .eq('store_id', profile.store_id) // VALIDAR ownership
         .single();
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Erro ao buscar produto:', error);
+      console.error('🚨 [SECURITY] Erro ao buscar produto:', error);
       return { data: null, error };
     }
   };
 
   useEffect(() => {
-    if (profile) {
+    // SEMPRE verificar se há profile antes de buscar
+    if (profile?.store_id || storeId) {
       fetchProducts();
+    } else {
+      console.log('🔒 [SECURITY] Aguardando store_id válido...');
+      setLoading(false);
     }
-  }, [profile, storeId]);
+  }, [profile?.store_id, storeId]);
 
   // Produtos com estoque baixo
-  const lowStockProducts = products.filter(isLowStock);
+  const lowStockProducts = products.filter(product => {
+    const threshold = product.stock_alert_threshold || 5;
+    const availableStock = product.stock - (product.reserved_stock || 0);
+    return availableStock <= threshold;
+  });
 
   return {
     products,
