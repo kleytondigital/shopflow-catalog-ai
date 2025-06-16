@@ -21,21 +21,9 @@ export interface FeatureUsage {
   percentage: number;
 }
 
-// Plano padrão para usuários sem assinatura
-const DEFAULT_FREE_PLAN = {
-  id: 'free',
-  name: 'Gratuito',
-  type: 'basic' as const,
-  description: 'Plano básico gratuito',
-  price_monthly: 0,
-  price_yearly: 0,
-  is_active: true,
-  trial_days: 0
-};
-
 export const useSubscription = () => {
   const { profile } = useAuth();
-  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useStoreSubscription();
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, getTrialDaysLeft } = useStoreSubscription();
   const [featureUsage, setFeatureUsage] = useState<FeatureUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +42,7 @@ export const useSubscription = () => {
     
     const featureMatrix: Record<string, string[]> = {
       'basic': ['max_images_per_product', 'basic_support'],
-      'premium': ['max_images_per_product', 'ai_agent', 'whatsapp_integration', 'payment_pix', 'payment_credit_card'],
+      'premium': ['max_images_per_product', 'ai_agent', 'whatsapp_integration', 'payment_pix', 'payment_credit_card', 'discount_coupons', 'shipping_calculator', 'dedicated_support'],
       'enterprise': ['*'] // Todas as features
     };
 
@@ -91,35 +79,44 @@ export const useSubscription = () => {
     return subscription?.status === 'trialing';
   };
 
-  const getTrialDaysLeft = (): number => {
-    if (!subscription?.trial_ends_at || subscription.status !== 'trialing') return 0;
-    
-    const trialEnd = new Date(subscription.trial_ends_at);
-    const now = new Date();
-    const diffTime = trialEnd.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return Math.max(0, diffDays);
+  const isActive = (): boolean => {
+    return subscription?.status === 'active';
   };
 
-  // Retornar plano atual ou plano gratuito como fallback
-  const currentSubscription = subscription || {
-    ...DEFAULT_FREE_PLAN,
-    id: 'free-default',
-    store_id: profile?.store_id || '',
-    plan_id: 'free',
-    status: 'active' as const,
-    starts_at: new Date().toISOString(),
-    ends_at: null,
-    trial_ends_at: null,
-    canceled_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    plan: DEFAULT_FREE_PLAN
+  const getPlanDisplayName = (): string => {
+    if (profile?.role === 'superadmin') return 'Superadmin';
+    if (!subscription?.plan) return 'Sem Plano';
+    
+    const planLabels = {
+      basic: 'Básico',
+      premium: 'Premium',
+      enterprise: 'Enterprise'
+    };
+    
+    return planLabels[subscription.plan.type as keyof typeof planLabels] || 'Básico';
+  };
+
+  const getPlanValue = (): number => {
+    if (!subscription?.plan) return 0;
+    return subscription.plan.price_monthly || 0;
+  };
+
+  const getExpirationDate = (): Date | null => {
+    if (!subscription) return null;
+    
+    if (subscription.status === 'trialing' && subscription.trial_ends_at) {
+      return new Date(subscription.trial_ends_at);
+    }
+    
+    if (subscription.ends_at) {
+      return new Date(subscription.ends_at);
+    }
+    
+    return null;
   };
 
   return {
-    subscription: currentSubscription,
+    subscription,
     featureUsage,
     loading,
     error,
@@ -127,7 +124,11 @@ export const useSubscription = () => {
     getFeatureLimit,
     canUseFeature,
     isTrialing,
+    isActive,
     getTrialDaysLeft,
+    getPlanDisplayName,
+    getPlanValue,
+    getExpirationDate,
     refetch: () => {} // Implementar se necessário
   };
 };

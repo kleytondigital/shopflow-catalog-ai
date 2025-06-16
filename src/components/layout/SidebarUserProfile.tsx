@@ -13,15 +13,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useStoreSubscription } from '@/hooks/useStoreSubscription';
-import { LogOut, Settings, Crown, Store, User, Zap } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { LogOut, Settings, Crown, Store, User, Zap, Clock, CreditCard, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const SidebarUserProfile: React.FC = () => {
   const { profile } = useAuth();
   const { signOut } = useAuthSession();
-  const { subscription, loading } = useStoreSubscription();
+  const { 
+    subscription, 
+    loading, 
+    isTrialing, 
+    getTrialDaysLeft, 
+    getPlanDisplayName, 
+    getPlanValue,
+    getExpirationDate
+  } = useSubscription();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -38,6 +46,11 @@ const SidebarUserProfile: React.FC = () => {
     }
   };
 
+  const handleUpgrade = () => {
+    navigate('/billing');
+    toast.info('Redirecionando para página de faturamento...');
+  };
+
   const getRoleIcon = () => {
     if (profile?.role === 'superadmin') return <Crown className="h-3 w-3" />;
     if (profile?.role === 'store_admin') return <Store className="h-3 w-3" />;
@@ -52,37 +65,78 @@ const SidebarUserProfile: React.FC = () => {
 
   const getPlanInfo = () => {
     if (profile?.role === 'superadmin') {
-      return { label: 'Superadmin', variant: 'default' as const, color: 'bg-purple-100 text-purple-800' };
+      return { 
+        label: 'Superadmin', 
+        variant: 'default' as const, 
+        color: 'bg-purple-100 text-purple-800',
+        showUpgrade: false
+      };
     }
 
     if (loading) {
-      return { label: 'Carregando...', variant: 'outline' as const, color: 'bg-gray-50 text-gray-600' };
+      return { 
+        label: 'Carregando...', 
+        variant: 'outline' as const, 
+        color: 'bg-gray-50 text-gray-600',
+        showUpgrade: false
+      };
     }
 
     if (!subscription) {
-      return { label: 'Gratuito', variant: 'outline' as const, color: 'bg-gray-50 text-gray-600' };
+      return { 
+        label: 'Sem Plano', 
+        variant: 'destructive' as const, 
+        color: 'bg-red-50 text-red-700',
+        showUpgrade: true,
+        urgent: true
+      };
     }
 
-    const planLabels = {
-      basic: 'Básico',
-      premium: 'Premium',
-      enterprise: 'Enterprise'
-    };
+    const planName = getPlanDisplayName();
+    const trialDays = getTrialDaysLeft();
 
-    const planName = planLabels[subscription.plan?.type as keyof typeof planLabels] || 'Básico';
-
-    if (subscription.status === 'trialing') {
-      return { label: `${planName} (Trial)`, variant: 'secondary' as const, color: 'bg-blue-50 text-blue-700' };
+    if (isTrialing()) {
+      return { 
+        label: `${planName} (Trial - ${trialDays}d)`, 
+        variant: 'secondary' as const, 
+        color: 'bg-blue-50 text-blue-700',
+        showUpgrade: true,
+        urgent: trialDays <= 3
+      };
     }
 
     if (subscription.status === 'active') {
-      return { label: planName, variant: 'default' as const, color: 'bg-green-50 text-green-700' };
+      return { 
+        label: planName, 
+        variant: 'default' as const, 
+        color: 'bg-green-50 text-green-700',
+        showUpgrade: subscription.plan?.type === 'basic'
+      };
     }
 
-    return { label: `${planName} (Inativo)`, variant: 'destructive' as const, color: 'bg-red-50 text-red-700' };
+    return { 
+      label: `${planName} (Inativo)`, 
+      variant: 'destructive' as const, 
+      color: 'bg-red-50 text-red-700',
+      showUpgrade: true,
+      urgent: true
+    };
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('pt-BR').format(date);
   };
 
   const planInfo = getPlanInfo();
+  const planValue = getPlanValue();
+  const expirationDate = getExpirationDate();
 
   if (!profile) return null;
 
@@ -106,8 +160,9 @@ const SidebarUserProfile: React.FC = () => {
                 </p>
                 <Badge 
                   variant={planInfo.variant}
-                  className={`text-xs ${planInfo.color} border-none`}
+                  className={`text-xs ${planInfo.color} border-none ${planInfo.urgent ? 'animate-pulse' : ''}`}
                 >
+                  {planInfo.urgent && <Clock className="h-3 w-3 mr-1" />}
                   {planInfo.label}
                 </Badge>
               </div>
@@ -115,7 +170,7 @@ const SidebarUserProfile: React.FC = () => {
           </Button>
         </DropdownMenuTrigger>
         
-        <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuContent className="w-80" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium">
@@ -133,10 +188,58 @@ const SidebarUserProfile: React.FC = () => {
             </div>
           </DropdownMenuLabel>
           
+          {/* Informações detalhadas do plano */}
+          {profile.role === 'store_admin' && (
+            <>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-3">
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Plano Atual</span>
+                    <Badge 
+                      variant={planInfo.variant}
+                      className={`text-xs ${planInfo.color} border-none`}
+                    >
+                      {planInfo.label}
+                    </Badge>
+                  </div>
+                  
+                  {subscription && (
+                    <>
+                      <div className="flex items-center justify-between text-xs text-gray-600">
+                        <span>Valor mensal:</span>
+                        <span className="font-medium">{formatCurrency(planValue)}</span>
+                      </div>
+                      
+                      {expirationDate && (
+                        <div className="flex items-center justify-between text-xs text-gray-600">
+                          <span>{isTrialing() ? 'Trial expira:' : 'Renova em:'}</span>
+                          <span className="font-medium">{formatDate(expirationDate)}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {planInfo.showUpgrade && (
+                    <Button 
+                      onClick={handleUpgrade}
+                      className="w-full mt-2" 
+                      size="sm"
+                      variant={planInfo.urgent ? "default" : "outline"}
+                    >
+                      <TrendingUp className="mr-2 h-3 w-3" />
+                      {planInfo.urgent ? 'Ativar Plano' : 'Fazer Upgrade'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           <DropdownMenuSeparator />
 
           <DropdownMenuItem onClick={() => navigate('/billing')} className="cursor-pointer">
-            <Zap className="mr-2 h-4 w-4" />
+            <CreditCard className="mr-2 h-4 w-4" />
             <span>Faturamento</span>
           </DropdownMenuItem>
 

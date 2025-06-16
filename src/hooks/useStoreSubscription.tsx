@@ -42,6 +42,7 @@ export const useStoreSubscription = () => {
     }
 
     try {
+      // Buscar assinatura ativa OU em trial
       const { data, error } = await supabase
         .from('store_subscriptions')
         .select(`
@@ -61,20 +62,35 @@ export const useStoreSubscription = () => {
           )
         `)
         .eq('store_id', profile.store_id)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
+      
       setSubscription(data);
+      setError(null);
     } catch (err) {
       console.error('Erro ao buscar assinatura:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      setSubscription(null);
     } finally {
       setLoading(false);
     }
   }, [profile?.store_id]);
+
+  // Calcular dias restantes do trial
+  const getTrialDaysLeft = useCallback((): number => {
+    if (!subscription?.trial_ends_at || subscription.status !== 'trialing') return 0;
+    
+    const trialEnd = new Date(subscription.trial_ends_at);
+    const now = new Date();
+    const diffTime = trialEnd.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
+  }, [subscription]);
 
   useEffect(() => {
     fetchSubscription();
@@ -84,6 +100,7 @@ export const useStoreSubscription = () => {
     subscription,
     loading,
     error,
-    refetch: fetchSubscription
+    refetch: fetchSubscription,
+    getTrialDaysLeft
   };
 };
