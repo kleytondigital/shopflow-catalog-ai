@@ -5,26 +5,29 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface StoreWizardData {
-  // Etapa 1: Informações Básicas
+  // Etapa 2: Informações Básicas
   store_name: string;
   store_description: string;
   business_type: string;
   
-  // Etapa 2: Identidade Visual
+  // Etapa 3: Identidade Visual
   logo_file: File | null;
   logo_url: string;
   
-  // Etapa 3: Contato e WhatsApp
+  // Etapa 4: Contato e WhatsApp
   store_phone: string;
   store_email: string;
   whatsapp_number: string;
   
-  // Etapa 4: Como Você Vende
+  // Etapa 5: Seleção de Plano (NOVA)
+  selected_plan_id: string;
+  
+  // Etapa 6: Como Você Vende
   accepts_pix: boolean;
   accepts_credit_card: boolean;
   accepts_cash: boolean;
   
-  // Etapa 5: Como Entrega
+  // Etapa 7: Como Entrega
   offers_pickup: boolean;
   offers_delivery: boolean;
   offers_shipping: boolean;
@@ -50,7 +53,7 @@ export const useStoreWizard = () => {
   const [loading, setLoading] = useState(false);
   
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 7; // Atualizado: 1 welcome + 6 configurações
   
   const [data, setData] = useState<StoreWizardData>({
     store_name: '',
@@ -61,6 +64,7 @@ export const useStoreWizard = () => {
     store_phone: '',
     store_email: '',
     whatsapp_number: '',
+    selected_plan_id: '', // NOVO campo
     accepts_pix: true,
     accepts_credit_card: false,
     accepts_cash: true,
@@ -75,7 +79,7 @@ export const useStoreWizard = () => {
   }, []);
 
   const nextStep = useCallback(() => {
-    if (currentStep < totalSteps) {
+    if (currentStep < totalSteps + 1) { // +1 para incluir welcome
       setCurrentStep(prev => prev + 1);
     }
   }, [currentStep, totalSteps]);
@@ -87,7 +91,7 @@ export const useStoreWizard = () => {
   }, [currentStep]);
 
   const goToStep = useCallback((step: number) => {
-    if (step >= 1 && step <= totalSteps) {
+    if (step >= 1 && step <= totalSteps + 1) {
       setCurrentStep(step);
     }
   }, [totalSteps]);
@@ -114,11 +118,45 @@ export const useStoreWizard = () => {
     }
   };
 
+  const createStoreSubscription = async (storeId: string, planId: string) => {
+    try {
+      // Criar assinatura com trial de 7 dias
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
+      const { error: subscriptionError } = await supabase
+        .from('store_subscriptions')
+        .insert([{
+          store_id: storeId,
+          plan_id: planId,
+          status: 'trialing',
+          starts_at: new Date().toISOString(),
+          trial_ends_at: trialEndsAt.toISOString()
+        }]);
+
+      if (subscriptionError) throw subscriptionError;
+
+      console.log('✅ Assinatura criada com trial de 7 dias');
+    } catch (error) {
+      console.error('❌ Erro ao criar assinatura:', error);
+      throw error;
+    }
+  };
+
   const completeWizard = async (): Promise<boolean> => {
     if (!profile?.id) {
       toast({
         title: "Erro",
         description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!data.selected_plan_id) {
+      toast({
+        title: "Erro",
+        description: "Selecione um plano para continuar",
         variant: "destructive",
       });
       return false;
@@ -154,7 +192,10 @@ export const useStoreWizard = () => {
 
       console.log('✅ Loja criada:', storeData);
 
-      // 3. Atualizar perfil com store_id
+      // 3. Criar assinatura com trial
+      await createStoreSubscription(storeData.id, data.selected_plan_id);
+
+      // 4. Atualizar perfil com store_id
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ store_id: storeData.id })
@@ -162,7 +203,7 @@ export const useStoreWizard = () => {
 
       if (profileError) throw profileError;
 
-      // 4. Criar configurações da loja
+      // 5. Criar configurações da loja
       const storeSettings = {
         store_id: storeData.id,
         retail_catalog_active: true,
@@ -191,12 +232,12 @@ export const useStoreWizard = () => {
 
       console.log('✅ Configurações da loja criadas');
 
-      // 5. Recarregar perfil
+      // 6. Recarregar perfil
       await refreshProfile();
 
       toast({
         title: "🎉 Parabéns!",
-        description: "Sua loja foi criada com sucesso e está pronta para receber produtos!",
+        description: `Sua loja foi criada com sucesso! Você tem 7 dias de teste gratuito para explorar todos os recursos.`,
         duration: 5000,
       });
 
@@ -222,14 +263,18 @@ export const useStoreWizard = () => {
   const canProceedToNext = useCallback(() => {
     switch (currentStep) {
       case 1:
-        return data.store_name.trim().length >= 3 && data.business_type;
+        return true; // Welcome step - sempre pode prosseguir
       case 2:
-        return true; // Logo é opcional
+        return data.store_name.trim().length >= 3 && data.business_type;
       case 3:
-        return data.store_phone.trim().length >= 10;
+        return true; // Logo é opcional - sempre pode prosseguir
       case 4:
-        return data.accepts_pix || data.accepts_credit_card || data.accepts_cash;
+        return data.store_phone.trim().length >= 10;
       case 5:
+        return !!data.selected_plan_id; // Plano é obrigatório
+      case 6:
+        return data.accepts_pix || data.accepts_credit_card || data.accepts_cash;
+      case 7:
         return data.offers_pickup || data.offers_delivery || data.offers_shipping;
       default:
         return true;
@@ -237,7 +282,9 @@ export const useStoreWizard = () => {
   }, [currentStep, data]);
 
   const getProgress = useCallback(() => {
-    return (currentStep / totalSteps) * 100;
+    if (currentStep === 1) return 0; // Welcome step não conta no progresso
+    const actualStep = currentStep - 1; // Ajustar para não contar welcome
+    return (actualStep / totalSteps) * 100;
   }, [currentStep, totalSteps]);
 
   return {

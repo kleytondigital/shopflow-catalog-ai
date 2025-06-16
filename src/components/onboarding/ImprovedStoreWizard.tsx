@@ -8,6 +8,7 @@ import { WelcomeStep } from './steps/WelcomeStep';
 import { BasicInfoStep } from './steps/BasicInfoStep';
 import { VisualIdentityStep } from './steps/VisualIdentityStep';
 import { ContactStep } from './steps/ContactStep';
+import { PlanSelectionStep } from './steps/PlanSelectionStep';
 import { PaymentStep } from './steps/PaymentStep';
 import { DeliveryStep } from './steps/DeliveryStep';
 import { FinalStep } from './steps/FinalStep';
@@ -72,19 +73,26 @@ export const ImprovedStoreWizard: React.FC<ImprovedStoreWizardProps> = ({
         );
       case 5:
         return (
-          <PaymentStep
+          <PlanSelectionStep
             data={data}
             onUpdate={updateData}
           />
         );
       case 6:
         return (
-          <DeliveryStep
+          <PaymentStep
             data={data}
             onUpdate={updateData}
           />
         );
       case 7:
+        return (
+          <DeliveryStep
+            data={data}
+            onUpdate={updateData}
+          />
+        );
+      case 8:
         return (
           <FinalStep
             data={data}
@@ -103,6 +111,7 @@ export const ImprovedStoreWizard: React.FC<ImprovedStoreWizardProps> = ({
       'Informações Básicas',
       'Identidade Visual',
       'Contato e WhatsApp',
+      'Escolha Seu Plano',
       'Formas de Pagamento',
       'Opções de Entrega',
       'Revisão Final'
@@ -148,7 +157,7 @@ export const ImprovedStoreWizard: React.FC<ImprovedStoreWizardProps> = ({
               {/* Indicadores de passos */}
               <div className="hidden md:flex items-center gap-1">
                 {Array.from({ length: totalSteps }, (_, i) => {
-                  const stepNumber = i + 2; // Começamos do passo 2
+                  const stepNumber = i + 2; // Começamos do passo 2 (pula welcome)
                   const isActive = stepNumber === currentStep;
                   const isCompleted = stepNumber < currentStep;
                   

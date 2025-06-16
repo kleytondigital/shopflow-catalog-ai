@@ -160,15 +160,16 @@ export const VisualIdentityStep: React.FC<VisualIdentityStepProps> = ({
           </ul>
         </div>
 
-        {!preview && (
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-600">
-              Não se preocupe! Você pode pular esta etapa e adicionar um logo mais tarde.
-              <br />
-              <span className="font-medium">Sua loja funcionará perfeitamente sem logo.</span>
-            </p>
-          </div>
-        )}
+        <div className="bg-green-50 p-4 rounded-lg text-center">
+          <p className="text-sm text-green-700 font-medium">
+            ✅ Esta etapa é opcional
+          </p>
+          <p className="text-sm text-green-600 mt-1">
+            Você pode pular e adicionar um logo mais tarde.
+            <br />
+            <span className="font-medium">Sua loja funcionará perfeitamente sem logo.</span>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

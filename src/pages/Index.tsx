@@ -13,7 +13,7 @@ import { LogOut, Loader2, AlertTriangle, Store } from 'lucide-react';
 
 const Index = () => {
   const { profile, signOut, loading } = useAuth();
-  const { needsOnboarding, loading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const { needsOnboarding, loading: onboardingLoading, completeOnboarding, recheckOnboarding } = useOnboarding();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -32,6 +32,11 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleStartWizard = () => {
+    console.log('🔄 Forçando início do wizard');
+    recheckOnboarding();
   };
 
   // Mostrar loading enquanto carrega o perfil e onboarding
@@ -72,27 +77,36 @@ const Index = () => {
 
   // Para store_admin, SEMPRE verificar loja válida
   if (profile.role === 'store_admin') {
-    // SEGURANÇA CRÍTICA: Bloquear se não tem store_id
-    if (!profile.store_id) {
-      console.log('🚨 [SECURITY] Store admin sem store_id - ACESSO NEGADO');
+    // SEGURANÇA CRÍTICA: Bloquear se não tem store_id OU se precisa de onboarding
+    if (!profile.store_id || needsOnboarding) {
+      console.log('🚨 [SECURITY] Store admin sem loja válida - iniciando wizard');
+      
+      // Se precisa de onboarding, mostrar o wizard
+      if (needsOnboarding) {
+        console.log('🔧 Store admin precisa de onboarding - mostrando wizard');
+        return (
+          <ImprovedStoreWizard
+            open={true}
+            onComplete={completeOnboarding}
+          />
+        );
+      }
+
+      // Fallback: tela de configuração manual
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center max-w-md mx-auto p-6">
             <Store className="h-16 w-16 text-orange-500 mx-auto mb-6" />
             <h2 className="text-2xl font-bold mb-4 text-gray-900">Loja Não Configurada</h2>
             <p className="text-gray-600 mb-6">
-              Sua conta não está associada a nenhuma loja. É necessário configurar sua loja antes de continuar.
+              Sua conta não está associada a nenhuma loja. Vamos configurar sua loja agora!
             </p>
             <div className="space-y-3">
               <Button 
-                onClick={() => {
-                  console.log('🔄 Forçando wizard para usuário sem loja');
-                  // Forçar onboarding
-                  window.location.reload();
-                }} 
+                onClick={handleStartWizard}
                 className="w-full"
               >
-                Configurar Loja
+                Configurar Minha Loja
               </Button>
               <Button 
                 onClick={handleLogout} 
@@ -105,17 +119,6 @@ const Index = () => {
             </div>
           </div>
         </div>
-      );
-    }
-    
-    // Se precisa de onboarding, mostrar o wizard
-    if (needsOnboarding) {
-      console.log('🔧 Store admin precisa de onboarding - mostrando wizard');
-      return (
-        <ImprovedStoreWizard
-          open={true}
-          onComplete={completeOnboarding}
-        />
       );
     }
 

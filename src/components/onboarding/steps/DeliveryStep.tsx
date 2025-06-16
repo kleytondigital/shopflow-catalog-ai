@@ -27,6 +27,13 @@ export const DeliveryStep: React.FC<DeliveryStepProps> = ({ data, onUpdate }) =>
     onUpdate({ delivery_fee: Number(formatted) });
   };
 
+  // Garantir que pelo menos uma opção esteja selecionada por padrão
+  React.useEffect(() => {
+    if (!hasAnyDeliveryMethod) {
+      onUpdate({ offers_pickup: true });
+    }
+  }, [hasAnyDeliveryMethod, onUpdate]);
+
   return (
     <Card>
       <CardHeader>
@@ -139,6 +146,14 @@ export const DeliveryStep: React.FC<DeliveryStepProps> = ({ data, onUpdate }) =>
           <div className="bg-red-50 p-4 rounded-lg">
             <p className="text-sm text-red-800">
               ⚠️ Selecione pelo menos uma opção de entrega para continuar
+            </p>
+          </div>
+        )}
+
+        {hasAnyDeliveryMethod && (
+          <div className="bg-green-50 p-4 rounded-lg">
+            <p className="text-sm text-green-700 font-medium">
+              ✅ Pelo menos uma opção de entrega selecionada
             </p>
           </div>
         )}
