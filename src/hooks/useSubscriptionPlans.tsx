@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,29 +55,46 @@ export const useSubscriptionPlans = () => {
   };
 
   const createPlan = async (plan: CreateSubscriptionPlanData) => {
-    const { data, error } = await supabase.from('subscription_plans').insert([plan]);
-    if (error) throw error;
-    await fetchPlans();
-    return data;
+    try {
+      const { data, error } = await supabase.from('subscription_plans').insert([plan]);
+      if (error) throw error;
+      await fetchPlans();
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Erro ao criar plano' };
+    }
   };
 
   const updatePlan = async (id: string, updates: UpdateSubscriptionPlanData) => {
-    const { data, error } = await supabase
-      .from('subscription_plans')
-      .update(updates)
-      .eq('id', id);
-    if (error) throw error;
-    await fetchPlans();
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+      await fetchPlans();
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Erro ao atualizar plano' };
+    }
   };
 
   const deletePlan = async (id: string) => {
-    const { error } = await supabase
-      .from('subscription_plans')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-    await fetchPlans();
+    try {
+      const { error } = await supabase
+        .from('subscription_plans')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      await fetchPlans();
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Erro ao deletar plano' };
+    }
+  };
+
+  const getPlanById = (id: string): SubscriptionPlan | null => {
+    return plans.find(plan => plan.id === id) || null;
   };
 
   useEffect(() => {
@@ -90,6 +108,7 @@ export const useSubscriptionPlans = () => {
     refetch: fetchPlans,
     createPlan,
     updatePlan,
-    deletePlan
+    deletePlan,
+    getPlanById
   };
 };

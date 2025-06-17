@@ -75,38 +75,52 @@ const Index = () => {
     needsOnboarding
   });
 
-  // Para store_admin, SEMPRE verificar loja válida
-  if (profile.role === 'store_admin') {
-    // SEGURANÇA CRÍTICA: Bloquear se não tem store_id OU se precisa de onboarding
-    if (!profile.store_id || needsOnboarding) {
-      console.log('🚨 [SECURITY] Store admin sem loja válida - iniciando wizard');
-      
-      // Se precisa de onboarding, mostrar o wizard
-      if (needsOnboarding) {
-        console.log('🔧 Store admin precisa de onboarding - mostrando wizard');
-        return (
-          <ImprovedStoreWizard
-            open={true}
-            onComplete={completeOnboarding}
-          />
-        );
-      }
+  // Para superadmin, sempre mostrar dashboard administrativo (nunca wizard)
+  if (profile.role === 'superadmin') {
+    console.log('✅ Superadmin - liberando dashboard administrativo');
+    return (
+      <AppLayout 
+        title="Dashboard Administrativo"
+        subtitle="Visão geral de todas as lojas do sistema"
+        breadcrumbs={[
+          { label: 'Dashboard', current: true }
+        ]}
+      >
+        <SuperadminDashboard />
+      </AppLayout>
+    );
+  }
 
-      // Fallback: tela de configuração manual
+  // Para store_admin, verificar se precisa de onboarding
+  if (profile.role === 'store_admin') {
+    // Se precisa de onboarding, mostrar o wizard
+    if (needsOnboarding) {
+      console.log('🔧 Store admin precisa de onboarding - mostrando wizard');
+      return (
+        <ImprovedStoreWizard
+          open={true}
+          onComplete={completeOnboarding}
+        />
+      );
+    }
+
+    // Se não precisa de onboarding mas não tem store_id, erro crítico
+    if (!profile.store_id) {
+      console.log('🚨 [CRITICAL] Store admin sem loja mas onboarding completo');
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center max-w-md mx-auto p-6">
             <Store className="h-16 w-16 text-orange-500 mx-auto mb-6" />
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Loja Não Configurada</h2>
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Erro de Configuração</h2>
             <p className="text-gray-600 mb-6">
-              Sua conta não está associada a nenhuma loja. Vamos configurar sua loja agora!
+              Sua conta parece estar em um estado inconsistente. Vamos reconfigurar sua loja.
             </p>
             <div className="space-y-3">
               <Button 
                 onClick={handleStartWizard}
                 className="w-full"
               >
-                Configurar Minha Loja
+                Reconfigurar Loja
               </Button>
               <Button 
                 onClick={handleLogout} 
@@ -122,7 +136,7 @@ const Index = () => {
       );
     }
 
-    // APENAS com loja válida E onboarding completo
+    // Store admin com loja válida - mostrar dashboard
     console.log('✅ [SECURITY] Store admin com loja válida - liberando dashboard');
     return (
       <AppLayout 
@@ -136,22 +150,6 @@ const Index = () => {
       </AppLayout>
     );
   }
-
-  // Para superadmin, mostrar dashboard administrativo
-  if (profile.role === 'superadmin') {
-    console.log('✅ Superadmin - liberando dashboard administrativo');
-    return (
-      <AppLayout 
-        title="Dashboard Administrativo"
-        subtitle="Visão geral de todas as lojas do sistema"
-        breadcrumbs={[
-          { label: 'Dashboard', current: true }
-        ]}
-      >
-        <SuperadminDashboard />
-      </AppLayout>
-    );
-  } 
 
   // Fallback - papel não reconhecido
   return (

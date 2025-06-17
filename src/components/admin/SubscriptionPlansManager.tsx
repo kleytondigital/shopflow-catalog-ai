@@ -16,12 +16,18 @@ const SubscriptionPlansManager = () => {
   const { toast } = useToast();
 
   const handleCreatePlan = async (planData) => {
-    const { error } = await createPlan(planData);
-    if (!error) {
+    const result = await createPlan(planData);
+    if (!result.error) {
       setShowForm(false);
       toast({
         title: "Sucesso",
         description: "Plano criado com sucesso",
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: result.error,
+        variant: "destructive",
       });
     }
   };
@@ -29,23 +35,35 @@ const SubscriptionPlansManager = () => {
   const handleUpdatePlan = async (planData) => {
     if (!editingPlan) return;
     
-    const { error } = await updatePlan(editingPlan.id, planData);
-    if (!error) {
+    const result = await updatePlan(editingPlan.id, planData);
+    if (!result.error) {
       setEditingPlan(null);
       toast({
         title: "Sucesso", 
         description: "Plano atualizado com sucesso",
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: result.error,
+        variant: "destructive",
       });
     }
   };
 
   const handleDeletePlan = async (planId) => {
     if (confirm('Tem certeza que deseja excluir este plano?')) {
-      const { error } = await deletePlan(planId);
-      if (!error) {
+      const result = await deletePlan(planId);
+      if (!result.error) {
         toast({
           title: "Sucesso",
           description: "Plano excluído com sucesso",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: result.error,
+          variant: "destructive",
         });
       }
     }

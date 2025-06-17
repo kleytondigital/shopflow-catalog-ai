@@ -12,9 +12,17 @@ export const useOnboarding = () => {
     try {
       console.log('🔒 [SECURITY] Verificando status do onboarding - Profile:', profile);
 
-      // SEGURANÇA CRÍTICA: Se não tem store_id, SEMPRE precisa de onboarding
+      // CORREÇÃO CRÍTICA: Superadmins NUNCA precisam de onboarding
+      if (profile?.role === 'superadmin') {
+        console.log('✅ [SECURITY] Superadmin detectado - pular onboarding');
+        setNeedsOnboarding(false);
+        setLoading(false);
+        return;
+      }
+
+      // SEGURANÇA CRÍTICA: Para store_admin, se não tem store_id, SEMPRE precisa de onboarding
       if (!profile?.store_id) {
-        console.log('🚨 [SECURITY] Usuário sem store_id - forçando onboarding');
+        console.log('🚨 [SECURITY] Store admin sem store_id - forçando onboarding');
         setNeedsOnboarding(true);
         setLoading(false);
         return;
@@ -67,8 +75,8 @@ export const useOnboarding = () => {
       
     } catch (error) {
       console.error('🚨 [SECURITY] Erro na verificação do onboarding - forçando onboarding:', error);
-      // EM CASO DE ERRO, SEMPRE FORÇAR ONBOARDING (fail-safe)
-      setNeedsOnboarding(true);
+      // EM CASO DE ERRO, APENAS store_admin é forçado a onboarding (fail-safe)
+      setNeedsOnboarding(profile?.role === 'store_admin');
     } finally {
       setLoading(false);
     }
@@ -84,7 +92,7 @@ export const useOnboarding = () => {
     } else {
       setLoading(false);
     }
-  }, [profile?.store_id, profile?.id]);
+  }, [profile?.store_id, profile?.id, profile?.role]);
 
   return {
     needsOnboarding,

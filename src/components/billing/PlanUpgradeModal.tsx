@@ -21,7 +21,7 @@ const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
   onOpenChange
 }) => {
   const { user } = useAuth();
-  const { getPlanById } = useSubscriptionPlans();
+  const { plans } = useSubscriptionPlans();
   const { subscription, loading: subscriptionLoading } = useStoreSubscription();
 
   // Suporte para ambas as APIs (isOpen/onClose e open/onOpenChange)
@@ -32,6 +32,11 @@ const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
   };
 
   if (!modalOpen) return null;
+
+  // Função local para buscar plano por ID
+  const getPlanById = (id: string): SubscriptionPlan | null => {
+    return plans.find(plan => plan.id === id) || null;
+  };
 
   // Converter o plano da subscription para o formato SubscriptionPlan se necessário
   const currentPlan = subscription?.plan ? {
