@@ -18,12 +18,21 @@ export const usePlanPermissions = () => {
   // Superadmins sempre têm acesso total
   if (isSuperadmin) {
     return {
+      // Funções específicas
       hasFeatureAccess: () => ({ hasAccess: true, loading: false }),
       hasBenefitAccess: () => ({ hasAccess: true, loading: false }),
       checkProductLimit: () => ({ hasAccess: true, loading: false }),
       checkImageLimit: () => ({ hasAccess: true, loading: false }),
       checkVariationLimit: () => ({ hasAccess: true, loading: false }),
       checkAIUsage: () => ({ hasAccess: true, loading: false }),
+      
+      // Propriedades de compatibilidade
+      checkFeatureAccess: () => true,
+      hasBenefit: () => true,
+      subscription,
+      isTrialing: () => false,
+      isSuperadmin: true,
+      getPlanBadgeInfo: () => ({ label: 'Superadmin', variant: 'default' as const }),
       loading: false
     };
   }
@@ -130,13 +139,51 @@ export const usePlanPermissions = () => {
     return { hasAccess: true, loading: false };
   };
 
+  // Funções de compatibilidade com a interface antiga
+  const checkFeatureAccess = (featureKey: string, showToast = true): boolean => {
+    const result = hasFeatureAccess(featureKey);
+    return result.hasAccess;
+  };
+
+  const hasBenefit = (benefitKey: string): boolean => {
+    const result = hasBenefitAccess(benefitKey);
+    return result.hasAccess;
+  };
+
+  const isTrialing = (): boolean => {
+    return subscription?.status === 'trialing';
+  };
+
+  const getPlanBadgeInfo = () => {
+    if (!subscription?.plan) {
+      return { label: 'Sem Plano', variant: 'outline' as const };
+    }
+
+    const planLabels = {
+      basic: { label: 'Básico', variant: 'outline' as const },
+      premium: { label: 'Premium', variant: 'default' as const },
+      enterprise: { label: 'Enterprise', variant: 'secondary' as const }
+    };
+
+    return planLabels[subscription.plan.type] || { label: 'Básico', variant: 'outline' as const };
+  };
+
   return {
+    // Funções específicas (nova interface)
     hasFeatureAccess,
     hasBenefitAccess,
     checkProductLimit,
     checkImageLimit,
     checkVariationLimit,
     checkAIUsage,
+    
+    // Propriedades de compatibilidade (interface antiga)
+    checkFeatureAccess,
+    hasBenefit,
+    subscription,
+    isTrialing,
+    isSuperadmin: false,
+    getPlanBadgeInfo,
     loading
   };
 };

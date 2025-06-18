@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -31,10 +32,11 @@ const AIContentGenerator = ({
   const [loadingSEO, setLoadingSEO] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { toast } = useToast();
-  const { checkFeatureAccess } = usePlanPermissions();
+  const { checkAIUsage } = usePlanPermissions();
 
   const validateAIAccess = () => {
-    if (!checkFeatureAccess('ai_agent', false)) {
+    const aiAccess = checkAIUsage();
+    if (!aiAccess.hasAccess) {
       setShowUpgradeModal(true);
       return false;
     }

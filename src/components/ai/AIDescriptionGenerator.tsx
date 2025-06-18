@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Copy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ const AIDescriptionGenerator = ({ productName, category, onDescriptionGenerated 
   const [generatedSEO, setGeneratedSEO] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { toast } = useToast();
-  const { checkFeatureAccess } = usePlanPermissions();
+  const { checkAIUsage } = usePlanPermissions();
 
   const generateContent = async () => {
     if (!productName.trim()) {
@@ -35,7 +36,8 @@ const AIDescriptionGenerator = ({ productName, category, onDescriptionGenerated 
     }
 
     // Verificar acesso à funcionalidade de IA
-    if (!checkFeatureAccess('ai_agent', false)) {
+    const aiAccess = checkAIUsage();
+    if (!aiAccess.hasAccess) {
       setShowUpgradeModal(true);
       return;
     }
