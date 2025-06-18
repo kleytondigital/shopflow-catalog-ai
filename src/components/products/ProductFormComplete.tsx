@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +15,7 @@ import { useDraftImages } from '@/hooks/useDraftImages';
 import DraftImageUpload from './DraftImageUpload';
 import CategoryFormDialog from './CategoryFormDialog';
 import ProductDescriptionAI from '@/components/ai/ProductDescriptionAI';
+import ProductVariationsManager, { ProductVariation } from './ProductVariationsManager';
 import { Package, DollarSign, Hash, Tag, FileText, Image, Loader2 } from 'lucide-react';
 
 const productSchema = z.object({
@@ -41,6 +43,7 @@ interface ProductFormCompleteProps {
 const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormCompleteProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
   
   const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
   const { draftImages, addDraftImages, removeDraftImage, uploadDraftImages, clearDraftImages } = useDraftImages();
@@ -70,6 +73,13 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
     }
   });
 
+  // Carregar variações existentes se estiver no modo edição
+  useEffect(() => {
+    if (mode === 'edit' && initialData?.variations) {
+      setVariations(initialData.variations);
+    }
+  }, [mode, initialData]);
+
   const handleCategoryCreated = async (newCategory: any) => {
     console.log('ProductFormComplete: Nova categoria criada:', newCategory);
     await fetchCategories();
@@ -80,14 +90,11 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
     setValue('description', description);
   };
 
-  // Corrigido: Função que aceita um único arquivo conforme esperado pelo DraftImageUpload
   const handleImageAdd = (file: File) => {
     addDraftImages([file]);
   };
 
-  // Corrigido: Função que aceita string como ID conforme esperado pelo DraftImageUpload
   const handleImageRemove = (id: string) => {
-    // Encontrar o índice da imagem pelo ID
     const index = draftImages.findIndex(img => img.id === id);
     if (index !== -1) {
       removeDraftImage(index);
@@ -114,7 +121,8 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
         wholesale_price: data.wholesale_price || null,
         min_wholesale_qty: data.min_wholesale_qty || 1,
         image_url: imageUrls[0] || null,
-        additional_images: imageUrls.slice(1)
+        additional_images: imageUrls.slice(1),
+        variations: variations.length > 0 ? variations : undefined
       };
 
       console.log('Dados do produto para envio:', productData);
@@ -123,6 +131,7 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
       
       if (mode === 'create') {
         reset();
+        setVariations([]);
         clearDraftImages();
       }
     } catch (error) {
@@ -283,6 +292,13 @@ const ProductFormComplete = ({ onSubmit, initialData, mode }: ProductFormComplet
           </div>
         </CardContent>
       </Card>
+
+      {/* Variações do Produto */}
+      <ProductVariationsManager
+        variations={variations}
+        onChange={setVariations}
+        disabled={isSubmitting || uploading}
+      />
 
       {/* Imagens */}
       <Card>

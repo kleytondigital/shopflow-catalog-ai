@@ -1,28 +1,36 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, AlertCircle } from 'lucide-react';
+import { Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProductImages } from '@/hooks/useProductImages';
 import { useDraftImages } from '@/hooks/useDraftImages';
+import { usePlanPermissions } from '@/hooks/usePlanPermissions';
 import { UseFormReturn } from 'react-hook-form';
 
 interface ProductImagesFormProps {
   form: UseFormReturn<any>;
   initialData?: any;
   mode?: 'create' | 'edit';
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
   form,
   initialData,
-  mode = 'create'
+  mode = 'create',
+  onValidationChange
 }) => {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
   const { uploadAndSaveImages, loading, error } = useProductImages();
   const { draftImages, addDraftImages, removeDraftImage, clearDraftImages } = useDraftImages();
+  const { checkImageLimit } = usePlanPermissions();
+
+  const imageAccess = checkImageLimit();
 
   // Carregar imagens iniciais se estiver no modo edição
   useEffect(() => {
@@ -40,18 +48,33 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       // Atualizar o form com a primeira imagem
       if (imageUrls.length > 0) {
         form.setValue('image_url', imageUrls[0]);
+        setUploadStatus('success');
       }
     }
   }, [draftImages, mode, form]);
 
+  // Notificar sobre mudanças de validação
+  useEffect(() => {
+    const isValid = images.length > 0 || !imageAccess.hasAccess;
+    onValidationChange?.(isValid);
+  }, [images.length, imageAccess.hasAccess, onValidationChange]);
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (mode === 'create') {
-      // No modo criação, usar draft images
-      addDraftImages(acceptedFiles);
-    } else if (mode === 'edit' && initialData?.id) {
-      // No modo edição, fazer upload direto
-      try {
-        setUploading(true);
+    if (!imageAccess.hasAccess) {
+      console.warn('Upload de imagens não permitido no plano atual');
+      return;
+    }
+
+    setUploading(true);
+    setUploadStatus('idle');
+
+    try {
+      if (mode === 'create') {
+        // No modo criação, usar draft images
+        addDraftImages(acceptedFiles);
+        setUploadStatus('success');
+      } else if (mode === 'edit' && initialData?.id) {
+        // No modo edição, fazer upload direto
         const uploadedImages = await uploadAndSaveImages(acceptedFiles, initialData.id);
         const newImageUrls = uploadedImages.map(img => img.image_url);
         const updatedImages = [...images, ...newImageUrls];
@@ -61,13 +84,15 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
         if (updatedImages.length > 0) {
           form.setValue('image_url', updatedImages[0]);
         }
-      } catch (error) {
-        console.error('Erro ao fazer upload:', error);
-      } finally {
-        setUploading(false);
+        setUploadStatus('success');
       }
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      setUploadStatus('error');
+    } finally {
+      setUploading(false);
     }
-  }, [mode, initialData, addDraftImages, uploadAndSaveImages, images, form]);
+  }, [mode, initialData, addDraftImages, uploadAndSaveImages, images, form, imageAccess.hasAccess]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -75,7 +100,8 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       'image/*': ['.jpeg', '.jpg', '.png', '.webp']
     },
     maxSize: 5 * 1024 * 1024, // 5MB
-    multiple: true
+    multiple: true,
+    disabled: !imageAccess.hasAccess || uploading
   });
 
   const removeImage = (index: number) => {
@@ -93,6 +119,23 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       }
     }
   };
+
+  if (!imageAccess.hasAccess && !imageAccess.loading) {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Imagens do Produto</label>
+        </div>
+        
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {imageAccess.message || 'Upload de imagens não disponível no seu plano'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   const isLoading = loading || uploading;
   const displayImages = mode === 'create' ? draftImages.map(img => img.url) : images;
@@ -113,6 +156,15 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
         </Alert>
       )}
 
+      {uploadStatus === 'success' && displayImages.length > 0 && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            {displayImages.length} imagem(ns) adicionada(s) com sucesso!
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div
         {...getRootProps()}
         className={`
@@ -122,9 +174,10 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
             : 'border-gray-300 hover:border-gray-400'
           }
           ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+          ${!imageAccess.hasAccess ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        <input {...getInputProps()} disabled={isLoading} />
+        <input {...getInputProps()} disabled={isLoading || !imageAccess.hasAccess} />
         <Upload className="h-8 w-8 mx-auto mb-4 text-gray-400" />
         <p className="text-gray-600 mb-2">
           {isDragActive
