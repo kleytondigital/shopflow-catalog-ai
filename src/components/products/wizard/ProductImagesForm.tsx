@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProductImages } from '@/hooks/useProductImages';
 import { useDraftImages } from '@/hooks/useDraftImages';
-import { usePlanPermissions } from '@/hooks/usePlanPermissions';
 import { UseFormReturn } from 'react-hook-form';
 
 interface ProductImagesFormProps {
@@ -28,9 +27,6 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
   
   const { uploadAndSaveImages, loading, error } = useProductImages();
   const { draftImages, addDraftImages, removeDraftImage, clearDraftImages } = useDraftImages();
-  const { checkImageLimit } = usePlanPermissions();
-
-  const imageAccess = checkImageLimit();
 
   // Carregar imagens iniciais se estiver no modo edição
   useEffect(() => {
@@ -55,16 +51,11 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
 
   // Notificar sobre mudanças de validação
   useEffect(() => {
-    const isValid = images.length > 0 || !imageAccess.hasAccess;
+    const isValid = images.length > 0;
     onValidationChange?.(isValid);
-  }, [images.length, imageAccess.hasAccess, onValidationChange]);
+  }, [images.length, onValidationChange]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!imageAccess.hasAccess) {
-      console.warn('Upload de imagens não permitido no plano atual');
-      return;
-    }
-
     setUploading(true);
     setUploadStatus('idle');
 
@@ -92,7 +83,7 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
     } finally {
       setUploading(false);
     }
-  }, [mode, initialData, addDraftImages, uploadAndSaveImages, images, form, imageAccess.hasAccess]);
+  }, [mode, initialData, addDraftImages, uploadAndSaveImages, images, form]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -101,7 +92,7 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
     },
     maxSize: 5 * 1024 * 1024, // 5MB
     multiple: true,
-    disabled: !imageAccess.hasAccess || uploading
+    disabled: uploading
   });
 
   const removeImage = (index: number) => {
@@ -119,23 +110,6 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       }
     }
   };
-
-  if (!imageAccess.hasAccess && !imageAccess.loading) {
-    return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Imagens do Produto</label>
-        </div>
-        
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {imageAccess.message || 'Upload de imagens não disponível no seu plano'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   const isLoading = loading || uploading;
   const displayImages = mode === 'create' ? draftImages.map(img => img.url) : images;
@@ -168,16 +142,15 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       <div
         {...getRootProps()}
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-none
           ${isDragActive 
             ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+            : 'border-gray-300'
           }
           ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
-          ${!imageAccess.hasAccess ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        <input {...getInputProps()} disabled={isLoading || !imageAccess.hasAccess} />
+        <input {...getInputProps()} disabled={isLoading} />
         <Upload className="h-8 w-8 mx-auto mb-4 text-gray-400" />
         <p className="text-gray-600 mb-2">
           {isDragActive
@@ -210,7 +183,7 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 opacity-100 transition-none"
                   onClick={() => removeImage(index)}
                 >
                   <X className="h-4 w-4" />

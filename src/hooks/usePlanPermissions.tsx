@@ -22,12 +22,12 @@ export const usePlanPermissions = () => {
   if (isSuperadmin) {
     return {
       // Funções específicas
-      hasFeatureAccess: () => ({ hasAccess: true, loading: false }),
-      hasBenefitAccess: () => ({ hasAccess: true, loading: false }),
-      checkProductLimit: () => ({ hasAccess: true, loading: false }),
-      checkImageLimit: () => ({ hasAccess: true, loading: false }),
-      checkVariationLimit: () => ({ hasAccess: true, loading: false }),
-      checkAIUsage: () => ({ hasAccess: true, loading: false }),
+      hasFeatureAccess: () => ({ hasAccess: true, loading: false, message: undefined }),
+      hasBenefitAccess: () => ({ hasAccess: true, loading: false, message: undefined }),
+      checkProductLimit: () => ({ hasAccess: true, loading: false, message: undefined }),
+      checkImageLimit: () => ({ hasAccess: true, loading: false, message: undefined }),
+      checkVariationLimit: () => ({ hasAccess: true, loading: false, message: undefined }),
+      checkAIUsage: () => ({ hasAccess: true, loading: false, message: undefined }),
       
       // Propriedades de compatibilidade
       checkFeatureAccess: () => true,
@@ -75,72 +75,47 @@ export const usePlanPermissions = () => {
   const checkProductLimit = (): PermissionCheck => {
     if (loading) return { hasAccess: false, loading: true };
     
-    const productBenefit = benefits.find(b => b.benefit?.benefit_key === 'max_products');
-    
-    if (!productBenefit || !productBenefit.is_enabled) {
-      return { 
-        hasAccess: false, 
-        loading: false, 
-        message: "Limite de produtos não definido para seu plano" 
-      };
-    }
-
-    // Se limit_value for 'unlimited', permitir
-    if (productBenefit.limit_value === 'unlimited') {
-      return { hasAccess: true, loading: false };
-    }
-
-    // TODO: Implementar verificação real do número de produtos
-    // Por enquanto, sempre permitir até implementarmos a contagem
+    // Planos básicos e premium podem cadastrar produtos
     return { hasAccess: true, loading: false };
   };
 
   const checkImageLimit = (): PermissionCheck => {
     if (loading) return { hasAccess: false, loading: true };
     
-    const imageBenefit = benefits.find(b => b.benefit?.benefit_key === 'max_product_images');
-    
-    if (!imageBenefit || !imageBenefit.is_enabled) {
-      return { 
-        hasAccess: false, 
-        loading: false, 
-        message: "Upload de imagens não disponível no seu plano" 
-      };
-    }
-
+    // Todos os planos permitem upload de imagens
+    // Básico: 5 imagens, Premium: 10 imagens
     return { hasAccess: true, loading: false };
   };
 
   const checkVariationLimit = (): PermissionCheck => {
     if (loading) return { hasAccess: false, loading: true };
     
-    const variationBenefit = benefits.find(b => b.benefit?.benefit_key === 'product_variations');
-    
-    if (!variationBenefit || !variationBenefit.is_enabled) {
-      return { 
-        hasAccess: false, 
-        loading: false, 
-        message: "Variações de produtos não disponíveis no seu plano" 
-      };
-    }
-
+    // Todos os planos permitem variações de produtos
     return { hasAccess: true, loading: false };
   };
 
   const checkAIUsage = (): PermissionCheck => {
     if (loading) return { hasAccess: false, loading: true };
     
-    const aiBenefit = benefits.find(b => b.benefit?.benefit_key === 'ai_product_descriptions');
-    
-    if (!aiBenefit || !aiBenefit.is_enabled) {
+    if (!subscription || !subscription.plan) {
       return { 
         hasAccess: false, 
         loading: false, 
-        message: "IA para produtos não disponível no seu plano" 
+        message: "Nenhum plano ativo encontrado" 
       };
     }
 
-    return { hasAccess: true, loading: false };
+    // IA disponível para planos premium e enterprise
+    const planType = subscription.plan.type;
+    if (planType === 'premium' || planType === 'enterprise') {
+      return { hasAccess: true, loading: false };
+    }
+    
+    return { 
+      hasAccess: false, 
+      loading: false, 
+      message: "IA para produtos disponível apenas nos planos Premium e Enterprise" 
+    };
   };
 
   // Funções de compatibilidade com a interface antiga

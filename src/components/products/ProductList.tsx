@@ -1,17 +1,12 @@
 
-import React, { useState } from 'react';
-import { Edit, Trash2, Eye, Sparkles, MoreHorizontal, Brain } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Edit, Trash2, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import AIProductToolsModal from './AIProductToolsModal';
-import { useIsMobile } from '@/hooks/use-mobile';
-import ProductMobileCard from './ProductMobileCard';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import StockIndicator from './StockIndicator';
 
 interface Product {
   id: string;
@@ -20,7 +15,7 @@ interface Product {
   price: number;
   stock: number;
   status: 'active' | 'inactive';
-  image: string;
+  image?: string;
   wholesalePrice?: number;
 }
 
@@ -32,181 +27,163 @@ interface ProductListProps {
 }
 
 const ProductList = ({ products, onEdit, onDelete, onGenerateDescription }: ProductListProps) => {
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [iaModalProduct, setIaModalProduct] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const isMobile = useIsMobile();
+  // Filtros dinâmicos
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
+      
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [products, searchTerm, categoryFilter, statusFilter]);
 
-  const toggleProductSelection = (id: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(id) 
-        ? prev.filter(pid => pid !== id)
-        : [...prev, id]
-    );
-  };
+  // Obter categorias únicas
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    return uniqueCategories.filter(Boolean);
+  }, [products]);
 
-  // Layout para mobile (cards) ou desktop (tabela)
   return (
-    <div className="card-modern">
-      {isMobile ? (
-        <div>
-          {products.map(product => (
-            <ProductMobileCard
-              key={product.id}
-              product={product}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onGenerateDescription={onGenerateDescription}
-              onOpenIAModal={setIaModalProduct}
-            />
-          ))}
+    <div className="space-y-4">
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Buscar produtos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativo</SelectItem>
+              <SelectItem value="inactive">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Lista de produtos */}
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>Nenhum produto encontrado</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-4 px-4">
-                  <input
-                    type="checkbox"
-                    className="rounded border-border"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedProducts(products.map(p => p.id));
-                      } else {
-                        setSelectedProducts([]);
-                      }
-                    }}
-                  />
-                </th>
-                <th className="text-left py-4 px-4 font-semibold">Produto</th>
-                <th className="text-left py-4 px-4 font-semibold">Categoria</th>
-                <th className="text-left py-4 px-4 font-semibold">Preço Varejo</th>
-                <th className="text-left py-4 px-4 font-semibold">Preço Atacado</th>
-                <th className="text-left py-4 px-4 font-semibold">Estoque</th>
-                <th className="text-left py-4 px-4 font-semibold">Status</th>
-                <th className="text-left py-4 px-4 font-semibold">IA</th>
-                <th className="text-left py-4 px-4 font-semibold">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                  <td className="py-4 px-4">
-                    <input
-                      type="checkbox"
-                      className="rounded border-border"
-                      checked={selectedProducts.includes(product.id)}
-                      onChange={() => toggleProductSelection(product.id)}
-                    />
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={product.image} 
+        <div className="grid gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="transition-none">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  {/* Imagem */}
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                    {product.image ? (
+                      <img
+                        src={product.image}
                         alt={product.name}
-                        className="w-12 h-12 rounded-lg object-cover bg-muted"
+                        className="w-full h-full object-cover"
                       />
-                      <div>
-                        <p className="font-medium text-foreground">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">ID: {product.id}</p>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <span className="text-xs">Sem foto</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informações */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                        <p className="text-sm text-gray-500">{product.category}</p>
+                        
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="text-sm">
+                            <span className="font-medium text-green-600">
+                              R$ {product.price.toFixed(2)}
+                            </span>
+                            {product.wholesalePrice && (
+                              <span className="text-gray-500 ml-2">
+                                Atacado: R$ {product.wholesalePrice.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <StockIndicator stock={product.stock} />
+                          
+                          <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
+                            <div className="flex items-center gap-1">
+                              {product.status === 'active' ? (
+                                <Eye className="h-3 w-3" />
+                              ) : (
+                                <EyeOff className="h-3 w-3" />
+                              )}
+                              {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                            </div>
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateDescription(product.id)}
+                          className="transition-none"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(product)}
+                          className="transition-none"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDelete(product.id)}
+                          className="text-red-600 border-red-200 transition-none"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-muted-foreground">{product.category}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="font-medium">R$ {product.price.toFixed(2)}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="font-medium">
-                      {product.wholesalePrice ? `R$ ${product.wholesalePrice.toFixed(2)}` : '-'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`font-medium ${product.stock <= 5 ? 'text-destructive' : 'text-foreground'}`}>
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                      {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </td>
-                  <td className="py-4 px-4">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => setIaModalProduct(product)}
-                      title="Ferramentas de IA"
-                      className="flex items-center justify-center"
-                    >
-                      <Brain className="h-5 w-5" />
-                    </Button>
-                  </td>
-                  <td className="py-4 px-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit(product)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onGenerateDescription(product.id)}>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Gerar Descrição IA
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Visualizar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => onDelete(product.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      )}
-      
-      {selectedProducts.length > 0 && !isMobile && (
-        <div className="mt-4 p-4 bg-primary-50 rounded-lg border-l-4 border-primary">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-primary">
-              {selectedProducts.length} produto(s) selecionado(s)
-            </span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline">
-                Exportar Selecionados
-              </Button>
-              <Button size="sm" className="btn-secondary">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Gerar Descrições IA
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {iaModalProduct && (
-        <AIProductToolsModal
-          product={iaModalProduct}
-          open={!!iaModalProduct}
-          onClose={() => setIaModalProduct(null)}
-        />
       )}
     </div>
   );

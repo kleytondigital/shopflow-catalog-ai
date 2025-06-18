@@ -7,8 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus, Package } from 'lucide-react';
-import { usePlanPermissions } from '@/hooks/usePlanPermissions';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export interface ProductVariation {
   id?: string;
@@ -31,7 +29,6 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
   onChange,
   disabled = false
 }) => {
-  const { checkVariationLimit } = usePlanPermissions();
   const [newVariation, setNewVariation] = useState<Partial<ProductVariation>>({
     name: '',
     type: 'other',
@@ -39,19 +36,6 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     stock: 0,
     is_active: true
   });
-
-  const variationAccess = checkVariationLimit();
-
-  if (!variationAccess.hasAccess && !variationAccess.loading) {
-    return (
-      <Alert>
-        <Package className="h-4 w-4" />
-        <AlertDescription>
-          {variationAccess.message || 'Variações de produtos não disponíveis no seu plano'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   const handleAddVariation = () => {
     if (!newVariation.name?.trim()) return;
@@ -123,6 +107,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                     size="sm"
                     onClick={() => handleRemoveVariation(index)}
                     disabled={disabled}
+                    className="transition-none"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -138,6 +123,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                       onChange={(e) => handleUpdateVariation(index, 'price_adjustment', Number(e.target.value))}
                       disabled={disabled}
                       placeholder="0.00"
+                      className="transition-none"
                     />
                   </div>
                   <div>
@@ -148,6 +134,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                       onChange={(e) => handleUpdateVariation(index, 'stock', Number(e.target.value))}
                       disabled={disabled}
                       placeholder="0"
+                      className="transition-none"
                     />
                   </div>
                   <div>
@@ -157,6 +144,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                       onChange={(e) => handleUpdateVariation(index, 'sku', e.target.value)}
                       disabled={disabled}
                       placeholder="SKU-001"
+                      className="transition-none"
                     />
                   </div>
                 </div>
@@ -176,7 +164,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 onValueChange={(value) => setNewVariation(prev => ({ ...prev, type: value as ProductVariation['type'] }))}
                 disabled={disabled}
               >
-                <SelectTrigger>
+                <SelectTrigger className="transition-none">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,6 +182,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 onChange={(e) => setNewVariation(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Ex: P, Azul, Algodão..."
                 disabled={disabled}
+                className="transition-none"
               />
             </div>
           </div>
@@ -208,6 +197,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 onChange={(e) => setNewVariation(prev => ({ ...prev, price_adjustment: Number(e.target.value) }))}
                 placeholder="0.00"
                 disabled={disabled}
+                className="transition-none"
               />
             </div>
             <div>
@@ -218,6 +208,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 onChange={(e) => setNewVariation(prev => ({ ...prev, stock: Number(e.target.value) }))}
                 placeholder="0"
                 disabled={disabled}
+                className="transition-none"
               />
             </div>
           </div>
@@ -226,7 +217,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
             type="button"
             onClick={handleAddVariation}
             disabled={!newVariation.name?.trim() || disabled}
-            className="w-full"
+            className="w-full transition-none"
           >
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Variação
