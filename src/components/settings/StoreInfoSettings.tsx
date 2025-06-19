@@ -419,7 +419,7 @@ const StoreInfoSettings: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Horário de Funcionamento */}
+        {/* Horário de Funcionamento - Layout Responsivo */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -435,32 +435,73 @@ const StoreInfoSettings: React.FC = () => {
                   control={form.control}
                   name={`businessHours.${day.key}` as const}
                   render={({ field }) => (
-                    <div className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="w-32">
-                        <span className="font-medium">{day.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="time"
-                          className="w-24"
-                          value={field.value.open}
-                          onChange={e => field.onChange({ ...field.value, open: e.target.value })}
-                        />
-                        <span>às</span>
-                        <Input
-                          type="time"
-                          className="w-24"
-                          value={field.value.close}
-                          onChange={e => field.onChange({ ...field.value, close: e.target.value })}
-                        />
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={field.value.closed}
-                            onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
+                    <div className="p-4 border rounded-lg">
+                      {/* Layout Desktop */}
+                      <div className="hidden sm:flex items-center gap-4">
+                        <div className="w-32">
+                          <span className="font-medium">{day.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="time"
+                            className="w-24"
+                            value={field.value.open}
+                            onChange={e => field.onChange({ ...field.value, open: e.target.value })}
+                            disabled={field.value.closed}
                           />
-                          <span className="text-sm">Fechado</span>
-                        </label>
+                          <span>às</span>
+                          <Input
+                            type="time"
+                            className="w-24"
+                            value={field.value.close}
+                            onChange={e => field.onChange({ ...field.value, close: e.target.value })}
+                            disabled={field.value.closed}
+                          />
+                          <label className="flex items-center gap-2 ml-4">
+                            <input
+                              type="checkbox"
+                              checked={field.value.closed}
+                              onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
+                            />
+                            <span className="text-sm">Fechado</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Layout Mobile */}
+                      <div className="sm:hidden space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{day.label}</span>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={field.value.closed}
+                              onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
+                            />
+                            <span className="text-sm">Fechado</span>
+                          </label>
+                        </div>
+                        
+                        {!field.value.closed && (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <label className="block text-xs text-gray-500 mb-1">Abertura</label>
+                              <Input
+                                type="time"
+                                value={field.value.open}
+                                onChange={e => field.onChange({ ...field.value, open: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs text-gray-500 mb-1">Fechamento</label>
+                              <Input
+                                type="time"
+                                value={field.value.close}
+                                onChange={e => field.onChange({ ...field.value, close: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
