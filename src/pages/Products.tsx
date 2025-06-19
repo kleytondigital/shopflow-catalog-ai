@@ -15,7 +15,7 @@ const Products = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState(null);
-  const { products, loading, deleteProduct, refetch } = useProducts();
+  const { products, loading, deleteProduct, fetchProducts } = useProducts();
   const { toast } = useToast();
 
   const breadcrumbs = [
@@ -51,20 +51,19 @@ const Products = () => {
   };
 
   const handleAIContentApply = async (content: any) => {
-    // Implementar aplicação do conteúdo gerado pela IA
     console.log('Aplicando conteúdo IA:', content);
     setShowAIModal(false);
     toast({
       title: "Conteúdo aplicado com sucesso",
       description: "O conteúdo gerado pela IA foi aplicado ao produto.",
     });
-    refetch();
+    fetchProducts();
   };
 
   const handleProductSaved = () => {
     setShowProductForm(false);
     setEditingProduct(null);
-    refetch();
+    fetchProducts();
   };
 
   if (loading) {
@@ -76,6 +75,14 @@ const Products = () => {
       </AppLayout>
     );
   }
+
+  // Mapear produtos para o formato esperado pelo ProductList
+  const mappedProducts = products.map(product => ({
+    ...product,
+    price: product.retail_price || 0,
+    status: product.is_active ? 'active' as const : 'inactive' as const,
+    wholesalePrice: product.wholesale_price
+  }));
 
   return (
     <AppLayout 
@@ -110,7 +117,7 @@ const Products = () => {
 
         {/* Lista de produtos */}
         <ProductList
-          products={products}
+          products={mappedProducts}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onGenerateDescription={handleGenerateDescription}
@@ -119,7 +126,7 @@ const Products = () => {
         {/* Modal do formulário de produto */}
         {showProductForm && (
           <ProductFormWizard
-            product={editingProduct}
+            initialData={editingProduct}
             onClose={() => {
               setShowProductForm(false);
               setEditingProduct(null);
@@ -131,7 +138,7 @@ const Products = () => {
         {/* Modal de IA */}
         {showAIModal && selectedProductId && (
           <ImprovedAIToolsModal
-            isOpen={showAIModal}
+            open={showAIModal}
             onClose={() => setShowAIModal(false)}
             productId={selectedProductId}
             onContentApply={handleAIContentApply}

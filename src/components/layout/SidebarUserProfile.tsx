@@ -11,15 +11,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
-import { useAuthSession } from '@/hooks/useAuthSession';
 import { LogOut, Settings, Crown, Store, User, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ProfilePlanCard } from '@/components/billing/ProfilePlanCard';
 
 const SidebarUserProfile: React.FC = () => {
-  const { profile } = useAuth();
-  const { signOut } = useAuthSession();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -94,17 +92,22 @@ const SidebarUserProfile: React.FC = () => {
             </div>
           </DropdownMenuLabel>
           
-          {/* Card de plano detalhado */}
-          <div className="px-2 py-3">
-            <ProfilePlanCard />
-          </div>
+          {/* Card de plano detalhado - apenas para store_admin */}
+          {profile.role === 'store_admin' && (
+            <div className="px-2 py-3">
+              <ProfilePlanCard />
+            </div>
+          )}
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => navigate('/billing')} className="cursor-pointer">
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Faturamento</span>
-          </DropdownMenuItem>
+          {/* Faturamento apenas para store_admin */}
+          {profile.role === 'store_admin' && (
+            <DropdownMenuItem onClick={() => navigate('/billing')} className="cursor-pointer">
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>Faturamento</span>
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />

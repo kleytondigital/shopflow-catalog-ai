@@ -14,7 +14,7 @@ const Categories = () => {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { categories, loading, deleteCategory, refetch } = useCategories();
+  const { categories, loading, deleteCategory, fetchCategories } = useCategories();
   const { toast } = useToast();
 
   const breadcrumbs = [
@@ -52,7 +52,7 @@ const Categories = () => {
   const handleCategorySaved = () => {
     setShowCategoryDialog(false);
     setEditingCategory(null);
-    refetch();
+    fetchCategories();
   };
 
   if (loading) {
@@ -173,7 +173,7 @@ const Categories = () => {
         {/* Dialog de categoria */}
         {showCategoryDialog && (
           <SimpleCategoryDialog
-            category={editingCategory}
+            initialData={editingCategory}
             onClose={() => {
               setShowCategoryDialog(false);
               setEditingCategory(null);
