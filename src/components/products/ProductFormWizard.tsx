@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, CheckCircle } from 'lucide-react';
 import ProductBasicInfoForm from './wizard/ProductBasicInfoForm';
 import ProductPricingForm from './wizard/ProductPricingForm';
 import ProductImagesForm from './wizard/ProductImagesForm';
@@ -42,11 +42,11 @@ interface ProductFormWizardProps {
 }
 
 const steps = [
-  { id: 1, name: 'Informações Básicas', shortName: 'Básicas', component: ProductBasicInfoForm },
-  { id: 2, name: 'Preços e Estoque', shortName: 'Preços', component: ProductPricingForm },
-  { id: 3, name: 'Imagens', shortName: 'Imagens', component: ProductImagesForm },
-  { id: 4, name: 'Variações', shortName: 'Variações', component: ProductVariationsForm },
-  { id: 5, name: 'Configurações Avançadas', shortName: 'Avançadas', component: ProductAdvancedForm },
+  { id: 1, name: 'Informações Básicas', icon: '📝', component: ProductBasicInfoForm },
+  { id: 2, name: 'Preços e Estoque', icon: '💰', component: ProductPricingForm },
+  { id: 3, name: 'Imagens', icon: '📸', component: ProductImagesForm },
+  { id: 4, name: 'Variações', icon: '🎨', component: ProductVariationsForm },
+  { id: 5, name: 'SEO e Avançado', icon: '🚀', component: ProductAdvancedForm },
 ];
 
 // Função para gerar slug a partir do nome
@@ -54,10 +54,10 @@ const generateSlug = (name: string): string => {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-    .replace(/\s+/g, '-') // Substitui espaços por hífens
-    .replace(/-+/g, '-') // Remove hífens duplicados
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .trim();
 };
 
@@ -65,6 +65,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
+  const [stepValidation, setStepValidation] = useState<Record<number, boolean>>({});
   const { profile } = useAuth();
   const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
 
@@ -141,14 +142,11 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
       case 2:
         return values.retail_price > 0 && values.stock >= 0;
       case 3:
-        // Imagens são opcionais - sempre permitir próximo
-        return true;
+        return true; // Imagens são opcionais
       case 4:
-        // Variações são opcionais
-        return true;
+        return true; // Variações são opcionais
       case 5:
-        // Configurações avançadas são opcionais
-        return true;
+        return true; // Configurações avançadas são opcionais
       default:
         return true;
     }
@@ -247,51 +245,60 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
     }
   };
 
-  return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Progress Bar - Compacto */}
-      <div className="space-y-2 mb-3 sm:mb-4 shrink-0">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Passo {currentStep} de {steps.length}</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <Progress value={progress} className="w-full h-1.5 sm:h-2" />
-      </div>
+  const currentStepData = steps.find(step => step.id === currentStep);
 
-      {/* Step Navigation - Ultra compacto para mobile */}
-      <div className="mb-3 sm:mb-4 shrink-0">
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header com Progress */}
+      <div className="shrink-0 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">{currentStepData?.icon}</div>
+            <div>
+              <h3 className="text-lg font-semibold">{currentStepData?.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                Passo {currentStep} de {steps.length}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-medium">{Math.round(progress)}%</div>
+            <div className="text-xs text-muted-foreground">Concluído</div>
+          </div>
+        </div>
+        
+        <Progress value={progress} className="h-2 mb-4" />
+        
+        {/* Steps Navigation */}
         <div className="flex items-center justify-center">
-          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center shrink-0">
                 <div
-                  className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
-                    step.id === currentStep
-                      ? 'bg-primary text-primary-foreground'
+                  className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200
+                    ${step.id === currentStep
+                      ? 'bg-primary text-primary-foreground shadow-lg scale-110'
                       : step.id < currentStep
                       ? 'bg-green-500 text-white'
                       : 'bg-muted text-muted-foreground'
-                  }`}
+                    }
+                  `}
                 >
-                  {step.id}
+                  {step.id < currentStep ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    step.id
+                  )}
                 </div>
                 
-                {/* Texto apenas em telas maiores */}
-                <span
-                  className={`ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden md:inline transition-colors ${
-                    step.id === currentStep
-                      ? 'text-primary'
-                      : step.id < currentStep
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  {step.name}
-                </span>
-                
-                {/* Conectores */}
                 {index < steps.length - 1 && (
-                  <div className="ml-1 sm:ml-2 md:ml-4 w-2 sm:w-4 md:w-8 h-px bg-border shrink-0" />
+                  <div 
+                    className={`
+                      w-8 h-0.5 mx-1 transition-colors
+                      ${step.id < currentStep ? 'bg-green-500' : 'bg-border'}
+                    `} 
+                  />
                 )}
               </div>
             ))}
@@ -299,55 +306,50 @@ const ProductFormWizard = ({ onSubmit, initialData, mode }: ProductFormWizardPro
         </div>
       </div>
 
-      {/* Form Content - Scrollável */}
+      {/* Form Content */}
       <div className="flex-1 overflow-hidden">
         <Form {...form}>
           <div className="h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="min-h-[250px] sm:min-h-[300px] lg:min-h-[350px] pb-4">
+            <div className="flex-1 overflow-y-auto px-1">
+              <div className="pb-6">
                 {renderCurrentStep()}
               </div>
             </div>
 
-            {/* Navigation Buttons - Fixo no bottom */}
-            <div className="shrink-0 pt-3 sm:pt-4 border-t bg-background">
-              <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-3">
+            {/* Navigation Buttons */}
+            <div className="shrink-0 pt-6 border-t bg-background/95 backdrop-blur">
+              <div className="flex justify-between gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handlePrevious}
                   disabled={currentStep === 1}
-                  className="order-2 sm:order-1 h-9 sm:h-10"
-                  size="sm"
+                  className="min-w-[100px]"
                 >
-                  <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs sm:text-sm">Anterior</span>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Anterior
                 </Button>
 
-                <div className="flex gap-2 order-1 sm:order-2">
+                <div className="flex gap-2">
                   {currentStep < steps.length ? (
                     <Button
                       type="button"
                       onClick={handleNext}
                       disabled={!canProceedToNext()}
-                      className="flex-1 sm:flex-none h-9 sm:h-10"
-                      size="sm"
+                      className="min-w-[100px]"
                     >
-                      <span className="text-xs sm:text-sm">Próximo</span>
-                      <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      Próximo
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
                       type="button"
                       onClick={() => handleSubmit(form.getValues())}
                       disabled={isSubmitting}
-                      className="flex-1 sm:flex-none h-9 sm:h-10"
-                      size="sm"
+                      className="min-w-[120px] bg-green-600 hover:bg-green-700"
                     >
-                      <Save className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="text-xs sm:text-sm">
-                        {isSubmitting ? 'Salvando...' : mode === 'edit' ? 'Atualizar' : 'Criar'}
-                      </span>
+                      <Save className="mr-2 h-4 w-4" />
+                      {isSubmitting ? 'Salvando...' : mode === 'edit' ? 'Atualizar' : 'Criar Produto'}
                     </Button>
                   )}
                 </div>

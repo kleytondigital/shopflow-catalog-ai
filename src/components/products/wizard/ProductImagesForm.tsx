@@ -1,12 +1,13 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, AlertCircle, CheckCircle, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProductImages } from '@/hooks/useProductImages';
 import { useDraftImages } from '@/hooks/useDraftImages';
 import { UseFormReturn } from 'react-hook-form';
+import WatermarkPreview from '../WatermarkPreview';
 
 interface ProductImagesFormProps {
   form: UseFormReturn<any>;
@@ -24,9 +25,16 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [selectedImageForWatermark, setSelectedImageForWatermark] = useState<File | null>(null);
   
   const { uploadAndSaveImages, loading, error } = useProductImages();
-  const { draftImages, addDraftImages, removeDraftImage, clearDraftImages } = useDraftImages();
+  const { 
+    draftImages, 
+    addDraftImages, 
+    removeDraftImage, 
+    clearDraftImages,
+    addDraftImage
+  } = useDraftImages();
 
   // Carregar imagens iniciais se estiver no modo edição
   useEffect(() => {
@@ -61,17 +69,14 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
 
     try {
       if (mode === 'create') {
-        // No modo criação, usar draft images
         addDraftImages(acceptedFiles);
         setUploadStatus('success');
       } else if (mode === 'edit' && initialData?.id) {
-        // No modo edição, fazer upload direto
         const uploadedImages = await uploadAndSaveImages(acceptedFiles, initialData.id);
         const newImageUrls = uploadedImages.map(img => img.image_url);
         const updatedImages = [...images, ...newImageUrls];
         setImages(updatedImages);
         
-        // Atualizar o form com a primeira imagem
         if (updatedImages.length > 0) {
           form.setValue('image_url', updatedImages[0]);
         }
@@ -102,7 +107,6 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       const updatedImages = images.filter((_, i) => i !== index);
       setImages(updatedImages);
       
-      // Atualizar o form
       if (updatedImages.length > 0) {
         form.setValue('image_url', updatedImages[0]);
       } else {
@@ -111,14 +115,21 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
     }
   };
 
+  const handleWatermarkApplied = (watermarkedFile: File) => {
+    if (mode === 'create') {
+      addDraftImage(watermarkedFile);
+    }
+    setSelectedImageForWatermark(null);
+  };
+
   const isLoading = loading || uploading;
   const displayImages = mode === 'create' ? draftImages.map(img => img.url) : images;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Imagens do Produto</label>
-        <p className="text-sm text-gray-600">
+        <h3 className="text-lg font-semibold">Imagens do Produto</h3>
+        <p className="text-sm text-muted-foreground">
           Adicione até 10 imagens do produto. A primeira imagem será a principal.
         </p>
       </div>
@@ -139,65 +150,111 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
         </Alert>
       )}
 
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-none
-          ${isDragActive 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300'
-          }
-          ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
-      >
-        <input {...getInputProps()} disabled={isLoading} />
-        <Upload className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-        <p className="text-gray-600 mb-2">
-          {isDragActive
-            ? 'Solte as imagens aqui...'
-            : 'Arraste imagens aqui ou clique para selecionar'
-          }
-        </p>
-        <p className="text-sm text-gray-500">
-          Formatos aceitos: JPG, PNG, WebP (máx. 5MB cada)
-        </p>
-        {isLoading && (
-          <p className="text-sm text-blue-600 mt-2">Fazendo upload...</p>
-        )}
-      </div>
-
-      {displayImages.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium">Imagens Adicionadas ({displayImages.length})</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {displayImages.map((imageUrl, index) => (
-              <div key={index} className="relative group">
-                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt={`Produto ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upload">Upload de Imagens</TabsTrigger>
+          <TabsTrigger value="watermark" disabled={displayImages.length === 0}>
+            <Wand2 className="w-4 h-4 mr-2" />
+            Marca d'Água
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="upload" className="space-y-4">
+          <div
+            {...getRootProps()}
+            className={`
+              border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200
+              ${isDragActive 
+                ? 'border-primary bg-primary/5 scale-102' 
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+              }
+              ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+          >
+            <input {...getInputProps()} disabled={isLoading} />
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-medium mb-2">
+                  {isDragActive
+                    ? 'Solte as imagens aqui...'
+                    : 'Arraste imagens aqui ou clique para selecionar'
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Formatos: JPG, PNG, WebP • Máximo 5MB cada • Até 10 imagens
+                </p>
+              </div>
+              {isLoading && (
+                <div className="flex items-center gap-2 text-primary">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                  <span className="text-sm">Processando...</span>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {displayImages.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Imagens Adicionadas ({displayImages.length})</h4>
                 <Button
                   type="button"
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  className="absolute top-2 right-2 opacity-100 transition-none"
-                  onClick={() => removeImage(index)}
+                  onClick={() => setSelectedImageForWatermark(draftImages[0]?.file || null)}
+                  disabled={mode === 'edit'}
                 >
-                  <X className="h-4 w-4" />
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Adicionar Marca d'Água
                 </Button>
-                {index === 0 && (
-                  <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                    Principal
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {displayImages.map((imageUrl, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                      <img
+                        src={imageUrl}
+                        alt={`Produto ${index + 1}`}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    {index === 0 && (
+                      <div className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                        Principal
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="watermark">
+          <WatermarkPreview
+            imageFile={selectedImageForWatermark}
+            onWatermarkApplied={handleWatermarkApplied}
+            defaultConfig={{
+              text: 'Minha Loja',
+              position: 'bottom-right',
+              opacity: 0.7
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

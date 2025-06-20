@@ -15,7 +15,7 @@ const Products = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [editingProduct, setEditingProduct] = useState(null);
-  const { products, loading, deleteProduct, fetchProducts } = useProducts();
+  const { products, loading, deleteProduct, fetchProducts, createProduct, updateProduct } = useProducts();
   const { toast } = useToast();
 
   const breadcrumbs = [
@@ -63,11 +63,26 @@ const Products = () => {
 
   const handleProductSubmit = async (data: any) => {
     try {
-      // Lógica para salvar/atualizar produto
       console.log('Salvando produto:', data);
+      
+      let result;
+      if (editingProduct) {
+        // Atualizar produto existente
+        result = await updateProduct({ ...data, id: editingProduct.id });
+      } else {
+        // Criar novo produto
+        result = await createProduct(data);
+      }
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
       toast({
-        title: "Produto salvo com sucesso",
+        title: editingProduct ? "Produto atualizado com sucesso" : "Produto criado com sucesso",
+        description: `${data.name} foi ${editingProduct ? 'atualizado' : 'criado'} com sucesso.`,
       });
+      
       setShowProductForm(false);
       setEditingProduct(null);
       fetchProducts();
@@ -75,16 +90,25 @@ const Products = () => {
       console.error('Erro ao salvar produto:', error);
       toast({
         title: "Erro ao salvar produto",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive",
       });
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowProductForm(false);
+    setEditingProduct(null);
   };
 
   if (loading) {
     return (
       <AppLayout title="Produtos" breadcrumbs={breadcrumbs}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">Carregando produtos...</div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="text-center">Carregando produtos...</div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -140,7 +164,7 @@ const Products = () => {
         {/* Modal do formulário de produto */}
         <ProductFormModal
           open={showProductForm}
-          onOpenChange={setShowProductForm}
+          onOpenChange={handleCloseModal}
           onSubmit={handleProductSubmit}
           initialData={editingProduct}
           mode={editingProduct ? 'edit' : 'create'}
