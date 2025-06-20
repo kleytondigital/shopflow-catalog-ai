@@ -197,7 +197,7 @@ export const useProducts = (storeId?: string) => {
     }
   };
 
-  const createProduct = async (productData: CreateProductData) => {
+  const createProduct = async (productData: CreateProductData & { variations?: any[] }) => {
     try {
       // VALIDAÇÃO CRÍTICA: Verificar store_id
       const targetStoreId = profile?.store_id || productData.store_id;
@@ -207,25 +207,55 @@ export const useProducts = (storeId?: string) => {
         return { data: null, error: 'Store ID é obrigatório' };
       }
 
+      // Remover variations dos dados do produto principal
+      const { variations, ...productOnlyData } = productData;
+
+      console.log('Criando produto com dados:', productOnlyData);
+
       const { data, error } = await supabase
         .from('products')
         .insert([{
-          ...productData,
+          ...productOnlyData,
           store_id: targetStoreId // SEMPRE usar store_id validado
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar produto:', error);
+        throw error;
+      }
+
+      console.log('Produto criado com sucesso:', data);
+
+      // Se há variações, criar separadamente
+      if (variations && variations.length > 0 && data.id) {
+        console.log('Criando variações para produto:', data.id);
+        
+        const variationsData = variations.map(variation => ({
+          ...variation,
+          product_id: data.id
+        }));
+
+        const { error: variationsError } = await supabase
+          .from('product_variations')
+          .insert(variationsData);
+
+        if (variationsError) {
+          console.error('Erro ao criar variações:', variationsError);
+          // Produto foi criado, mas variações falharam
+        }
+      }
+
       await fetchProducts();
       return { data, error: null };
     } catch (error) {
       console.error('🚨 [SECURITY] Erro ao criar produto:', error);
-      return { data: null, error };
+      return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
   };
 
-  const updateProduct = async (productData: UpdateProductData) => {
+  const updateProduct = async (productData: UpdateProductData & { variations?: any[] }) => {
     try {
       // VALIDAÇÃO: Verificar se o produto pertence à loja do usuário
       if (!profile?.store_id) {
@@ -233,7 +263,10 @@ export const useProducts = (storeId?: string) => {
         return { data: null, error: 'Store ID é obrigatório' };
       }
 
-      const { id, ...updates } = productData;
+      const { id, variations, ...updates } = productData;
+      
+      console.log('Atualizando produto:', id, 'com dados:', updates);
+
       const { data, error } = await supabase
         .from('products')
         .update(updates)
@@ -242,12 +275,41 @@ export const useProducts = (storeId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar produto:', error);
+        throw error;
+      }
+
+      // Se há variações, atualizar separadamente
+      if (variations && variations.length > 0) {
+        console.log('Atualizando variações para produto:', id);
+        
+        // Primeiro, remover variações existentes
+        await supabase
+          .from('product_variations')
+          .delete()
+          .eq('product_id', id);
+
+        // Depois, inserir novas variações
+        const variationsData = variations.map(variation => ({
+          ...variation,
+          product_id: id
+        }));
+
+        const { error: variationsError } = await supabase
+          .from('product_variations')
+          .insert(variationsData);
+
+        if (variationsError) {
+          console.error('Erro ao atualizar variações:', variationsError);
+        }
+      }
+
       await fetchProducts();
       return { data, error: null };
     } catch (error) {
       console.error('🚨 [SECURITY] Erro ao atualizar produto:', error);
-      return { data: null, error };
+      return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
   };
 
@@ -319,8 +381,48 @@ export const useProducts = (storeId?: string) => {
     fetchProducts,
     createProduct,
     updateProduct,
-    deleteProduct,
-    getProduct,
+    deleteProduct: async (id: string) => {
+      try {
+        if (!profile?.store_id) {
+          console.log('🚨 [SECURITY] Tentativa de deletar produto sem store_id - BLOQUEADO');
+          return { error: 'Store ID é obrigatório' };
+        }
+
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', id)
+          .eq('store_id', profile.store_id);
+
+        if (error) throw error;
+        await fetchProducts();
+        return { error: null };
+      } catch (error) {
+        console.error('🚨 [SECURITY] Erro ao deletar produto:', error);
+        return { error: error instanceof Error ? error.message : 'Erro desconhecido' };
+      }
+    },
+    getProduct: async (id: string) => {
+      try {
+        if (!profile?.store_id) {
+          console.log('🚨 [SECURITY] Tentativa de buscar produto sem store_id - BLOQUEADO');
+          return { data: null, error: 'Store ID é obrigatório' };
+        }
+
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .eq('store_id', profile.store_id)
+          .single();
+
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        console.error('🚨 [SECURITY] Erro ao buscar produto:', error);
+        return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+      }
+    },
     
     // Funções de estoque
     getAvailableStock,
