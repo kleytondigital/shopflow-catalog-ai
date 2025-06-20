@@ -1,28 +1,52 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type CatalogType = 'retail' | 'wholesale';
 
+// Usar o tipo Product do useProducts.tsx para evitar conflitos
 export interface Product {
   id: string;
+  store_id: string;
   name: string;
-  description: string;
-  category: string;
+  description: string | null;
+  category: string | null;
   retail_price: number;
-  wholesale_price?: number;
+  wholesale_price: number | null;
   stock: number;
+  reserved_stock: number;
+  min_wholesale_qty: number | null;
+  allow_negative_stock: boolean;
+  stock_alert_threshold: number | null;
   is_active: boolean;
-  image_url?: string;
+  is_featured: boolean | null;
+  image_url: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  seo_slug: string | null;
+  keywords: string | null;
   created_at: string;
+  updated_at: string;
   variations?: any[];
 }
 
+// Interface Store alinhada com os dados reais do Supabase
 export interface Store {
   id: string;
   name: string;
-  description: string;
-  logo_url: string;
-  catalog_type: CatalogType;
+  description: string | null;
+  logo_url: string | null;
+  owner_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  url_slug: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  cnpj: string | null;
+  plan_type: string;
+  monthly_fee: number;
 }
 
 export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 'retail') => {
@@ -39,7 +63,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
-        .eq('identifier', identifier)
+        .eq('url_slug', identifier)
         .single();
 
       if (storeError) {
@@ -56,8 +80,8 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
         return false;
       }
 
-      setStore(storeData as Store);
-      return storeData as Store;
+      setStore(storeData);
+      return storeData;
 
     } catch (error) {
       console.error('Erro ao carregar loja:', error);
@@ -129,8 +153,8 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     const searchTerm = query.toLowerCase();
     const results = products.filter(product =>
       product.name.toLowerCase().includes(searchTerm) ||
-      product.description.toLowerCase().includes(searchTerm) ||
-      product.category.toLowerCase().includes(searchTerm)
+      (product.description && product.description.toLowerCase().includes(searchTerm)) ||
+      (product.category && product.category.toLowerCase().includes(searchTerm))
     );
     setFilteredProducts(results);
   };

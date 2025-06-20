@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCatalog, CatalogType } from '@/hooks/useCatalog';
+import { useCatalog, CatalogType, Product } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { Product } from '@/hooks/useProducts';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import { createCartItem } from '@/utils/cartHelpers';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
