@@ -21,13 +21,15 @@ interface FilterSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   products?: any[];
+  isMobile?: boolean;
 }
 
 const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
   onFilter,
   isOpen,
   onClose,
-  products = []
+  products = [],
+  isMobile = false
 }) => {
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -40,13 +42,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
     }
   });
 
-  // Categorias disponíveis (extraídas dos produtos)
+  // Memoize categorias disponíveis
   const availableCategories = useMemo(() => {
     const categories = new Set(products.map(p => p.category).filter(Boolean));
     return Array.from(categories).sort();
   }, [products]);
 
-  // Faixa de preços dos produtos
+  // Memoize faixa de preços
   const priceRange = useMemo(() => {
     if (products.length === 0) return [0, 1000];
     
@@ -57,43 +59,47 @@ const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
     return [Math.floor(min), Math.ceil(max)];
   }, [products]);
 
-  useEffect(() => {
-    if (products.length > 0) {
-      setFilters(prev => ({
-        ...prev,
-        priceRange: priceRange as [number, number]
-      }));
-    }
-  }, [priceRange]);
-
+  // Stable callback for category change
   const handleCategoryChange = useCallback((category: string, checked: boolean) => {
-    const newCategories = checked 
-      ? [...filters.categories, category]
-      : filters.categories.filter(c => c !== category);
-    
-    const newFilters = { ...filters, categories: newCategories };
-    setFilters(newFilters);
-    onFilter(newFilters);
-  }, [filters, onFilter]);
+    setFilters(prev => {
+      const newCategories = checked 
+        ? [...prev.categories, category]
+        : prev.categories.filter(c => c !== category);
+      
+      const newFilters = { ...prev, categories: newCategories };
+      onFilter(newFilters);
+      return newFilters;
+    });
+  }, [onFilter]);
 
+  // Stable callback for price range change
   const handlePriceRangeChange = useCallback((values: number[]) => {
-    const newFilters = { ...filters, priceRange: values as [number, number] };
-    setFilters(newFilters);
-    onFilter(newFilters);
-  }, [filters, onFilter]);
+    setFilters(prev => {
+      const newFilters = { ...prev, priceRange: values as [number, number] };
+      onFilter(newFilters);
+      return newFilters;
+    });
+  }, [onFilter]);
 
+  // Stable callback for stock change
   const handleInStockChange = useCallback((checked: boolean) => {
-    const newFilters = { ...filters, inStock: checked };
-    setFilters(newFilters);
-    onFilter(newFilters);
-  }, [filters, onFilter]);
+    setFilters(prev => {
+      const newFilters = { ...prev, inStock: checked };
+      onFilter(newFilters);
+      return newFilters;
+    });
+  }, [onFilter]);
 
+  // Stable callback for variation filters
   const handleVariationFilterChange = useCallback((variationFilters: VariationFilterState) => {
-    const newFilters = { ...filters, variations: variationFilters };
-    setFilters(newFilters);
-    onFilter(newFilters);
-  }, [filters, onFilter]);
+    setFilters(prev => {
+      const newFilters = { ...prev, variations: variationFilters };
+      onFilter(newFilters);
+      return newFilters;
+    });
+  }, [onFilter]);
 
+  // Stable callback for clearing filters
   const clearAllFilters = useCallback(() => {
     const clearedFilters = {
       categories: [],
@@ -108,6 +114,16 @@ const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
     setFilters(clearedFilters);
     onFilter(clearedFilters);
   }, [priceRange, onFilter]);
+
+  // Update price range when products change
+  useEffect(() => {
+    if (products.length > 0) {
+      setFilters(prev => ({
+        ...prev,
+        priceRange: priceRange as [number, number]
+      }));
+    }
+  }, [priceRange]);
 
   const FilterContent = memo(() => (
     <div className="space-y-6">
@@ -192,8 +208,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
     </div>
   ));
 
+  FilterContent.displayName = 'FilterContent';
+
   // Mobile (Sheet)
-  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+  if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="left" className="w-80 overflow-y-auto">

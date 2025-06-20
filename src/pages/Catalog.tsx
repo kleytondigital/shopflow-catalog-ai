@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCatalog, CatalogType, Product } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { CartProvider, useCart } from '@/hooks/useCart';
+import { useDebounce } from '@/hooks/useDebounce';
 import { createCartItem } from '@/utils/cartHelpers';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import FilterSidebar, { FilterState } from '@/components/catalog/FilterSidebar';
@@ -61,27 +62,19 @@ const CatalogContent = memo(() => {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // Debounce search query to avoid excessive API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Handle search with debounced query
   useEffect(() => {
-    console.log('Catalog: Verificando inicialização:', { storeIdentifier, catalogType });
-    
-    if (storeIdentifier) {
-      console.log('Catalog: Inicializando catálogo para loja:', storeIdentifier);
-      initializeCatalog(storeIdentifier, catalogType).then((success) => {
-        console.log('Catalog: Resultado da inicialização:', success);
-        if (!success) {
-          toast({
-            title: "Catálogo indisponível",
-            description: `O catálogo de ${catalogType === 'retail' ? 'varejo' : 'atacado'} não está disponível.`,
-            variant: "destructive"
-          });
-        }
-      });
-    } else {
-      console.error('Catalog: storeIdentifier não disponível - URL pode estar malformada');
+    if (debouncedSearchQuery) {
+      searchProducts(debouncedSearchQuery);
     }
-  }, [storeIdentifier, catalogType, initializeCatalog, toast]);
+  }, [debouncedSearchQuery, searchProducts]);
 
+  // Update catalog type when URL changes
   useEffect(() => {
     const newCatalogType = getCatalogTypeFromUrl();
     if (newCatalogType !== catalogType) {
@@ -90,6 +83,7 @@ const CatalogContent = memo(() => {
     }
   }, [location.pathname, location.search, catalogType, getCatalogTypeFromUrl]);
 
+  // Set page title when store data is available
   useEffect(() => {
     if (store) {
       const pageTitle = `${store.name} - Catálogo ${catalogType === 'retail' ? 'Varejo' : 'Atacado'}`;
@@ -125,8 +119,8 @@ const CatalogContent = memo(() => {
   }, [settings, toast, storeIdentifier, initializeCatalog]);
 
   const handleSearch = useCallback((query: string) => {
-    searchProducts(query);
-  }, [searchProducts]);
+    setSearchQuery(query);
+  }, []);
 
   const handleFilter = useCallback((filters: FilterState) => {
     const filterOptions = {
@@ -144,13 +138,13 @@ const CatalogContent = memo(() => {
     const isInWishlist = wishlist.some(item => item.id === product.id);
     
     if (isInWishlist) {
-      setWishlist(wishlist.filter(item => item.id !== product.id));
+      setWishlist(prev => prev.filter(item => item.id !== product.id));
       toast({
         title: "Removido da lista de desejos",
         description: `${product.name} foi removido da sua lista de desejos.`,
       });
     } else {
-      setWishlist([...wishlist, product]);
+      setWishlist(prev => [...prev, product]);
       toast({
         title: "Adicionado à lista de desejos!",
         description: `${product.name} foi adicionado à sua lista de desejos.`,
@@ -182,7 +176,20 @@ const CatalogContent = memo(() => {
     }
   }, [filteredProducts, sortBy]);
 
-  // Verificar se não há storeIdentifier
+  // Check for mobile view
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // ... keep existing code (error handling and loading states)
+
   if (!storeIdentifier) {
     console.error('Catalog: storeIdentifier ausente - URL inválida');
     return (
@@ -269,13 +276,14 @@ const CatalogContent = memo(() => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           {/* Filter Sidebar - Desktop */}
-          {showFilters && (
-            <div className="hidden lg:block w-80 flex-shrink-0">
+          {showFilters && !isMobile && (
+            <div className="w-80 flex-shrink-0">
               <FilterSidebar
                 onFilter={handleFilter}
                 isOpen={true}
                 onClose={() => {}}
                 products={products}
+                isMobile={false}
               />
             </div>
           )}
@@ -287,6 +295,7 @@ const CatalogContent = memo(() => {
               isOpen={filterSidebarOpen}
               onClose={() => setFilterSidebarOpen(false)}
               products={products}
+              isMobile={true}
             />
           )}
 
@@ -379,7 +388,7 @@ const CatalogContent = memo(() => {
         onClose={() => setShowCheckout(false)}
         storeSettings={settings}
         storeId={store?.id}
-        storeData={store} // Passar dados da loja para contexto público
+        storeData={store}
       />
     </div>
   );

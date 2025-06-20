@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type CatalogType = 'retail' | 'wholesale';
@@ -55,8 +55,12 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
+  
+  // Use refs to avoid recreating functions on every render
+  const loadedStoreRef = useRef<string | null>(null);
+  const loadedCatalogTypeRef = useRef<CatalogType | null>(null);
 
-  const loadStore = async (identifier: string) => {
+  const loadStore = useCallback(async (identifier: string) => {
     setLoading(true);
     setStoreError(null);
     try {
@@ -90,9 +94,9 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadProducts = async (storeId: string, type: CatalogType) => {
+  const loadProducts = useCallback(async (storeId: string, type: CatalogType) => {
     setLoading(true);
     try {
       const { data: productsData, error: productsError } = await supabase
@@ -126,9 +130,14 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const initializeCatalog = async (identifier: string, type: CatalogType) => {
+  const initializeCatalog = useCallback(async (identifier: string, type: CatalogType) => {
+    // Avoid reloading if same store and catalog type
+    if (loadedStoreRef.current === identifier && loadedCatalogTypeRef.current === type) {
+      return true;
+    }
+
     setLoading(true);
     setStoreError(null);
   
@@ -139,17 +148,25 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     }
   
     const productsLoaded = await loadProducts(storeData.id, type);
+    
+    if (productsLoaded) {
+      loadedStoreRef.current = identifier;
+      loadedCatalogTypeRef.current = type;
+    }
+    
     setLoading(false);
     return productsLoaded;
-  };
+  }, [loadStore, loadProducts]);
 
+  // Only initialize when store identifier or catalog type actually changes
   useEffect(() => {
-    if (storeIdentifier) {
+    if (storeIdentifier && 
+        (loadedStoreRef.current !== storeIdentifier || loadedCatalogTypeRef.current !== catalogType)) {
       initializeCatalog(storeIdentifier, catalogType);
     }
-  }, [storeIdentifier, catalogType]);
+  }, [storeIdentifier, catalogType, initializeCatalog]);
 
-  const searchProducts = (query: string) => {
+  const searchProducts = useCallback((query: string) => {
     const searchTerm = query.toLowerCase();
     const results = products.filter(product =>
       product.name.toLowerCase().includes(searchTerm) ||
@@ -157,9 +174,9 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       (product.category && product.category.toLowerCase().includes(searchTerm))
     );
     setFilteredProducts(results);
-  };
+  }, [products]);
 
-  const filterProducts = (options: {
+  const filterProducts = useCallback((options: {
     category?: string;
     minPrice?: number;
     maxPrice?: number;
@@ -229,7 +246,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     
     console.log('useCatalog: Produtos filtrados:', filtered.length);
     setFilteredProducts(filtered);
-  };
+  }, [products]);
 
   return {
     store,
