@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,11 +20,13 @@ export interface ProductVariation {
 interface ProductVariationsManagerProps {
   variations: ProductVariation[];
   onChange: (variations: ProductVariation[]) => void;
+  disabled?: boolean;
 }
 
 const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
   variations,
-  onChange
+  onChange,
+  disabled = false
 }) => {
   const [newVariation, setNewVariation] = useState<ProductVariation>({
     color: '',
@@ -111,6 +112,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 placeholder="Ex: Azul, Vermelho"
                 value={newVariation.color}
                 onChange={(e) => setNewVariation({ ...newVariation, color: e.target.value })}
+                disabled={disabled}
               />
             </div>
             <div>
@@ -120,6 +122,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 placeholder="Ex: P, M, G, XG"
                 value={newVariation.size}
                 onChange={(e) => setNewVariation({ ...newVariation, size: e.target.value })}
+                disabled={disabled}
               />
             </div>
           </div>
@@ -132,6 +135,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 placeholder="Código interno"
                 value={newVariation.sku}
                 onChange={(e) => setNewVariation({ ...newVariation, sku: e.target.value })}
+                disabled={disabled}
               />
             </div>
             <div>
@@ -150,6 +154,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                     stock: value === '' ? 0 : parseInt(value) || 0 
                   });
                 }}
+                disabled={disabled}
               />
             </div>
             <div>
@@ -158,6 +163,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 value={newVariation.price_adjustment || 0}
                 onChange={(value) => setNewVariation({ ...newVariation, price_adjustment: value })}
                 placeholder="0,00"
+                disabled={disabled}
               />
             </div>
           </div>
@@ -165,7 +171,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
           <Button
             type="button"
             onClick={addVariation}
-            disabled={!newVariation.color && !newVariation.size}
+            disabled={disabled || (!newVariation.color && !newVariation.size)}
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -193,6 +199,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           <Input
                             value={editingVariation?.color || ''}
                             onChange={(e) => setEditingVariation(prev => prev ? { ...prev, color: e.target.value } : null)}
+                            disabled={disabled}
                           />
                         </div>
                         <div>
@@ -200,6 +207,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           <Input
                             value={editingVariation?.size || ''}
                             onChange={(e) => setEditingVariation(prev => prev ? { ...prev, size: e.target.value } : null)}
+                            disabled={disabled}
                           />
                         </div>
                       </div>
@@ -210,6 +218,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           <Input
                             value={editingVariation?.sku || ''}
                             onChange={(e) => setEditingVariation(prev => prev ? { ...prev, sku: e.target.value } : null)}
+                            disabled={disabled}
                           />
                         </div>
                         <div>
@@ -226,6 +235,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                                 stock: value === '' ? 0 : parseInt(value) || 0 
                               } : null);
                             }}
+                            disabled={disabled}
                           />
                         </div>
                         <div>
@@ -233,6 +243,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           <CurrencyInput
                             value={editingVariation?.price_adjustment || 0}
                             onChange={(value) => setEditingVariation(prev => prev ? { ...prev, price_adjustment: value } : null)}
+                            disabled={disabled}
                           />
                         </div>
                       </div>
@@ -242,6 +253,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           type="button"
                           size="sm"
                           onClick={saveEdit}
+                          disabled={disabled}
                         >
                           <Check className="h-4 w-4 mr-1" />
                           Salvar
@@ -251,6 +263,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={cancelEdit}
+                          disabled={disabled}
                         >
                           <X className="h-4 w-4 mr-1" />
                           Cancelar
@@ -288,6 +301,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => startEdit(index)}
+                          disabled={disabled}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -296,6 +310,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           variant="destructive"
                           size="sm"
                           onClick={() => removeVariation(index)}
+                          disabled={disabled}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
