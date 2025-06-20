@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,7 +55,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
   
-  // Cache para evitar requests repetidos
   const cacheRef = useRef<Map<string, { data: CatalogSettingsData; timestamp: number }>>(new Map());
   const isFetchingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -63,11 +63,9 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
     try {
       console.log('useCatalogSettings: Resolvendo store ID para:', identifier);
       
-      // Verificar se é UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       
       if (uuidRegex.test(identifier)) {
-        // É UUID, buscar diretamente
         const { data, error } = await supabase
           .from('stores')
           .select('id')
@@ -78,7 +76,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
         if (error) throw error;
         return data?.id || null;
       } else {
-        // É slug, buscar por url_slug
         const { data, error } = await supabase
           .from('stores')
           .select('id')
@@ -96,7 +93,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
   }, []);
 
   const fetchSettings = useCallback(async () => {
-    // Cancelar request anterior se existir
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -107,7 +103,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
       setLoading(true);
       isFetchingRef.current = true;
       
-      // Criar novo AbortController para este request
       abortControllerRef.current = new AbortController();
       
       let targetStoreId: string | null = null;
@@ -124,9 +119,8 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
         return;
       }
 
-      // Verificar cache primeiro
       const cached = cacheRef.current.get(targetStoreId);
-      if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutos
+      if (cached && Date.now() - cached.timestamp < 300000) {
         console.log('useCatalogSettings: Usando cache para store ID:', targetStoreId);
         setSettings(cached.data);
         return;
@@ -134,12 +128,10 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
 
       console.log('useCatalogSettings: Buscando configurações para store ID:', targetStoreId);
 
-      // Timeout Promise
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout: Busca de configurações demorou mais de 8 segundos')), 8000)
       );
 
-      // Fetch Promise
       const fetchPromise = supabase
         .from('store_settings')
         .select('*')
@@ -148,7 +140,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
-      // Verificar se request foi cancelado
       if (abortControllerRef.current?.signal.aborted) {
         console.log('useCatalogSettings: Request cancelado');
         return;
@@ -159,7 +150,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
       let processedSettings: CatalogSettingsData;
       
       if (!data) {
-        // Criar configuração padrão apenas se usuário estiver logado
         if (!profile) {
           console.log('useCatalogSettings: Configurações não encontradas e usuário não logado');
           setSettings(null);
@@ -198,7 +188,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           facebook_url: null,
           instagram_url: null,
           twitter_url: null,
-          // Configurações padrão de marca d'água
           watermark_enabled: false,
           watermark_type: 'text' as const,
           watermark_text: 'Minha Loja',
@@ -230,7 +219,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           facebook_url: null,
           instagram_url: null,
           twitter_url: null,
-          // Configurações de marca d'água
           watermark_enabled: false,
           watermark_type: 'text' as const,
           watermark_text: 'Minha Loja',
@@ -241,7 +229,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           watermark_color: '#ffffff',
         };
       } else {
-        // Processar dados existentes incluindo credenciais do Mercado Pago e redes sociais
         const existingPaymentMethods = typeof data.payment_methods === 'object' && data.payment_methods !== null 
           ? data.payment_methods as any 
           : {};
@@ -274,19 +261,19 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           facebook_url: data.facebook_url || null,
           instagram_url: data.instagram_url || null,
           twitter_url: data.twitter_url || null,
-          // Configurações de marca d'água
           watermark_enabled: data.watermark_enabled || false,
-          watermark_type: data.watermark_type || 'text',
+          watermark_type: (data.watermark_type === 'logo' ? 'logo' : 'text') as 'text' | 'logo',
           watermark_text: data.watermark_text || 'Minha Loja',
           watermark_logo_url: data.watermark_logo_url || null,
-          watermark_position: data.watermark_position || 'bottom-right',
+          watermark_position: (['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'].includes(data.watermark_position)) 
+            ? data.watermark_position as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'
+            : 'bottom-right',
           watermark_opacity: data.watermark_opacity || 0.7,
           watermark_size: data.watermark_size || 24,
           watermark_color: data.watermark_color || '#ffffff',
         };
       }
 
-      // Atualizar cache
       cacheRef.current.set(targetStoreId, {
         data: processedSettings,
         timestamp: Date.now()
@@ -349,12 +336,13 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
         facebook_url: data.facebook_url || null,
         instagram_url: data.instagram_url || null,
         twitter_url: data.twitter_url || null,
-        // Configurações de marca d'água
         watermark_enabled: data.watermark_enabled || false,
-        watermark_type: data.watermark_type || 'text',
+        watermark_type: (data.watermark_type === 'logo' ? 'logo' : 'text') as 'text' | 'logo',
         watermark_text: data.watermark_text || 'Minha Loja',
         watermark_logo_url: data.watermark_logo_url || null,
-        watermark_position: data.watermark_position || 'bottom-right',
+        watermark_position: (['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'].includes(data.watermark_position)) 
+          ? data.watermark_position as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'
+          : 'bottom-right',
         watermark_opacity: data.watermark_opacity || 0.7,
         watermark_size: data.watermark_size || 24,
         watermark_color: data.watermark_color || '#ffffff',
@@ -378,7 +366,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
   useEffect(() => {
     fetchSettings();
     
-    // Cleanup function para cancelar requests pendentes
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();

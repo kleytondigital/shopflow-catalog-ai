@@ -36,6 +36,7 @@ const ProductFormModal = ({
             onSubmit={onSubmit}
             initialData={initialData}
             mode={mode}
+            onClose={() => onOpenChange(false)}
           />
         </div>
       </DialogContent>
