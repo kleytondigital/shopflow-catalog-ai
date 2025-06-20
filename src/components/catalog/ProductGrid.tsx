@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Product } from '@/hooks/useProducts';
+import React, { memo } from 'react';
+import { Product } from '@/hooks/useCatalog';
 import { CatalogType } from '@/hooks/useCatalog';
 import ProductCard from './ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +14,7 @@ interface ProductGridProps {
   wishlist: Product[];
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({
+const ProductGrid: React.FC<ProductGridProps> = memo(({
   products,
   catalogType,
   loading = false,
@@ -69,6 +69,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({
       ))}
     </div>
   );
-};
+});
+
+ProductGrid.displayName = 'ProductGrid';
 
 export default ProductGrid;

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { Filter, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,7 +18,7 @@ export interface VariationFilterState {
   [key: string]: string[];
 }
 
-const VariationFilters: React.FC<VariationFiltersProps> = ({
+const VariationFilters: React.FC<VariationFiltersProps> = memo(({
   products,
   onFilterChange
 }) => {
@@ -54,7 +54,7 @@ const VariationFilters: React.FC<VariationFiltersProps> = ({
     };
   }, [products]);
 
-  const handleFilterChange = (category: keyof VariationFilterState, value: string, checked: boolean) => {
+  const handleFilterChange = useCallback((category: keyof VariationFilterState, value: string, checked: boolean) => {
     const newFilters = { ...filters };
     
     if (checked) {
@@ -65,9 +65,9 @@ const VariationFilters: React.FC<VariationFiltersProps> = ({
     
     setFilters(newFilters);
     onFilterChange(newFilters);
-  };
+  }, [filters, onFilterChange]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     const clearedFilters = {
       sizes: [],
       colors: [],
@@ -75,17 +75,19 @@ const VariationFilters: React.FC<VariationFiltersProps> = ({
     };
     setFilters(clearedFilters);
     onFilterChange(clearedFilters);
-  };
+  }, [onFilterChange]);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     setOpenSections(prev => 
       prev.includes(section) 
         ? prev.filter(s => s !== section)
         : [...prev, section]
     );
-  };
+  }, []);
 
-  const activeFiltersCount = Object.values(filters).flat().length;
+  const activeFiltersCount = useMemo(() => 
+    Object.values(filters).flat().length, [filters]
+  );
 
   if (!availableVariations.sizes.length && !availableVariations.colors.length && !availableVariations.materials.length) {
     return null;
@@ -223,6 +225,8 @@ const VariationFilters: React.FC<VariationFiltersProps> = ({
       </div>
     </div>
   );
-};
+});
+
+VariationFilters.displayName = 'VariationFilters';
 
 export default VariationFilters;

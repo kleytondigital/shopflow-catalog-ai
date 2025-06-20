@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useMemo, useCallback } from 'react';
 import { X, Filter, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ interface FilterSidebarProps {
   products?: any[];
 }
 
-const FilterSidebar: React.FC<FilterSidebarProps> = ({
+const FilterSidebar: React.FC<FilterSidebarProps> = memo(({
   onFilter,
   isOpen,
   onClose,
@@ -41,13 +41,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   });
 
   // Categorias disponíveis (extraídas dos produtos)
-  const availableCategories = React.useMemo(() => {
+  const availableCategories = useMemo(() => {
     const categories = new Set(products.map(p => p.category).filter(Boolean));
     return Array.from(categories).sort();
   }, [products]);
 
   // Faixa de preços dos produtos
-  const priceRange = React.useMemo(() => {
+  const priceRange = useMemo(() => {
     if (products.length === 0) return [0, 1000];
     
     const prices = products.map(p => p.retail_price || 0);
@@ -66,7 +66,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     }
   }, [priceRange]);
 
-  const handleCategoryChange = (category: string, checked: boolean) => {
+  const handleCategoryChange = useCallback((category: string, checked: boolean) => {
     const newCategories = checked 
       ? [...filters.categories, category]
       : filters.categories.filter(c => c !== category);
@@ -74,27 +74,27 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     const newFilters = { ...filters, categories: newCategories };
     setFilters(newFilters);
     onFilter(newFilters);
-  };
+  }, [filters, onFilter]);
 
-  const handlePriceRangeChange = (values: number[]) => {
+  const handlePriceRangeChange = useCallback((values: number[]) => {
     const newFilters = { ...filters, priceRange: values as [number, number] };
     setFilters(newFilters);
     onFilter(newFilters);
-  };
+  }, [filters, onFilter]);
 
-  const handleInStockChange = (checked: boolean) => {
+  const handleInStockChange = useCallback((checked: boolean) => {
     const newFilters = { ...filters, inStock: checked };
     setFilters(newFilters);
     onFilter(newFilters);
-  };
+  }, [filters, onFilter]);
 
-  const handleVariationFilterChange = (variationFilters: VariationFilterState) => {
+  const handleVariationFilterChange = useCallback((variationFilters: VariationFilterState) => {
     const newFilters = { ...filters, variations: variationFilters };
     setFilters(newFilters);
     onFilter(newFilters);
-  };
+  }, [filters, onFilter]);
 
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     const clearedFilters = {
       categories: [],
       priceRange: priceRange as [number, number],
@@ -107,9 +107,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     };
     setFilters(clearedFilters);
     onFilter(clearedFilters);
-  };
+  }, [priceRange, onFilter]);
 
-  const FilterContent = () => (
+  const FilterContent = memo(() => (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -190,7 +190,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         onFilterChange={handleVariationFilterChange}
       />
     </div>
-  );
+  ));
 
   // Mobile (Sheet)
   if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -214,6 +214,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       <FilterContent />
     </div>
   );
-};
+});
+
+FilterSidebar.displayName = 'FilterSidebar';
 
 export default FilterSidebar;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Filter, Grid, List, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import FloatingCart from '@/components/catalog/FloatingCart';
 import CheckoutModal from '@/components/catalog/CheckoutModal';
 import { useToast } from '@/hooks/use-toast';
 
-const CatalogContent = () => {
+const CatalogContent = memo(() => {
   const { storeIdentifier } = useParams<{ storeIdentifier: string }>();
   const location = useLocation();
   const { toast } = useToast();
@@ -27,7 +27,7 @@ const CatalogContent = () => {
     search: location.search 
   });
   
-  const getCatalogTypeFromUrl = (): CatalogType => {
+  const getCatalogTypeFromUrl = useCallback((): CatalogType => {
     const params = new URLSearchParams(location.search);
     const typeParam = params.get('type');
     if (typeParam === 'wholesale') return 'wholesale';
@@ -38,9 +38,9 @@ const CatalogContent = () => {
     }
     
     return 'retail';
-  };
+  }, [location.pathname, location.search]);
 
-  const initialCatalogType = getCatalogTypeFromUrl();
+  const initialCatalogType = useMemo(() => getCatalogTypeFromUrl(), [getCatalogTypeFromUrl]);
   
   const {
     store,
@@ -88,7 +88,7 @@ const CatalogContent = () => {
       console.log('Catalog: Mudando tipo de catálogo:', { from: catalogType, to: newCatalogType });
       setCatalogType(newCatalogType);
     }
-  }, [location.pathname, location.search, catalogType]);
+  }, [location.pathname, location.search, catalogType, getCatalogTypeFromUrl]);
 
   useEffect(() => {
     if (store) {
@@ -98,7 +98,7 @@ const CatalogContent = () => {
     }
   }, [store, catalogType]);
 
-  const handleCatalogTypeChange = (type: CatalogType) => {
+  const handleCatalogTypeChange = useCallback((type: CatalogType) => {
     if (type === 'wholesale' && settings && !settings.wholesale_catalog_active) {
       toast({
         title: "Catálogo indisponível",
@@ -122,13 +122,13 @@ const CatalogContent = () => {
     if (storeIdentifier) {
       initializeCatalog(storeIdentifier, type);
     }
-  };
+  }, [settings, toast, storeIdentifier, initializeCatalog]);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     searchProducts(query);
-  };
+  }, [searchProducts]);
 
-  const handleFilter = (filters: FilterState) => {
+  const handleFilter = useCallback((filters: FilterState) => {
     const filterOptions = {
       category: filters.categories.length > 0 ? filters.categories[0] : undefined,
       minPrice: filters.priceRange[0],
@@ -138,9 +138,9 @@ const CatalogContent = () => {
     };
     
     filterProducts(filterOptions);
-  };
+  }, [filterProducts]);
 
-  const handleAddToWishlist = (product: Product) => {
+  const handleAddToWishlist = useCallback((product: Product) => {
     const isInWishlist = wishlist.some(item => item.id === product.id);
     
     if (isInWishlist) {
@@ -156,16 +156,16 @@ const CatalogContent = () => {
         description: `${product.name} foi adicionado à sua lista de desejos.`,
       });
     }
-  };
+  }, [wishlist, toast]);
 
-  const handleQuickView = (product: Product) => {
+  const handleQuickView = useCallback((product: Product) => {
     toast({
       title: "Visualização rápida",
       description: `Abrindo detalhes de ${product.name}...`,
     });
-  };
+  }, [toast]);
 
-  const getSortedProducts = () => {
+  const getSortedProducts = useMemo(() => {
     const sorted = [...filteredProducts];
     
     switch (sortBy) {
@@ -180,7 +180,7 @@ const CatalogContent = () => {
       default:
         return sorted;
     }
-  };
+  }, [filteredProducts, sortBy]);
 
   // Verificar se não há storeIdentifier
   if (!storeIdentifier) {
@@ -239,7 +239,7 @@ const CatalogContent = () => {
     );
   }
 
-  const sortedProducts = getSortedProducts();
+  const sortedProducts = getSortedProducts;
   const showCategoryFilter = settings?.allow_categories_filter !== false;
   const showPriceFilter = settings?.allow_price_filter !== false;
   const showFilters = showCategoryFilter || showPriceFilter;
@@ -383,14 +383,18 @@ const CatalogContent = () => {
       />
     </div>
   );
-};
+});
 
-const Catalog = () => {
+CatalogContent.displayName = 'CatalogContent';
+
+const Catalog = memo(() => {
   return (
     <CartProvider>
       <CatalogContent />
     </CartProvider>
   );
-};
+});
+
+Catalog.displayName = 'Catalog';
 
 export default Catalog;
