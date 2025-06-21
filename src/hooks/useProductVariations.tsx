@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,6 +10,7 @@ export interface ProductVariation {
   stock: number;
   price_adjustment: number | null;
   is_active: boolean;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +23,7 @@ export interface CreateVariationData {
   stock: number;
   price_adjustment?: number;
   is_active?: boolean;
+  image_url?: string;
 }
 
 export const useProductVariations = (productId?: string) => {

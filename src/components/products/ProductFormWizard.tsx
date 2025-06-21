@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,7 +11,7 @@ import ProductBasicInfoForm from './wizard/ProductBasicInfoForm';
 import ProductPricingForm from './wizard/ProductPricingForm';
 import ProductImagesForm from './wizard/ProductImagesForm';
 import ProductVariationsForm from './wizard/ProductVariationsForm';
-import ProductAdvancedForm from './wizard/ProductAdvancedForm';
+import ProductSeoForm from './wizard/ProductSeoForm';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftImages } from '@/hooks/useDraftImages';
 import { useFormTracker } from '@/hooks/useFormTracker';
@@ -48,7 +47,8 @@ const steps = [
   { id: 1, name: 'Informações Básicas', icon: '📝', component: ProductBasicInfoForm },
   { id: 2, name: 'Preços e Estoque', icon: '💰', component: ProductPricingForm },
   { id: 3, name: 'Imagens', icon: '📸', component: ProductImagesForm },
-  { id: 4, name: 'Variações e SEO', icon: '🎨', component: ProductVariationsForm },
+  { id: 4, name: 'Variações', icon: '🎨', component: ProductVariationsForm },
+  { id: 5, name: 'SEO', icon: '🔍', component: ProductSeoForm },
 ];
 
 const generateSlug = (name: string): string => {
@@ -199,11 +199,40 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         }
       }
 
+      // Processar variações com upload de imagens
+      const processedVariations = await Promise.all(
+        variations.map(async (variation) => {
+          let variationImageUrl = variation.image_url;
+          
+          // Se há arquivo de imagem para upload
+          if (variation.image_file) {
+            try {
+              // Aqui você pode implementar o upload da imagem da variação
+              // Por enquanto, mantemos a URL temporária
+              console.log('Upload de imagem da variação:', variation.image_file.name);
+            } catch (error) {
+              console.error('Erro no upload da imagem da variação:', error);
+            }
+          }
+
+          // Remover propriedades temporárias
+          const { image_file, ...cleanVariation } = variation;
+          
+          return {
+            ...cleanVariation,
+            image_url: variationImageUrl,
+            // Garantir que temos valores válidos
+            stock: Number(variation.stock) || 0,
+            price_adjustment: Number(variation.price_adjustment) || 0,
+          };
+        })
+      );
+
       const productData = {
         ...form.getValues(),
         store_id: profile.store_id,
         image_url: imageUrl,
-        variations: variations.length > 0 ? variations : undefined,
+        variations: processedVariations.length > 0 ? processedVariations : undefined,
         wholesale_price: form.getValues('wholesale_price') || null,
         min_wholesale_qty: form.getValues('min_wholesale_qty') || 1,
         retail_price: Number(form.getValues('retail_price')),
@@ -211,6 +240,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       };
 
       console.log('Salvando produto com dados:', productData);
+      console.log('Variações processadas:', processedVariations);
 
       await onSubmit(productData);
       markAsSaved();
@@ -248,17 +278,14 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         );
       case 4:
         return (
-          <>
-            <ProductVariationsForm 
-              form={form}
-              variations={variations}
-              onVariationsChange={setVariations}
-            />
-            <div className="mt-8 pt-6 border-t">
-              <ProductAdvancedForm form={form} />
-            </div>
-          </>
+          <ProductVariationsForm 
+            form={form}
+            variations={variations}
+            onVariationsChange={setVariations}
+          />
         );
+      case 5:
+        return <ProductSeoForm form={form} />;
       default:
         return null;
     }

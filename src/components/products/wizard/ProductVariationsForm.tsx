@@ -3,7 +3,6 @@ import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import ProductVariationsManager, { ProductVariation } from '../ProductVariationsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package } from 'lucide-react';
 
 interface ProductVariationsFormProps {
   form: UseFormReturn<any>;
@@ -22,7 +21,7 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
         <h3 className="text-lg font-semibold">Variações do Produto</h3>
         <p className="text-sm text-muted-foreground">
           Adicione variações como tamanhos, cores ou materiais para seu produto.
-          Cada variação pode ter ajuste de preço e estoque próprio.
+          Cada variação pode ter ajuste de preço, estoque próprio e imagem específica.
         </p>
       </div>
 
@@ -37,9 +36,10 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
             <CardTitle className="text-sm">Resumo das Variações</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground">
-              <p>Total de variações: {variations.length}</p>
-              <p>Estoque total das variações: {variations.reduce((sum, v) => sum + v.stock, 0)}</p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>Total de variações: <strong>{variations.length}</strong></p>
+              <p>Estoque total das variações: <strong>{variations.reduce((sum, v) => sum + v.stock, 0)}</strong></p>
+              <p>Variações com imagem própria: <strong>{variations.filter(v => v.image_url).length}</strong></p>
             </div>
           </CardContent>
         </Card>

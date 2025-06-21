@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, Edit, Check, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import VariationImageUpload from './VariationImageUpload';
 
 export interface ProductVariation {
   id?: string;
@@ -15,6 +17,8 @@ export interface ProductVariation {
   stock: number;
   price_adjustment: number;
   is_active: boolean;
+  image_url?: string;
+  image_file?: File;
 }
 
 interface ProductVariationsManagerProps {
@@ -34,7 +38,8 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     sku: '',
     stock: 0,
     price_adjustment: 0,
-    is_active: true
+    is_active: true,
+    image_url: '',
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
@@ -58,7 +63,8 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
       sku: '',
       stock: 0,
       price_adjustment: 0,
-      is_active: true
+      is_active: true,
+      image_url: '',
     });
   };
 
@@ -94,6 +100,42 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     if (variation.color) parts.push(variation.color);
     if (variation.size) parts.push(variation.size);
     return parts.join(' - ') || 'Variação';
+  };
+
+  const handleNewVariationImageUpload = (file: File) => {
+    setNewVariation(prev => ({
+      ...prev,
+      image_file: file,
+      image_url: URL.createObjectURL(file)
+    }));
+  };
+
+  const handleNewVariationImageRemove = () => {
+    setNewVariation(prev => ({
+      ...prev,
+      image_file: undefined,
+      image_url: ''
+    }));
+  };
+
+  const handleEditVariationImageUpload = (file: File) => {
+    if (editingVariation) {
+      setEditingVariation({
+        ...editingVariation,
+        image_file: file,
+        image_url: URL.createObjectURL(file)
+      });
+    }
+  };
+
+  const handleEditVariationImageRemove = () => {
+    if (editingVariation) {
+      setEditingVariation({
+        ...editingVariation,
+        image_file: undefined,
+        image_url: ''
+      });
+    }
   };
 
   return (
@@ -146,12 +188,12 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 min="0"
                 step="1"
                 placeholder="0"
-                value={newVariation.stock || ''}
+                value={newVariation.stock === 0 ? '' : newVariation.stock.toString()}
                 onChange={(e) => {
                   const value = e.target.value;
                   setNewVariation({ 
                     ...newVariation, 
-                    stock: value === '' ? 0 : parseInt(value) || 0 
+                    stock: value === '' ? 0 : Math.max(0, parseInt(value) || 0)
                   });
                 }}
                 disabled={disabled}
@@ -166,6 +208,15 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 disabled={disabled}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <VariationImageUpload
+              imageUrl={newVariation.image_url}
+              onImageUpload={handleNewVariationImageUpload}
+              onImageRemove={handleNewVariationImageRemove}
+              disabled={disabled}
+            />
           </div>
           
           <Button
@@ -227,12 +278,12 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                             type="number"
                             min="0"
                             step="1"
-                            value={editingVariation?.stock || ''}
+                            value={editingVariation?.stock === 0 ? '' : editingVariation?.stock?.toString() || ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               setEditingVariation(prev => prev ? { 
                                 ...prev, 
-                                stock: value === '' ? 0 : parseInt(value) || 0 
+                                stock: value === '' ? 0 : Math.max(0, parseInt(value) || 0)
                               } : null);
                             }}
                             disabled={disabled}
@@ -246,6 +297,15 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                             disabled={disabled}
                           />
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <VariationImageUpload
+                          imageUrl={editingVariation?.image_url}
+                          onImageUpload={handleEditVariationImageUpload}
+                          onImageRemove={handleEditVariationImageRemove}
+                          disabled={disabled}
+                        />
                       </div>
                       
                       <div className="flex gap-2">
@@ -273,26 +333,35 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                   ) : (
                     // Modo de visualização
                     <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {formatVariationName(variation)}
-                          </Badge>
-                          {variation.sku && (
-                            <Badge variant="secondary">
-                              SKU: {variation.sku}
+                      <div className="flex items-center gap-4">
+                        {variation.image_url && (
+                          <img
+                            src={variation.image_url}
+                            alt={formatVariationName(variation)}
+                            className="w-12 h-12 object-cover rounded border"
+                          />
+                        )}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {formatVariationName(variation)}
                             </Badge>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground flex gap-4">
-                          <span>Estoque: {variation.stock}</span>
-                          <span>
-                            Ajuste: {variation.price_adjustment > 0 ? '+' : ''}
-                            {new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL'
-                            }).format(variation.price_adjustment)}
-                          </span>
+                            {variation.sku && (
+                              <Badge variant="secondary">
+                                SKU: {variation.sku}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground flex gap-4">
+                            <span>Estoque: {variation.stock}</span>
+                            <span>
+                              Ajuste: {variation.price_adjustment > 0 ? '+' : ''}
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              }).format(variation.price_adjustment)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
