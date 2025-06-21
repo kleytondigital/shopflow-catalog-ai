@@ -73,9 +73,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
   const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
   const { uploadVariationImage } = useVariationImageUpload();
   
-  // Controle mais rigoroso de carregamento inicial
-  const dataLoadedRef = useRef<string | null>(null);
-  const modeRef = useRef(mode);
+  // Controle rigoroso de carregamento e reset
+  const initialLoadDoneRef = useRef<string | null>(null);
+  const currentModeRef = useRef(mode);
+  const variationsLoadedRef = useRef<boolean>(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -104,7 +105,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     }
   });
 
-  // Função segura para atualizar variações
+  // Função para atualizar variações com proteção
   const handleVariationsChange = (newVariations: ProductVariation[]) => {
     console.log('🔄 VARIAÇÕES - Mudança solicitada:', {
       anterior: variations.length,
@@ -121,27 +122,25 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     });
     
     setVariations(newVariations);
-    console.log('✅ VARIAÇÕES - Estado atualizado com sucesso:', newVariations.length);
+    variationsLoadedRef.current = true;
+    console.log('✅ VARIAÇÕES - Estado atualizado:', newVariations.length);
   };
 
-  // CORREÇÃO CRÍTICA: Carregamento inicial controlado - executar apenas uma vez por produto
+  // CORREÇÃO: Carregamento inicial ÚNICO e controlado
   useEffect(() => {
-    const currentProductId = initialData?.id || 'new-product';
-    const currentMode = mode;
+    const currentProductId = initialData?.id || `new-${mode}`;
     
     console.log('🔍 CARREGAMENTO - Verificando necessidade:', {
-      mode: currentMode,
+      mode,
       productId: currentProductId,
-      dataLoadedFor: dataLoadedRef.current,
-      needsLoad: dataLoadedRef.current !== currentProductId
+      initialLoadDone: initialLoadDoneRef.current,
+      needsLoad: initialLoadDoneRef.current !== currentProductId,
+      variationsLoaded: variationsLoadedRef.current
     });
 
-    // Só carregar se:
-    // 1. É modo de edição E
-    // 2. Temos dados iniciais E  
-    // 3. Ainda não carregamos dados para este produto específico
-    if (currentMode === 'edit' && initialData && dataLoadedRef.current !== currentProductId) {
-      console.log('📝 CARREGAMENTO - Iniciando para produto:', {
+    // Carregamento inicial para modo de edição
+    if (mode === 'edit' && initialData && initialLoadDoneRef.current !== currentProductId) {
+      console.log('📝 CARREGAMENTO - Iniciando edição:', {
         id: initialData.id,
         name: initialData.name,
         variations_count: initialData.variations?.length || 0
@@ -169,13 +168,15 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       if (initialData.variations && Array.isArray(initialData.variations)) {
         console.log('🎨 CARREGAMENTO - Configurando variações:', initialData.variations.length);
         setVariations(initialData.variations);
+        variationsLoadedRef.current = true;
       } else {
         console.log('🎨 CARREGAMENTO - Nenhuma variação encontrada');
         setVariations([]);
+        variationsLoadedRef.current = true;
       }
       
       form.reset(formData);
-      dataLoadedRef.current = currentProductId;
+      initialLoadDoneRef.current = currentProductId;
       
       // Reset tracker após carregamento
       setTimeout(() => reset(), 300);
@@ -183,18 +184,16 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       console.log('✅ CARREGAMENTO - Concluído para produto:', currentProductId);
     }
     
-    // CORREÇÃO: Reset apenas quando mudança real de modo para 'create'
-    else if (currentMode === 'create' && modeRef.current === 'edit') {
+    // Reset controlado apenas para mudança de modo efetiva
+    else if (mode === 'create' && currentModeRef.current === 'edit') {
       console.log('🔄 RESET - Mudança de edição para criação');
       setVariations([]);
-      dataLoadedRef.current = null;
-      modeRef.current = 'create';
+      variationsLoadedRef.current = false;
+      initialLoadDoneRef.current = null;
     }
     
-    // Atualizar ref do modo
-    if (modeRef.current !== currentMode) {
-      modeRef.current = currentMode;
-    }
+    // Atualizar ref do modo atual
+    currentModeRef.current = mode;
   }, [initialData?.id, mode, form, reset]);
 
   // Gerar slug automaticamente quando o nome mudar (apenas no modo criação)
@@ -251,7 +250,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     }
   };
 
-  // Função simplificada para processar imagens das variações
+  // Função para processar imagens das variações
   const processVariationImages = async (variations: ProductVariation[]): Promise<ProductVariation[]> => {
     console.log('🖼️ IMAGENS - Processando imagens das variações:', variations.length);
     const processedVariations: ProductVariation[] = [];
@@ -298,12 +297,13 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       return;
     }
 
-    // VERIFICAÇÃO CRÍTICA MELHORADA: Estado das variações
+    // VERIFICAÇÃO CRÍTICA: Estado das variações
     console.log('🚨 CRÍTICO - Verificação completa do estado antes do salvamento:', {
       variationsLength: variations.length,
-      dataLoaded: dataLoadedRef.current,
+      initialLoadDone: initialLoadDoneRef.current,
+      variationsLoaded: variationsLoadedRef.current,
       mode: mode,
-      productId: initialData?.id,
+      productId: mode === 'edit' ? initialData?.id : 'novo-produto',
       variationsDetailed: variations.map(v => ({ 
         id: v.id, 
         color: v.color, 
@@ -360,8 +360,13 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         stock: Number(form.getValues('stock')),
       };
 
+      // CORREÇÃO: Adicionar ID apenas se estiver no modo de edição
+      if (mode === 'edit' && initialData?.id) {
+        (productData as any).id = initialData.id;
+      }
+
       console.log('💾 ENVIO FINAL - Dados do produto preparados:', {
-        id: productData.id,
+        id: mode === 'edit' ? initialData?.id : 'novo-produto',
         name: productData.name,
         mode: mode,
         variations_count: productData.variations?.length || 0,
@@ -379,7 +384,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       if (mode === 'create') {
         clearDraftImages();
         setVariations([]);
-        dataLoadedRef.current = null;
+        variationsLoadedRef.current = false;
+        initialLoadDoneRef.current = null;
       }
       
       onClose?.();
