@@ -9,12 +9,23 @@ interface EditorConfiguration {
     background: string;
     text: string;
     border: string;
+    surface: string;
   };
   global: {
     fontFamily: string;
     borderRadius: number;
     layoutSpacing: number;
     template: string;
+    fontSize: {
+      small: number;
+      medium: number;
+      large: number;
+    };
+    spacing: {
+      small: number;
+      medium: number;
+      large: number;
+    };
   };
   sections: {
     hero: {
@@ -48,6 +59,32 @@ interface EditorConfiguration {
     showBusinessHours?: boolean;
     customText?: string;
     copyrightText?: string;
+  };
+  productCards: {
+    columns: {
+      desktop: number;
+      tablet: number;
+      mobile: number;
+    };
+    backgroundColor: string;
+    borderColor: string;
+    showBorder: boolean;
+    showElements: {
+      title: boolean;
+      description: boolean;
+      price: boolean;
+      buyButton: boolean;
+    };
+    buttonStyle: {
+      backgroundColor: string;
+      textColor: string;
+      borderRadius: number;
+    };
+  };
+  productCard: {
+    showQuickView: boolean;
+    showAddToCart: boolean;
+    productCardStyle: string;
   };
   checkout: {
     showPrices: boolean;
@@ -100,6 +137,7 @@ interface EditorStore {
   resetToDefault: () => void;
   applyTemplate: (templateId: string, colors: any) => void;
   loadFromDatabase: (settings: any) => void;
+  reorderSections: (newOrder: string[]) => void;
 }
 
 const defaultConfiguration: EditorConfiguration = {
@@ -109,13 +147,24 @@ const defaultConfiguration: EditorConfiguration = {
     accent: '#8E2DE2',
     background: '#F8FAFC',
     text: '#1E293B',
-    border: '#E2E8F0'
+    border: '#E2E8F0',
+    surface: '#FFFFFF'
   },
   global: {
     fontFamily: 'Inter, system-ui, sans-serif',
     borderRadius: 8,
     layoutSpacing: 16,
-    template: 'editor'
+    template: 'editor',
+    fontSize: {
+      small: 14,
+      medium: 16,
+      large: 24
+    },
+    spacing: {
+      small: 8,
+      medium: 16,
+      large: 32
+    }
   },
   sections: {
     hero: {
@@ -148,6 +197,32 @@ const defaultConfiguration: EditorConfiguration = {
     showBusinessHours: true,
     customText: '',
     copyrightText: ''
+  },
+  productCards: {
+    columns: {
+      desktop: 4,
+      tablet: 3,
+      mobile: 2
+    },
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    showBorder: true,
+    showElements: {
+      title: true,
+      description: true,
+      price: true,
+      buyButton: true
+    },
+    buttonStyle: {
+      backgroundColor: '#0057FF',
+      textColor: '#FFFFFF',
+      borderRadius: 8
+    }
+  },
+  productCard: {
+    showQuickView: true,
+    showAddToCart: true,
+    productCardStyle: 'card'
   },
   checkout: {
     showPrices: true,
@@ -233,13 +308,24 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   applyTemplate: (templateId, colors) => set(state => ({
     configuration: {
       ...state.configuration,
-      colors,
+      colors: {
+        ...state.configuration.colors,
+        ...colors
+      },
       global: {
         ...state.configuration.global,
         template: templateId
       }
     },
     currentTemplate: templateId,
+    isDirty: true
+  })),
+
+  reorderSections: (newOrder) => set(state => ({
+    configuration: {
+      ...state.configuration,
+      sectionOrder: newOrder
+    },
     isDirty: true
   })),
 
@@ -253,6 +339,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         background: settings.background_color || defaultConfiguration.colors.background,
         text: settings.text_color || defaultConfiguration.colors.text,
         border: settings.border_color || defaultConfiguration.colors.border,
+        surface: settings.surface_color || defaultConfiguration.colors.surface,
       },
       global: {
         ...defaultConfiguration.global,

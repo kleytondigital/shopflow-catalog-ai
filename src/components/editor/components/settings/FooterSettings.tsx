@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { ColorPicker } from '../ColorPicker';
+import ColorPicker from '../ColorPicker';
 
 const FooterSettings: React.FC = () => {
   const { configuration, updateConfiguration } = useEditorStore();

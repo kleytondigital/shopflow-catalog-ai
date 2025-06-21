@@ -12,7 +12,7 @@ const SectionsManager: React.FC = () => {
   const { sections, sectionOrder } = configuration;
 
   const sectionLabels: Record<string, string> = {
-    banner: 'Banner Principal',
+    hero: 'Banner Principal',
     categories: 'Categorias',
     featuredProducts: 'Produtos em Destaque',
     testimonials: 'Depoimentos',
@@ -21,7 +21,19 @@ const SectionsManager: React.FC = () => {
   };
 
   const handleSectionToggle = (sectionKey: string, enabled: boolean) => {
-    updateConfiguration(`sections.${sectionKey}`, enabled);
+    if (sectionKey === 'hero') {
+      updateConfiguration({
+        sections: {
+          ...sections,
+          hero: {
+            ...sections.hero,
+            enabled
+          }
+        }
+      });
+    } else {
+      updateConfiguration(`sections.${sectionKey}`, enabled);
+    }
   };
 
   const moveSection = (index: number, direction: 'up' | 'down') => {
@@ -35,7 +47,7 @@ const SectionsManager: React.FC = () => {
   };
 
   // Garantir que sectionOrder existe
-  const currentSectionOrder = sectionOrder || ['banner', 'categories', 'featuredProducts', 'testimonials', 'newsletter', 'footer'];
+  const currentSectionOrder = sectionOrder || ['hero', 'categories', 'featuredProducts', 'footer'];
 
   return (
     <Card>
@@ -48,7 +60,9 @@ const SectionsManager: React.FC = () => {
           
           <div className="space-y-2">
             {currentSectionOrder.map((sectionKey, index) => {
-              const isEnabled = sections[sectionKey as keyof typeof sections] || false;
+              const isEnabled = sectionKey === 'hero' 
+                ? sections.hero.enabled 
+                : sections[sectionKey as keyof typeof sections] as boolean || false;
               const label = sectionLabels[sectionKey] || sectionKey;
               
               return (
