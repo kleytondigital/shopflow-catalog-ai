@@ -15,7 +15,7 @@ export const useTemplateSync = () => {
       console.log('useTemplateSync: Carregando configurações do banco:', settings);
       loadFromDatabase(settings);
     }
-  }, [settings, loading, loadFromDatabase]);
+  }, [settings, loading]);
 
   // Função para salvar no banco
   const saveToDatabase = async () => {
@@ -26,13 +26,16 @@ export const useTemplateSync = () => {
     console.log('useTemplateSync: Salvando configurações:', configuration);
 
     const updates = {
-      template_name: configuration.global.templateName,
-      primary_color: configuration.global.primaryColor,
-      secondary_color: configuration.global.secondaryColor,
-      accent_color: configuration.global.accentColor,
-      background_color: configuration.global.backgroundColor,
-      text_color: configuration.global.textColor,
-      border_color: configuration.global.borderColor,
+      template_name: configuration.global.template,
+      primary_color: configuration.colors.primary,
+      secondary_color: configuration.colors.secondary,
+      accent_color: configuration.colors.accent,
+      background_color: configuration.colors.background,
+      text_color: configuration.colors.text,
+      border_color: configuration.colors.border,
+      font_family: configuration.global.fontFamily,
+      layout_spacing: configuration.global.layoutSpacing,
+      border_radius: configuration.global.borderRadius,
       show_prices: configuration.checkout.showPrices,
       allow_categories_filter: configuration.checkout.allowFilters,
     };

@@ -14,11 +14,10 @@ interface EditorStore {
   resetToDefault: () => void;
   configuration: any;
   updateConfiguration: (path: string, value: any) => void;
-  // Novas propriedades adicionadas
   currentTemplate: string;
-  applyTemplate: (templateName: string) => void;
+  applyTemplate: (templateName: string, colors?: any) => void;
   reorderSections: (sections: string[]) => void;
-  loadFromDatabase: () => Promise<void>;
+  loadFromDatabase: (settings?: any) => Promise<void>;
 }
 
 const defaultConfiguration = {
@@ -122,20 +121,25 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
   
-  // Novas implementações
   currentTemplate: 'modern',
-  applyTemplate: (templateName: string) => {
-    set((state) => ({
-      currentTemplate: templateName,
-      configuration: {
-        ...state.configuration,
-        global: {
-          ...state.configuration.global,
-          template: templateName
-        }
-      },
-      isDirty: true
-    }));
+  applyTemplate: (templateName: string, colors?: any) => {
+    set((state) => {
+      const newConfiguration = { ...state.configuration };
+      
+      // Aplicar template
+      newConfiguration.global.template = templateName;
+      
+      // Aplicar cores se fornecidas
+      if (colors) {
+        newConfiguration.colors = { ...newConfiguration.colors, ...colors };
+      }
+      
+      return {
+        currentTemplate: templateName,
+        configuration: newConfiguration,
+        isDirty: true
+      };
+    });
   },
   
   reorderSections: (sections: string[]) => {
@@ -151,10 +155,35 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }));
   },
   
-  loadFromDatabase: async () => {
-    // Implementação simples para evitar erro
-    // Em um cenário real, carregaria do banco
-    console.log('Carregando configurações do banco...');
-    set({ isDirty: false });
+  loadFromDatabase: async (settings?: any) => {
+    if (settings) {
+      console.log('Carregando configurações do banco:', settings);
+      set((state) => ({
+        configuration: {
+          ...state.configuration,
+          global: {
+            ...state.configuration.global,
+            template: settings.template_name || 'modern',
+            fontFamily: settings.font_family || 'Inter, sans-serif',
+            borderRadius: settings.border_radius || 8,
+            layoutSpacing: settings.layout_spacing || 16,
+          },
+          colors: {
+            ...state.configuration.colors,
+            primary: settings.primary_color || '#0057FF',
+            secondary: settings.secondary_color || '#FF6F00',
+            accent: settings.accent_color || '#8E2DE2',
+            background: settings.background_color || '#F8FAFC',
+            text: settings.text_color || '#1E293B',
+            border: settings.border_color || '#E2E8F0',
+          }
+        },
+        currentTemplate: settings.template_name || 'modern',
+        isDirty: false
+      }));
+    } else {
+      console.log('Carregando configurações do banco...');
+      set({ isDirty: false });
+    }
   }
 }));
