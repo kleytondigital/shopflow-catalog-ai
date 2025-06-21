@@ -31,14 +31,14 @@ const ModernCatalogTemplate: React.FC<ModernCatalogTemplateProps> = ({
   onCartClick,
   children
 }) => {
-  const { applyColorsToDocument, colors } = useTemplateColors(store.url_slug || store.id);
+  const { applyColorsToDocument, colorScheme } = useTemplateColors(store.url_slug || store.id);
 
   useEffect(() => {
     applyColorsToDocument();
   }, [applyColorsToDocument]);
 
-  const backgroundStyle = colors ? 
-    `linear-gradient(135deg, ${colors.background}dd 0%, ${colors.primary}11 50%, ${colors.secondary}11 100%)` :
+  const backgroundStyle = colorScheme ? 
+    `linear-gradient(135deg, ${colorScheme.background}dd 0%, ${colorScheme.primary}11 50%, ${colorScheme.secondary}11 100%)` :
     'linear-gradient(135deg, #f8fafc 0%, #0057ff11 50%, #ff6f0011 100%)';
 
   return (

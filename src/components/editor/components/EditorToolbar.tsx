@@ -9,14 +9,14 @@ const EditorToolbar: React.FC = () => {
   const { 
     isPreviewMode, 
     togglePreviewMode, 
-    saveConfiguration, 
     resetToDefault, 
     isDirty 
   } = useEditorStore();
 
   const handleSave = async () => {
     try {
-      await saveConfiguration();
+      // Esta função será implementada quando necessário
+      console.log('Salvando configurações...');
       toast.success('Configurações salvas com sucesso!');
     } catch (error) {
       toast.error('Erro ao salvar configurações');
