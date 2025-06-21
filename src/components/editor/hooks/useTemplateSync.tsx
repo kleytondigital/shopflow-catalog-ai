@@ -6,32 +6,24 @@ import { useAuth } from '@/hooks/useAuth';
 
 export const useTemplateSync = () => {
   const { profile } = useAuth();
-  const { settings, updateSettings } = useCatalogSettings();
-  const { configuration, updateConfiguration, syncWithDatabase } = useEditorStore();
+  const { settings, updateSettings, loading } = useCatalogSettings();
+  const { configuration, updateConfiguration, loadFromDatabase, isDirty } = useEditorStore();
 
-  // Sincronizar configurações do banco com o editor
+  // Carregar configurações do banco na inicialização
   useEffect(() => {
-    if (settings && profile?.store_id) {
-      // Atualizar configurações do editor com dados do banco
-      updateConfiguration('global.primaryColor', settings.primary_color);
-      updateConfiguration('global.secondaryColor', settings.secondary_color);
-      updateConfiguration('global.accentColor', settings.accent_color);
-      updateConfiguration('global.backgroundColor', settings.background_color);
-      updateConfiguration('global.textColor', settings.text_color);
-      updateConfiguration('global.templateName', settings.template_name);
-      
-      // Configurações de checkout
-      updateConfiguration('checkout.colors.primary', settings.primary_color);
-      updateConfiguration('checkout.colors.secondary', settings.secondary_color);
-      updateConfiguration('checkout.colors.accent', settings.accent_color);
-      updateConfiguration('checkout.showPrices', settings.show_prices);
-      updateConfiguration('checkout.allowFilters', settings.allow_categories_filter);
+    if (settings && !loading) {
+      console.log('useTemplateSync: Carregando configurações do banco:', settings);
+      loadFromDatabase(settings);
     }
-  }, [settings, profile?.store_id, updateConfiguration]);
+  }, [settings, loading, loadFromDatabase]);
 
   // Função para salvar no banco
   const saveToDatabase = async () => {
-    if (!settings || !updateSettings) return;
+    if (!settings || !updateSettings) {
+      throw new Error('Configurações não disponíveis para salvar');
+    }
+
+    console.log('useTemplateSync: Salvando configurações:', configuration);
 
     const updates = {
       template_name: configuration.global.templateName,
@@ -45,12 +37,22 @@ export const useTemplateSync = () => {
       allow_categories_filter: configuration.checkout.allowFilters,
     };
 
-    return await updateSettings(updates);
+    const result = await updateSettings(updates);
+    
+    if (result.error) {
+      throw new Error('Erro ao salvar no banco de dados');
+    }
+
+    // Marcar como salvo
+    useEditorStore.setState({ isDirty: false });
+    
+    return result;
   };
 
   return {
     settings,
     saveToDatabase,
-    isConnected: !!settings
+    isConnected: !!settings && !loading,
+    loading
   };
 };

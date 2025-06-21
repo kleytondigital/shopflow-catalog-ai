@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -155,11 +154,10 @@ interface EditorStore {
   setSelectedElement: (elementId: string | null) => void;
   setCurrentDevice: (device: 'desktop' | 'tablet' | 'mobile') => void;
   togglePreviewMode: () => void;
-  saveConfiguration: () => Promise<void>;
   resetToDefault: () => void;
   reorderSections: (newOrder: string[]) => void;
   applyTemplate: (templateId: string, colors?: any) => void;
-  syncWithDatabase: () => Promise<void>;
+  loadFromDatabase: (settings: any) => void;
 }
 
 const defaultConfiguration: EditorConfiguration = {
@@ -342,9 +340,34 @@ export const useEditorStore = create<EditorStore>()(
         });
       },
       
-      syncWithDatabase: async () => {
-        // Implementar sincronização com o banco via hook
-        console.log('Sincronizando com banco de dados...');
+      loadFromDatabase: (settings: any) => {
+        set((state) => {
+          const newConfig = { ...state.configuration };
+          
+          // Mapear dados do banco para configuração do editor
+          if (settings) {
+            newConfig.global.primaryColor = settings.primary_color || newConfig.global.primaryColor;
+            newConfig.global.secondaryColor = settings.secondary_color || newConfig.global.secondaryColor;
+            newConfig.global.accentColor = settings.accent_color || newConfig.global.accentColor;
+            newConfig.global.backgroundColor = settings.background_color || newConfig.global.backgroundColor;
+            newConfig.global.textColor = settings.text_color || newConfig.global.textColor;
+            newConfig.global.borderColor = settings.border_color || newConfig.global.borderColor;
+            newConfig.global.templateName = settings.template_name || newConfig.global.templateName;
+            
+            // Configurações de checkout
+            newConfig.checkout.colors.primary = settings.primary_color || newConfig.checkout.colors.primary;
+            newConfig.checkout.colors.secondary = settings.secondary_color || newConfig.checkout.colors.secondary;
+            newConfig.checkout.colors.accent = settings.accent_color || newConfig.checkout.colors.accent;
+            newConfig.checkout.showPrices = settings.show_prices ?? newConfig.checkout.showPrices;
+            newConfig.checkout.allowFilters = settings.allow_categories_filter ?? newConfig.checkout.allowFilters;
+          }
+          
+          return {
+            configuration: newConfig,
+            currentTemplate: settings?.template_name || 'modern',
+            isDirty: false,
+          };
+        });
       },
       
       setSelectedElement: (elementId) => set({ selectedElement: elementId }),
@@ -352,12 +375,6 @@ export const useEditorStore = create<EditorStore>()(
       setCurrentDevice: (device) => set({ currentDevice: device }),
       
       togglePreviewMode: () => set((state) => ({ isPreviewMode: !state.isPreviewMode })),
-      
-      saveConfiguration: async () => {
-        // TODO: Implementar salvamento no Supabase via hook
-        console.log('Salvando configuração...', get().configuration);
-        set({ isDirty: false });
-      },
       
       resetToDefault: () => set({ 
         configuration: defaultConfiguration, 

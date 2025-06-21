@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
+import { useEditorSync } from '@/hooks/useEditorSync';
 import ProductGrid from './ProductGrid';
 import FilterSidebar from './FilterSidebar';
 import TemplateWrapper from './TemplateWrapper';
@@ -19,6 +20,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 }) => {
   const { store, products, filteredProducts, loading: catalogLoading, searchProducts, filterProducts } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
+  const { templateName } = useEditorSync(storeIdentifier);
   const { totalItems } = useCart();
   
   const [wishlist, setWishlist] = useState<Product[]>([]);
@@ -64,8 +66,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       </div>
     );
   }
-
-  const templateName = settings?.template_name || 'modern';
 
   return (
     <div className="relative">
