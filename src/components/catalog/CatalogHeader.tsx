@@ -101,6 +101,12 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
         .store-description {
           color: var(--template-text-muted, #64748B);
         }
+        
+        .header-logo-ring {
+          border: 2px solid;
+          border-color: var(--template-primary, #0057FF);
+          opacity: 0.2;
+        }
       `}</style>
       
       <header className="catalog-header sticky top-0 z-50 shadow-sm">
@@ -125,7 +131,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                       alt={`Logo ${store.name}`}
                       className="w-10 h-10 rounded-xl object-cover shadow-sm"
                     />
-                    <div className="absolute inset-0 rounded-xl ring-2" style={{ ringColor: 'var(--template-primary)' + '33' }}></div>
+                    <div className="absolute inset-0 rounded-xl header-logo-ring"></div>
                   </div>
                 ) : (
                   <div className="header-logo-gradient w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">
@@ -186,7 +192,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                 {cartItemsCount > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg animate-pulse"
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
                   >
                     {cartItemsCount}
                   </Badge>
