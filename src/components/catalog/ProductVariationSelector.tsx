@@ -3,7 +3,17 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProductVariation } from '@/hooks/useProductVariations';
+
+interface ProductVariation {
+  id: string;
+  color: string | null;
+  size: string | null;
+  sku: string | null;
+  stock: number;
+  price_adjustment: number;
+  is_active: boolean;
+  image_url: string | null;
+}
 
 interface ProductVariationSelectorProps {
   variations: ProductVariation[];
@@ -18,6 +28,22 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   onVariationChange,
   loading = false
 }) => {
+  console.log('🎨 SELECTOR - Recebendo variações:', {
+    total: variations?.length || 0,
+    variations: variations?.map(v => ({
+      id: v.id,
+      color: v.color,
+      size: v.size,
+      stock: v.stock,
+      hasImage: !!v.image_url
+    })) || [],
+    selectedVariation: selectedVariation ? {
+      id: selectedVariation.id,
+      color: selectedVariation.color,
+      size: selectedVariation.size
+    } : null
+  });
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -31,13 +57,21 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
     );
   }
 
-  if (variations.length === 0) {
+  if (!variations || variations.length === 0) {
+    console.log('⚠️ SELECTOR - Nenhuma variação disponível');
     return null;
   }
 
   // Agrupar variações por atributos
   const colors = [...new Set(variations.filter(v => v.color).map(v => v.color))];
   const sizes = [...new Set(variations.filter(v => v.size).map(v => v.size))];
+
+  console.log('🎨 SELECTOR - Atributos agrupados:', {
+    colors: colors.length,
+    sizes: sizes.length,
+    colorsArray: colors,
+    sizesArray: sizes
+  });
 
   const getVariationsForAttributes = (color?: string, size?: string) => {
     return variations.filter(v => 
@@ -53,6 +87,13 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
 
   const handleAttributeSelection = (color?: string, size?: string) => {
     const matchingVariations = getVariationsForAttributes(color, size);
+    
+    console.log('🎯 SELECTOR - Seleção de atributo:', {
+      color,
+      size,
+      matchingVariations: matchingVariations.length,
+      variations: matchingVariations.map(v => ({ id: v.id, stock: v.stock }))
+    });
     
     if (matchingVariations.length === 1) {
       onVariationChange(matchingVariations[0]);
@@ -74,7 +115,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
           <div className="flex gap-2 flex-wrap">
             {colors.map((color) => {
               const isSelected = selectedVariation?.color === color;
-              const stock = getAvailableStock(color, selectedVariation?.size);
+              const stock = getAvailableStock(color as string, selectedVariation?.size || undefined);
               const isAvailable = stock > 0;
 
               return (
@@ -82,7 +123,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                   key={color}
                   variant={isSelected ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleAttributeSelection(color, selectedVariation?.size)}
+                  onClick={() => handleAttributeSelection(color as string, selectedVariation?.size || undefined)}
                   disabled={!isAvailable}
                   className={`relative ${!isAvailable ? 'opacity-50' : ''}`}
                 >
@@ -106,7 +147,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
           <div className="flex gap-2 flex-wrap">
             {sizes.map((size) => {
               const isSelected = selectedVariation?.size === size;
-              const stock = getAvailableStock(selectedVariation?.color, size);
+              const stock = getAvailableStock(selectedVariation?.color || undefined, size as string);
               const isAvailable = stock > 0;
 
               return (
@@ -114,7 +155,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                   key={size}
                   variant={isSelected ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleAttributeSelection(selectedVariation?.color, size)}
+                  onClick={() => handleAttributeSelection(selectedVariation?.color || undefined, size as string)}
                   disabled={!isAvailable}
                   className={`relative ${!isAvailable ? 'opacity-50' : ''}`}
                 >
@@ -135,7 +176,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
       {selectedVariation && (
         <div className="p-3 bg-gray-50 rounded-lg">
           <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               {selectedVariation.color && (
                 <Badge variant="outline">{selectedVariation.color}</Badge>
               )}
@@ -146,16 +187,38 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                 <Badge variant="outline">SKU: {selectedVariation.sku}</Badge>
               )}
             </div>
-            <div className="text-sm">
+            <div className="text-sm flex items-center gap-2">
               <span className="font-medium">{selectedVariation.stock} em estoque</span>
               {selectedVariation.price_adjustment !== 0 && (
-                <span className="ml-2 text-primary">
+                <span className="text-primary">
                   {selectedVariation.price_adjustment > 0 ? '+' : ''}
                   R$ {selectedVariation.price_adjustment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               )}
             </div>
           </div>
+          
+          {/* Mostrar imagem da variação se disponível */}
+          {selectedVariation.image_url && (
+            <div className="mt-2">
+              <img
+                src={selectedVariation.image_url}
+                alt={`${selectedVariation.color || ''} ${selectedVariation.size || ''}`.trim()}
+                className="w-16 h-16 object-cover rounded border"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+          <strong>🐛 DEBUG SELECTOR:</strong>
+          <div>Total variações: {variations.length}</div>
+          <div>Cores disponíveis: {colors.join(', ') || 'Nenhuma'}</div>
+          <div>Tamanhos disponíveis: {sizes.join(', ') || 'Nenhum'}</div>
+          <div>Variação selecionada: {selectedVariation ? `${selectedVariation.color || 'S/C'} ${selectedVariation.size || 'S/T'}` : 'Nenhuma'}</div>
         </div>
       )}
     </div>

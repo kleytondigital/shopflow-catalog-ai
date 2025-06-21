@@ -4,7 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type CatalogType = 'retail' | 'wholesale';
 
-// Usar o tipo Product do useProducts.tsx para evitar conflitos
+// Interface para variações no catálogo
+export interface CatalogProductVariation {
+  id: string;
+  color: string | null;
+  size: string | null;
+  sku: string | null;
+  stock: number;
+  price_adjustment: number;
+  is_active: boolean;
+  image_url: string | null;
+}
+
+// Usar o tipo Product atualizado para incluir variações
 export interface Product {
   id: string;
   store_id: string;
@@ -27,7 +39,7 @@ export interface Product {
   keywords: string | null;
   created_at: string;
   updated_at: string;
-  variations?: any[];
+  variations?: CatalogProductVariation[];
 }
 
 // Interface Store alinhada com os dados reais do Supabase
@@ -64,6 +76,8 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     setLoading(true);
     setStoreError(null);
     try {
+      console.log('🏪 CATÁLOGO - Carregando loja:', identifier);
+
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
@@ -71,24 +85,30 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
         .single();
 
       if (storeError) {
-        console.error('Erro ao buscar loja:', storeError);
+        console.error('❌ Erro ao buscar loja:', storeError);
         setStoreError(`Erro ao buscar loja: ${storeError.message}`);
         setLoading(false);
         return false;
       }
 
       if (!storeData) {
-        console.warn('Loja não encontrada');
+        console.warn('⚠️ Loja não encontrada');
         setStoreError('Loja não encontrada.');
         setLoading(false);
         return false;
       }
 
+      console.log('✅ Loja carregada:', {
+        id: storeData.id,
+        name: storeData.name,
+        url_slug: storeData.url_slug
+      });
+
       setStore(storeData);
       return storeData;
 
     } catch (error) {
-      console.error('Erro ao carregar loja:', error);
+      console.error('🚨 Erro ao carregar loja:', error);
       setStoreError('Erro ao carregar loja.');
       return false;
     } finally {
@@ -99,33 +119,69 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
   const loadProducts = useCallback(async (storeId: string, type: CatalogType) => {
     setLoading(true);
     try {
+      console.log('📦 CATÁLOGO - Carregando produtos com variações:', {
+        storeId,
+        type,
+        timestamp: new Date().toISOString()
+      });
+
+      // Buscar produtos com suas variações em uma única query otimizada
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_variations!inner (
+            id,
+            color,
+            size,
+            sku,
+            stock,
+            price_adjustment,
+            is_active,
+            image_url
+          )
+        `)
         .eq('store_id', storeId)
         .eq('is_active', true)
+        .eq('product_variations.is_active', true)
         .order('name', { ascending: true });
 
       if (productsError) {
-        console.error('Erro ao buscar produtos:', productsError);
+        console.error('❌ Erro ao buscar produtos:', productsError);
         setLoading(false);
         return false;
       }
 
-      const typedProducts = productsData as Product[];
+      // Transformar os dados para incluir variações corretamente
+      const productsWithVariations = productsData?.map(product => ({
+        ...product,
+        variations: product.product_variations || []
+      })) || [];
+
+      console.log('✅ CATÁLOGO - Produtos carregados com variações:', {
+        total: productsWithVariations.length,
+        withVariations: productsWithVariations.filter(p => p.variations?.length > 0).length,
+        variationsPreview: productsWithVariations.slice(0, 2).map(p => ({
+          name: p.name,
+          variations: p.variations?.length || 0
+        }))
+      });
       
       if (type === 'wholesale') {
-        const wholesaleProducts = typedProducts.filter(product => product.wholesale_price !== null && product.wholesale_price > 0);
+        const wholesaleProducts = productsWithVariations.filter(product => 
+          product.wholesale_price !== null && product.wholesale_price > 0
+        );
+        console.log('🏪 CATÁLOGO - Produtos atacado filtrados:', wholesaleProducts.length);
         setProducts(wholesaleProducts);
         setFilteredProducts(wholesaleProducts);
       } else {
-        setProducts(typedProducts);
-        setFilteredProducts(typedProducts);
+        setProducts(productsWithVariations);
+        setFilteredProducts(productsWithVariations);
       }
 
       return true;
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
+      console.error('🚨 Erro ao carregar produtos:', error);
       return false;
     } finally {
       setLoading(false);
@@ -135,8 +191,11 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
   const initializeCatalog = useCallback(async (identifier: string, type: CatalogType) => {
     // Avoid reloading if same store and catalog type
     if (loadedStoreRef.current === identifier && loadedCatalogTypeRef.current === type) {
+      console.log('ℹ️ CATÁLOGO - Cache hit, não recarregando');
       return true;
     }
+
+    console.log('🚀 CATÁLOGO - Inicializando:', { identifier, type });
 
     setLoading(true);
     setStoreError(null);
@@ -152,6 +211,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     if (productsLoaded) {
       loadedStoreRef.current = identifier;
       loadedCatalogTypeRef.current = type;
+      console.log('✅ CATÁLOGO - Inicialização concluída com sucesso');
     }
     
     setLoading(false);
@@ -173,6 +233,10 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       (product.description && product.description.toLowerCase().includes(searchTerm)) ||
       (product.category && product.category.toLowerCase().includes(searchTerm))
     );
+    console.log('🔍 CATÁLOGO - Busca realizada:', {
+      query,
+      results: results.length
+    });
     setFilteredProducts(results);
   }, [products]);
 
@@ -187,7 +251,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       materials?: string[];
     };
   } = {}) => {
-    console.log('useCatalog: Aplicando filtros:', options);
+    console.log('🎯 CATÁLOGO - Aplicando filtros:', options);
     
     let filtered = [...products];
     
@@ -210,7 +274,17 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     
     // Filtro por estoque
     if (options.inStock) {
-      filtered = filtered.filter(product => product.stock > 0);
+      filtered = filtered.filter(product => {
+        // Verificar estoque do produto principal
+        if (product.stock > 0) return true;
+        
+        // Verificar estoque nas variações
+        if (product.variations && product.variations.length > 0) {
+          return product.variations.some(v => v.stock > 0);
+        }
+        
+        return false;
+      });
     }
     
     // Filtros por variações
@@ -244,7 +318,11 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       }
     }
     
-    console.log('useCatalog: Produtos filtrados:', filtered.length);
+    console.log('✅ CATÁLOGO - Filtros aplicados:', {
+      original: products.length,
+      filtered: filtered.length
+    });
+    
     setFilteredProducts(filtered);
   }, [products]);
 

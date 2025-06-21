@@ -13,6 +13,17 @@ import ProductVariationSelector from './ProductVariationSelector';
 import { useCart } from '@/hooks/useCart';
 import { useProductImages } from '@/hooks/useProductImages';
 
+interface ProductVariation {
+  id: string;
+  color: string | null;
+  size: string | null;
+  sku: string | null;
+  stock: number;
+  price_adjustment: number;
+  is_active: boolean;
+  image_url: string | null;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -23,7 +34,7 @@ interface Product {
   category: string;
   stock: number;
   min_wholesale_qty?: number;
-  variations?: any[];
+  variations?: ProductVariation[];
 }
 
 interface ProductDetailsModalProps {
@@ -40,17 +51,32 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   catalogType
 }) => {
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariation, setSelectedVariation] = useState<any>(null);
+  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [productImages, setProductImages] = useState<string[]>([]);
   const { addItem } = useCart();
   const { getProductImages } = useProductImages();
+
+  console.log('🔍 MODAL - Produto recebido:', {
+    productId: product?.id,
+    hasVariations: !!product?.variations?.length,
+    variationsCount: product?.variations?.length || 0,
+    variations: product?.variations?.map(v => ({
+      id: v.id,
+      color: v.color,
+      size: v.size,
+      stock: v.stock,
+      hasImage: !!v.image_url
+    })) || []
+  });
 
   // Carregar imagens do produto quando o modal abrir
   useEffect(() => {
     if (product?.id && isOpen) {
       const loadImages = async () => {
         try {
+          console.log('📸 MODAL - Carregando imagens para produto:', product.id);
+          
           const images = await getProductImages(product.id);
           const imageUrls = images.map(img => img.image_url);
           
@@ -58,50 +84,108 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
           if (product.image_url && !imageUrls.includes(product.image_url)) {
             imageUrls.unshift(product.image_url);
           }
+
+          // Incluir imagens das variações
+          if (product.variations) {
+            product.variations.forEach(variation => {
+              if (variation.image_url && !imageUrls.includes(variation.image_url)) {
+                imageUrls.push(variation.image_url);
+              }
+            });
+          }
           
-          setProductImages(imageUrls.length > 0 ? imageUrls : [product.image_url || '/placeholder.svg']);
+          const finalImages = imageUrls.length > 0 ? imageUrls : [product.image_url || '/placeholder.svg'];
+          
+          console.log('✅ MODAL - Imagens carregadas:', {
+            total: finalImages.length,
+            images: finalImages.slice(0, 3)
+          });
+          
+          setProductImages(finalImages);
         } catch (error) {
-          console.error('Erro ao carregar imagens:', error);
+          console.error('❌ Erro ao carregar imagens:', error);
           setProductImages([product.image_url || '/placeholder.svg']);
         }
       };
       
       loadImages();
     }
-  }, [product?.id, product?.image_url, isOpen, getProductImages]);
+  }, [product?.id, product?.image_url, product?.variations, isOpen, getProductImages]);
 
   // Reset states when product changes
   useEffect(() => {
     if (product) {
-      setQuantity(catalogType === 'wholesale' ? (product.min_wholesale_qty || 1) : 1);
+      const minQty = catalogType === 'wholesale' ? (product.min_wholesale_qty || 1) : 1;
+      setQuantity(minQty);
       setSelectedVariation(null);
       setSelectedImageIndex(0);
+      
+      console.log('🔄 MODAL - Estados resetados:', {
+        quantity: minQty,
+        catalogType,
+        hasVariations: !!product.variations?.length
+      });
     }
   }, [product, catalogType]);
+
+  // Atualizar imagem quando variação é selecionada
+  useEffect(() => {
+    if (selectedVariation?.image_url && productImages.includes(selectedVariation.image_url)) {
+      const variationImageIndex = productImages.indexOf(selectedVariation.image_url);
+      setSelectedImageIndex(variationImageIndex);
+      
+      console.log('🖼️ MODAL - Imagem da variação selecionada:', {
+        variationId: selectedVariation.id,
+        imageIndex: variationImageIndex,
+        imageUrl: selectedVariation.image_url
+      });
+    }
+  }, [selectedVariation, productImages]);
 
   if (!product) return null;
 
   const price = catalogType === 'retail' ? product.retail_price : (product.wholesale_price || product.retail_price);
   const minQty = catalogType === 'wholesale' ? (product.min_wholesale_qty || 1) : 1;
 
+  // Calcular preço final com ajuste da variação
+  const finalPrice = selectedVariation 
+    ? price + (selectedVariation.price_adjustment || 0)
+    : price;
+
+  // Calcular estoque disponível
+  const availableStock = selectedVariation 
+    ? selectedVariation.stock 
+    : product.stock;
+
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= minQty && newQuantity <= product.stock) {
+    if (newQuantity >= minQty && newQuantity <= availableStock) {
       setQuantity(newQuantity);
     }
   };
 
   const handleAddToCart = () => {
+    console.log('🛒 MODAL - Adicionando ao carrinho:', {
+      productId: product.id,
+      quantity,
+      selectedVariation: selectedVariation ? {
+        id: selectedVariation.id,
+        color: selectedVariation.color,
+        size: selectedVariation.size
+      } : null,
+      finalPrice
+    });
+
     addItem({
-      id: `${product.id}-${Date.now()}`,
+      id: `${product.id}-${selectedVariation?.id || 'main'}-${Date.now()}`,
       product: {
         id: product.id,
         name: product.name,
         retail_price: product.retail_price,
         wholesale_price: product.wholesale_price,
-        image_url: product.image_url
+        image_url: selectedVariation?.image_url || product.image_url
       },
       quantity: quantity,
-      price: price,
+      price: finalPrice,
       variations: selectedVariation,
       catalogType: catalogType
     });
@@ -130,6 +214,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 src={currentImage}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
               />
             </div>
             
@@ -147,6 +234,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       src={image}
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
                     />
                   </button>
                 ))}
@@ -170,7 +260,16 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 {new Intl.NumberFormat('pt-BR', {
                   style: 'currency',
                   currency: 'BRL'
-                }).format(price)}
+                }).format(finalPrice)}
+                {selectedVariation?.price_adjustment !== 0 && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    (Ajuste: {selectedVariation.price_adjustment > 0 ? '+' : ''}
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(selectedVariation.price_adjustment)})
+                  </span>
+                )}
               </div>
               
               {catalogType === 'wholesale' && minQty > 1 && (
@@ -180,17 +279,20 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               )}
               
               <p className="text-sm text-gray-600 mb-6">
-                Estoque disponível: {product.stock} unidades
+                Estoque disponível: {availableStock} unidades
               </p>
             </div>
 
             {/* Seletor de Variações */}
             {product.variations && product.variations.length > 0 && (
-              <ProductVariationSelector
-                variations={product.variations}
-                selectedVariation={selectedVariation}
-                onVariationChange={setSelectedVariation}
-              />
+              <div>
+                <h3 className="font-medium mb-3">Opções do Produto</h3>
+                <ProductVariationSelector
+                  variations={product.variations}
+                  selectedVariation={selectedVariation}
+                  onVariationChange={setSelectedVariation}
+                />
+              </div>
             )}
 
             {/* Controle de Quantidade */}
@@ -212,7 +314,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  disabled={quantity >= product.stock}
+                  disabled={quantity >= availableStock}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -224,10 +326,10 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <Button
                 onClick={handleAddToCart}
                 className="w-full"
-                disabled={product.stock === 0}
+                disabled={availableStock === 0}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                {product.stock === 0 ? 'Sem Estoque' : 'Adicionar ao Carrinho'}
+                {availableStock === 0 ? 'Sem Estoque' : 'Adicionar ao Carrinho'}
               </Button>
               
               <Button variant="outline" className="w-full">
@@ -235,6 +337,18 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 Adicionar aos Favoritos
               </Button>
             </div>
+
+            {/* Debug Info */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <strong>🐛 DEBUG MODAL:</strong>
+                <div>Variações recebidas: {product.variations?.length || 0}</div>
+                <div>Variação selecionada: {selectedVariation?.id || 'Nenhuma'}</div>
+                <div>Estoque disponível: {availableStock}</div>
+                <div>Preço final: R$ {finalPrice.toFixed(2)}</div>
+                <div>Imagens: {productImages.length}</div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

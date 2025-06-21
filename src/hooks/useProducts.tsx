@@ -24,6 +24,21 @@ export interface Product {
   seo_slug: string | null;
   created_at: string;
   updated_at: string;
+  variations?: ProductVariation[];
+}
+
+export interface ProductVariation {
+  id: string;
+  product_id: string;
+  color: string | null;
+  size: string | null;
+  sku: string | null;
+  stock: number;
+  price_adjustment: number;
+  is_active: boolean;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateProductData {
@@ -68,21 +83,46 @@ export const useProducts = (storeId?: string) => {
         return;
       }
 
-      console.log('🔒 [SECURITY] Buscando produtos para store_id:', targetStoreId);
+      console.log('🔒 [SECURITY] Buscando produtos com variações para store_id:', targetStoreId);
       
-      const { data, error } = await supabase
+      // Buscar produtos com suas variações em uma única query
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
-        .eq('store_id', targetStoreId) // SEMPRE filtrar por store_id
+        .select(`
+          *,
+          product_variations (
+            id,
+            color,
+            size,
+            sku,
+            stock,
+            price_adjustment,
+            is_active,
+            image_url,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('store_id', targetStoreId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('🚨 [SECURITY] Erro ao buscar produtos:', error);
-        throw error;
+      if (productsError) {
+        console.error('🚨 [SECURITY] Erro ao buscar produtos:', productsError);
+        throw productsError;
       }
 
-      console.log('✅ [SECURITY] Produtos carregados com segurança:', data?.length || 0);
-      setProducts(data || []);
+      // Transformar dados para incluir variações
+      const productsWithVariations = productsData?.map(product => ({
+        ...product,
+        variations: product.product_variations || []
+      })) || [];
+
+      console.log('✅ [SECURITY] Produtos carregados com variações:', {
+        total: productsWithVariations.length,
+        withVariations: productsWithVariations.filter(p => p.variations?.length > 0).length
+      });
+
+      setProducts(productsWithVariations);
     } catch (error) {
       console.error('🚨 [SECURITY] Erro crítico ao buscar produtos:', error);
       setProducts([]); // Limpar produtos em caso de erro
@@ -535,10 +575,24 @@ export const useProducts = (storeId?: string) => {
 
       console.log('🔍 Buscando produto com variações:', id);
 
-      // Buscar produto
+      // Buscar produto com variações em uma única query
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_variations (
+            id,
+            color,
+            size,
+            sku,
+            stock,
+            price_adjustment,
+            is_active,
+            image_url,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('id', id)
         .eq('store_id', profile.store_id)
         .single();
@@ -548,26 +602,20 @@ export const useProducts = (storeId?: string) => {
         throw productError;
       }
 
-      // Buscar variações do produto
-      const { data: variations, error: variationsError } = await supabase
-        .from('product_variations')
-        .select('*')
-        .eq('product_id', id)
-        .order('created_at', { ascending: true });
-
-      if (variationsError) {
-        console.error('❌ Erro ao buscar variações:', variationsError);
-      }
-
       const productWithVariations = {
         ...product,
-        variations: variations || []
+        variations: product.product_variations || []
       };
 
-      console.log('✅ Produto carregado:', {
+      console.log('✅ Produto carregado com variações:', {
         id: product.id,
         name: product.name,
-        variations_count: variations?.length || 0
+        variations_count: product.product_variations?.length || 0,
+        variationsPreview: product.product_variations?.slice(0, 2).map(v => ({
+          color: v.color,
+          size: v.size,
+          stock: v.stock
+        })) || []
       });
 
       return { data: productWithVariations, error: null };
