@@ -174,7 +174,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
             shipping: false,
           },
           business_hours: {},
-          template_name: 'default',
+          template_name: 'modern', // Mudando de 'default' para 'modern'
           custom_domain: null,
           catalog_url_slug: null,
           seo_title: null,
@@ -211,7 +211,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           ...newSettings,
           payment_methods: defaultSettings.payment_methods,
           shipping_options: defaultSettings.shipping_options,
-          template_name: 'default',
+          template_name: 'modern', // Garantindo que seja 'modern'
           checkout_type: 'both' as const,
           show_prices: true,
           show_stock: true,
@@ -253,7 +253,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
             delivery: false,
             shipping: false,
           },
-          template_name: data.template_name || 'default',
+          template_name: data.template_name || 'modern', // Mudando de 'default' para 'modern'
           checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
             data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
           show_prices: data.show_prices !== false,
@@ -330,7 +330,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           delivery: (data.shipping_options as any)?.delivery || false,
           shipping: (data.shipping_options as any)?.shipping || false,
         } : settings.shipping_options,
-        template_name: data.template_name || 'default',
+        template_name: data.template_name || 'modern', // Mudando de 'default' para 'modern'
         checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
           data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
         show_prices: data.show_prices !== false,

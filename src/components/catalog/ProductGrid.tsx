@@ -2,7 +2,7 @@
 import React, { memo } from 'react';
 import { Product } from '@/hooks/useCatalog';
 import { CatalogType } from '@/hooks/useCatalog';
-import ProductCard from './ProductCard';
+import TemplateSelector from './TemplateSelector';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProductGridProps {
@@ -12,7 +12,8 @@ interface ProductGridProps {
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   wishlist: Product[];
-  storeIdentifier?: string; // Adicionar esta propriedade
+  storeIdentifier?: string;
+  templateName?: string; // Nova prop para o template
 }
 
 const ProductGrid: React.FC<ProductGridProps> = memo(({
@@ -22,8 +23,15 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
   onAddToWishlist,
   onQuickView,
   wishlist,
-  storeIdentifier
+  storeIdentifier,
+  templateName = 'modern' // Valor padrão
 }) => {
+  // Função placeholder para adicionar ao carrinho
+  const handleAddToCart = (product: Product) => {
+    console.log('Adicionar ao carrinho:', product.name);
+    // TODO: Implementar lógica do carrinho se necessário
+  };
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -60,14 +68,17 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {products.map((product) => (
-        <ProductCard
+        <TemplateSelector
           key={product.id}
           product={product}
           catalogType={catalogType}
+          templateName={templateName}
+          onAddToCart={handleAddToCart}
           onAddToWishlist={onAddToWishlist}
           onQuickView={onQuickView}
           isInWishlist={wishlist.some(item => item.id === product.id)}
-          storeIdentifier={storeIdentifier}
+          showPrices={true} // TODO: Pegar das configurações
+          showStock={true} // TODO: Pegar das configurações
         />
       ))}
     </div>
