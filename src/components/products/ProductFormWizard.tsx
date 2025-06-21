@@ -72,9 +72,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
   const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
   const { uploadVariationImage } = useVariationImageUpload();
   
-  // Usar ref para controlar se os dados iniciais já foram carregados
+  // Controle de carregamento de dados iniciais
   const initialDataLoadedRef = useRef(false);
-  const lastInitialDataRef = useRef<any>(null);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -99,22 +98,18 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
   const { hasUnsavedChanges, markAsSaved, reset } = useFormTracker({ 
     form,
     onUnsavedChanges: (hasChanges) => {
-      console.log('Mudanças detectadas:', hasChanges);
+      console.log('📊 Mudanças no formulário:', hasChanges);
     }
   });
 
-  // Carregar dados iniciais apenas uma vez e quando realmente necessário
+  // Carregar dados iniciais apenas uma vez
   useEffect(() => {
     if (mode === 'edit' && initialData && !initialDataLoadedRef.current) {
-      // Verificar se os dados realmente mudaram para evitar loops
-      const currentDataString = JSON.stringify(initialData);
-      const lastDataString = JSON.stringify(lastInitialDataRef.current);
-      
-      if (currentDataString === lastDataString) {
-        return;
-      }
-      
-      console.log('📝 ProductFormWizard - Carregando dados iniciais:', initialData);
+      console.log('📝 ProductFormWizard - Carregando dados iniciais:', {
+        id: initialData.id,
+        name: initialData.name,
+        variations_count: initialData.variations?.length || 0
+      });
       
       const formData = {
         id: initialData.id,
@@ -134,27 +129,25 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         image_url: initialData.image_url || '',
       };
       
-      if (initialData.variations) {
+      // Configurar variações se existirem
+      if (initialData.variations && Array.isArray(initialData.variations)) {
         console.log('🎨 Carregando variações existentes:', initialData.variations.length);
         setVariations(initialData.variations);
       }
       
       form.reset(formData);
-      
-      // Marcar como carregado e salvar referência dos dados
       initialDataLoadedRef.current = true;
-      lastInitialDataRef.current = initialData;
       
-      // Reset do form tracker após carregar dados iniciais
-      setTimeout(() => reset(), 100);
+      // Reset do form tracker após pequeno delay
+      setTimeout(() => reset(), 200);
     }
-  }, [initialData?.id]); // Dependência apenas no ID para evitar loops
+  }, [initialData?.id, mode]);
 
-  // Reset do controle quando mode muda
+  // Reset do controle quando mode muda para criação
   useEffect(() => {
     if (mode === 'create') {
       initialDataLoadedRef.current = false;
-      lastInitialDataRef.current = null;
+      setVariations([]);
     }
   }, [mode]);
 
@@ -221,20 +214,26 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       
       // Se há arquivo de imagem (blob), fazer upload
       if (variation.image_file && variation.image_url?.startsWith('blob:')) {
-        console.log('🔄 Processando upload de imagem da variação...');
+        console.log('🔄 Fazendo upload de imagem da variação...');
         
         // Gerar ID temporário se não existir
         const variationId = variation.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        const uploadResult = await uploadVariationImage(variation.image_file, variationId);
-        
-        if (uploadResult.success && uploadResult.imageUrl) {
-          processedVariation.image_url = uploadResult.imageUrl;
-          // Remover o arquivo após upload bem-sucedido
-          delete processedVariation.image_file;
-        } else {
-          console.warn('⚠️ Falha no upload da imagem da variação:', uploadResult.error);
-          // Remover URL blob inválida se upload falhou
+        try {
+          const uploadResult = await uploadVariationImage(variation.image_file, variationId);
+          
+          if (uploadResult.success && uploadResult.imageUrl) {
+            processedVariation.image_url = uploadResult.imageUrl;
+            // Remover o arquivo após upload bem-sucedido
+            delete processedVariation.image_file;
+            console.log('✅ Upload da variação concluído:', uploadResult.imageUrl);
+          } else {
+            console.warn('⚠️ Falha no upload da imagem da variação:', uploadResult.error);
+            // Remover URL blob inválida se upload falhou
+            processedVariation.image_url = '';
+          }
+        } catch (error) {
+          console.error('🚨 Erro no upload da variação:', error);
           processedVariation.image_url = '';
         }
       }
@@ -264,22 +263,34 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       }
 
       // Processar imagens das variações ANTES de enviar
-      console.log('🎨 Processando imagens das variações...');
+      console.log('🎨 Processando variações antes do envio:', {
+        total: variations.length,
+        variations: variations.map(v => ({ 
+          id: v.id, 
+          color: v.color, 
+          size: v.size, 
+          stock: v.stock,
+          hasImageFile: !!v.image_file,
+          hasImageUrl: !!v.image_url
+        }))
+      });
+
       const processedVariations = await processVariationImages(variations);
+      console.log('✅ Variações processadas:', processedVariations.length);
 
       const productData = {
         ...form.getValues(),
         store_id: profile.store_id,
         image_url: imageUrl,
         image_files: imageFiles.length > 0 ? imageFiles : undefined,
-        variations: processedVariations.length > 0 ? processedVariations : undefined,
+        variations: processedVariations, // SEMPRE incluir variações, mesmo se vazio
         wholesale_price: form.getValues('wholesale_price') || null,
         min_wholesale_qty: form.getValues('min_wholesale_qty') || 1,
         retail_price: Number(form.getValues('retail_price')),
         stock: Number(form.getValues('stock')),
       };
 
-      console.log('💾 Salvando produto com dados processados:', {
+      console.log('💾 Enviando dados do produto:', {
         ...productData,
         image_files: productData.image_files?.length || 0,
         variations: productData.variations?.length || 0

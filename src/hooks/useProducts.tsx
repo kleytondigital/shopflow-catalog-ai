@@ -263,13 +263,16 @@ export const useProducts = (storeId?: string) => {
       // Separar dados do produto das variações e arquivos
       const { variations, image_files, ...productOnlyData } = productData;
 
-      console.log('➕ Criando produto com dados:', productOnlyData);
+      console.log('➕ Criando produto:', {
+        name: productOnlyData.name,
+        variations_count: variations?.length || 0
+      });
 
       const { data, error } = await supabase
         .from('products')
         .insert([{
           ...productOnlyData,
-          store_id: targetStoreId // SEMPRE usar store_id validado
+          store_id: targetStoreId
         }])
         .select()
         .single();
@@ -279,7 +282,7 @@ export const useProducts = (storeId?: string) => {
         throw error;
       }
 
-      console.log('✅ Produto criado com sucesso:', data);
+      console.log('✅ Produto criado com sucesso:', data.id);
 
       // Upload de imagens se houver
       if (image_files && image_files.length > 0 && data.id) {
@@ -287,7 +290,6 @@ export const useProducts = (storeId?: string) => {
         const imageUrls = await uploadProductImages(image_files, data.id);
         
         if (imageUrls.length > 0) {
-          // Atualizar produto com a primeira imagem como principal
           await supabase
             .from('products')
             .update({ image_url: imageUrls[0] })
@@ -295,40 +297,63 @@ export const useProducts = (storeId?: string) => {
         }
       }
 
-      // Se há variações, criar separadamente
+      // Processar variações se houver
       if (variations && variations.length > 0 && data.id) {
-        console.log('➕ Criando variações para produto:', data.id);
+        console.log('🎨 Criando variações:', variations.length);
+        await createProductVariations(data.id, variations);
+      }
+
+      await fetchProducts();
+      return { data, error: null };
+    } catch (error) {
+      console.error('🚨 Erro ao criar produto:', error);
+      return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+    }
+  };
+
+  const createProductVariations = async (productId: string, variations: any[]) => {
+    for (const [index, variation] of variations.entries()) {
+      try {
+        const { image_file, ...variationData } = variation;
         
-        for (const variation of variations) {
-          const { image_file, ...variationData } = variation;
-          let imageUrl = variation.image_url;
+        console.log(`🎨 Criando variação ${index + 1}/${variations.length}:`, {
+          color: variationData.color,
+          size: variationData.size,
+          stock: variationData.stock
+        });
 
-          // Criar variação no banco
-          const { data: variationRecord, error: variationError } = await supabase
-            .from('product_variations')
-            .insert({
-              ...variationData,
-              product_id: data.id,
-              color: variationData.color || null,
-              size: variationData.size || null,
-              sku: variationData.sku || null,
-              stock: Number(variationData.stock) || 0,
-              price_adjustment: Number(variationData.price_adjustment) || 0,
-              is_active: variationData.is_active ?? true,
-            })
-            .select()
-            .single();
+        // Preparar dados da variação
+        const variationPayload = {
+          product_id: productId,
+          color: variationData.color || null,
+          size: variationData.size || null,
+          sku: variationData.sku || null,
+          stock: Number(variationData.stock) || 0,
+          price_adjustment: Number(variationData.price_adjustment) || 0,
+          is_active: variationData.is_active ?? true,
+          image_url: variationData.image_url || null,
+        };
 
-          if (variationError) {
-            console.error('❌ Erro ao criar variação:', variationError);
-            continue;
-          }
+        const { data: newVariation, error: createError } = await supabase
+          .from('product_variations')
+          .insert(variationPayload)
+          .select()
+          .single();
 
-          // Se há arquivo de imagem, fazer upload
-          if (image_file && variationRecord.id) {
-            console.log('📤 Fazendo upload da imagem da variação...');
+        if (createError) {
+          console.error(`❌ Erro ao criar variação ${index + 1}:`, createError);
+          continue;
+        }
+
+        console.log(`✅ Variação ${index + 1} criada:`, newVariation.id);
+
+        // Upload da imagem se houver arquivo
+        if (image_file && newVariation.id) {
+          console.log(`📤 Fazendo upload da imagem da variação ${index + 1}...`);
+          
+          try {
             const fileExt = image_file.name.split('.').pop()?.toLowerCase();
-            const fileName = `variations/${variationRecord.id}/${Date.now()}.${fileExt}`;
+            const fileName = `variations/${newVariation.id}/${Date.now()}.${fileExt}`;
             
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('product-images')
@@ -346,25 +371,24 @@ export const useProducts = (storeId?: string) => {
               await supabase
                 .from('product_variations')
                 .update({ image_url: publicUrl })
-                .eq('id', variationRecord.id);
+                .eq('id', newVariation.id);
 
-              console.log('✅ Imagem da variação salva:', publicUrl);
+              console.log(`✅ Imagem da variação ${index + 1} salva:`, publicUrl);
+            } else {
+              console.error(`❌ Erro no upload da imagem da variação ${index + 1}:`, uploadError);
             }
+          } catch (uploadError) {
+            console.error(`🚨 Erro inesperado no upload da variação ${index + 1}:`, uploadError);
           }
         }
+      } catch (error) {
+        console.error(`🚨 Erro inesperado na variação ${index + 1}:`, error);
       }
-
-      await fetchProducts();
-      return { data, error: null };
-    } catch (error) {
-      console.error('🚨 [SECURITY] Erro ao criar produto:', error);
-      return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
   };
 
   const updateProduct = async (productData: UpdateProductData & { variations?: any[], image_files?: File[] }) => {
     try {
-      // VALIDAÇÃO: Verificar se o produto pertence à loja do usuário
       if (!profile?.store_id) {
         console.log('🚨 [SECURITY] Tentativa de atualizar produto sem store_id - BLOQUEADO');
         return { data: null, error: 'Store ID é obrigatório' };
@@ -372,13 +396,18 @@ export const useProducts = (storeId?: string) => {
 
       const { id, variations, image_files, ...updates } = productData;
       
-      console.log('✏️ Atualizando produto:', id, 'com dados:', updates);
+      console.log('✏️ Atualizando produto:', {
+        id,
+        variations_count: variations?.length || 0,
+        has_image_files: !!image_files?.length
+      });
 
+      // Atualizar dados básicos do produto
       const { data, error } = await supabase
         .from('products')
         .update(updates)
         .eq('id', id)
-        .eq('store_id', profile.store_id) // VALIDAR ownership
+        .eq('store_id', profile.store_id)
         .select()
         .single();
 
@@ -393,7 +422,6 @@ export const useProducts = (storeId?: string) => {
         const imageUrls = await uploadProductImages(image_files, id);
         
         if (imageUrls.length > 0 && !data.image_url) {
-          // Se produto não tem imagem principal, definir a primeira como principal
           await supabase
             .from('products')
             .update({ image_url: imageUrls[0] })
@@ -401,129 +429,26 @@ export const useProducts = (storeId?: string) => {
         }
       }
 
-      // Gerenciar variações se fornecidas
-      if (variations) {
-        console.log('🔄 Atualizando variações para produto:', id);
+      // Gerenciar variações - abordagem simplificada: deletar todas e recriar
+      if (variations !== undefined) {
+        console.log('🔄 Atualizando variações do produto:', id);
         
-        // Buscar variações existentes
-        const { data: existingVariations } = await supabase
+        // 1. Deletar todas as variações existentes
+        const { error: deleteError } = await supabase
           .from('product_variations')
-          .select('*')
+          .delete()
           .eq('product_id', id);
 
-        const existingIds = new Set(existingVariations?.map(v => v.id) || []);
-        const providedIds = new Set(variations.filter(v => v.id && !v.id.startsWith('temp_')).map(v => v.id));
-
-        // Deletar variações removidas
-        const idsToDelete = Array.from(existingIds).filter(id => !providedIds.has(id));
-        if (idsToDelete.length > 0) {
-          console.log('🗑️ Deletando variações removidas:', idsToDelete);
-          await supabase
-            .from('product_variations')
-            .delete()
-            .in('id', idsToDelete);
+        if (deleteError) {
+          console.error('❌ Erro ao deletar variações existentes:', deleteError);
+        } else {
+          console.log('🗑️ Variações existentes deletadas');
         }
 
-        // Processar cada variação
-        for (const variation of variations) {
-          const { image_file, ...variationData } = variation;
-          const isTemporary = variation.id?.startsWith('temp_');
-          const isNew = !variation.id || isTemporary;
-
-          if (isNew) {
-            // Criar nova variação
-            console.log('➕ Criando nova variação:', variationData);
-            
-            const { data: newVariation, error: createError } = await supabase
-              .from('product_variations')
-              .insert({
-                ...variationData,
-                product_id: id,
-                color: variationData.color || null,
-                size: variationData.size || null,
-                sku: variationData.sku || null,
-                stock: Number(variationData.stock) || 0,
-                price_adjustment: Number(variationData.price_adjustment) || 0,
-                is_active: variationData.is_active ?? true,
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              console.error('❌ Erro ao criar nova variação:', createError);
-              continue;
-            }
-
-            // Upload da imagem se houver
-            if (image_file && newVariation.id) {
-              console.log('📤 Fazendo upload da imagem da nova variação...');
-              const fileExt = image_file.name.split('.').pop()?.toLowerCase();
-              const fileName = `variations/${newVariation.id}/${Date.now()}.${fileExt}`;
-              
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('product-images')
-                .upload(fileName, image_file, {
-                  cacheControl: '3600',
-                  upsert: false
-                });
-
-              if (!uploadError) {
-                const { data: { publicUrl } } = supabase.storage
-                  .from('product-images')
-                  .getPublicUrl(fileName);
-
-                await supabase
-                  .from('product_variations')
-                  .update({ image_url: publicUrl })
-                  .eq('id', newVariation.id);
-              }
-            }
-          } else {
-            // Atualizar variação existente
-            console.log('✏️ Atualizando variação existente:', variation.id);
-            
-            let imageUrl = variationData.image_url;
-
-            // Upload da nova imagem se houver
-            if (image_file) {
-              console.log('📤 Fazendo upload da nova imagem da variação...');
-              const fileExt = image_file.name.split('.').pop()?.toLowerCase();
-              const fileName = `variations/${variation.id}/${Date.now()}.${fileExt}`;
-              
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('product-images')
-                .upload(fileName, image_file, {
-                  cacheControl: '3600',
-                  upsert: false
-                });
-
-              if (!uploadError) {
-                const { data: { publicUrl } } = supabase.storage
-                  .from('product-images')
-                  .getPublicUrl(fileName);
-
-                imageUrl = publicUrl;
-              }
-            }
-
-            const { error: updateError } = await supabase
-              .from('product_variations')
-              .update({
-                ...variationData,
-                image_url: imageUrl,
-                color: variationData.color || null,
-                size: variationData.size || null,
-                sku: variationData.sku || null,
-                stock: Number(variationData.stock) || 0,
-                price_adjustment: Number(variationData.price_adjustment) || 0,
-                is_active: variationData.is_active ?? true,
-              })
-              .eq('id', variation.id);
-
-            if (updateError) {
-              console.error('❌ Erro ao atualizar variação:', updateError);
-            }
-          }
+        // 2. Criar novas variações se houver
+        if (variations.length > 0) {
+          console.log('➕ Criando novas variações:', variations.length);
+          await createProductVariations(id, variations);
         }
       }
 
@@ -531,7 +456,7 @@ export const useProducts = (storeId?: string) => {
       console.log('✅ Produto atualizado com sucesso:', id);
       return { data, error: null };
     } catch (error) {
-      console.error('🚨 [SECURITY] Erro ao atualizar produto:', error);
+      console.error('🚨 Erro ao atualizar produto:', error);
       return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
   };
@@ -547,7 +472,7 @@ export const useProducts = (storeId?: string) => {
         .from('products')
         .delete()
         .eq('id', id)
-        .eq('store_id', profile.store_id); // VALIDAR ownership
+        .eq('store_id', profile.store_id);
 
       if (error) throw error;
       await fetchProducts();
@@ -589,7 +514,6 @@ export const useProducts = (storeId?: string) => {
 
       if (variationsError) {
         console.error('❌ Erro ao buscar variações:', variationsError);
-        // Não falhar se não conseguir buscar variações
       }
 
       const productWithVariations = {
@@ -597,7 +521,7 @@ export const useProducts = (storeId?: string) => {
         variations: variations || []
       };
 
-      console.log('✅ Produto carregado com variações:', {
+      console.log('✅ Produto carregado:', {
         id: product.id,
         name: product.name,
         variations_count: variations?.length || 0
@@ -662,15 +586,44 @@ export const useProducts = (storeId?: string) => {
           return { data: null, error: 'Store ID é obrigatório' };
         }
 
-        const { data, error } = await supabase
+        console.log('🔍 Buscando produto com variações:', id);
+
+        // Buscar produto
+        const { data: product, error: productError } = await supabase
           .from('products')
           .select('*')
           .eq('id', id)
           .eq('store_id', profile.store_id)
           .single();
 
-        if (error) throw error;
-        return { data, error: null };
+        if (productError) {
+          console.error('❌ Erro ao buscar produto:', productError);
+          throw productError;
+        }
+
+        // Buscar variações do produto
+        const { data: variations, error: variationsError } = await supabase
+          .from('product_variations')
+          .select('*')
+          .eq('product_id', id)
+          .order('created_at', { ascending: true });
+
+        if (variationsError) {
+          console.error('❌ Erro ao buscar variações:', variationsError);
+        }
+
+        const productWithVariations = {
+          ...product,
+          variations: variations || []
+        };
+
+        console.log('✅ Produto carregado:', {
+          id: product.id,
+          name: product.name,
+          variations_count: variations?.length || 0
+        });
+
+        return { data: productWithVariations, error: null };
       } catch (error) {
         console.error('🚨 [SECURITY] Erro ao buscar produto:', error);
         return { data: null, error: error instanceof Error ? error.message : 'Erro desconhecido' };
