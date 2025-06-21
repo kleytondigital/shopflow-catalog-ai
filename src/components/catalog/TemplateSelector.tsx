@@ -7,6 +7,7 @@ import { CatalogType } from '@/hooks/useCatalog';
 import ModernTemplate from './templates/ModernTemplate';
 import MinimalTemplate from './templates/MinimalTemplate';
 import ElegantTemplate from './templates/ElegantTemplate';
+import IndustrialTemplate from './templates/IndustrialTemplate';
 
 interface TemplateSelectorProps {
   product: Product;
@@ -49,6 +50,8 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       return <MinimalTemplate {...templateProps} />;
     case 'elegant':
       return <ElegantTemplate {...templateProps} />;
+    case 'industrial':
+      return <IndustrialTemplate {...templateProps} />;
     default:
       return <ModernTemplate {...templateProps} />;
   }
