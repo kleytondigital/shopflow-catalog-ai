@@ -2,17 +2,23 @@
 import React from 'react';
 import { useEditorStore } from '../stores/useEditorStore';
 import { usePreviewData } from '../hooks/usePreviewData';
-import { useTemplateSync } from '../hooks/useTemplateSync';
-import PreviewHeader from './preview/PreviewHeader';
-import PreviewBanner from './preview/PreviewBanner';
-import PreviewCategories from './preview/PreviewCategories';
-import PreviewProductGrid from './preview/PreviewProductGrid';
-import PreviewFooter from './preview/PreviewFooter';
+import { useUnifiedEditor } from '@/hooks/useUnifiedEditor';
+import { useAuth } from '@/hooks/useAuth';
+import { useStoreData } from '@/hooks/useStoreData';
+import TemplateWrapper from '@/components/catalog/TemplateWrapper';
+import ProductGrid from '@/components/catalog/ProductGrid';
 
 const CatalogPreview: React.FC = () => {
   const { configuration } = useEditorStore();
   const { products, categories, loading, hasRealData } = usePreviewData();
-  const { settings, isConnected } = useTemplateSync();
+  const { applyStylesImmediately, isConnected } = useUnifiedEditor();
+  const { profile } = useAuth();
+  const { store } = useStoreData(profile?.store_id);
+
+  // Aplicar estilos quando o componente montar
+  React.useEffect(() => {
+    applyStylesImmediately();
+  }, [applyStylesImmediately]);
 
   if (loading) {
     return (
@@ -25,82 +31,69 @@ const CatalogPreview: React.FC = () => {
     );
   }
 
-  // Usar configurações do banco se disponível, senão usar do editor
-  const activeConfig = settings && isConnected ? {
-    colors: {
-      primary: settings.primary_color || configuration.colors.primary,
-      secondary: settings.secondary_color || configuration.colors.secondary,
-      accent: settings.accent_color || configuration.colors.accent,
-      background: settings.background_color || configuration.colors.background,
-      text: settings.text_color || configuration.colors.text,
-      border: settings.border_color || configuration.colors.border,
-    },
-    global: {
-      fontFamily: settings.font_family || configuration.global.fontFamily,
-      borderRadius: settings.border_radius || configuration.global.borderRadius,
-      layoutSpacing: settings.layout_spacing || configuration.global.layoutSpacing,
-      template: settings.template_name || configuration.global.template,
-      ...configuration.global
-    },
-    sections: configuration.sections,
-    sectionOrder: configuration.sectionOrder,
-    header: configuration.header,
-    checkout: {
-      showPrices: settings.show_prices ?? configuration.checkout.showPrices,
-      allowFilters: settings.allow_categories_filter ?? configuration.checkout.allowFilters,
-      ...configuration.checkout
-    }
-  } : configuration;
+  // Usar loja mockada se não tiver dados reais
+  const previewStore = store || {
+    id: 'preview-store',
+    name: 'Minha Loja',
+    description: 'Descrição da loja de exemplo',
+    logo_url: null,
+    phone: '(11) 99999-9999',
+    email: 'contato@minhaloja.com',
+    address: 'Rua Example, 123 - São Paulo, SP',
+    url_slug: 'preview',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
   return (
     <div 
       className="min-h-full template-container catalog-container"
       style={{ 
-        backgroundColor: activeConfig.colors.background,
-        fontFamily: activeConfig.global.fontFamily,
-        color: activeConfig.colors.text
+        backgroundColor: configuration.colors.background,
+        fontFamily: configuration.global.fontFamily,
+        color: configuration.colors.text
       }}
     >
-      {/* Indicador de dados e conexão */}
-      {(!hasRealData || !isConnected) && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-2 text-sm">
-          <div className="flex items-center gap-2">
-            {!isConnected && (
-              <span className="text-yellow-800">
-                ⚠️ Editor desconectado - usando configurações locais
-              </span>
-            )}
-            {!hasRealData && (
-              <span className="text-yellow-800">
-                📝 Usando dados de exemplo - adicione produtos reais
-              </span>
-            )}
-          </div>
+      {/* Indicador de status */}
+      <div className="bg-blue-100 border-l-4 border-blue-500 p-2 text-sm">
+        <div className="flex items-center gap-2 text-blue-800">
+          <span className="font-medium">🎨 Preview em Tempo Real</span>
+          {!hasRealData && (
+            <span className="opacity-70">• Usando dados de exemplo</span>
+          )}
+          {!isConnected && (
+            <span className="opacity-70">• Editor desconectado</span>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Header */}
-      <PreviewHeader />
-      
-      {/* Hero/Banner Section */}
-      {activeConfig.sections.hero?.enabled && (
-        <PreviewBanner />
-      )}
-      
-      {/* Categories Navigation */}
-      {activeConfig.sections.categories && (
-        <PreviewCategories categories={categories} />
-      )}
-      
-      {/* Products Grid */}
-      {activeConfig.sections.featuredProducts && (
-        <PreviewProductGrid products={products} />
-      )}
-      
-      {/* Footer */}
-      {activeConfig.sections.footer && (
-        <PreviewFooter />
-      )}
+      {/* Usar o TemplateWrapper real do catálogo */}
+      <TemplateWrapper
+        templateName={configuration.global.template}
+        store={previewStore}
+        catalogType="retail"
+        cartItemsCount={0}
+        wishlistCount={0}
+        onSearch={() => {}}
+        onToggleFilters={() => {}}
+        onCartClick={() => {}}
+      >
+        <div className="container mx-auto px-4 py-8">
+          <ProductGrid
+            products={products}
+            catalogType="retail"
+            loading={false}
+            onAddToWishlist={() => {}}
+            onQuickView={() => {}}
+            wishlist={[]}
+            storeIdentifier="preview"
+            templateName={configuration.global.template}
+            showPrices={configuration.checkout.showPrices}
+            showStock={true}
+          />
+        </div>
+      </TemplateWrapper>
     </div>
   );
 };

@@ -22,10 +22,20 @@
   --template-spacing: 16px;
   --template-border-radius: 8px;
   
+  /* Tamanhos de fonte */
+  --template-font-size-small: 14px;
+  --template-font-size-medium: 16px;
+  --template-font-size-large: 24px;
+  
+  /* Espaçamentos */
+  --template-spacing-small: 8px;
+  --template-spacing-medium: 16px;
+  --template-spacing-large: 32px;
+  
   /* Sombras */
   --template-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --template-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --template-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --template-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0,   0, 0, 0.05);
   --template-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
@@ -35,6 +45,35 @@
   font-family: var(--template-font-family);
   background-color: var(--template-background);
   color: var(--template-text);
+}
+
+/* Switches com tema personalizado */
+.themed-switch[data-state="checked"] {
+  background-color: var(--template-primary) !important;
+  border-color: var(--template-primary) !important;
+}
+
+.themed-switch[data-state="unchecked"] {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.themed-switch:hover[data-state="checked"] {
+  background-color: var(--template-secondary) !important;
+  opacity: 0.9;
+}
+
+.themed-switch:hover[data-state="unchecked"] {
+  background-color: #cbd5e1 !important;
+}
+
+.themed-switch .switch-thumb {
+  background: white !important;
+  transition: transform 0.2s ease !important;
+}
+
+.themed-switch[data-state="checked"] .switch-thumb {
+  transform: translateX(18px) !important;
 }
 
 /* Botões com gradiente global - Versão mais específica */

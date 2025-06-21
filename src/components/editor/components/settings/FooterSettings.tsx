@@ -2,13 +2,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { useEditorStore } from '../../stores/useEditorStore';
+import { useUnifiedEditor } from '@/hooks/useUnifiedEditor';
 import ColorPicker from '../ColorPicker';
+import ThemedSwitch from '../ThemedSwitch';
 
 const FooterSettings: React.FC = () => {
-  const { configuration, updateConfiguration } = useEditorStore();
+  const { configuration, updateConfiguration } = useUnifiedEditor();
 
   const updateFooterConfig = (updates: any) => {
     updateConfiguration({
@@ -29,7 +29,7 @@ const FooterSettings: React.FC = () => {
           {/* Ativar/Desativar Footer */}
           <div className="flex items-center justify-between">
             <Label htmlFor="footer-enabled">Mostrar Footer</Label>
-            <Switch
+            <ThemedSwitch
               id="footer-enabled"
               checked={configuration.sections.footer}
               onCheckedChange={(enabled) => 
@@ -69,7 +69,7 @@ const FooterSettings: React.FC = () => {
                 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-contact">Informações de Contato</Label>
-                  <Switch
+                  <ThemedSwitch
                     id="show-contact"
                     checked={configuration.footer?.showContact !== false}
                     onCheckedChange={(show) => updateFooterConfig({ showContact: show })}
@@ -78,7 +78,7 @@ const FooterSettings: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-social">Redes Sociais</Label>
-                  <Switch
+                  <ThemedSwitch
                     id="show-social"
                     checked={configuration.footer?.showSocial !== false}
                     onCheckedChange={(show) => updateFooterConfig({ showSocial: show })}
@@ -87,7 +87,7 @@ const FooterSettings: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-links">Links Rápidos</Label>
-                  <Switch
+                  <ThemedSwitch
                     id="show-links"
                     checked={configuration.footer?.showQuickLinks !== false}
                     onCheckedChange={(show) => updateFooterConfig({ showQuickLinks: show })}
@@ -96,7 +96,7 @@ const FooterSettings: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-business-hours">Horário de Funcionamento</Label>
-                  <Switch
+                  <ThemedSwitch
                     id="show-business-hours"
                     checked={configuration.footer?.showBusinessHours !== false}
                     onCheckedChange={(show) => updateFooterConfig({ showBusinessHours: show })}

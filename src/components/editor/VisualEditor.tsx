@@ -9,7 +9,7 @@ import EditorSidebar from './components/EditorSidebar';
 import EditorPreview from './components/EditorPreview';
 import EditorToolbar from './components/EditorToolbar';
 import { useEditorStore } from './stores/useEditorStore';
-import { useTemplateSync } from './hooks/useTemplateSync';
+import { useUnifiedEditor } from '@/hooks/useUnifiedEditor';
 import { toast } from 'sonner';
 
 const VisualEditor: React.FC = () => {
@@ -19,21 +19,25 @@ const VisualEditor: React.FC = () => {
     setCurrentDevice, 
     isPreviewMode, 
     togglePreviewMode,
-    resetToDefault,
-    isDirty
+    resetToDefault
   } = useEditorStore();
   
-  const { saveToDatabase, isConnected, loading } = useTemplateSync();
+  const { saveToDatabase, isConnected, loading, isDirty, applyStylesImmediately } = useUnifiedEditor();
   const [isSaving, setIsSaving] = useState(false);
+
+  // Aplicar estilos quando o editor carregar
+  useEffect(() => {
+    applyStylesImmediately();
+  }, [applyStylesImmediately]);
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       await saveToDatabase();
-      toast.success('Configurações salvas com sucesso!');
+      toast.success('✅ Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error('❌ Erro ao salvar configurações');
     } finally {
       setIsSaving(false);
     }
@@ -45,6 +49,14 @@ const VisualEditor: React.FC = () => {
       if (!shouldLeave) return;
     }
     navigate('/');
+  };
+
+  const handleReset = () => {
+    if (window.confirm('Tem certeza que deseja resetar todas as configurações?')) {
+      resetToDefault();
+      applyStylesImmediately();
+      toast.info('🔄 Configurações resetadas para o padrão');
+    }
   };
 
   const devices = [
@@ -70,7 +82,7 @@ const VisualEditor: React.FC = () => {
             </Button>
             
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">Editor Visual</h1>
+              <h1 className="text-xl font-bold text-gray-900">🎨 Editor Visual</h1>
               {isDirty && (
                 <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
                   Não salvo
@@ -88,7 +100,7 @@ const VisualEditor: React.FC = () => {
               )}
               {isConnected && !loading && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                  Conectado
+                  ✅ Conectado
                 </span>
               )}
             </div>
@@ -111,12 +123,7 @@ const VisualEditor: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  if (window.confirm('Tem certeza que deseja resetar todas as configurações?')) {
-                    resetToDefault();
-                    toast.info('Configurações resetadas para o padrão');
-                  }
-                }}
+                onClick={handleReset}
                 className="flex items-center gap-2"
               >
                 <RotateCw size={16} />
@@ -126,7 +133,7 @@ const VisualEditor: React.FC = () => {
               <Button
                 onClick={handleSave}
                 disabled={!isDirty || !isConnected || isSaving}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
               >
                 <Save size={16} />
                 {isSaving ? 'Salvando...' : 'Salvar'}

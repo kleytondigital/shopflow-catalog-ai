@@ -2,13 +2,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { GripVertical, Eye, EyeOff } from 'lucide-react';
-import { useEditorStore } from '../../stores/useEditorStore';
+import { useUnifiedEditor } from '@/hooks/useUnifiedEditor';
+import ThemedSwitch from '../ThemedSwitch';
 
 const SectionsManager: React.FC = () => {
-  const { configuration, updateConfiguration, reorderSections } = useEditorStore();
+  const { configuration, updateConfiguration } = useUnifiedEditor();
   const { sections, sectionOrder } = configuration;
 
   const sectionLabels: Record<string, string> = {
@@ -42,7 +42,9 @@ const SectionsManager: React.FC = () => {
     
     if (targetIndex >= 0 && targetIndex < newOrder.length) {
       [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
-      reorderSections(newOrder);
+      updateConfiguration({
+        sectionOrder: newOrder
+      });
     }
   };
 
@@ -106,7 +108,7 @@ const SectionsManager: React.FC = () => {
                       </Button>
                     </div>
                     
-                    <Switch
+                    <ThemedSwitch
                       checked={isEnabled}
                       onCheckedChange={(checked) => handleSectionToggle(sectionKey, checked)}
                     />
