@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export const useTemplateSync = () => {
   const { profile } = useAuth();
-  const { settings, updateSettings, loading } = useCatalogSettings();
+  const { settings, updateSettings, loading } = useCatalogSettings(profile?.store_id);
   const { configuration, updateConfiguration, loadFromDatabase, isDirty } = useEditorStore();
 
   // Carregar configurações do banco na inicialização
@@ -55,7 +55,7 @@ export const useTemplateSync = () => {
   return {
     settings,
     saveToDatabase,
-    isConnected: !!settings && !loading,
+    isConnected: !!settings && !loading && !!profile?.store_id,
     loading
   };
 };

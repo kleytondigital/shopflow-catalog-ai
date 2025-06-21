@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Monitor, Tablet, Smartphone, Save, RotateCw, Eye } from 'lucide-react';
+import { Monitor, Tablet, Smartphone, Save, RotateCw, Eye, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import EditorSidebar from './components/EditorSidebar';
 import EditorPreview from './components/EditorPreview';
 import EditorToolbar from './components/EditorToolbar';
@@ -12,6 +13,7 @@ import { useTemplateSync } from './hooks/useTemplateSync';
 import { toast } from 'sonner';
 
 const VisualEditor: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     currentDevice, 
     setCurrentDevice, 
@@ -21,7 +23,7 @@ const VisualEditor: React.FC = () => {
     isDirty
   } = useEditorStore();
   
-  const { saveToDatabase, isConnected } = useTemplateSync();
+  const { saveToDatabase, isConnected, loading } = useTemplateSync();
 
   const handleSave = async () => {
     try {
@@ -31,6 +33,14 @@ const VisualEditor: React.FC = () => {
       console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar configurações');
     }
+  };
+
+  const handleBackToDashboard = () => {
+    if (isDirty) {
+      const shouldLeave = window.confirm('Você tem alterações não salvas. Deseja sair mesmo assim?');
+      if (!shouldLeave) return;
+    }
+    navigate('/');
   };
 
   const devices = [
@@ -44,18 +54,40 @@ const VisualEditor: React.FC = () => {
       {/* Toolbar Superior */}
       <div className="bg-white border-b border-gray-200 px-6 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900">Editor Visual</h1>
-            {isDirty && (
-              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                Não salvo
-              </span>
-            )}
-            {!isConnected && (
-              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                Desconectado
-              </span>
-            )}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackToDashboard}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft size={16} />
+              Dashboard
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-gray-900">Editor Visual</h1>
+              {isDirty && (
+                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                  Não salvo
+                </span>
+              )}
+              {loading && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  Carregando...
+                </span>
+              )}
+              {!isConnected && !loading && (
+                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                  Desconectado
+                </span>
+              )}
+              {isConnected && !loading && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                  Conectado
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -66,7 +98,7 @@ const VisualEditor: React.FC = () => {
               onClick={togglePreviewMode}
               className="flex items-center gap-2"
             >
-              {isPreviewMode ? <Eye size={16} /> : <Eye size={16} />}
+              <Eye size={16} />
               {isPreviewMode ? 'Editar' : 'Preview'}
             </Button>
 

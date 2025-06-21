@@ -85,8 +85,15 @@ const defaultConfiguration = {
       title: 'Bem-vindo!',
       subtitle: 'Descubra nossos produtos.',
       backgroundImage: '/placeholder.svg',
-    }
+    },
+    banner: true,
+    categories: true,
+    featuredProducts: true,
+    testimonials: false,
+    newsletter: false,
+    footer: true,
   },
+  sectionOrder: ['banner', 'categories', 'featuredProducts', 'testimonials', 'newsletter', 'footer'],
   checkout: {
     layout: 'single',
     type: 'both',
@@ -178,10 +185,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set((state) => ({
       configuration: {
         ...state.configuration,
-        sections: {
-          ...state.configuration.sections,
-          order: sections
-        }
+        sectionOrder: sections
       },
       isDirty: true
     }));

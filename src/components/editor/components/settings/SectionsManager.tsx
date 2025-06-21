@@ -25,7 +25,7 @@ const SectionsManager: React.FC = () => {
   };
 
   const moveSection = (index: number, direction: 'up' | 'down') => {
-    const newOrder = [...sectionOrder];
+    const newOrder = [...(sectionOrder || [])];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     
     if (targetIndex >= 0 && targetIndex < newOrder.length) {
@@ -33,6 +33,9 @@ const SectionsManager: React.FC = () => {
       reorderSections(newOrder);
     }
   };
+
+  // Garantir que sectionOrder existe
+  const currentSectionOrder = sectionOrder || ['banner', 'categories', 'featuredProducts', 'testimonials', 'newsletter', 'footer'];
 
   return (
     <Card>
@@ -44,8 +47,8 @@ const SectionsManager: React.FC = () => {
           <Label>Seções Ativas</Label>
           
           <div className="space-y-2">
-            {sectionOrder.map((sectionKey, index) => {
-              const isEnabled = sections[sectionKey as keyof typeof sections];
+            {currentSectionOrder.map((sectionKey, index) => {
+              const isEnabled = sections[sectionKey as keyof typeof sections] || false;
               const label = sectionLabels[sectionKey] || sectionKey;
               
               return (
@@ -82,7 +85,7 @@ const SectionsManager: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => moveSection(index, 'down')}
-                        disabled={index === sectionOrder.length - 1}
+                        disabled={index === currentSectionOrder.length - 1}
                         className="h-6 w-6 p-0"
                       >
                         ↓
