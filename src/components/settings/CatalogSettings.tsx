@@ -13,6 +13,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import ShareableLinks from '@/components/settings/ShareableLinks';
 import WatermarkSettings from '@/components/settings/WatermarkSettings';
+import DomainSettings from '@/components/settings/DomainSettings';
 import ModernTemplate from '@/components/catalog/templates/ModernTemplate';
 import MinimalTemplate from '@/components/catalog/templates/MinimalTemplate';
 import ElegantTemplate from '@/components/catalog/templates/ElegantTemplate';
@@ -495,42 +496,7 @@ const CatalogSettings = () => {
 
         {/* Domínio */}
         <TabsContent value="domain">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Configurações de Domínio
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="custom_domain">Domínio Personalizado</Label>
-                <Input
-                  id="custom_domain"
-                  placeholder="meusite.com.br"
-                  value={settings.custom_domain || ''}
-                  onChange={(e) => handleInputChange('custom_domain', e.target.value)}
-                  disabled={saving}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Deixe em branco para usar o domínio padrão
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="catalog_url_slug">URL do Catálogo</Label>
-                <Input
-                  id="catalog_url_slug"
-                  placeholder="minha-loja"
-                  value={settings.catalog_url_slug || ''}
-                  onChange={(e) => handleInputChange('catalog_url_slug', e.target.value)}
-                  disabled={saving}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Personaliza a URL do seu catálogo
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <DomainSettings />
         </TabsContent>
 
         {/* SEO */}
