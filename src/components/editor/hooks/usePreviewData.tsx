@@ -6,8 +6,8 @@ import { useCategories } from '@/hooks/useCategories';
 
 export const usePreviewData = () => {
   const { profile } = useAuth();
-  const { data: products, isLoading: productsLoading } = useProducts();
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { products, loading: productsLoading } = useProducts();
+  const { categories, loading: categoriesLoading } = useCategories();
 
   // Produtos de exemplo para preview quando não há produtos reais
   const mockProducts = [
