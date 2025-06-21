@@ -48,14 +48,17 @@ export const useBanners = (storeId?: string, bannerType?: string) => {
 
       if (fetchError) throw fetchError;
 
-      // Filtrar banners que estão dentro do período de exibição
+      // Filtrar banners que estão dentro do período de exibição e fazer type assertion
       const activeBanners = data?.filter(banner => {
         const now = new Date();
         const startDate = banner.start_date ? new Date(banner.start_date) : null;
         const endDate = banner.end_date ? new Date(banner.end_date) : null;
 
         return (!startDate || startDate <= now) && (!endDate || endDate >= now);
-      }) || [];
+      }).map(banner => ({
+        ...banner,
+        banner_type: banner.banner_type as Banner['banner_type']
+      })) || [];
 
       setBanners(activeBanners);
     } catch (err) {
@@ -76,8 +79,13 @@ export const useBanners = (storeId?: string, bannerType?: string) => {
 
       if (error) throw error;
 
-      setBanners(prev => [...prev, data]);
-      return { data, error: null };
+      const newBanner = {
+        ...data,
+        banner_type: data.banner_type as Banner['banner_type']
+      };
+
+      setBanners(prev => [...prev, newBanner]);
+      return { data: newBanner, error: null };
     } catch (error) {
       console.error('Erro ao criar banner:', error);
       return { data: null, error };
@@ -95,10 +103,15 @@ export const useBanners = (storeId?: string, bannerType?: string) => {
 
       if (error) throw error;
 
+      const updatedBanner = {
+        ...data,
+        banner_type: data.banner_type as Banner['banner_type']
+      };
+
       setBanners(prev => prev.map(banner => 
-        banner.id === id ? { ...banner, ...data } : banner
+        banner.id === id ? { ...banner, ...updatedBanner } : banner
       ));
-      return { data, error: null };
+      return { data: updatedBanner, error: null };
     } catch (error) {
       console.error('Erro ao atualizar banner:', error);
       return { data: null, error };
