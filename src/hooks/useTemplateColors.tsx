@@ -73,21 +73,20 @@ export const useTemplateColors = (storeIdentifier?: string) => {
     const templateName = settings?.template_name || 'modern';
     const baseColors = defaultColorSchemes[templateName] || defaultColorSchemes.modern;
     
-    // Aplicar cores personalizadas se disponíveis
+    // Usar cores personalizadas do banco se disponíveis
     if (settings) {
-      // Se houver cores personalizadas nas configurações, usar elas
-      const customPrimary = (settings as any).primary_color;
-      const customSecondary = (settings as any).secondary_color;
-      
-      if (customPrimary || customSecondary) {
-        return {
-          ...baseColors,
-          primary: customPrimary || baseColors.primary,
-          secondary: customSecondary || baseColors.secondary,
-          gradientFrom: customPrimary || baseColors.gradientFrom,
-          gradientTo: customSecondary || baseColors.gradientTo,
-        };
-      }
+      return {
+        primary: settings.primary_color || baseColors.primary,
+        secondary: settings.secondary_color || baseColors.secondary,
+        accent: settings.accent_color || baseColors.accent,
+        background: settings.background_color || baseColors.background,
+        surface: '#FFFFFF', // Sempre branco para cards
+        text: settings.text_color || baseColors.text,
+        textMuted: baseColors.textMuted, // Manter padrão
+        border: settings.border_color || baseColors.border,
+        gradientFrom: settings.primary_color || baseColors.gradientFrom,
+        gradientTo: settings.secondary_color || baseColors.gradientTo,
+      };
     }
     
     return baseColors;
@@ -107,12 +106,27 @@ export const useTemplateColors = (storeIdentifier?: string) => {
       root.style.setProperty('--template-border', colorScheme.border);
       root.style.setProperty('--template-gradient-from', colorScheme.gradientFrom);
       root.style.setProperty('--template-gradient-to', colorScheme.gradientTo);
+      
+      console.log('Cores aplicadas ao documento:', colorScheme);
     }
+  };
+
+  const resetToTemplateDefaults = (templateName: string) => {
+    const defaults = defaultColorSchemes[templateName] || defaultColorSchemes.modern;
+    return {
+      primary_color: defaults.primary,
+      secondary_color: defaults.secondary,
+      accent_color: defaults.accent,
+      background_color: defaults.background,
+      text_color: defaults.text,
+      border_color: defaults.border,
+    };
   };
 
   return {
     colorScheme,
     applyColorsToDocument,
+    resetToTemplateDefaults,
     templateName: settings?.template_name || 'modern'
   };
 };

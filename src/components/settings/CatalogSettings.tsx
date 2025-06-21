@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
+import { useTemplateColors } from '@/hooks/useTemplateColors';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import AdvancedColorSettings from './AdvancedColorSettings';
 import {
   Palette,
   Eye,
@@ -25,6 +29,7 @@ import {
 const CatalogSettings = () => {
   const { profile } = useAuth();
   const { settings, loading, updateSettings } = useCatalogSettings();
+  const { resetToTemplateDefaults } = useTemplateColors();
   
   const [localSettings, setLocalSettings] = useState({
     template_name: 'modern',
@@ -38,6 +43,10 @@ const CatalogSettings = () => {
     catalog_description: '',
     primary_color: '#0057FF',
     secondary_color: '#FF6F00',
+    accent_color: '#8E2DE2',
+    background_color: '#F8FAFC',
+    text_color: '#1E293B',
+    border_color: '#E2E8F0',
     font_family: 'Inter',
     custom_css: ''
   });
@@ -54,8 +63,12 @@ const CatalogSettings = () => {
         items_per_page: 12,
         catalog_title: settings.seo_title || '',
         catalog_description: settings.seo_description || '',
-        primary_color: (settings as any).primary_color || '#0057FF',
-        secondary_color: (settings as any).secondary_color || '#FF6F00',
+        primary_color: settings.primary_color || '#0057FF',
+        secondary_color: settings.secondary_color || '#FF6F00',
+        accent_color: settings.accent_color || '#8E2DE2',
+        background_color: settings.background_color || '#F8FAFC',
+        text_color: settings.text_color || '#1E293B',
+        border_color: settings.border_color || '#E2E8F0',
         font_family: 'Inter',
         custom_css: ''
       });
@@ -72,7 +85,11 @@ const CatalogSettings = () => {
       seo_title: localSettings.catalog_title,
       seo_description: localSettings.catalog_description,
       primary_color: localSettings.primary_color,
-      secondary_color: localSettings.secondary_color
+      secondary_color: localSettings.secondary_color,
+      accent_color: localSettings.accent_color,
+      background_color: localSettings.background_color,
+      text_color: localSettings.text_color,
+      border_color: localSettings.border_color,
     };
 
     const result = await updateSettings(updates);
@@ -83,9 +100,33 @@ const CatalogSettings = () => {
     }
   };
 
+  const handleTemplateChange = async (templateName: string) => {
+    // Aplicar cores padrão do template selecionado
+    const defaultColors = resetToTemplateDefaults(templateName);
+    
+    setLocalSettings(prev => ({
+      ...prev,
+      template_name: templateName,
+      ...defaultColors
+    }));
+
+    // Salvar automaticamente a mudança de template com cores padrão
+    const updates = {
+      template_name: templateName,
+      ...defaultColors
+    };
+
+    const result = await updateSettings(updates);
+    if (result.data && !result.error) {
+      toast.success(`Template "${templateName}" aplicado com cores padrão!`);
+    }
+  };
+
   const handleReset = () => {
-    setLocalSettings({
-      template_name: 'modern',
+    const defaultColors = resetToTemplateDefaults(localSettings.template_name);
+    setLocalSettings(prev => ({
+      ...prev,
+      ...defaultColors,
       show_prices: true,
       show_stock: true,
       show_categories: true,
@@ -94,12 +135,24 @@ const CatalogSettings = () => {
       items_per_page: 12,
       catalog_title: '',
       catalog_description: '',
-      primary_color: '#0057FF',
-      secondary_color: '#FF6F00',
-      font_family: 'Inter',
-      custom_css: ''
-    });
+    }));
     toast.info('Configurações resetadas para o padrão!');
+  };
+
+  const handleColorChange = (colors: any) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      ...colors
+    }));
+  };
+
+  const handleColorReset = () => {
+    const defaultColors = resetToTemplateDefaults(localSettings.template_name);
+    setLocalSettings(prev => ({
+      ...prev,
+      ...defaultColors
+    }));
+    toast.success('Cores resetadas para o padrão do template!');
   };
 
   const templates = [
@@ -147,296 +200,245 @@ const CatalogSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Template Selection with Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Template do Catálogo
-          </CardTitle>
-          <CardDescription>
-            Escolha o template visual que melhor representa sua marca. O template será aplicado a todo o catálogo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {templates.map((template) => {
-              const IconComponent = template.icon;
-              return (
-                <Card 
-                  key={template.value}
-                  className={`cursor-pointer transition-all border-2 hover:shadow-lg ${
-                    localSettings.template_name === template.value 
-                      ? 'border-blue-500 bg-blue-50 shadow-md' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setLocalSettings({...localSettings, template_name: template.value})}
-                >
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${localSettings.template_name === template.value ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
-                            <IconComponent size={20} />
+      <Tabs defaultValue="template" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="template">Template</TabsTrigger>
+          <TabsTrigger value="display">Exibição</TabsTrigger>
+          <TabsTrigger value="colors">Cores</TabsTrigger>
+          <TabsTrigger value="info">Informações</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="template" className="space-y-6">
+          {/* Template Selection with Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Template do Catálogo
+              </CardTitle>
+              <CardDescription>
+                Escolha o template visual que melhor representa sua marca. O template será aplicado a todo o catálogo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {templates.map((template) => {
+                  const IconComponent = template.icon;
+                  return (
+                    <Card 
+                      key={template.value}
+                      className={`cursor-pointer transition-all border-2 hover:shadow-lg ${
+                        localSettings.template_name === template.value 
+                          ? 'border-blue-500 bg-blue-50 shadow-md' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleTemplateChange(template.value)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${localSettings.template_name === template.value ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                                <IconComponent size={20} />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-lg">{template.label}</h4>
+                                <p className="text-sm text-gray-600">{template.description}</p>
+                              </div>
+                            </div>
+                            {localSettings.template_name === template.value && (
+                              <Badge className="bg-blue-500">
+                                <Sparkles size={12} className="mr-1" />
+                                Ativo
+                              </Badge>
+                            )}
                           </div>
-                          <div>
-                            <h4 className="font-semibold text-lg">{template.label}</h4>
-                            <p className="text-sm text-gray-600">{template.description}</p>
+                          
+                          {/* Color Preview */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Paleta:</span>
+                            {template.colors.map((color, index) => (
+                              <div 
+                                key={index}
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Features */}
+                          <div className="space-y-2">
+                            <span className="text-xs text-gray-500 font-medium">Características:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {template.features.map((feature, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {feature}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                        {localSettings.template_name === template.value && (
-                          <Badge className="bg-blue-500">
-                            <Sparkles size={12} className="mr-1" />
-                            Ativo
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {/* Color Preview */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Paleta:</span>
-                        {template.colors.map((color, index) => (
-                          <div 
-                            key={index}
-                            className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                      
-                      {/* Features */}
-                      <div className="space-y-2">
-                        <span className="text-xs text-gray-500 font-medium">Características:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {template.features.map((feature, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {feature}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Appearance Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Configurações de Exibição
-          </CardTitle>
-          <CardDescription>
-            Configure o que será exibido em seu catálogo
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h4 className="font-medium">Elementos Visuais</h4>
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-prices">Exibir Preços</Label>
-                <Switch
-                  id="show-prices"
-                  checked={localSettings.show_prices}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({...localSettings, show_prices: checked})
-                  }
-                />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-stock">Exibir Estoque</Label>
-                <Switch
-                  id="show-stock"
-                  checked={localSettings.show_stock}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({...localSettings, show_stock: checked})
-                  }
-                />
+        <TabsContent value="display" className="space-y-6">
+          {/* Appearance Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Configurações de Exibição
+              </CardTitle>
+              <CardDescription>
+                Configure o que será exibido em seu catálogo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium">Elementos Visuais</h4>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-prices">Exibir Preços</Label>
+                    <Switch
+                      id="show-prices"
+                      checked={localSettings.show_prices}
+                      onCheckedChange={(checked) => 
+                        setLocalSettings({...localSettings, show_prices: checked})
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-stock">Exibir Estoque</Label>
+                    <Switch
+                      id="show-stock"
+                      checked={localSettings.show_stock}
+                      onCheckedChange={(checked) => 
+                        setLocalSettings({...localSettings, show_stock: checked})
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-categories">Exibir Categorias</Label>
+                    <Switch
+                      id="show-categories"
+                      checked={localSettings.show_categories}
+                      onCheckedChange={(checked) => 
+                        setLocalSettings({...localSettings, show_categories: checked})
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Funcionalidades</h4>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-search">Barra de Pesquisa</Label>
+                    <Switch
+                      id="show-search"
+                      checked={localSettings.show_search}
+                      onCheckedChange={(checked) => 
+                        setLocalSettings({...localSettings, show_search: checked})
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-filters">Filtros de Produto</Label>
+                    <Switch
+                      id="show-filters"
+                      checked={localSettings.show_filters}
+                      onCheckedChange={(checked) => 
+                        setLocalSettings({...localSettings, show_filters: checked})
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="items-per-page">Itens por Página</Label>
+                    <Select
+                      value={localSettings.items_per_page.toString()}
+                      onValueChange={(value) => 
+                        setLocalSettings({...localSettings, items_per_page: parseInt(value)})
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="8">8 itens</SelectItem>
+                        <SelectItem value="12">12 itens</SelectItem>
+                        <SelectItem value="16">16 itens</SelectItem>
+                        <SelectItem value="24">24 itens</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-categories">Exibir Categorias</Label>
-                <Switch
-                  id="show-categories"
-                  checked={localSettings.show_categories}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({...localSettings, show_categories: checked})
-                  }
-                />
-              </div>
-            </div>
+        <TabsContent value="colors" className="space-y-6">
+          <AdvancedColorSettings
+            colors={{
+              primary_color: localSettings.primary_color,
+              secondary_color: localSettings.secondary_color,
+              accent_color: localSettings.accent_color,
+              background_color: localSettings.background_color,
+              text_color: localSettings.text_color,
+              border_color: localSettings.border_color,
+            }}
+            onChange={handleColorChange}
+            onReset={handleColorReset}
+          />
+        </TabsContent>
 
-            <div className="space-y-4">
-              <h4 className="font-medium">Funcionalidades</h4>
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-search">Barra de Pesquisa</Label>
-                <Switch
-                  id="show-search"
-                  checked={localSettings.show_search}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({...localSettings, show_search: checked})
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-filters">Filtros de Produto</Label>
-                <Switch
-                  id="show-filters"
-                  checked={localSettings.show_filters}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({...localSettings, show_filters: checked})
-                  }
+        <TabsContent value="info" className="space-y-6">
+          {/* Branding */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Informações do Catálogo
+              </CardTitle>
+              <CardDescription>
+                Personalize as informações exibidas no seu catálogo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="catalog-title">Título do Catálogo</Label>
+                <Input
+                  id="catalog-title"
+                  value={localSettings.catalog_title}
+                  onChange={(e) => setLocalSettings({...localSettings, catalog_title: e.target.value})}
+                  placeholder="Ex: Catálogo de Produtos"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="items-per-page">Itens por Página</Label>
-                <Select
-                  value={localSettings.items_per_page.toString()}
-                  onValueChange={(value) => 
-                    setLocalSettings({...localSettings, items_per_page: parseInt(value)})
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="8">8 itens</SelectItem>
-                    <SelectItem value="12">12 itens</SelectItem>
-                    <SelectItem value="16">16 itens</SelectItem>
-                    <SelectItem value="24">24 itens</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Branding */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Informações do Catálogo
-          </CardTitle>
-          <CardDescription>
-            Personalize as informações exibidas no seu catálogo
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="catalog-title">Título do Catálogo</Label>
-            <Input
-              id="catalog-title"
-              value={localSettings.catalog_title}
-              onChange={(e) => setLocalSettings({...localSettings, catalog_title: e.target.value})}
-              placeholder="Ex: Catálogo de Produtos"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="catalog-description">Descrição do Catálogo</Label>
-            <Input
-              id="catalog-description"
-              value={localSettings.catalog_description}
-              onChange={(e) => setLocalSettings({...localSettings, catalog_description: e.target.value})}
-              placeholder="Ex: Encontre os melhores produtos aqui"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Colors - Enhanced */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Cores Personalizadas
-          </CardTitle>
-          <CardDescription>
-            Personalize as cores do template selecionado. As cores serão aplicadas a todo o catálogo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="primary-color">Cor Primária</Label>
-              <div className="flex gap-2">
+                <Label htmlFor="catalog-description">Descrição do Catálogo</Label>
                 <Input
-                  id="primary-color"
-                  type="color"
-                  value={localSettings.primary_color}
-                  onChange={(e) => setLocalSettings({...localSettings, primary_color: e.target.value})}
-                  className="w-16 h-10 p-1 border rounded"
-                />
-                <Input
-                  value={localSettings.primary_color}
-                  onChange={(e) => setLocalSettings({...localSettings, primary_color: e.target.value})}
-                  placeholder="#0057FF"
-                  className="flex-1"
+                  id="catalog-description"
+                  value={localSettings.catalog_description}
+                  onChange={(e) => setLocalSettings({...localSettings, catalog_description: e.target.value})}
+                  placeholder="Ex: Encontre os melhores produtos aqui"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secondary-color">Cor Secundária</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="secondary-color"
-                  type="color"
-                  value={localSettings.secondary_color}
-                  onChange={(e) => setLocalSettings({...localSettings, secondary_color: e.target.value})}
-                  className="w-16 h-10 p-1 border rounded"
-                />
-                <Input
-                  value={localSettings.secondary_color}
-                  onChange={(e) => setLocalSettings({...localSettings, secondary_color: e.target.value})}
-                  placeholder="#FF6F00"
-                  className="flex-1"
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Color Preview */}
-          <div className="mt-4 p-4 rounded-lg border-2 border-dashed border-gray-300">
-            <h4 className="text-sm font-medium mb-3">Preview das Cores:</h4>
-            <div className="flex gap-4">
-              <div 
-                className="px-4 py-2 rounded text-white font-medium"
-                style={{ backgroundColor: localSettings.primary_color }}
-              >
-                Cor Primária
-              </div>
-              <div 
-                className="px-4 py-2 rounded text-white font-medium"
-                style={{ backgroundColor: localSettings.secondary_color }}
-              >
-                Cor Secundária
-              </div>
-              <div 
-                className="px-4 py-2 rounded text-white font-medium"
-                style={{ 
-                  background: `linear-gradient(135deg, ${localSettings.primary_color}, ${localSettings.secondary_color})` 
-                }}
-              >
-                Gradiente
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3 justify-end">

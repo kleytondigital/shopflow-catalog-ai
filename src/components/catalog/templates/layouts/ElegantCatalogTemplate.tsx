@@ -31,7 +31,7 @@ const ElegantCatalogTemplate: React.FC<ElegantCatalogTemplateProps> = ({
   onCartClick,
   children
 }) => {
-  const { applyColorsToDocument } = useTemplateColors();
+  const { applyColorsToDocument } = useTemplateColors(store.url_slug || store.id);
 
   useEffect(() => {
     applyColorsToDocument();

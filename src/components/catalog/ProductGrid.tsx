@@ -13,7 +13,9 @@ interface ProductGridProps {
   onQuickView: (product: Product) => void;
   wishlist: Product[];
   storeIdentifier?: string;
-  templateName?: string; // Nova prop para o template
+  templateName?: string;
+  showPrices?: boolean;
+  showStock?: boolean;
 }
 
 const ProductGrid: React.FC<ProductGridProps> = memo(({
@@ -24,7 +26,9 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
   onQuickView,
   wishlist,
   storeIdentifier,
-  templateName = 'modern' // Valor padrão
+  templateName = 'modern',
+  showPrices = true,
+  showStock = true
 }) => {
   // Função placeholder para adicionar ao carrinho
   const handleAddToCart = (product: Product) => {
@@ -77,8 +81,8 @@ const ProductGrid: React.FC<ProductGridProps> = memo(({
           onAddToWishlist={onAddToWishlist}
           onQuickView={onQuickView}
           isInWishlist={wishlist.some(item => item.id === product.id)}
-          showPrices={true} // TODO: Pegar das configurações
-          showStock={true} // TODO: Pegar das configurações
+          showPrices={showPrices}
+          showStock={showStock}
         />
       ))}
     </div>

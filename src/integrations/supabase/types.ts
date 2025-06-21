@@ -952,8 +952,11 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          accent_color: string | null
           allow_categories_filter: boolean | null
           allow_price_filter: boolean | null
+          background_color: string | null
+          border_color: string | null
           business_hours: Json | null
           business_type: string | null
           catalog_mode: string | null
@@ -965,7 +968,9 @@ export type Database = {
           id: string
           instagram_url: string | null
           payment_methods: Json | null
+          primary_color: string | null
           retail_catalog_active: boolean | null
+          secondary_color: string | null
           seo_description: string | null
           seo_keywords: string | null
           seo_title: string | null
@@ -974,6 +979,7 @@ export type Database = {
           show_stock: boolean | null
           store_id: string
           template_name: string | null
+          text_color: string | null
           twitter_url: string | null
           updated_at: string
           watermark_color: string | null
@@ -989,8 +995,11 @@ export type Database = {
           wholesale_catalog_active: boolean | null
         }
         Insert: {
+          accent_color?: string | null
           allow_categories_filter?: boolean | null
           allow_price_filter?: boolean | null
+          background_color?: string | null
+          border_color?: string | null
           business_hours?: Json | null
           business_type?: string | null
           catalog_mode?: string | null
@@ -1002,7 +1011,9 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           payment_methods?: Json | null
+          primary_color?: string | null
           retail_catalog_active?: boolean | null
+          secondary_color?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
@@ -1011,6 +1022,7 @@ export type Database = {
           show_stock?: boolean | null
           store_id: string
           template_name?: string | null
+          text_color?: string | null
           twitter_url?: string | null
           updated_at?: string
           watermark_color?: string | null
@@ -1026,8 +1038,11 @@ export type Database = {
           wholesale_catalog_active?: boolean | null
         }
         Update: {
+          accent_color?: string | null
           allow_categories_filter?: boolean | null
           allow_price_filter?: boolean | null
+          background_color?: string | null
+          border_color?: string | null
           business_hours?: Json | null
           business_type?: string | null
           catalog_mode?: string | null
@@ -1039,7 +1054,9 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           payment_methods?: Json | null
+          primary_color?: string | null
           retail_catalog_active?: boolean | null
+          secondary_color?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
@@ -1048,6 +1065,7 @@ export type Database = {
           show_stock?: boolean | null
           store_id?: string
           template_name?: string | null
+          text_color?: string | null
           twitter_url?: string | null
           updated_at?: string
           watermark_color?: string | null

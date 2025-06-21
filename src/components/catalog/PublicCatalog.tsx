@@ -102,6 +102,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
             wishlist={wishlist}
             storeIdentifier={storeIdentifier}
             templateName={templateName}
+            showPrices={settings?.show_prices ?? true}
+            showStock={settings?.show_stock ?? true}
           />
         </div>
       </div>

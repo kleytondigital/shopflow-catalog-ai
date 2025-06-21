@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,6 +38,13 @@ export interface CatalogSettingsData {
   instagram_url: string | null;
   twitter_url: string | null;
   catalog_mode: 'separated' | 'hybrid' | 'toggle';
+  // Cores personalizadas
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  text_color: string;
+  border_color: string;
   // Configurações de marca d'água
   watermark_enabled: boolean;
   watermark_type: 'text' | 'logo';
@@ -174,7 +182,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
             shipping: false,
           },
           business_hours: {},
-          template_name: 'modern', // Mudando de 'default' para 'modern'
+          template_name: 'modern',
           custom_domain: null,
           catalog_url_slug: null,
           seo_title: null,
@@ -189,6 +197,13 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           instagram_url: null,
           twitter_url: null,
           catalog_mode: 'separated' as const,
+          // Cores padrão (Modern)
+          primary_color: '#0057FF',
+          secondary_color: '#FF6F00',
+          accent_color: '#8E2DE2',
+          background_color: '#F8FAFC',
+          text_color: '#1E293B',
+          border_color: '#E2E8F0',
           watermark_enabled: false,
           watermark_type: 'text' as const,
           watermark_text: 'Minha Loja',
@@ -211,7 +226,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           ...newSettings,
           payment_methods: defaultSettings.payment_methods,
           shipping_options: defaultSettings.shipping_options,
-          template_name: 'modern', // Garantindo que seja 'modern'
+          template_name: 'modern',
           checkout_type: 'both' as const,
           show_prices: true,
           show_stock: true,
@@ -221,6 +236,12 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           instagram_url: null,
           twitter_url: null,
           catalog_mode: 'separated' as const,
+          primary_color: '#0057FF',
+          secondary_color: '#FF6F00',
+          accent_color: '#8E2DE2',
+          background_color: '#F8FAFC',
+          text_color: '#1E293B',
+          border_color: '#E2E8F0',
           watermark_enabled: false,
           watermark_type: 'text' as const,
           watermark_text: 'Minha Loja',
@@ -253,7 +274,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
             delivery: false,
             shipping: false,
           },
-          template_name: data.template_name || 'modern', // Mudando de 'default' para 'modern'
+          template_name: data.template_name || 'modern',
           checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
             data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
           show_prices: data.show_prices !== false,
@@ -265,6 +286,13 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           twitter_url: data.twitter_url || null,
           catalog_mode: (['separated', 'hybrid', 'toggle'].includes(data.catalog_mode)) ? 
             data.catalog_mode as 'separated' | 'hybrid' | 'toggle' : 'separated',
+          // Cores personalizadas com fallback
+          primary_color: data.primary_color || '#0057FF',
+          secondary_color: data.secondary_color || '#FF6F00',
+          accent_color: data.accent_color || '#8E2DE2',
+          background_color: data.background_color || '#F8FAFC',
+          text_color: data.text_color || '#1E293B',
+          border_color: data.border_color || '#E2E8F0',
           watermark_enabled: data.watermark_enabled || false,
           watermark_type: (data.watermark_type === 'logo' ? 'logo' : 'text') as 'text' | 'logo',
           watermark_text: data.watermark_text || 'Minha Loja',
@@ -330,7 +358,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           delivery: (data.shipping_options as any)?.delivery || false,
           shipping: (data.shipping_options as any)?.shipping || false,
         } : settings.shipping_options,
-        template_name: data.template_name || 'modern', // Mudando de 'default' para 'modern'
+        template_name: data.template_name || 'modern',
         checkout_type: (['whatsapp', 'online', 'both'].includes(data.checkout_type)) ? 
           data.checkout_type as 'whatsapp' | 'online' | 'both' : 'both',
         show_prices: data.show_prices !== false,
@@ -342,6 +370,13 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
         twitter_url: data.twitter_url || null,
         catalog_mode: (['separated', 'hybrid', 'toggle'].includes(data.catalog_mode)) ? 
           data.catalog_mode as 'separated' | 'hybrid' | 'toggle' : 'separated',
+        // Cores personalizadas
+        primary_color: data.primary_color || '#0057FF',
+        secondary_color: data.secondary_color || '#FF6F00',
+        accent_color: data.accent_color || '#8E2DE2',
+        background_color: data.background_color || '#F8FAFC',
+        text_color: data.text_color || '#1E293B',
+        border_color: data.border_color || '#E2E8F0',
         watermark_enabled: data.watermark_enabled || false,
         watermark_type: (data.watermark_type === 'logo' ? 'logo' : 'text') as 'text' | 'logo',
         watermark_text: data.watermark_text || 'Minha Loja',
