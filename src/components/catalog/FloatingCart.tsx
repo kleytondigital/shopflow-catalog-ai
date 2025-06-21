@@ -35,7 +35,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-40">
       <Sheet open={isOpen} onOpenChange={toggleCart}>
         <SheetTrigger asChild>
           <Button
@@ -46,7 +46,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
             {totalItems > 0 && (
               <Badge
                 variant="destructive"
-                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 flex items-center justify-center bg-secondary text-white font-bold text-sm animate-pulse"
+                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 flex items-center justify-center bg-red-500 text-white font-bold text-sm animate-pulse"
               >
                 {totalItems > 99 ? '99+' : totalItems}
               </Badge>

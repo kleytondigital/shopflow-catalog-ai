@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { ShoppingCart, Search, Menu, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Search, Menu, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { StoreData } from '@/hooks/useStoreData';
+import { useCart } from '@/hooks/useCart';
 
 export type CatalogType = 'retail' | 'wholesale';
 
@@ -32,11 +33,18 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   onCartClick
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const { toggleCart } = useCart();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
     onSearch?.(query);
+  };
+
+  const handleCartClick = () => {
+    console.log('🛒 HEADER - Clique no carrinho, abrindo FloatingCart');
+    // Primeiro abrir o floating cart
+    toggleCart();
   };
 
   return (
@@ -92,23 +100,45 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
             </div>
           </div>
 
-          {/* Carrinho */}
-          <Button
-            variant="outline"
-            onClick={onCartClick}
-            className="relative rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartItemsCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg animate-pulse"
+          {/* Ações do Header */}
+          <div className="flex items-center gap-3">
+            {/* Favoritos */}
+            {wishlistCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative rounded-xl hover:bg-gray-50 transition-all duration-200"
               >
-                {cartItemsCount}
-              </Badge>
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {wishlistCount}
+                  </Badge>
+                )}
+              </Button>
             )}
-            <span className="ml-2 hidden sm:inline">Carrinho</span>
-          </Button>
+
+            {/* Carrinho */}
+            <Button
+              variant="outline"
+              onClick={handleCartClick}
+              className="relative rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemsCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg animate-pulse"
+                >
+                  {cartItemsCount}
+                </Badge>
+              )}
+              <span className="ml-2 hidden sm:inline">Carrinho</span>
+            </Button>
+          </div>
         </div>
 
         {/* Barra de Pesquisa Mobile */}

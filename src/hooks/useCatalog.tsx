@@ -141,18 +141,18 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
   const loadProducts = useCallback(async (storeId: string, type: CatalogType) => {
     setLoading(true);
     try {
-      console.log('📦 CATÁLOGO - Carregando produtos com variações:', {
+      console.log('📦 CATÁLOGO - Carregando produtos com variações (LEFT JOIN):', {
         storeId,
         type,
         timestamp: new Date().toISOString()
       });
 
-      // Buscar produtos com suas variações em uma única query otimizada
+      // Usar LEFT JOIN para incluir produtos sem variações
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
           *,
-          product_variations!inner (
+          product_variations (
             id,
             product_id,
             color,
@@ -168,7 +168,6 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
         `)
         .eq('store_id', storeId)
         .eq('is_active', true)
-        .eq('product_variations.is_active', true)
         .order('name', { ascending: true });
 
       if (productsError) {
@@ -180,27 +179,31 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       // Transformar os dados para incluir variações corretamente
       const productsWithVariations = productsData?.map(product => ({
         ...product,
-        variations: product.product_variations?.map(variation => ({
-          id: variation.id,
-          product_id: variation.product_id,
-          color: variation.color,
-          size: variation.size,
-          sku: variation.sku,
-          stock: variation.stock,
-          price_adjustment: variation.price_adjustment,
-          is_active: variation.is_active,
-          image_url: variation.image_url,
-          created_at: variation.created_at,
-          updated_at: variation.updated_at
-        })) || []
+        variations: product.product_variations
+          ?.filter(variation => variation.is_active) // Filtrar apenas variações ativas
+          ?.map(variation => ({
+            id: variation.id,
+            product_id: variation.product_id,
+            color: variation.color,
+            size: variation.size,
+            sku: variation.sku,
+            stock: variation.stock,
+            price_adjustment: variation.price_adjustment,
+            is_active: variation.is_active,
+            image_url: variation.image_url,
+            created_at: variation.created_at,
+            updated_at: variation.updated_at
+          })) || []
       })) || [];
 
-      console.log('✅ CATÁLOGO - Produtos carregados com variações:', {
+      console.log('✅ CATÁLOGO - Produtos carregados (incluindo sem variações):', {
         total: productsWithVariations.length,
         withVariations: productsWithVariations.filter(p => p.variations?.length > 0).length,
-        variationsPreview: productsWithVariations.slice(0, 2).map(p => ({
+        withoutVariations: productsWithVariations.filter(p => !p.variations?.length).length,
+        preview: productsWithVariations.slice(0, 3).map(p => ({
           name: p.name,
-          variations: p.variations?.length || 0
+          variations: p.variations?.length || 0,
+          hasStock: p.stock > 0
         }))
       });
       

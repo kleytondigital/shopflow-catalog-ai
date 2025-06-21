@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, ShoppingCart, Heart } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, Heart, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -53,12 +54,15 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const { addItem } = useCart();
   const { getProductImages } = useProductImages();
 
+  const hasVariations = product?.variations && product.variations.length > 0;
+
   console.log('🔍 MODAL - Produto recebido:', {
     productId: product?.id,
-    hasVariations: !!product?.variations?.length,
+    hasVariations,
     variationsCount: product?.variations?.length || 0,
     variations: product?.variations?.map(v => ({
       id: v.id,
@@ -118,14 +122,15 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       setQuantity(minQty);
       setSelectedVariation(null);
       setSelectedImageIndex(0);
+      setValidationError(null);
       
       console.log('🔄 MODAL - Estados resetados:', {
         quantity: minQty,
         catalogType,
-        hasVariations: !!product.variations?.length
+        hasVariations
       });
     }
-  }, [product, catalogType]);
+  }, [product, catalogType, hasVariations]);
 
   // Atualizar imagem quando variação é selecionada
   useEffect(() => {
@@ -161,7 +166,34 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     }
   };
 
+  const validateAddToCart = (): string | null => {
+    // Se o produto tem variações mas nenhuma foi selecionada
+    if (hasVariations && !selectedVariation) {
+      return 'Por favor, selecione uma variação do produto antes de adicionar ao carrinho.';
+    }
+
+    // Se não há estoque disponível
+    if (availableStock === 0) {
+      return 'Este produto está sem estoque no momento.';
+    }
+
+    // Se a quantidade é maior que o estoque
+    if (quantity > availableStock) {
+      return `Quantidade máxima disponível: ${availableStock} unidades.`;
+    }
+
+    return null;
+  };
+
   const handleAddToCart = () => {
+    const error = validateAddToCart();
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+
+    setValidationError(null);
+
     console.log('🛒 MODAL - Adicionando ao carrinho:', {
       productId: product.id,
       quantity,
@@ -189,6 +221,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     });
     onClose();
   };
+
+  const isAddToCartDisabled = hasVariations && !selectedVariation;
 
   const currentImage = productImages[selectedImageIndex] || '/placeholder.svg';
 
@@ -282,7 +316,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             </div>
 
             {/* Seletor de Variações */}
-            {product.variations && product.variations.length > 0 && (
+            {hasVariations && (
               <div>
                 <h3 className="font-medium mb-3">Opções do Produto</h3>
                 <ProductVariationSelector
@@ -290,7 +324,22 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   selectedVariation={selectedVariation}
                   onVariationChange={setSelectedVariation}
                 />
+                
+                {hasVariations && !selectedVariation && (
+                  <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Selecione uma variação para continuar
+                  </p>
+                )}
               </div>
+            )}
+
+            {/* Alerta de Validação */}
+            {validationError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Controle de Quantidade */}
@@ -324,10 +373,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <Button
                 onClick={handleAddToCart}
                 className="w-full"
-                disabled={availableStock === 0}
+                disabled={availableStock === 0 || isAddToCartDisabled}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                {availableStock === 0 ? 'Sem Estoque' : 'Adicionar ao Carrinho'}
+                {availableStock === 0 ? 'Sem Estoque' : 
+                 isAddToCartDisabled ? 'Selecione uma Variação' : 'Adicionar ao Carrinho'}
               </Button>
               
               <Button variant="outline" className="w-full">
@@ -346,6 +396,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 <div>Preço final: R$ {finalPrice.toFixed(2)}</div>
                 <div>Ajuste de preço: R$ {priceAdjustment.toFixed(2)}</div>
                 <div>Imagens: {productImages.length}</div>
+                <div>Tem variações: {hasVariations ? 'Sim' : 'Não'}</div>
+                <div>Pode adicionar: {isAddToCartDisabled ? 'Não' : 'Sim'}</div>
               </div>
             )}
           </div>
