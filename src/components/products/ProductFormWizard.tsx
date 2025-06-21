@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -73,10 +72,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
   const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
   const { uploadVariationImage } = useVariationImageUpload();
   
-  // Controle rigoroso de carregamento e reset
+  // Controle rigoroso de carregamento - APENAS uma ref necessária
   const initialLoadDoneRef = useRef<string | null>(null);
-  const currentModeRef = useRef(mode);
-  const variationsLoadedRef = useRef<boolean>(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -105,13 +102,14 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     }
   });
 
-  // Função para atualizar variações com proteção
+  // Função para atualizar variações com proteção ABSOLUTA
   const handleVariationsChange = (newVariations: ProductVariation[]) => {
     console.log('🔄 VARIAÇÕES - Mudança solicitada:', {
       anterior: variations.length,
       nova: newVariations.length,
       modo: mode,
       productId: initialData?.id,
+      timestamp: new Date().toISOString(),
       detalhes: newVariations.map(v => ({ 
         id: v.id, 
         color: v.color, 
@@ -122,11 +120,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     });
     
     setVariations(newVariations);
-    variationsLoadedRef.current = true;
-    console.log('✅ VARIAÇÕES - Estado atualizado:', newVariations.length);
+    console.log('✅ VARIAÇÕES - Estado atualizado com sucesso:', newVariations.length);
   };
 
-  // CORREÇÃO: Carregamento inicial ÚNICO e controlado
+  // CARREGAMENTO INICIAL - ÚNICO E CONTROLADO
   useEffect(() => {
     const currentProductId = initialData?.id || `new-${mode}`;
     
@@ -134,11 +131,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       mode,
       productId: currentProductId,
       initialLoadDone: initialLoadDoneRef.current,
-      needsLoad: initialLoadDoneRef.current !== currentProductId,
-      variationsLoaded: variationsLoadedRef.current
+      needsLoad: initialLoadDoneRef.current !== currentProductId
     });
 
-    // Carregamento inicial para modo de edição
+    // Carregamento inicial APENAS para modo de edição
     if (mode === 'edit' && initialData && initialLoadDoneRef.current !== currentProductId) {
       console.log('📝 CARREGAMENTO - Iniciando edição:', {
         id: initialData.id,
@@ -164,15 +160,13 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         image_url: initialData.image_url || '',
       };
       
-      // Configurar variações se existirem
+      // PROTEGER VARIAÇÕES - Carregar apenas uma vez
       if (initialData.variations && Array.isArray(initialData.variations)) {
         console.log('🎨 CARREGAMENTO - Configurando variações:', initialData.variations.length);
         setVariations(initialData.variations);
-        variationsLoadedRef.current = true;
       } else {
         console.log('🎨 CARREGAMENTO - Nenhuma variação encontrada');
         setVariations([]);
-        variationsLoadedRef.current = true;
       }
       
       form.reset(formData);
@@ -184,16 +178,18 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       console.log('✅ CARREGAMENTO - Concluído para produto:', currentProductId);
     }
     
-    // Reset controlado apenas para mudança de modo efetiva
-    else if (mode === 'create' && currentModeRef.current === 'edit') {
+    // Reset APENAS na mudança real de modo (edit -> create)
+    else if (mode === 'create' && initialLoadDoneRef.current && initialLoadDoneRef.current.includes('edit')) {
       console.log('🔄 RESET - Mudança de edição para criação');
       setVariations([]);
-      variationsLoadedRef.current = false;
-      initialLoadDoneRef.current = null;
+      initialLoadDoneRef.current = currentProductId;
     }
     
-    // Atualizar ref do modo atual
-    currentModeRef.current = mode;
+    // Definir ID para modo create se ainda não foi definido
+    else if (mode === 'create' && !initialLoadDoneRef.current) {
+      initialLoadDoneRef.current = currentProductId;
+      console.log('📝 CARREGAMENTO - Configurado para criação:', currentProductId);
+    }
   }, [initialData?.id, mode, form, reset]);
 
   // Gerar slug automaticamente quando o nome mudar (apenas no modo criação)
@@ -301,9 +297,9 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     console.log('🚨 CRÍTICO - Verificação completa do estado antes do salvamento:', {
       variationsLength: variations.length,
       initialLoadDone: initialLoadDoneRef.current,
-      variationsLoaded: variationsLoadedRef.current,
       mode: mode,
       productId: mode === 'edit' ? initialData?.id : 'novo-produto',
+      timestamp: new Date().toISOString(),
       variationsDetailed: variations.map(v => ({ 
         id: v.id, 
         color: v.color, 
@@ -384,7 +380,6 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       if (mode === 'create') {
         clearDraftImages();
         setVariations([]);
-        variationsLoadedRef.current = false;
         initialLoadDoneRef.current = null;
       }
       
@@ -553,13 +548,13 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
                 </div>
               </div>
               
-              {/* Debug: Estado atual das variações - MELHORADO */}
+              {/* Debug: Estado atual das variações - CORRIGIDO */}
               {variations.length > 0 && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
                   <strong>✅ Estado OK:</strong> {variations.length} variações prontas para salvar
-                  {mode === 'edit' && dataLoadedRef.current && (
+                  {mode === 'edit' && initialLoadDoneRef.current && (
                     <span className="ml-2 text-green-600">
-                      | Dados carregados: {dataLoadedRef.current.slice(0, 8)}...
+                      | Dados carregados: {initialLoadDoneRef.current.slice(0, 8)}...
                     </span>
                   )}
                 </div>
