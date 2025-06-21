@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,11 +25,10 @@ export const useCategories = (storeId?: string) => {
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Usar o store_id do parâmetro ou do profile
       const targetStoreId = storeId || profile?.store_id;
       
       console.log('useCategories: Buscando categorias para store_id:', targetStoreId);
@@ -61,7 +60,7 @@ export const useCategories = (storeId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId, profile?.store_id]); // Manter dependências estáveis
 
   const createCategory = async (categoryData: CreateCategoryData) => {
     try {
@@ -122,11 +121,12 @@ export const useCategories = (storeId?: string) => {
     }
   };
 
+  // Carregar categorias apenas quando profile estiver disponível
   useEffect(() => {
-    if (profile || storeId) {
+    if (profile?.store_id || storeId) {
       fetchCategories();
     }
-  }, [profile?.store_id, storeId]);
+  }, [profile?.store_id, storeId]); // Remover fetchCategories da dependência
 
   return {
     categories,

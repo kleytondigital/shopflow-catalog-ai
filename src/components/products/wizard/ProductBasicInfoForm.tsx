@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -18,21 +17,22 @@ interface ProductBasicInfoFormProps {
 const ProductBasicInfoForm: React.FC<ProductBasicInfoFormProps> = ({ form }) => {
   const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
 
-  // Forçar refresh das categorias quando o componente for montado
+  // Usar useCallback para evitar recriação da função
+  const handleRefreshCategories = useCallback(async () => {
+    console.log('🔄 Atualizando lista de categorias...');
+    await fetchCategories();
+  }, [fetchCategories]);
+
+  // Carregar categorias apenas uma vez ao montar o componente
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+  }, []); // Remover fetchCategories da dependência para evitar loop
 
   const handleCategoryCreated = async (newCategory: any) => {
     console.log('📂 Nova categoria criada:', newCategory);
     await fetchCategories(); // Recarregar categorias
     form.setValue('category', newCategory.name); // Selecionar automaticamente
     form.trigger('category'); // Validar campo
-  };
-
-  const handleRefreshCategories = async () => {
-    console.log('🔄 Atualizando lista de categorias...');
-    await fetchCategories();
   };
 
   return (
