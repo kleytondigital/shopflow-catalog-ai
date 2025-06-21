@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -42,7 +43,18 @@ export const useProductVariations = (productId?: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setVariations(data || []);
+      
+      // Garantir que todos os campos obrigatórios estejam presentes
+      const processedVariations = (data || []).map(variation => ({
+        ...variation,
+        image_url: variation.image_url || null,
+        color: variation.color || null,
+        size: variation.size || null,
+        sku: variation.sku || null,
+        price_adjustment: variation.price_adjustment || null,
+      }));
+      
+      setVariations(processedVariations);
     } catch (error) {
       console.error('Erro ao buscar variações:', error);
     } finally {

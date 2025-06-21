@@ -669,6 +669,7 @@ export type Database = {
           color: string | null
           created_at: string
           id: string
+          image_url: string | null
           is_active: boolean
           price_adjustment: number | null
           product_id: string
@@ -681,6 +682,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           price_adjustment?: number | null
           product_id: string
@@ -693,6 +695,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           price_adjustment?: number | null
           product_id?: string

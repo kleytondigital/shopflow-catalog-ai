@@ -102,6 +102,13 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     return parts.join(' - ') || 'Variação';
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
   const handleNewVariationImageUpload = (file: File) => {
     setNewVariation(prev => ({
       ...prev,
@@ -138,6 +145,24 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     }
   };
 
+  const handleStockChange = (value: string, isEditing: boolean = false, index?: number) => {
+    const numericValue = value === '' ? 0 : Math.max(0, parseInt(value) || 0);
+    
+    if (isEditing && editingVariation) {
+      setEditingVariation({ ...editingVariation, stock: numericValue });
+    } else {
+      setNewVariation({ ...newVariation, stock: numericValue });
+    }
+  };
+
+  const handlePriceAdjustmentChange = (value: number, isEditing: boolean = false) => {
+    if (isEditing && editingVariation) {
+      setEditingVariation({ ...editingVariation, price_adjustment: value });
+    } else {
+      setNewVariation({ ...newVariation, price_adjustment: value });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Form para adicionar nova variação */}
@@ -152,7 +177,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
               <Input
                 id="new-color"
                 placeholder="Ex: Azul, Vermelho"
-                value={newVariation.color}
+                value={newVariation.color || ''}
                 onChange={(e) => setNewVariation({ ...newVariation, color: e.target.value })}
                 disabled={disabled}
               />
@@ -162,7 +187,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
               <Input
                 id="new-size"
                 placeholder="Ex: P, M, G, XG"
-                value={newVariation.size}
+                value={newVariation.size || ''}
                 onChange={(e) => setNewVariation({ ...newVariation, size: e.target.value })}
                 disabled={disabled}
               />
@@ -175,7 +200,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
               <Input
                 id="new-sku"
                 placeholder="Código interno"
-                value={newVariation.sku}
+                value={newVariation.sku || ''}
                 onChange={(e) => setNewVariation({ ...newVariation, sku: e.target.value })}
                 disabled={disabled}
               />
@@ -189,13 +214,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 step="1"
                 placeholder="0"
                 value={newVariation.stock === 0 ? '' : newVariation.stock.toString()}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setNewVariation({ 
-                    ...newVariation, 
-                    stock: value === '' ? 0 : Math.max(0, parseInt(value) || 0)
-                  });
-                }}
+                onChange={(e) => handleStockChange(e.target.value)}
                 disabled={disabled}
               />
             </div>
@@ -203,7 +222,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
               <Label htmlFor="new-price-adjustment">Ajuste de Preço</Label>
               <CurrencyInput
                 value={newVariation.price_adjustment || 0}
-                onChange={(value) => setNewVariation({ ...newVariation, price_adjustment: value })}
+                onChange={(value) => handlePriceAdjustmentChange(value)}
                 placeholder="0,00"
                 disabled={disabled}
               />
@@ -279,13 +298,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                             min="0"
                             step="1"
                             value={editingVariation?.stock === 0 ? '' : editingVariation?.stock?.toString() || ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setEditingVariation(prev => prev ? { 
-                                ...prev, 
-                                stock: value === '' ? 0 : Math.max(0, parseInt(value) || 0)
-                              } : null);
-                            }}
+                            onChange={(e) => handleStockChange(e.target.value, true)}
                             disabled={disabled}
                           />
                         </div>
@@ -293,7 +306,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                           <Label>Ajuste de Preço</Label>
                           <CurrencyInput
                             value={editingVariation?.price_adjustment || 0}
-                            onChange={(value) => setEditingVariation(prev => prev ? { ...prev, price_adjustment: value } : null)}
+                            onChange={(value) => handlePriceAdjustmentChange(value, true)}
                             disabled={disabled}
                           />
                         </div>
@@ -356,10 +369,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                             <span>Estoque: {variation.stock}</span>
                             <span>
                               Ajuste: {variation.price_adjustment > 0 ? '+' : ''}
-                              {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(variation.price_adjustment)}
+                              {formatCurrency(variation.price_adjustment)}
                             </span>
                           </div>
                         </div>

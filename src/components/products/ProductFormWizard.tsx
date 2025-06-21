@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -152,7 +153,9 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       case 3:
         return true; // Imagens são opcionais
       case 4:
-        return true; // Variações e SEO são opcionais
+        return true; // Variações são opcionais
+      case 5:
+        return true; // SEO é opcional
       default:
         return true;
     }
@@ -215,15 +218,18 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
             }
           }
 
-          // Remover propriedades temporárias
+          // Remover propriedades temporárias e garantir tipos corretos
           const { image_file, ...cleanVariation } = variation;
           
           return {
             ...cleanVariation,
-            image_url: variationImageUrl,
-            // Garantir que temos valores válidos
+            image_url: variationImageUrl || null,
+            color: variation.color || null,
+            size: variation.size || null,
+            sku: variation.sku || null,
             stock: Number(variation.stock) || 0,
             price_adjustment: Number(variation.price_adjustment) || 0,
+            is_active: variation.is_active ?? true,
           };
         })
       );
