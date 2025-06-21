@@ -49,6 +49,28 @@ const defaultConfiguration = {
     showAddToCart: true,
     productCardStyle: 'card',
   },
+  productCards: {
+    columns: {
+      desktop: 4,
+      tablet: 3,
+      mobile: 2
+    },
+    showBorder: true,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    showElements: {
+      title: true,
+      description: true,
+      price: true,
+      discountBadge: true,
+      buyButton: true
+    },
+    buttonStyle: {
+      backgroundColor: '#0057FF',
+      textColor: '#FFFFFF',
+      borderRadius: 8
+    }
+  },
   colors: {
     primary: '#0057FF',
     secondary: '#FF6F00',
