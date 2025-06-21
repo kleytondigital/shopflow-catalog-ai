@@ -25,6 +25,14 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   initialData,
   mode
 }) => {
+  // Log para debug do fluxo de props
+  console.log('🔀 WizardStepContent - Props recebidas:', {
+    currentStep,
+    variationsLength: variations.length,
+    mode,
+    timestamp: new Date().toISOString()
+  });
+
   switch (currentStep) {
     case 1:
       return <ProductBasicInfoForm form={form} />;
@@ -39,6 +47,10 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
         />
       );
     case 4:
+      console.log('🎨 Renderizando step 4 - ProductVariationsForm com:', {
+        variations: variations.length,
+        onVariationsChange: !!onVariationsChange
+      });
       return (
         <ProductVariationsForm 
           form={form}

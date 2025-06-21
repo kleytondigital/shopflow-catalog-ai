@@ -29,6 +29,23 @@ const WizardActionButtons: React.FC<WizardActionButtonsProps> = ({
   mode,
   variations
 }) => {
+  // Log antes do salvamento
+  const handleSaveClick = () => {
+    console.log('🚨 BOTÃO SALVAR CLICADO - Estado das variações:', {
+      variationsLength: variations.length,
+      currentStep,
+      mode,
+      timestamp: new Date().toISOString(),
+      variations: variations.map(v => ({ 
+        id: v.id, 
+        color: v.color, 
+        size: v.size, 
+        stock: v.stock 
+      }))
+    });
+    onSave();
+  };
+
   return (
     <div className="shrink-0 pt-6 border-t bg-background/95 backdrop-blur">
       <div className="flex justify-between gap-4">
@@ -47,7 +64,7 @@ const WizardActionButtons: React.FC<WizardActionButtonsProps> = ({
           {hasUnsavedChanges && (
             <Button
               type="button"
-              onClick={onSave}
+              onClick={handleSaveClick}
               disabled={isSubmitting}
               className="min-w-[100px] bg-blue-600 hover:bg-blue-700"
             >
@@ -69,7 +86,7 @@ const WizardActionButtons: React.FC<WizardActionButtonsProps> = ({
           ) : (
             <Button
               type="button"
-              onClick={onSave}
+              onClick={handleSaveClick}
               disabled={isSubmitting}
               className="min-w-[120px] bg-green-600 hover:bg-green-700"
             >
@@ -80,18 +97,25 @@ const WizardActionButtons: React.FC<WizardActionButtonsProps> = ({
         </div>
       </div>
       
-      {/* Debug: Estado das variações */}
+      {/* Debug melhorado: Estado das variações */}
       {variations.length > 0 && (
         <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
           <strong>✅ VARIAÇÕES ATIVAS:</strong> {variations.length} variações no estado
           <div className="text-green-600 mt-1">
             {variations.slice(0, 3).map((v, i) => (
               <span key={i} className="mr-2">
-                {v.color && `${v.color}`}{v.size && ` (${v.size})`}
+                {v.color && `${v.color}`}{v.size && ` (${v.size})`} - Stock: {v.stock}
               </span>
             ))}
             {variations.length > 3 && '...'}
           </div>
+        </div>
+      )}
+
+      {/* Aviso quando não há variações */}
+      {variations.length === 0 && currentStep === 4 && (
+        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+          <strong>⚠️ NENHUMA VARIAÇÃO:</strong> Adicione variações no step atual
         </div>
       )}
 
