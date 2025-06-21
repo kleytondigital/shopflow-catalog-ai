@@ -7,6 +7,7 @@ import CatalogHeader from './CatalogHeader';
 import CatalogFooter from './CatalogFooter';
 import FilterSidebar from './FilterSidebar';
 import { Product, CatalogType } from '@/hooks/useCatalog';
+import { useCart } from '@/hooks/useCart';
 
 interface PublicCatalogProps {
   storeIdentifier: string;
@@ -19,9 +20,11 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 }) => {
   const { store, products, filteredProducts, loading: catalogLoading, searchProducts, filterProducts } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
+  const { itemsCount } = useCart();
   
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const handleAddToWishlist = (product: Product) => {
     setWishlist(prev => {
@@ -36,6 +39,10 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
   const handleQuickView = (product: Product) => {
     setSelectedProduct(product);
+  };
+
+  const handleCartClick = () => {
+    console.log('🛒 PUBLIC CATALOG - Clique no carrinho');
   };
 
   const loading = catalogLoading || settingsLoading;
@@ -63,9 +70,13 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     <div className="min-h-screen bg-gray-50">
       <CatalogHeader 
         store={store}
-        onSearch={searchProducts}
         catalogType={catalogType}
-        showSearch={settings?.show_prices !== false} // Usar configurações
+        cartItemsCount={itemsCount}
+        wishlistCount={wishlist.length}
+        whatsappNumber={settings?.whatsapp_number || undefined}
+        onSearch={searchProducts}
+        onToggleFilters={() => setIsFilterOpen(!isFilterOpen)}
+        onCartClick={handleCartClick}
       />
       
       <main className="container mx-auto px-4 py-6">
@@ -75,7 +86,9 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
               <FilterSidebar
                 products={products}
                 onFilter={filterProducts}
-                showPriceFilter={settings?.allow_price_filter !== false}
+                isOpen={false}
+                onClose={() => {}}
+                isMobile={false}
               />
             </aside>
           )}
@@ -89,13 +102,24 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
               onQuickView={handleQuickView}
               wishlist={wishlist}
               storeIdentifier={storeIdentifier}
-              templateName={settings?.template_name || 'modern'} // Passar o template das configurações
+              templateName={settings?.template_name || 'modern'}
             />
           </div>
         </div>
       </main>
 
       <CatalogFooter store={store} />
+
+      {/* FilterSidebar Mobile */}
+      {settings?.allow_categories_filter && (
+        <FilterSidebar
+          products={products}
+          onFilter={filterProducts}
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          isMobile={true}
+        />
+      )}
     </div>
   );
 };
