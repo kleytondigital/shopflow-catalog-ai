@@ -31,13 +31,15 @@ const ProductFormModal = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden p-6">
-          <ProductFormWizard
-            onSubmit={onSubmit}
-            initialData={initialData}
-            mode={mode}
-            onClose={() => onOpenChange(false)}
-          />
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto p-6">
+            <ProductFormWizard
+              onSubmit={onSubmit}
+              initialData={initialData}
+              mode={mode}
+              onClose={() => onOpenChange(false)}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -66,14 +67,17 @@ const generateSlug = (name: string): string => {
 const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductFormWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // 🎯 SIMPLIFICAÇÃO CRÍTICA: Estado único e direto para variações
   const [variations, setVariations] = useState<ProductVariation[]>([]);
+  
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const { profile } = useAuth();
   const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
   const { uploadVariationImage } = useVariationImageUpload();
   
-  // Controle rigoroso de carregamento - APENAS uma ref necessária
-  const initialLoadDoneRef = useRef<string | null>(null);
+  // 🔧 SIMPLIFICAÇÃO: Apenas uma ref para controlar carregamento inicial
+  const loadedRef = useRef(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -102,48 +106,41 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     }
   });
 
-  // Função para atualizar variações com proteção ABSOLUTA
+  // 🎯 FUNÇÃO CRÍTICA SIMPLIFICADA: Atualizar variações com debug detalhado
   const handleVariationsChange = (newVariations: ProductVariation[]) => {
-    console.log('🔄 VARIAÇÕES - Mudança solicitada:', {
-      anterior: variations.length,
-      nova: newVariations.length,
-      modo: mode,
-      productId: initialData?.id,
+    console.log('🚨 CRÍTICA - handleVariationsChange CHAMADA:', {
       timestamp: new Date().toISOString(),
-      detalhes: newVariations.map(v => ({ 
+      origem: 'ProductVariationsManager',
+      variationsAnterior: variations.length,
+      variationsNova: newVariations.length,
+      modo: mode,
+      productId: initialData?.id || 'novo',
+      stackTrace: new Error().stack?.split('\n').slice(1, 4),
+      variationsDetalhadas: newVariations.map(v => ({ 
         id: v.id, 
         color: v.color, 
         size: v.size, 
         stock: v.stock,
-        hasImage: !!v.image_url
+        hasImage: !!v.image_url,
+        hasImageFile: !!v.image_file
       }))
     });
     
+    // 🎯 DIRETO: Sem validações complexas, apenas atualizar
     setVariations(newVariations);
-    console.log('✅ VARIAÇÕES - Estado atualizado com sucesso:', newVariations.length);
+    console.log('✅ ESTADO VARIAÇÕES ATUALIZADO:', newVariations.length);
   };
 
-  // CARREGAMENTO INICIAL - ÚNICO E CONTROLADO
+  // 🔧 CARREGAMENTO INICIAL SIMPLIFICADO
   useEffect(() => {
-    const currentProductId = initialData?.id || `new-${mode}`;
-    
-    console.log('🔍 CARREGAMENTO - Verificando necessidade:', {
-      mode,
-      productId: currentProductId,
-      initialLoadDone: initialLoadDoneRef.current,
-      needsLoad: initialLoadDoneRef.current !== currentProductId
-    });
-
-    // Carregamento inicial APENAS para modo de edição
-    if (mode === 'edit' && initialData && initialLoadDoneRef.current !== currentProductId) {
-      console.log('📝 CARREGAMENTO - Iniciando edição:', {
+    if (mode === 'edit' && initialData && !loadedRef.current) {
+      console.log('📝 CARREGAMENTO INICIAL - Modo edição:', {
         id: initialData.id,
         name: initialData.name,
-        variations_count: initialData.variations?.length || 0
+        variations: initialData.variations?.length || 0
       });
       
       const formData = {
-        id: initialData.id,
         name: initialData.name || '',
         description: initialData.description || '',
         category: initialData.category || '',
@@ -160,35 +157,16 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         image_url: initialData.image_url || '',
       };
       
-      // PROTEGER VARIAÇÕES - Carregar apenas uma vez
+      form.reset(formData);
+      
+      // 🎯 CARREGAR VARIAÇÕES DIRETAMENTE
       if (initialData.variations && Array.isArray(initialData.variations)) {
-        console.log('🎨 CARREGAMENTO - Configurando variações:', initialData.variations.length);
+        console.log('🎨 CARREGANDO VARIAÇÕES INICIAIS:', initialData.variations.length);
         setVariations(initialData.variations);
-      } else {
-        console.log('🎨 CARREGAMENTO - Nenhuma variação encontrada');
-        setVariations([]);
       }
       
-      form.reset(formData);
-      initialLoadDoneRef.current = currentProductId;
-      
-      // Reset tracker após carregamento
+      loadedRef.current = true;
       setTimeout(() => reset(), 300);
-      
-      console.log('✅ CARREGAMENTO - Concluído para produto:', currentProductId);
-    }
-    
-    // Reset APENAS na mudança real de modo (edit -> create)
-    else if (mode === 'create' && initialLoadDoneRef.current && initialLoadDoneRef.current.includes('edit')) {
-      console.log('🔄 RESET - Mudança de edição para criação');
-      setVariations([]);
-      initialLoadDoneRef.current = currentProductId;
-    }
-    
-    // Definir ID para modo create se ainda não foi definido
-    else if (mode === 'create' && !initialLoadDoneRef.current) {
-      initialLoadDoneRef.current = currentProductId;
-      console.log('📝 CARREGAMENTO - Configurado para criação:', currentProductId);
     }
   }, [initialData?.id, mode, form, reset]);
 
@@ -212,11 +190,11 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       case 2:
         return values.retail_price > 0 && values.stock >= 0;
       case 3:
-        return true; // Imagens são opcionais
+        return true;
       case 4:
-        return true; // Variações são opcionais
+        return true;
       case 5:
-        return true; // SEO é opcional
+        return true;
       default:
         return true;
     }
@@ -246,19 +224,17 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     }
   };
 
-  // Função para processar imagens das variações
+  // Processar imagens das variações
   const processVariationImages = async (variations: ProductVariation[]): Promise<ProductVariation[]> => {
-    console.log('🖼️ IMAGENS - Processando imagens das variações:', variations.length);
+    console.log('🖼️ PROCESSANDO IMAGENS - Iniciando:', variations.length);
     const processedVariations: ProductVariation[] = [];
     
     for (const [index, variation] of variations.entries()) {
       let processedVariation = { ...variation };
       
-      // Se há arquivo de imagem (blob), fazer upload
       if (variation.image_file && variation.image_url?.startsWith('blob:')) {
         console.log(`🔄 Upload imagem variação ${index + 1}/${variations.length}...`);
         
-        // Gerar ID temporário se não existir
         const variationId = variation.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         try {
@@ -266,12 +242,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
           
           if (uploadResult.success && uploadResult.imageUrl) {
             processedVariation.image_url = uploadResult.imageUrl;
-            // Remover o arquivo após upload bem-sucedido
             delete processedVariation.image_file;
             console.log(`✅ Upload variação ${index + 1} concluído:`, uploadResult.imageUrl);
           } else {
             console.warn(`⚠️ Falha upload variação ${index + 1}:`, uploadResult.error);
-            // Remover URL blob inválida se upload falhou
             processedVariation.image_url = '';
           }
         } catch (error) {
@@ -283,7 +257,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       processedVariations.push(processedVariation);
     }
     
-    console.log('✅ IMAGENS - Processamento concluído:', processedVariations.length);
+    console.log('✅ PROCESSAMENTO IMAGENS - Concluído:', processedVariations.length);
     return processedVariations;
   };
 
@@ -293,28 +267,21 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       return;
     }
 
-    // VERIFICAÇÃO CRÍTICA: Estado das variações
-    console.log('🚨 CRÍTICO - Verificação completa do estado antes do salvamento:', {
-      variationsLength: variations.length,
-      initialLoadDone: initialLoadDoneRef.current,
-      mode: mode,
-      productId: mode === 'edit' ? initialData?.id : 'novo-produto',
-      timestamp: new Date().toISOString(),
-      variationsDetailed: variations.map(v => ({ 
+    // 🚨 DEBUG CRÍTICO: Estado completo antes do salvamento
+    console.log('🚨 SALVAMENTO - Estado completo INÍCIO:', {
+      variations_count: variations.length,
+      variations_detailed: variations.map(v => ({ 
         id: v.id, 
         color: v.color, 
         size: v.size, 
         stock: v.stock,
         hasImage: !!v.image_url,
         hasImageFile: !!v.image_file
-      }))
+      })),
+      mode: mode,
+      product_id: mode === 'edit' ? initialData?.id : 'novo',
+      timestamp: new Date().toISOString()
     });
-
-    if (variations.length === 0) {
-      console.log('ℹ️ AVISO - Produto será salvo sem variações');
-    } else {
-      console.log('✅ CONFIRMADO - Produto possui variações para salvar:', variations.length);
-    }
 
     setIsSubmitting(true);
 
@@ -322,55 +289,40 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       let imageUrl = form.getValues('image_url');
       let imageFiles: File[] = [];
       
-      // Preparar arquivos de imagem para upload
       if (mode === 'create' && draftImages.length > 0) {
         console.log('📤 Preparando upload de imagens rascunho...');
         imageFiles = draftImages.map(img => img.file);
       }
 
-      // Processar imagens das variações ANTES de enviar
-      console.log('🎨 PROCESSAMENTO - Iniciando processamento das variações:', {
-        total: variations.length,
-        variations: variations.map(v => ({ 
-          id: v.id, 
-          color: v.color, 
-          size: v.size, 
-          stock: v.stock,
-          hasImageFile: !!v.image_file,
-          hasImageUrl: !!v.image_url
-        }))
-      });
-
+      // 🎯 PROCESSAR VARIAÇÕES
+      console.log('🎨 PROCESSANDO VARIAÇÕES - Antes:', variations.length);
       const processedVariations = await processVariationImages(variations);
-      console.log('✅ PROCESSAMENTO - Variações processadas com sucesso:', processedVariations.length);
+      console.log('🎨 PROCESSANDO VARIAÇÕES - Depois:', processedVariations.length);
 
       const productData = {
         ...form.getValues(),
         store_id: profile.store_id,
         image_url: imageUrl,
         image_files: imageFiles.length > 0 ? imageFiles : undefined,
-        variations: processedVariations, // SEMPRE incluir variações processadas
+        variations: processedVariations, // 🎯 SEMPRE INCLUIR VARIAÇÕES
         wholesale_price: form.getValues('wholesale_price') || null,
         min_wholesale_qty: form.getValues('min_wholesale_qty') || 1,
         retail_price: Number(form.getValues('retail_price')),
         stock: Number(form.getValues('stock')),
       };
 
-      // CORREÇÃO: Adicionar ID apenas se estiver no modo de edição
       if (mode === 'edit' && initialData?.id) {
         (productData as any).id = initialData.id;
       }
 
-      console.log('💾 ENVIO FINAL - Dados do produto preparados:', {
-        id: mode === 'edit' ? initialData?.id : 'novo-produto',
+      console.log('💾 ENVIANDO DADOS FINAIS:', {
+        id: mode === 'edit' ? initialData?.id : 'novo',
         name: productData.name,
-        mode: mode,
         variations_count: productData.variations?.length || 0,
-        image_files_count: productData.image_files?.length || 0,
-        variationsPreview: productData.variations?.slice(0, 3).map(v => ({ 
-          id: v.id, 
+        variations_preview: productData.variations?.slice(0, 2).map(v => ({ 
           color: v.color, 
-          size: v.size 
+          size: v.size, 
+          stock: v.stock 
         }))
       });
 
@@ -380,7 +332,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       if (mode === 'create') {
         clearDraftImages();
         setVariations([]);
-        initialLoadDoneRef.current = null;
+        loadedRef.current = false;
       }
       
       onClose?.();
@@ -511,7 +463,6 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
                 </Button>
 
                 <div className="flex gap-2">
-                  {/* Botão de salvamento bypass - sempre visível se há mudanças */}
                   {hasUnsavedChanges && (
                     <Button
                       type="button"
@@ -548,15 +499,18 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
                 </div>
               </div>
               
-              {/* Debug: Estado atual das variações - CORRIGIDO */}
+              {/* Debug: Estado das variações */}
               {variations.length > 0 && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                  <strong>✅ Estado OK:</strong> {variations.length} variações prontas para salvar
-                  {mode === 'edit' && initialLoadDoneRef.current && (
-                    <span className="ml-2 text-green-600">
-                      | Dados carregados: {initialLoadDoneRef.current.slice(0, 8)}...
-                    </span>
-                  )}
+                  <strong>✅ VARIAÇÕES ATIVAS:</strong> {variations.length} variações no estado
+                  <div className="text-green-600 mt-1">
+                    {variations.slice(0, 3).map((v, i) => (
+                      <span key={i} className="mr-2">
+                        {v.color && `${v.color}`}{v.size && ` (${v.size})`}
+                      </span>
+                    ))}
+                    {variations.length > 3 && '...'}
+                  </div>
                 </div>
               )}
             </div>
