@@ -74,6 +74,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
   
   // Controle de carregamento de dados iniciais
   const initialDataLoadedRef = useRef(false);
+  // Ref para monitorar estado das variações
+  const variationsStateRef = useRef<ProductVariation[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -101,6 +103,29 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       console.log('📊 Mudanças no formulário:', hasChanges);
     }
   });
+
+  // Função segura para atualizar variações com logs detalhados
+  const handleVariationsChange = (newVariations: ProductVariation[]) => {
+    console.log('🔄 VARIAÇÕES - Mudança solicitada:', {
+      anterior: variations.length,
+      nova: newVariations.length,
+      detalhes: newVariations.map(v => ({ 
+        id: v.id, 
+        color: v.color, 
+        size: v.size, 
+        stock: v.stock,
+        hasImage: !!v.image_url
+      }))
+    });
+    
+    setVariations(newVariations);
+    variationsStateRef.current = newVariations;
+    
+    console.log('✅ VARIAÇÕES - Estado atualizado:', {
+      stateLength: newVariations.length,
+      refLength: variationsStateRef.current.length
+    });
+  };
 
   // Carregar dados iniciais apenas uma vez
   useEffect(() => {
@@ -132,7 +157,10 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       // Configurar variações se existirem
       if (initialData.variations && Array.isArray(initialData.variations)) {
         console.log('🎨 Carregando variações existentes:', initialData.variations.length);
-        setVariations(initialData.variations);
+        const loadedVariations = initialData.variations;
+        setVariations(loadedVariations);
+        variationsStateRef.current = loadedVariations;
+        console.log('✅ Variações carregadas no estado:', loadedVariations.length);
       }
       
       form.reset(formData);
@@ -148,8 +176,23 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     if (mode === 'create') {
       initialDataLoadedRef.current = false;
       setVariations([]);
+      variationsStateRef.current = [];
+      console.log('🔄 VARIAÇÕES - Reset para modo criação');
     }
   }, [mode]);
+
+  // Monitorar mudanças no estado das variações
+  useEffect(() => {
+    console.log('👀 VARIAÇÕES - Estado mudou:', {
+      length: variations.length,
+      variations: variations.map(v => ({ 
+        id: v.id, 
+        color: v.color, 
+        size: v.size, 
+        hasImage: !!v.image_url 
+      }))
+    });
+  }, [variations]);
 
   // Gerar slug automaticamente quando o nome mudar (apenas no modo criação)
   const watchedName = form.watch('name');
@@ -207,14 +250,15 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
 
   // Função simplificada para processar imagens das variações
   const processVariationImages = async (variations: ProductVariation[]): Promise<ProductVariation[]> => {
+    console.log('🖼️ IMAGENS - Processando imagens das variações:', variations.length);
     const processedVariations: ProductVariation[] = [];
     
-    for (const variation of variations) {
+    for (const [index, variation] of variations.entries()) {
       let processedVariation = { ...variation };
       
       // Se há arquivo de imagem (blob), fazer upload
       if (variation.image_file && variation.image_url?.startsWith('blob:')) {
-        console.log('🔄 Fazendo upload de imagem da variação...');
+        console.log(`🔄 Upload imagem variação ${index + 1}/${variations.length}...`);
         
         // Gerar ID temporário se não existir
         const variationId = variation.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -226,14 +270,14 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
             processedVariation.image_url = uploadResult.imageUrl;
             // Remover o arquivo após upload bem-sucedido
             delete processedVariation.image_file;
-            console.log('✅ Upload da variação concluído:', uploadResult.imageUrl);
+            console.log(`✅ Upload variação ${index + 1} concluído:`, uploadResult.imageUrl);
           } else {
-            console.warn('⚠️ Falha no upload da imagem da variação:', uploadResult.error);
+            console.warn(`⚠️ Falha upload variação ${index + 1}:`, uploadResult.error);
             // Remover URL blob inválida se upload falhou
             processedVariation.image_url = '';
           }
         } catch (error) {
-          console.error('🚨 Erro no upload da variação:', error);
+          console.error(`🚨 Erro upload variação ${index + 1}:`, error);
           processedVariation.image_url = '';
         }
       }
@@ -241,6 +285,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       processedVariations.push(processedVariation);
     }
     
+    console.log('✅ IMAGENS - Processamento concluído:', processedVariations.length);
     return processedVariations;
   };
 
@@ -248,6 +293,26 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
     if (!profile?.store_id) {
       console.error('🚨 Store ID não encontrado!');
       return;
+    }
+
+    // VERIFICAÇÃO CRÍTICA: Estado das variações antes do salvamento
+    const currentVariations = variationsStateRef.current.length > 0 ? variationsStateRef.current : variations;
+    
+    console.log('🚨 CRÍTICO - Estado das variações antes do salvamento:', {
+      stateVariations: variations.length,
+      refVariations: variationsStateRef.current.length,
+      currentVariations: currentVariations.length,
+      detalhes: currentVariations.map(v => ({ 
+        id: v.id, 
+        color: v.color, 
+        size: v.size, 
+        stock: v.stock,
+        hasImage: !!v.image_url 
+      }))
+    });
+
+    if (currentVariations.length === 0) {
+      console.log('⚠️ AVISO - Nenhuma variação encontrada para salvar');
     }
 
     setIsSubmitting(true);
@@ -264,8 +329,8 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
 
       // Processar imagens das variações ANTES de enviar
       console.log('🎨 Processando variações antes do envio:', {
-        total: variations.length,
-        variations: variations.map(v => ({ 
+        total: currentVariations.length,
+        variations: currentVariations.map(v => ({ 
           id: v.id, 
           color: v.color, 
           size: v.size, 
@@ -275,7 +340,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         }))
       });
 
-      const processedVariations = await processVariationImages(variations);
+      const processedVariations = await processVariationImages(currentVariations);
       console.log('✅ Variações processadas:', processedVariations.length);
 
       const productData = {
@@ -283,17 +348,23 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
         store_id: profile.store_id,
         image_url: imageUrl,
         image_files: imageFiles.length > 0 ? imageFiles : undefined,
-        variations: processedVariations, // SEMPRE incluir variações, mesmo se vazio
+        variations: processedVariations, // SEMPRE incluir variações processadas
         wholesale_price: form.getValues('wholesale_price') || null,
         min_wholesale_qty: form.getValues('min_wholesale_qty') || 1,
         retail_price: Number(form.getValues('retail_price')),
         stock: Number(form.getValues('stock')),
       };
 
-      console.log('💾 Enviando dados do produto:', {
+      console.log('💾 FINAL - Enviando dados do produto:', {
         ...productData,
         image_files: productData.image_files?.length || 0,
-        variations: productData.variations?.length || 0
+        variations: productData.variations?.length || 0,
+        variationsDetailed: productData.variations?.map(v => ({ 
+          id: v.id, 
+          color: v.color, 
+          size: v.size, 
+          stock: v.stock 
+        }))
       });
 
       await onSubmit(productData);
@@ -302,6 +373,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
       if (mode === 'create') {
         clearDraftImages();
         setVariations([]);
+        variationsStateRef.current = [];
       }
       
       onClose?.();
@@ -331,7 +403,7 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
           <ProductVariationsForm 
             form={form}
             variations={variations}
-            onVariationsChange={setVariations}
+            onVariationsChange={handleVariationsChange}
           />
         );
       case 5:
@@ -468,6 +540,13 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
                   )}
                 </div>
               </div>
+              
+              {/* Debug: Estado atual das variações */}
+              {variations.length > 0 && (
+                <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                  <strong>Debug:</strong> {variations.length} variações no estado atual
+                </div>
+              )}
             </div>
           </div>
         </Form>
@@ -480,6 +559,35 @@ const ProductFormWizard = ({ onSubmit, initialData, mode, onClose }: ProductForm
           Alterações não salvas
         </div>
       )}
+
+      {/* Dialog para mudanças não salvas */}
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterações não salvas</DialogTitle>
+            <DialogDescription>
+              Você tem alterações não salvas. Deseja sair sem salvar?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowUnsavedDialog(false)}
+            >
+              Continuar editando
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowUnsavedDialog(false);
+                onClose?.();
+              }}
+            >
+              Sair sem salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

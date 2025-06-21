@@ -312,6 +312,17 @@ export const useProducts = (storeId?: string) => {
   };
 
   const createProductVariations = async (productId: string, variations: any[]) => {
+    console.log('🎨 CRIANDO VARIAÇÕES - Início:', {
+      productId,
+      totalVariations: variations.length,
+      variations: variations.map(v => ({ 
+        color: v.color, 
+        size: v.size, 
+        stock: v.stock, 
+        hasImage: !!v.image_url 
+      }))
+    });
+
     for (const [index, variation] of variations.entries()) {
       try {
         const { image_file, ...variationData } = variation;
@@ -319,10 +330,12 @@ export const useProducts = (storeId?: string) => {
         console.log(`🎨 Criando variação ${index + 1}/${variations.length}:`, {
           color: variationData.color,
           size: variationData.size,
-          stock: variationData.stock
+          stock: variationData.stock,
+          price_adjustment: variationData.price_adjustment,
+          hasImageUrl: !!variationData.image_url
         });
 
-        // Preparar dados da variação
+        // Preparar dados da variação com validação
         const variationPayload = {
           product_id: productId,
           color: variationData.color || null,
@@ -333,6 +346,8 @@ export const useProducts = (storeId?: string) => {
           is_active: variationData.is_active ?? true,
           image_url: variationData.image_url || null,
         };
+
+        console.log(`📋 Payload variação ${index + 1}:`, variationPayload);
 
         const { data: newVariation, error: createError } = await supabase
           .from('product_variations')
@@ -345,11 +360,16 @@ export const useProducts = (storeId?: string) => {
           continue;
         }
 
-        console.log(`✅ Variação ${index + 1} criada:`, newVariation.id);
+        console.log(`✅ Variação ${index + 1} criada com sucesso:`, {
+          id: newVariation.id,
+          color: newVariation.color,
+          size: newVariation.size,
+          stock: newVariation.stock
+        });
 
-        // Upload da imagem se houver arquivo
+        // Upload da imagem se houver arquivo (legacy - deve vir processado agora)
         if (image_file && newVariation.id) {
-          console.log(`📤 Fazendo upload da imagem da variação ${index + 1}...`);
+          console.log(`📤 Upload imagem variação ${index + 1} (legacy)...`);
           
           try {
             const fileExt = image_file.name.split('.').pop()?.toLowerCase();
@@ -373,18 +393,20 @@ export const useProducts = (storeId?: string) => {
                 .update({ image_url: publicUrl })
                 .eq('id', newVariation.id);
 
-              console.log(`✅ Imagem da variação ${index + 1} salva:`, publicUrl);
+              console.log(`✅ Imagem variação ${index + 1} salva:`, publicUrl);
             } else {
-              console.error(`❌ Erro no upload da imagem da variação ${index + 1}:`, uploadError);
+              console.error(`❌ Erro upload imagem variação ${index + 1}:`, uploadError);
             }
           } catch (uploadError) {
-            console.error(`🚨 Erro inesperado no upload da variação ${index + 1}:`, uploadError);
+            console.error(`🚨 Erro inesperado upload variação ${index + 1}:`, uploadError);
           }
         }
       } catch (error) {
         console.error(`🚨 Erro inesperado na variação ${index + 1}:`, error);
       }
     }
+
+    console.log('🎨 CRIANDO VARIAÇÕES - Finalizado para produto:', productId);
   };
 
   const updateProduct = async (productData: UpdateProductData & { variations?: any[], image_files?: File[] }) => {
@@ -396,10 +418,16 @@ export const useProducts = (storeId?: string) => {
 
       const { id, variations, image_files, ...updates } = productData;
       
-      console.log('✏️ Atualizando produto:', {
+      console.log('✏️ ATUALIZANDO PRODUTO:', {
         id,
         variations_count: variations?.length || 0,
-        has_image_files: !!image_files?.length
+        has_image_files: !!image_files?.length,
+        variationsDetailed: variations?.map(v => ({ 
+          id: v.id, 
+          color: v.color, 
+          size: v.size, 
+          stock: v.stock 
+        })) || []
       });
 
       // Atualizar dados básicos do produto
@@ -412,9 +440,11 @@ export const useProducts = (storeId?: string) => {
         .single();
 
       if (error) {
-        console.error('❌ Erro ao atualizar produto:', error);
+        console.error('❌ Erro ao atualizar dados básicos do produto:', error);
         throw error;
       }
+
+      console.log('✅ Dados básicos do produto atualizados');
 
       // Upload de novas imagens se houver
       if (image_files && image_files.length > 0) {
@@ -429,7 +459,14 @@ export const useProducts = (storeId?: string) => {
         }
       }
 
-      // Gerenciar variações - abordagem simplificada: deletar todas e recriar
+      // Gerenciar variações - SEMPRE processar, mesmo se vazio
+      console.log('🔄 PROCESSANDO VARIAÇÕES:', {
+        variationsUndefined: variations === undefined,
+        variationsNull: variations === null,
+        variationsLength: variations?.length || 0,
+        variationsType: typeof variations
+      });
+
       if (variations !== undefined) {
         console.log('🔄 Atualizando variações do produto:', id);
         
@@ -441,15 +478,21 @@ export const useProducts = (storeId?: string) => {
 
         if (deleteError) {
           console.error('❌ Erro ao deletar variações existentes:', deleteError);
+          throw new Error(`Erro ao deletar variações: ${deleteError.message}`);
         } else {
-          console.log('🗑️ Variações existentes deletadas');
+          console.log('🗑️ Variações existentes deletadas com sucesso');
         }
 
         // 2. Criar novas variações se houver
         if (variations.length > 0) {
           console.log('➕ Criando novas variações:', variations.length);
           await createProductVariations(id, variations);
+          console.log('✅ Novas variações criadas com sucesso');
+        } else {
+          console.log('ℹ️ Nenhuma nova variação para criar');
         }
+      } else {
+        console.log('⚠️ Variações não definidas - pulando atualização de variações');
       }
 
       await fetchProducts();
