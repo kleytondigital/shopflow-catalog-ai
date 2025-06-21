@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 
 interface EditorStore {
@@ -13,6 +14,11 @@ interface EditorStore {
   resetToDefault: () => void;
   configuration: any;
   updateConfiguration: (path: string, value: any) => void;
+  // Novas propriedades adicionadas
+  currentTemplate: string;
+  applyTemplate: (templateName: string) => void;
+  reorderSections: (sections: string[]) => void;
+  loadFromDatabase: () => Promise<void>;
 }
 
 const defaultConfiguration = {
@@ -116,5 +122,39 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
   
+  // Novas implementações
+  currentTemplate: 'modern',
+  applyTemplate: (templateName: string) => {
+    set((state) => ({
+      currentTemplate: templateName,
+      configuration: {
+        ...state.configuration,
+        global: {
+          ...state.configuration.global,
+          template: templateName
+        }
+      },
+      isDirty: true
+    }));
+  },
   
+  reorderSections: (sections: string[]) => {
+    set((state) => ({
+      configuration: {
+        ...state.configuration,
+        sections: {
+          ...state.configuration.sections,
+          order: sections
+        }
+      },
+      isDirty: true
+    }));
+  },
+  
+  loadFromDatabase: async () => {
+    // Implementação simples para evitar erro
+    // Em um cenário real, carregaria do banco
+    console.log('Carregando configurações do banco...');
+    set({ isDirty: false });
+  }
 }));
