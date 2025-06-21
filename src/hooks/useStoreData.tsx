@@ -62,38 +62,9 @@ export const useStoreData = (storeIdentifier?: string) => {
           setStore(data);
           setError(null);
         } else {
-          // Tentar busca flexível apenas se não for UUID
-          if (!isUUID) {
-            console.log('🔄 useStoreData: Tentando busca flexível por nome');
-            
-            const flexibleQuery = supabase
-              .from('stores')
-              .select('id, name, description, logo_url, url_slug, phone, email, address')
-              .eq('is_active', true)
-              .or(`name.ilike.%${storeIdentifier}%,url_slug.ilike.%${storeIdentifier}%`)
-              .limit(1);
-            
-            const { data: flexibleData, error: flexibleError } = await flexibleQuery.maybeSingle();
-            
-            if (flexibleError) {
-              console.error('❌ useStoreData: Erro na busca flexível:', flexibleError);
-              throw flexibleError;
-            }
-            
-            if (flexibleData) {
-              console.log('✅ useStoreData: Loja encontrada via busca flexível:', flexibleData);
-              setStore(flexibleData);
-              setError(null);
-            } else {
-              console.log('❌ useStoreData: Nenhuma loja encontrada para:', storeIdentifier);
-              setError('Loja não encontrada');
-              setStore(null);
-            }
-          } else {
-            console.log('❌ useStoreData: UUID não encontrado:', storeIdentifier);
-            setError('Loja não encontrada');
-            setStore(null);
-          }
+          console.log('❌ useStoreData: Nenhuma loja encontrada para:', storeIdentifier);
+          setError('Loja não encontrada');
+          setStore(null);
         }
       } catch (error) {
         console.error('💥 useStoreData: Erro crítico:', error);

@@ -39,15 +39,22 @@ const CatalogPreview: React.FC = () => {
       fontFamily: settings.font_family || configuration.global.fontFamily,
       borderRadius: settings.border_radius || configuration.global.borderRadius,
       layoutSpacing: settings.layout_spacing || configuration.global.layoutSpacing,
+      template: settings.template_name || configuration.global.template,
       ...configuration.global
     },
     sections: configuration.sections,
-    sectionOrder: configuration.sectionOrder
+    sectionOrder: configuration.sectionOrder,
+    header: configuration.header,
+    checkout: {
+      showPrices: settings.show_prices ?? configuration.checkout.showPrices,
+      allowFilters: settings.allow_categories_filter ?? configuration.checkout.allowFilters,
+      ...configuration.checkout
+    }
   } : configuration;
 
   return (
     <div 
-      className="min-h-screen template-container"
+      className="min-h-full template-container catalog-container"
       style={{ 
         backgroundColor: activeConfig.colors.background,
         fontFamily: activeConfig.global.fontFamily,

@@ -30,16 +30,22 @@
 }
 
 /* Aplicação global dos estilos do template */
-.template-container {
+.template-container,
+.catalog-container {
   font-family: var(--template-font-family);
   background-color: var(--template-background);
   color: var(--template-text);
 }
 
-/* Botões com gradiente global */
+/* Botões com gradiente global - Versão mais específica */
 .btn-primary,
 .button-primary,
-.template-button-primary {
+.template-button-primary,
+button[class*="primary"],
+.catalog-container .btn-primary,
+.catalog-container .button-primary,
+.template-container .btn-primary,
+.template-container .button-primary {
   background: var(--template-gradient-primary) !important;
   color: #FFFFFF !important;
   border: none !important;
@@ -51,11 +57,18 @@
   align-items: center !important;
   justify-content: center !important;
   gap: 0.5rem !important;
+  padding: 0.5rem 1rem !important;
+  text-decoration: none !important;
 }
 
 .btn-primary:hover,
 .button-primary:hover,
-.template-button-primary:hover {
+.template-button-primary:hover,
+button[class*="primary"]:hover,
+.catalog-container .btn-primary:hover,
+.catalog-container .button-primary:hover,
+.template-container .btn-primary:hover,
+.template-container .button-primary:hover {
   transform: translateY(-2px) !important;
   box-shadow: var(--template-shadow-lg) !important;
   opacity: 0.9 !important;
@@ -63,7 +76,8 @@
 
 .btn-primary:active,
 .button-primary:active,
-.template-button-primary:active {
+.template-button-primary:active,
+button[class*="primary"]:active {
   transform: translateY(0) !important;
 }
 
@@ -77,6 +91,7 @@
   border-radius: var(--template-border-radius) !important;
   font-weight: 500 !important;
   transition: all 0.3s ease !important;
+  padding: 0.5rem 1rem !important;
 }
 
 .btn-secondary:hover,
@@ -100,12 +115,6 @@
   transform: translateY(-2px);
 }
 
-/* Produtos com gradiente */
-.product-card .btn-primary,
-.product-card .button-primary {
-  background: var(--template-gradient-primary) !important;
-}
-
 /* Headers do template */
 .template-header {
   background: var(--template-surface);
@@ -122,13 +131,11 @@
   font-weight: 600;
 }
 
-/* Aplicar nos elementos do catálogo */
-.catalog-container {
-  font-family: var(--template-font-family);
-}
-
-.catalog-container .btn-primary,
-.catalog-container .button-primary {
+/* Aplicar em elementos específicos do catálogo */
+.product-card .btn-primary,
+.product-card .button-primary,
+.product-card button[class*="Adicionar"],
+.product-card button[class*="Comprar"] {
   background: var(--template-gradient-primary) !important;
 }
 

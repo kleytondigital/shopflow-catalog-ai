@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useEditorStore } from '../stores/useEditorStore';
 import { CatalogPreview } from './CatalogPreview';
@@ -7,9 +8,9 @@ const EditorPreview: React.FC = () => {
   const { activeTab, setActiveTab } = useEditorStore();
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-[600px]">
       {/* Preview Tabs */}
-      <div className="border-b border-gray-200 px-4 py-2">
+      <div className="border-b border-gray-200 px-4 py-2 flex-shrink-0">
         <div className="flex gap-2">
           {[
             { id: 'catalog', label: 'Catálogo' },
@@ -32,17 +33,8 @@ const EditorPreview: React.FC = () => {
 
       {/* Preview Content */}
       <div className="flex-1 overflow-auto">
-        {activeTab === 'catalog' && (
-          <div className="p-4">
-            <CatalogPreview />
-          </div>
-        )}
-        
-        {activeTab === 'checkout' && (
-          <div className="p-4">
-            <CheckoutPreview />
-          </div>
-        )}
+        {activeTab === 'catalog' && <CatalogPreview />}
+        {activeTab === 'checkout' && <CheckoutPreview />}
       </div>
     </div>
   );

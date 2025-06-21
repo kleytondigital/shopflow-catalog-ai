@@ -1,10 +1,14 @@
 
 import React from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { useStoreData } from '@/hooks/useStoreData';
+import { useAuth } from '@/hooks/useAuth';
 import { Search, ShoppingCart, Menu } from 'lucide-react';
 
 const PreviewHeader: React.FC = () => {
   const { configuration } = useEditorStore();
+  const { profile } = useAuth();
+  const { store } = useStoreData(profile?.store_id);
   const headerConfig = configuration.header;
 
   const getLayoutClass = () => {
@@ -43,11 +47,19 @@ const PreviewHeader: React.FC = () => {
         <div className={`flex items-center ${getLayoutClass()}`}>
           {/* Logo */}
           <div className={`flex items-center ${getLogoPosition()}`}>
-            <div className="w-8 h-8 bg-current rounded mr-3 flex-shrink-0" />
+            {store?.logo_url ? (
+              <img 
+                src={store.logo_url} 
+                alt={store.name || 'Logo'}
+                className="w-8 h-8 object-contain rounded mr-3 flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-current rounded mr-3 flex-shrink-0" />
+            )}
             <div>
-              <h1 className="text-xl font-bold">Minha Loja</h1>
+              <h1 className="text-xl font-bold">{store?.name || 'Minha Loja'}</h1>
               {headerConfig.showSlogan && (
-                <p className="text-sm opacity-80">{headerConfig.slogan}</p>
+                <p className="text-sm opacity-80">{headerConfig.slogan || store?.description}</p>
               )}
             </div>
           </div>
@@ -75,7 +87,7 @@ const PreviewHeader: React.FC = () => {
                 </div>
               </div>
             )}
-            <button className="relative">
+            <button className="relative template-button-primary px-3 py-2 rounded-lg">
               <ShoppingCart size={20} />
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 0

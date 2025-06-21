@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,14 +24,18 @@ const VisualEditor: React.FC = () => {
   } = useEditorStore();
   
   const { saveToDatabase, isConnected, loading } = useTemplateSync();
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
       await saveToDatabase();
       toast.success('Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -52,7 +56,7 @@ const VisualEditor: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Toolbar Superior */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -121,11 +125,11 @@ const VisualEditor: React.FC = () => {
               
               <Button
                 onClick={handleSave}
-                disabled={!isDirty || !isConnected}
+                disabled={!isDirty || !isConnected || isSaving}
                 className="flex items-center gap-2"
               >
                 <Save size={16} />
-                Salvar
+                {isSaving ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </div>
@@ -135,15 +139,15 @@ const VisualEditor: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Painel Lateral */}
         {!isPreviewMode && (
-          <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
             <EditorSidebar />
           </div>
         )}
 
         {/* Área Principal - Preview */}
-        <div className="flex-1 flex flex-col bg-gray-100">
+        <div className="flex-1 flex flex-col bg-gray-100 overflow-hidden">
           {/* Seletor de Dispositivo */}
-          <div className="bg-white border-b border-gray-200 p-4">
+          <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
             <div className="flex items-center justify-center gap-2">
               {devices.map((device) => {
                 const IconComponent = device.icon;
@@ -163,18 +167,19 @@ const VisualEditor: React.FC = () => {
             </div>
           </div>
 
-          {/* Preview Container */}
-          <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
-            <div 
-              className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300"
-              style={{ 
-                width: devices.find(d => d.id === currentDevice)?.width,
-                maxWidth: '100%',
-                height: currentDevice === 'mobile' ? '667px' : 'auto',
-                minHeight: currentDevice === 'tablet' ? '1024px' : 'auto'
-              }}
-            >
-              <EditorPreview />
+          {/* Preview Container - Agora com scroll próprio */}
+          <div className="flex-1 p-8 overflow-auto">
+            <div className="flex items-start justify-center min-h-full">
+              <div 
+                className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300"
+                style={{ 
+                  width: devices.find(d => d.id === currentDevice)?.width,
+                  maxWidth: '100%',
+                  minHeight: currentDevice === 'mobile' ? '667px' : '800px',
+                }}
+              >
+                <EditorPreview />
+              </div>
             </div>
           </div>
         </div>

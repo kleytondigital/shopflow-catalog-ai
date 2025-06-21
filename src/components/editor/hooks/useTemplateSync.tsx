@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useEditorStore } from '../stores/useEditorStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,24 +8,24 @@ export const useTemplateSync = () => {
   const { profile } = useAuth();
   const { settings, updateSettings, loading } = useCatalogSettings(profile?.store_id);
   const { configuration, updateConfiguration, loadFromDatabase, isDirty } = useEditorStore();
+  const [isConnected, setIsConnected] = useState(false);
+  const loadingRef = useRef(false);
 
-  // Carregar configurações do banco na inicialização
+  // Carregar configurações do banco na inicialização com debounce
   useEffect(() => {
-    if (settings && !loading && profile?.store_id) {
+    if (settings && !loading && profile?.store_id && !loadingRef.current) {
+      loadingRef.current = true;
       console.log('useTemplateSync: Carregando configurações do banco:', settings);
       loadFromDatabase(settings);
+      setIsConnected(true);
+      loadingRef.current = false;
     }
   }, [settings, loading, profile?.store_id, loadFromDatabase]);
 
   // Aplicar estilos CSS globais quando as configurações mudarem
-  useEffect(() => {
-    if (settings && !loading) {
-      applyGlobalStyles(settings);
-    }
-  }, [settings, loading]);
+  const applyGlobalStyles = useCallback((currentSettings: any) => {
+    if (!currentSettings) return;
 
-  // Aplicar estilos CSS globais
-  const applyGlobalStyles = (currentSettings: any) => {
     const root = document.documentElement;
     
     // Aplicar cores CSS customizadas
@@ -57,13 +57,15 @@ export const useTemplateSync = () => {
     console.log('useTemplateSync: Estilos globais aplicados:', {
       primary: currentSettings.primary_color,
       secondary: currentSettings.secondary_color,
-      accent: currentSettings.accent_color,
-      background: currentSettings.background_color,
-      text: currentSettings.text_color,
-      border: currentSettings.border_color,
       template: currentSettings.template_name
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (settings && !loading) {
+      applyGlobalStyles(settings);
+    }
+  }, [settings, loading, applyGlobalStyles]);
 
   // Função para salvar no banco
   const saveToDatabase = async () => {
@@ -106,7 +108,7 @@ export const useTemplateSync = () => {
   return {
     settings,
     saveToDatabase,
-    isConnected: !!settings && !loading && !!profile?.store_id,
+    isConnected: isConnected && !!settings && !loading && !!profile?.store_id,
     loading
   };
 };
