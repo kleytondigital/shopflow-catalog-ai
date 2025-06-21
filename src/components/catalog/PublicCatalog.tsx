@@ -2,9 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useNavigate } from 'react-router-dom';
-import { Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import ProductGrid from './ProductGrid';
 import FilterSidebar from './FilterSidebar';
 import TemplateWrapper from './TemplateWrapper';
@@ -23,7 +20,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const { store, products, filteredProducts, loading: catalogLoading, searchProducts, filterProducts } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
   const { totalItems } = useCart();
-  const navigate = useNavigate();
   
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -46,10 +42,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
   const handleCartClick = () => {
     console.log('🛒 PUBLIC CATALOG - Clique no carrinho');
-  };
-
-  const handleEditCatalog = () => {
-    navigate('/visual-editor');
   };
 
   const loading = catalogLoading || settingsLoading;
@@ -77,16 +69,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
   return (
     <div className="relative">
-      {/* Botão flutuante para acessar o editor */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={handleEditCatalog}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg"
-        >
-          <Edit size={24} />
-        </Button>
-      </div>
-
       <TemplateWrapper
         templateName={templateName}
         store={store}

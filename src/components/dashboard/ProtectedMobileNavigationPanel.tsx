@@ -1,151 +1,93 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { usePlanPermissions } from '@/hooks/usePlanPermissions';
-import { Badge } from '@/components/ui/badge';
-import { Lock } from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { 
-  Package, ShoppingCart, Settings, BarChart3, 
-  Users, Tag, Truck, CreditCard
+  Package, 
+  ShoppingCart, 
+  BarChart3, 
+  Settings, 
+  Tag, 
+  Truck, 
+  Users,
+  Palette
 } from 'lucide-react';
-
-interface NavigationItem {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  route: string;
-  color: string;
-  bgColor: string;
-  benefitKey?: string;
-  requiresPremium?: boolean;
-}
+import { ProtectedMenuItem } from '@/components/billing/ProtectedMenuItem';
 
 const ProtectedMobileNavigationPanel = () => {
   const navigate = useNavigate();
-  const { hasBenefit, isSuperadmin } = usePlanPermissions();
 
-  const navigationItems: NavigationItem[] = [
+  const navigationItems = [
     {
       title: 'Produtos',
-      description: 'Gerencie catálogo',
       icon: Package,
-      route: '/products',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      href: '/products',
+      color: 'bg-blue-500 hover:bg-blue-600'
     },
     {
       title: 'Pedidos',
-      description: 'Acompanhe vendas',
       icon: ShoppingCart,
-      route: '/orders',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
+      href: '/orders',
+      color: 'bg-green-500 hover:bg-green-600'
     },
     {
-      title: 'Clientes',
-      description: 'Base de clientes',
-      icon: Users,
-      route: '/customers',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+      title: 'Templates',
+      icon: Palette,
+      href: '/visual-editor',
+      color: 'bg-purple-500 hover:bg-purple-600'
     },
     {
       title: 'Cupons',
-      description: 'Promoções',
       icon: Tag,
-      route: '/coupons',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
+      href: '/coupons',
+      color: 'bg-orange-500 hover:bg-orange-600',
       benefitKey: 'discount_coupons',
       requiresPremium: true
     },
     {
-      title: 'Relatórios',
-      description: 'Análises',
-      icon: BarChart3,
-      route: '/reports',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100',
-      benefitKey: 'dedicated_support',
-      requiresPremium: true
-    },
-    {
-      title: 'Envios',
-      description: 'Entregas',
+      title: 'Entrega',
       icon: Truck,
-      route: '/deliveries',
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-100',
+      href: '/deliveries',
+      color: 'bg-cyan-500 hover:bg-cyan-600',
       benefitKey: 'shipping_calculator',
       requiresPremium: true
     },
     {
-      title: 'Pagamentos',
-      description: 'Métodos',
-      icon: CreditCard,
-      route: '/payments',
-      color: 'text-cyan-600',
-      bgColor: 'bg-cyan-100'
+      title: 'Relatórios',
+      icon: BarChart3,
+      href: '/reports',
+      color: 'bg-indigo-500 hover:bg-indigo-600',
+      benefitKey: 'dedicated_support',
+      requiresPremium: true
     },
     {
-      title: 'Configurações',
-      description: 'Ajustes',
+      title: 'Clientes',
+      icon: Users,
+      href: '/customers',
+      color: 'bg-pink-500 hover:bg-pink-600'
+    },
+    {
+      title: 'Config.',
       icon: Settings,
-      route: '/settings',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100'
+      href: '/settings',
+      color: 'bg-gray-500 hover:bg-gray-600'
     }
   ];
 
-  const handleItemClick = (item: NavigationItem) => {
-    // Verificar se a funcionalidade requer premium e se o usuário tem acesso
-    if (item.requiresPremium && !isSuperadmin && !hasBenefit(item.benefitKey!)) {
-      toast.error(`${item.title} está disponível apenas no plano Premium. Faça upgrade para ter acesso!`);
-      return;
-    }
-    
-    navigate(item.route);
-  };
-
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-      {navigationItems.map((item) => {
-        const isBlocked = item.requiresPremium && !isSuperadmin && !hasBenefit(item.benefitKey!);
-        
-        return (
-          <Card 
-            key={item.route}
-            className={`cursor-pointer hover:scale-105 transition-all duration-300 group shadow-md hover:shadow-lg relative ${
-              isBlocked ? 'opacity-60' : ''
-            }`}
-            onClick={() => handleItemClick(item)}
-          >
-            <CardContent className="flex flex-col items-center justify-center p-3 md:p-6 text-center">
-              <div className={`${item.bgColor} p-2 md:p-4 rounded-lg md:rounded-xl mb-2 md:mb-4 group-hover:scale-110 transition-transform duration-300 relative`}>
-                <item.icon className={`h-5 w-5 md:h-8 md:w-8 ${item.color}`} />
-                {isBlocked && (
-                  <Lock className="h-3 w-3 absolute -top-1 -right-1 text-orange-500" />
-                )}
-              </div>
-              <div className="flex items-center gap-1 mb-1">
-                <h3 className="font-semibold text-xs md:text-sm truncate w-full">
-                  {item.title}
-                </h3>
-                {isBlocked && (
-                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 hidden md:block">
-                    Premium
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground hidden md:block truncate">
-                {item.description}
-              </p>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="grid grid-cols-4 gap-3">
+      {navigationItems.map((item) => (
+        <ProtectedMenuItem
+          key={item.title}
+          name={item.title}
+          href={item.href}
+          icon={item.icon}
+          benefitKey={(item as any).benefitKey}
+          requiresPremium={(item as any).requiresPremium}
+          renderAs="mobile-button"
+          color={item.color}
+        />
+      ))}
     </div>
   );
 };
