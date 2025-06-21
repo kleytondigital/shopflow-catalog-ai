@@ -20,7 +20,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 }) => {
   const { store, products, filteredProducts, loading: catalogLoading, searchProducts, filterProducts } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
-  const { itemsCount } = useCart();
+  const { totalItems } = useCart(); // Corrigido: usar totalItems em vez de itemsCount
   
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -71,7 +71,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       <CatalogHeader 
         store={store}
         catalogType={catalogType}
-        cartItemsCount={itemsCount}
+        cartItemsCount={totalItems} // Corrigido: usar totalItems
         wishlistCount={wishlist.length}
         whatsappNumber={settings?.whatsapp_number || undefined}
         onSearch={searchProducts}
