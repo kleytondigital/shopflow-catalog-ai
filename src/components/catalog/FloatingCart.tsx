@@ -126,13 +126,15 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout }) => {
                             <h4 className="font-semibold text-gray-900 truncate">
                               {item.product?.name || 'Produto sem nome'}
                             </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {item.catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
-                              </Badge>
-                              {item.isWholesalePrice && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {/* Lógica de badge melhorada - se é atacado, não mostra varejo */}
+                              {item.isWholesalePrice ? (
                                 <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
-                                  💰 Preço de Atacado
+                                  💰 Atacado
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Varejo
                                 </Badge>
                               )}
                               {item.variations && (
