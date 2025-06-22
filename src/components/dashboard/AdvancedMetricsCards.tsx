@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Users, ShoppingBag, Percent, DollarSign } from 'lucide-react';
@@ -100,7 +99,7 @@ const AdvancedMetricsCards: React.FC<AdvancedMetricsCardsProps> = ({ dateRange }
   });
 
   const formatCurrency = (value: number) => {
-    return new Int NumeFormat('pt-BR', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
