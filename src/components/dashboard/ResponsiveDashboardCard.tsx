@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import MiniChart from './MiniChart';
 
 interface ResponsiveDashboardCardProps {
   title: string;
@@ -13,6 +14,8 @@ interface ResponsiveDashboardCardProps {
   };
   variant?: 'primary' | 'secondary' | 'success' | 'warning';
   onClick?: () => void;
+  showChart?: boolean;
+  chartData?: Array<{ value: number; label?: string }>;
 }
 
 const ResponsiveDashboardCard = ({ 
@@ -22,11 +25,13 @@ const ResponsiveDashboardCard = ({
   icon: Icon, 
   trend, 
   variant = 'primary',
-  onClick 
+  onClick,
+  showChart = false,
+  chartData = []
 }: ResponsiveDashboardCardProps) => {
   const getCardClasses = () => {
     const baseClasses = "relative overflow-hidden rounded-2xl p-6 transition-all duration-300 ease-out";
-    const interactiveClasses = onClick ? 'cursor-pointer hover:transform hover:scale-102 hover:-translate-y-1' : '';
+    const interactiveClasses = onClick ? 'cursor-pointer hover:transform hover:scale-102 hover:-translate-y-1 hover:shadow-xl' : '';
     
     let variantClasses = '';
     switch (variant) {
@@ -55,6 +60,8 @@ const ResponsiveDashboardCard = ({
     <div 
       className={getCardClasses()}
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4 md:mb-5">
@@ -92,6 +99,19 @@ const ResponsiveDashboardCard = ({
           {subtitle}
         </p>
       )}
+
+      {/* Mini-gráfico */}
+      {showChart && chartData.length > 0 && (
+        <div className="mb-4">
+          <MiniChart 
+            data={chartData} 
+            type="area" 
+            color="rgba(255, 255, 255, 0.8)"
+            height={32}
+            isPositive={trend?.isPositive}
+          />
+        </div>
+      )}
       
       {/* Progress bar para trend */}
       {trend && (
@@ -104,6 +124,17 @@ const ResponsiveDashboardCard = ({
               width: `${Math.min(Math.abs(trend.value), 100)}%`,
             }}
           />
+        </div>
+      )}
+
+      {/* Click indicator */}
+      {onClick && (
+        <div className="absolute top-4 right-4 opacity-0 hover:opacity-100 transition-opacity duration-200">
+          <div className="bg-white/20 rounded-full p-1">
+            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       )}
 

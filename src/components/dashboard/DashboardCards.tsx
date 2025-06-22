@@ -5,17 +5,30 @@ import ResponsiveDashboardCard from './ResponsiveDashboardCard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useSuperadminMetrics } from '@/hooks/useSuperadminMetrics';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardCardsProps {
   userRole: 'superadmin' | 'admin';
 }
 
 const DashboardCards = ({ userRole }: DashboardCardsProps) => {
+  const navigate = useNavigate();
   const { data: storeMetrics, isLoading: storeLoading, error: storeError } = useDashboardMetrics();
   const { data: adminMetrics, isLoading: adminLoading, error: adminError } = useSuperadminMetrics();
 
   const isLoading = userRole === 'superadmin' ? adminLoading : storeLoading;
   const error = userRole === 'superadmin' ? adminError : storeError;
+
+  // Dados para mini-gráficos (simulados - em produção viriam de métricas reais)
+  const generateChartData = (baseValue: number, trend: boolean) => {
+    const points = 7;
+    const data = [];
+    for (let i = 0; i < points; i++) {
+      const variation = trend ? i * 2 : -i * 1.5;
+      data.push({ value: Math.max(baseValue + variation + Math.random() * 10, 0) });
+    }
+    return data;
+  };
 
   if (isLoading) {
     return (
@@ -52,7 +65,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.salesGrowth),
         isPositive: storeMetrics.salesGrowth >= 0
       } : undefined,
-      variant: 'success' as const
+      variant: 'success' as const,
+      onClick: () => navigate('/reports'),
+      chartData: storeMetrics ? generateChartData(50, storeMetrics.salesGrowth >= 0) : []
     },
     {
       title: 'Pedidos Hoje',
@@ -63,7 +78,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.ordersGrowth),
         isPositive: storeMetrics.ordersGrowth >= 0
       } : undefined,
-      variant: 'primary' as const
+      variant: 'primary' as const,
+      onClick: () => navigate('/orders'),
+      chartData: storeMetrics ? generateChartData(20, storeMetrics.ordersGrowth >= 0) : []
     },
     {
       title: 'Produtos Ativos',
@@ -74,7 +91,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.productsGrowth),
         isPositive: storeMetrics.productsGrowth >= 0
       } : undefined,
-      variant: 'secondary' as const
+      variant: 'secondary' as const,
+      onClick: () => navigate('/products'),
+      chartData: storeMetrics ? generateChartData(30, storeMetrics.productsGrowth >= 0) : []
     },
     {
       title: 'Visitantes',
@@ -85,7 +104,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.visitorsGrowth),
         isPositive: storeMetrics.visitorsGrowth >= 0
       } : undefined,
-      variant: 'warning' as const
+      variant: 'warning' as const,
+      onClick: () => navigate('/reports'),
+      chartData: storeMetrics ? generateChartData(40, storeMetrics.visitorsGrowth >= 0) : []
     }
   ];
 
@@ -99,7 +120,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.storesGrowth,
         isPositive: adminMetrics.storesGrowth >= 0
       } : undefined,
-      variant: 'primary' as const
+      variant: 'primary' as const,
+      onClick: () => navigate('/stores'),
+      chartData: adminMetrics ? generateChartData(10, adminMetrics.storesGrowth >= 0) : []
     },
     {
       title: 'Receita Total',
@@ -110,7 +133,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.revenueGrowth,
         isPositive: adminMetrics.revenueGrowth >= 0
       } : undefined,
-      variant: 'success' as const
+      variant: 'success' as const,
+      onClick: () => navigate('/reports'),
+      chartData: adminMetrics ? generateChartData(100, adminMetrics.revenueGrowth >= 0) : []
     },
     {
       title: 'Pedidos Hoje',
@@ -121,7 +146,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.ordersGrowth,
         isPositive: adminMetrics.ordersGrowth >= 0
       } : undefined,
-      variant: 'warning' as const
+      variant: 'warning' as const,
+      onClick: () => navigate('/orders'),
+      chartData: adminMetrics ? generateChartData(50, adminMetrics.ordersGrowth >= 0) : []
     },
     {
       title: 'Produtos Cadastrados',
@@ -132,7 +159,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.productsGrowth,
         isPositive: adminMetrics.productsGrowth >= 0
       } : undefined,
-      variant: 'secondary' as const
+      variant: 'secondary' as const,
+      onClick: () => navigate('/products'),
+      chartData: adminMetrics ? generateChartData(80, adminMetrics.productsGrowth >= 0) : []
     }
   ];
 
@@ -149,6 +178,9 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
           icon={stat.icon}
           trend={stat.trend}
           variant={stat.variant}
+          onClick={stat.onClick}
+          showChart={true}
+          chartData={stat.chartData}
         />
       ))}
     </div>

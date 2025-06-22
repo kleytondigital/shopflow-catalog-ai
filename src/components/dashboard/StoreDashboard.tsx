@@ -4,6 +4,8 @@ import DashboardCards from './DashboardCards';
 import QuickActions from './QuickActions';
 import ProtectedNavigationPanel from './ProtectedNavigationPanel';
 import ProtectedMobileNavigationPanel from './ProtectedMobileNavigationPanel';
+import IntelligentAlerts from './IntelligentAlerts';
+import RecentActivityWidget from './RecentActivityWidget';
 import ProductFormModal from '@/components/products/ProductFormModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
@@ -41,9 +43,18 @@ const StoreDashboard = () => {
         <DashboardCards userRole={isSuperadmin ? 'superadmin' : 'admin'} />
       </div>
 
-      {/* Ações rápidas - apenas em desktop */}
-      <div className="hidden lg:block">
-        <QuickActions onNewProduct={handleNewProduct} />
+      {/* Alertas Inteligentes */}
+      <IntelligentAlerts />
+
+      {/* Seção com Atividade Recente e Ações Rápidas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Atividade Recente */}
+        <RecentActivityWidget />
+        
+        {/* Ações rápidas - sempre visível */}
+        <div>
+          <QuickActions onNewProduct={handleNewProduct} />
+        </div>
       </div>
 
       {/* Acesso Rápido - Desktop */}
