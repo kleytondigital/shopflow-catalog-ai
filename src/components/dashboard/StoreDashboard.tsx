@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
@@ -21,6 +20,13 @@ import QuickControlCenter from './QuickControlCenter';
 
 // Modal de produto
 import ProductFormModal from '@/components/products/ProductFormModal';
+
+// Importar novos componentes da Fase 3
+import PredictiveAnalytics from './PredictiveAnalytics';
+import SmartAutomationHub from './SmartAutomationHub';
+import CustomReportsBuilder from './CustomReportsBuilder';
+import AdvancedIntegrationPanel from './AdvancedIntegrationPanel';
+import { BenefitGate } from '@/components/billing/BenefitGate';
 
 const StoreDashboard = () => {
   const [showProductModal, setShowProductModal] = useState(false);
@@ -82,6 +88,31 @@ const StoreDashboard = () => {
           <QuickControlCenter />
         </div>
       </div>
+
+      {/* FASE 3 - Funcionalidades Premium/Enterprise */}
+      <BenefitGate 
+        benefitKey="dedicated_support"
+        customMessage="As funcionalidades avançadas de análise e automação estão disponíveis apenas nos planos Premium e Enterprise."
+      >
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Painel Executivo Avançado
+          </h3>
+          
+          {/* Análise Preditiva e Automações */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PredictiveAnalytics />
+            <SmartAutomationHub />
+          </div>
+
+          {/* Relatórios Personalizados e Integrações */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CustomReportsBuilder />
+            <AdvancedIntegrationPanel />
+          </div>
+        </div>
+      </BenefitGate>
 
       {/* Acesso Rápido - Desktop */}
       <div className="hidden lg:block">
