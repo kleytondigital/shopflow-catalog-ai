@@ -2,9 +2,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
-// Componente legado - redireciona para o novo AppleDashboardCard
-import AppleDashboardCard from './AppleDashboardCard';
-
 interface DashboardCardProps {
   title: string;
   value: string | number;
@@ -22,32 +19,64 @@ const DashboardCard = ({
   title, 
   value, 
   subtitle, 
-  icon, 
+  icon: Icon, 
   trend, 
   variant = 'primary',
   onClick 
 }: DashboardCardProps) => {
-  // Mapear variantes antigas para as novas
-  const mapVariant = (oldVariant: string) => {
-    switch (oldVariant) {
-      case 'primary': return 'blue';
-      case 'secondary': return 'purple';
-      case 'success': return 'green';
-      case 'warning': return 'orange';
-      default: return 'blue';
+  const getCardClass = () => {
+    switch (variant) {
+      case 'primary':
+        return 'card-gradient-primary';
+      case 'secondary':
+        return 'card-gradient-secondary';
+      case 'success':
+        return 'card-gradient-success';
+      case 'warning':
+        return 'card-gradient-warning';
+      default:
+        return 'card-gradient-primary';
     }
   };
 
   return (
-    <AppleDashboardCard
-      title={title}
-      value={value}
-      subtitle={subtitle}
-      icon={icon}
-      trend={trend}
-      variant={mapVariant(variant)}
+    <div 
+      className={`${getCardClass()} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
-    />
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <p className="text-white/80 text-sm font-medium mb-2">{title}</p>
+          <div className="flex items-end gap-2">
+            <h3 className="text-3xl font-bold text-white">{value}</h3>
+            {trend && (
+              <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-200' : 'text-red-200'}`}>
+                {trend.isPositive ? '+' : ''}{trend.value}%
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p className="text-white/70 text-sm mt-1">{subtitle}</p>
+          )}
+        </div>
+        <div className="ml-4">
+          <div className="bg-white/20 p-3 rounded-xl">
+            <Icon size={24} className="text-white" />
+          </div>
+        </div>
+      </div>
+      
+      {trend && (
+        <div className="mt-4">
+          <div className="progress-bar bg-white/20">
+            <div 
+              className={`progress-fill ${trend.isPositive ? 'bg-green-300' : 'bg-red-300'}`}
+              style={{ width: `${Math.min(Math.abs(trend.value), 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

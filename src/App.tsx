@@ -29,9 +29,6 @@ import Stores from '@/pages/Stores';
 import PlanManagement from '@/pages/PlanManagement';
 import GlobalIntegrations from '@/pages/GlobalIntegrations';
 
-// Importar apenas estilos do template - removendo dashboard-apple.css
-import '@/styles/template-variables.css';
-
 function App() {
   return (
     <Router>

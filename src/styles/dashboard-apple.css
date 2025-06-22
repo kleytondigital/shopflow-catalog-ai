@@ -1,7 +1,7 @@
 
-/* Dashboard Apple Design System - ISOLADO DO SISTEMA DE TEMPLATES */
+/* Dashboard Apple Design System */
 :root {
-  /* Apple-inspired color palette - EXCLUSIVO PARA DASHBOARD */
+  /* Apple-inspired color palette */
   --apple-white: #FFFFFF;
   --apple-gray-50: #FAFAFA;
   --apple-gray-100: #F5F5F7;
@@ -14,7 +14,7 @@
   --apple-gray-800: #1D1D1F;
   --apple-gray-900: #000000;
   
-  /* Apple accent colors - EXCLUSIVO PARA DASHBOARD */
+  /* Apple accent colors */
   --apple-blue: #007AFF;
   --apple-blue-light: #5AC8FA;
   --apple-green: #34C759;
@@ -22,11 +22,11 @@
   --apple-red: #FF3B30;
   --apple-purple: #AF52DE;
   
-  /* Typography - EXCLUSIVO PARA DASHBOARD */
+  /* Typography */
   --apple-font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   --apple-font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   
-  /* Spacing scale - EXCLUSIVO PARA DASHBOARD */
+  /* Spacing scale */
   --apple-space-1: 4px;
   --apple-space-2: 8px;
   --apple-space-3: 12px;
@@ -39,20 +39,20 @@
   --apple-space-16: 64px;
   --apple-space-20: 80px;
   
-  /* Border radius - EXCLUSIVO PARA DASHBOARD */
+  /* Border radius */
   --apple-radius-sm: 6px;
   --apple-radius-md: 12px;
   --apple-radius-lg: 16px;
   --apple-radius-xl: 20px;
   
-  /* Shadows - EXCLUSIVO PARA DASHBOARD */
+  /* Shadows */
   --apple-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --apple-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --apple-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --apple-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* Dashboard-specific styles - COMPLETAMENTE ISOLADO DO SISTEMA DE TEMPLATES */
+/* Dashboard-specific styles - isolated from template system */
 .dashboard-container {
   font-family: var(--apple-font-system);
   background-color: var(--apple-gray-50);
@@ -62,23 +62,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* IMPORTANTE: Garantir que variáveis do template não afetem o dashboard */
-.dashboard-container,
-.dashboard-container * {
-  /* Reset de variáveis do template para evitar conflitos */
-  --template-primary: initial !important;
-  --template-secondary: initial !important;
-  --template-accent: initial !important;
-  --template-background: initial !important;
-  --template-surface: initial !important;
-  --template-text: initial !important;
-  --template-border: initial !important;
-  --template-font-family: initial !important;
-  --template-border-radius: initial !important;
-  --template-spacing: initial !important;
-}
-
-/* Apple-style cards - ISOLADO */
+/* Apple-style cards */
 .apple-card {
   background: var(--apple-white);
   border: 1px solid var(--apple-gray-200);
@@ -118,7 +102,7 @@
   padding: var(--apple-space-6);
 }
 
-/* Metric cards - ISOLADO */
+/* Metric cards */
 .apple-metric-card {
   background: linear-gradient(135deg, var(--apple-white) 0%, var(--apple-gray-50) 100%);
   border: 1px solid var(--apple-gray-200);
@@ -237,7 +221,7 @@
   color: var(--apple-red);
 }
 
-/* Button styles - ISOLADO */
+/* Button styles */
 .apple-button {
   display: inline-flex;
   align-items: center;
@@ -275,7 +259,7 @@
   background: var(--apple-gray-200);
 }
 
-/* Grid layouts - ISOLADO */
+/* Grid layouts */
 .apple-grid {
   display: grid;
   gap: var(--apple-space-6);
@@ -305,7 +289,7 @@
   .apple-grid-lg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* Typography - ISOLADO */
+/* Typography */
 .apple-heading-1 {
   font-size: 2.25rem;
   font-weight: 700;
@@ -346,7 +330,7 @@
   margin: 0;
 }
 
-/* Spacing utilities - ISOLADO */
+/* Spacing utilities */
 .apple-space-y-2 > * + * { margin-top: var(--apple-space-2); }
 .apple-space-y-4 > * + * { margin-top: var(--apple-space-4); }
 .apple-space-y-6 > * + * { margin-top: var(--apple-space-6); }
@@ -359,7 +343,7 @@
 .apple-mb-8 { margin-bottom: var(--apple-space-8); }
 .apple-mb-12 { margin-bottom: var(--apple-space-12); }
 
-/* Loading states - ISOLADO */
+/* Loading states */
 .apple-loading {
   display: inline-block;
   width: 20px;
@@ -374,13 +358,13 @@
   to { transform: rotate(360deg); }
 }
 
-/* Focus states - ISOLADO */
+/* Focus states */
 .apple-focus-ring:focus {
   outline: 2px solid var(--apple-blue);
   outline-offset: 2px;
 }
 
-/* Animations - ISOLADO */
+/* Animations */
 .apple-fade-in {
   animation: apple-fade-in 0.3s ease-out;
 }
@@ -394,22 +378,4 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* PROTEÇÃO ADICIONAL: Garantir que estilos do template não vazem para o dashboard */
-.dashboard-container .template-button-primary,
-.dashboard-container .btn-primary,
-.dashboard-container .button-primary {
-  background: var(--apple-blue) !important;
-  color: var(--apple-white) !important;
-  border: none !important;
-  border-radius: var(--apple-radius-md) !important;
-}
-
-.dashboard-container .template-card,
-.dashboard-container .catalog-container {
-  /* Neutralizar estilos do catálogo no dashboard */
-  background: var(--apple-white) !important;
-  color: var(--apple-gray-800) !important;
-  font-family: var(--apple-font-system) !important;
 }

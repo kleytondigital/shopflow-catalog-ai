@@ -1,43 +1,86 @@
 
-import React from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
 import DashboardCards from './DashboardCards';
-import AppleQuickActions from './AppleQuickActions';
-import AppleNavigationCard from './AppleNavigationCard';
-import { useNavigate } from 'react-router-dom';
+import QuickActions from './QuickActions';
+import ProtectedNavigationPanel from './ProtectedNavigationPanel';
+import ProtectedMobileNavigationPanel from './ProtectedMobileNavigationPanel';
+import ProductFormModal from '@/components/products/ProductFormModal';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useProducts } from '@/hooks/useProducts';
+import { toast } from 'sonner';
 
 const StoreDashboard = () => {
-  const navigate = useNavigate();
+  const [showProductModal, setShowProductModal] = useState(false);
+  const { isSuperadmin } = useAuth();
+  const { createProduct } = useProducts();
 
   const handleNewProduct = () => {
-    navigate('/products?action=new');
+    setShowProductModal(true);
+  };
+
+  const handleCreateProduct = async (data: any) => {
+    try {
+      const result = await createProduct(data);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      toast.success('Produto criado com sucesso!');
+      setShowProductModal(false);
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      toast.error('Erro ao criar produto');
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header com ação */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Visão geral das suas vendas e produtos</p>
-        </div>
-        <button
-          onClick={handleNewProduct}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={16} />
-          Novo Produto
-        </button>
+    <div className="space-y-6 lg:space-y-8">
+      {/* Cards principais */}
+      <DashboardCards userRole={isSuperadmin ? 'superadmin' : 'admin'} />
+
+      {/* Ações rápidas - apenas em desktop */}
+      <div className="hidden lg:block">
+        <QuickActions onNewProduct={handleNewProduct} />
       </div>
 
-      {/* Métricas principais */}
-      <DashboardCards userRole="admin" />
-
-      {/* Grid com navegação e ações rápidas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AppleNavigationCard />
-        <AppleQuickActions onNewProduct={handleNewProduct} />
+      {/* Acesso Rápido - Desktop */}
+      <div className="hidden lg:block">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Acesso Rápido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProtectedNavigationPanel />
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Acesso Rápido - Mobile */}
+      <div className="lg:hidden">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <TrendingUp className="h-5 w-5" />
+              Acesso Rápido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProtectedMobileNavigationPanel />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Modal para novo produto */}
+      <ProductFormModal
+        open={showProductModal}
+        onOpenChange={setShowProductModal}
+        onSubmit={handleCreateProduct}
+        mode="create"
+      />
     </div>
   );
 };

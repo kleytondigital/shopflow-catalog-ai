@@ -1,8 +1,10 @@
 
 import React from 'react';
-import { TrendingUp, Package, ShoppingCart, Users, DollarSign, Store } from 'lucide-react';
+import { TrendingUp, Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import ResponsiveDashboardCard from './ResponsiveDashboardCard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useSuperadminMetrics } from '@/hooks/useSuperadminMetrics';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardCardsProps {
   userRole: 'superadmin' | 'admin';
@@ -17,17 +19,12 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[1, 2, 3, 4].map((index) => (
-          <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                <div className="w-16 h-4 bg-gray-200 rounded"></div>
-              </div>
-              <div className="w-20 h-8 bg-gray-200 rounded mb-2"></div>
-              <div className="w-24 h-4 bg-gray-200 rounded"></div>
-            </div>
+          <div key={index} className="rounded-2xl p-6 space-y-4">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-4 w-16" />
           </div>
         ))}
       </div>
@@ -55,8 +52,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.salesGrowth),
         isPositive: storeMetrics.salesGrowth >= 0
       } : undefined,
-      color: 'bg-green-50 text-green-600',
-      iconBg: 'bg-green-100'
+      variant: 'success' as const
     },
     {
       title: 'Pedidos Hoje',
@@ -67,8 +63,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.ordersGrowth),
         isPositive: storeMetrics.ordersGrowth >= 0
       } : undefined,
-      color: 'bg-blue-50 text-blue-600',
-      iconBg: 'bg-blue-100'
+      variant: 'primary' as const
     },
     {
       title: 'Produtos Ativos',
@@ -79,8 +74,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.productsGrowth),
         isPositive: storeMetrics.productsGrowth >= 0
       } : undefined,
-      color: 'bg-purple-50 text-purple-600',
-      iconBg: 'bg-purple-100'
+      variant: 'secondary' as const
     },
     {
       title: 'Visitantes',
@@ -91,8 +85,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.visitorsGrowth),
         isPositive: storeMetrics.visitorsGrowth >= 0
       } : undefined,
-      color: 'bg-orange-50 text-orange-600',
-      iconBg: 'bg-orange-100'
+      variant: 'warning' as const
     }
   ];
 
@@ -101,13 +94,12 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
       title: 'Total de Lojas',
       value: adminMetrics?.totalStores || 0,
       subtitle: 'lojas ativas',
-      icon: Store,
+      icon: Users,
       trend: adminMetrics ? {
         value: adminMetrics.storesGrowth,
         isPositive: adminMetrics.storesGrowth >= 0
       } : undefined,
-      color: 'bg-blue-50 text-blue-600',
-      iconBg: 'bg-blue-100'
+      variant: 'primary' as const
     },
     {
       title: 'Receita Total',
@@ -118,8 +110,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.revenueGrowth,
         isPositive: adminMetrics.revenueGrowth >= 0
       } : undefined,
-      color: 'bg-green-50 text-green-600',
-      iconBg: 'bg-green-100'
+      variant: 'success' as const
     },
     {
       title: 'Pedidos Hoje',
@@ -130,8 +121,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.ordersGrowth,
         isPositive: adminMetrics.ordersGrowth >= 0
       } : undefined,
-      color: 'bg-orange-50 text-orange-600',
-      iconBg: 'bg-orange-100'
+      variant: 'warning' as const
     },
     {
       title: 'Produtos Cadastrados',
@@ -142,39 +132,24 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.productsGrowth,
         isPositive: adminMetrics.productsGrowth >= 0
       } : undefined,
-      color: 'bg-purple-50 text-purple-600',
-      iconBg: 'bg-purple-100'
+      variant: 'secondary' as const
     }
   ];
 
   const stats = userRole === 'superadmin' ? superadminStats : adminStats;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {stats.map((stat, index) => (
-        <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-lg ${stat.iconBg}`}>
-              <stat.icon className={`h-6 w-6 ${stat.color.split(' ')[1]}`} />
-            </div>
-            {stat.trend && (
-              <div className={`flex items-center gap-1 text-sm font-medium ${
-                stat.trend.isPositive ? 'text-green-600' : 'text-red-600'
-              }`}>
-                <span>{stat.trend.isPositive ? '↗' : '↘'}</span>
-                <span>{Math.abs(stat.trend.value)}%</span>
-              </div>
-            )}
-          </div>
-          
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-            <p className="text-sm text-gray-600 font-medium">{stat.title}</p>
-            {stat.subtitle && (
-              <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
-            )}
-          </div>
-        </div>
+        <ResponsiveDashboardCard
+          key={index}
+          title={stat.title}
+          value={stat.value}
+          subtitle={stat.subtitle}
+          icon={stat.icon}
+          trend={stat.trend}
+          variant={stat.variant}
+        />
       ))}
     </div>
   );
