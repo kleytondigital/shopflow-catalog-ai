@@ -24,61 +24,35 @@ const ResponsiveDashboardCard = ({
   variant = 'primary',
   onClick 
 }: ResponsiveDashboardCardProps) => {
-  const getCardVariantClass = () => {
-    return `dashboard-card dashboard-card-${variant}`;
-  };
-
   return (
     <div 
-      className={`${getCardVariantClass()} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`dashboard-card-${variant} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
-      style={{ position: 'relative', overflow: 'hidden' }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <div style={{ flex: '1', minWidth: '0' }}>
-          <p style={{ 
-            color: 'rgba(255, 255, 255, 0.9)', 
-            fontSize: '0.875rem', 
-            fontWeight: '600', 
-            marginBottom: '0.25rem',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex-1 min-w-0">
+          <p className="text-white/90 text-sm font-semibold mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
             {title}
           </p>
         </div>
         <div className="dashboard-card-icon">
-          <Icon size={28} style={{ color: 'white', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }} />
+          <Icon size={28} className="text-white drop-shadow-sm" />
         </div>
       </div>
 
       {/* Valor principal e trend */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <div style={{ flex: '1', minWidth: '0' }}>
-          <h3 style={{ 
-            color: 'white', 
-            fontSize: '2.5rem', 
-            fontWeight: '700', 
-            lineHeight: '1',
-            letterSpacing: '-0.025em',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
-          }}>
+      <div className="flex items-end justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white text-4xl font-bold leading-none tracking-tight overflow-hidden text-ellipsis whitespace-nowrap drop-shadow-sm">
             {value}
           </h3>
         </div>
         {trend && (
-          <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.75rem' }}>
-            <span style={{
-              fontSize: '0.875rem',
-              fontWeight: '700',
-              color: trend.isPositive ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)',
-              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
-            }}>
+          <div className="flex items-center ml-3">
+            <span className={`text-sm font-bold drop-shadow-sm ${
+              trend.isPositive ? 'text-green-400/90' : 'text-red-400/90'
+            }`}>
               {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
             </span>
           </div>
@@ -87,15 +61,7 @@ const ResponsiveDashboardCard = ({
 
       {/* Subtitle */}
       {subtitle && (
-        <p style={{ 
-          color: 'rgba(255, 255, 255, 0.8)', 
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          marginBottom: '1.25rem',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
+        <p className="text-white/80 text-sm font-medium mb-5 overflow-hidden text-ellipsis whitespace-nowrap">
           {subtitle}
         </p>
       )}
@@ -112,21 +78,6 @@ const ResponsiveDashboardCard = ({
             }}
           />
         </div>
-      )}
-
-      {/* Overlay Hover Effect */}
-      {onClick && (
-        <div style={{
-          position: 'absolute',
-          top: '0',
-          right: '0',
-          bottom: '0',
-          left: '0',
-          background: 'rgba(255, 255, 255, 0)',
-          borderRadius: '1.5rem',
-          pointerEvents: 'none',
-          transition: 'all 0.3s ease'
-        }} />
       )}
     </div>
   );

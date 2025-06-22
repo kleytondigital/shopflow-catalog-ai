@@ -28,14 +28,17 @@
 
 /* Responsividade específica do Dashboard */
 @media (max-width: 768px) {
-  .dashboard-card {
-    padding: 1.5rem;
-    border-radius: 1rem;
+  .dashboard-card-primary,
+  .dashboard-card-secondary,
+  .dashboard-card-success,
+  .dashboard-card-warning {
+    padding: 1.5rem !important;
+    border-radius: 1rem !important;
   }
   
   .dashboard-card-icon {
-    width: 3rem;
-    height: 3rem;
+    width: 3rem !important;
+    height: 3rem !important;
   }
   
   .dashboard-btn {
@@ -45,12 +48,15 @@
 }
 
 @media (max-width: 640px) {
-  .dashboard-card {
-    padding: 1.25rem;
+  .dashboard-card-primary,
+  .dashboard-card-secondary,
+  .dashboard-card-success,
+  .dashboard-card-warning {
+    padding: 1.25rem !important;
   }
   
   .dashboard-card-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.5rem !important;
+    height: 2.5rem !important;
   }
 }
