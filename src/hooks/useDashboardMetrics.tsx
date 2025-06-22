@@ -13,9 +13,14 @@ export interface DashboardMetrics {
   ordersGrowth: number;
   productsGrowth: number;
   visitorsGrowth: number;
+  // Novas métricas da Fase 2
+  totalCustomers: number;
+  averageOrderValue: number;
+  conversionRate: number;
+  topSellingProduct: string;
 }
 
-export const useDashboardMetrics = () => {
+export const useDashboardMetrics = (dateRange?: string) => {
   const { profile } = useAuth();
 
   const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
@@ -35,7 +40,7 @@ export const useDashboardMetrics = () => {
     // Vendas deste mês
     const { data: salesThisMonth, error: salesError } = await supabase
       .from('orders')
-      .select('total_amount')
+      .select('total_amount, customer_email')
       .eq('store_id', profile.store_id)
       .gte('created_at', monthStart.toISOString())
       .lte('created_at', monthEnd.toISOString())
@@ -91,7 +96,20 @@ export const useDashboardMetrics = () => {
 
     if (allProductsError) throw allProductsError;
 
-    // Calcular métricas
+    // Produto mais vendido
+    const { data: stockMovements, error: stockError } = await supabase
+      .from('stock_movements')
+      .select(`
+        quantity,
+        products!inner(name)
+      `)
+      .eq('store_id', profile.store_id)
+      .eq('movement_type', 'sale')
+      .gte('created_at', monthStart.toISOString());
+
+    if (stockError) throw stockError;
+
+    // Calcular métricas básicas
     const salesThisMonthTotal = salesThisMonth.reduce((sum, order) => sum + Number(order.total_amount), 0);
     const salesLastMonthTotal = salesLastMonth.reduce((sum, order) => sum + Number(order.total_amount), 0);
     
@@ -116,11 +134,33 @@ export const useDashboardMetrics = () => {
     const productsGrowth = productsLastMonthCount > 0 ? 
       ((productsThisMonth - productsLastMonthCount) / productsLastMonthCount) * 100 : 0;
 
-    // Simulação básica de visitantes (baseado em pedidos)
-    const visitorsToday = Math.max(ordersToday.length * 8, 50); // Estimativa: 8 visitantes por pedido
+    // Calcular métricas avançadas da Fase 2
+    const uniqueCustomers = new Set(
+      salesThisMonth
+        .filter(order => order.customer_email)
+        .map(order => order.customer_email)
+    ).size;
+
+    const averageOrderValue = ordersThisMonth > 0 ? salesThisMonthTotal / ordersThisMonth : 0;
+
+    // Produto mais vendido
+    const productSales: { [key: string]: number } = {};
+    stockMovements.forEach(movement => {
+      const productName = movement.products?.name || 'Produto sem nome';
+      productSales[productName] = (productSales[productName] || 0) + movement.quantity;
+    });
+
+    const topSellingProduct = Object.keys(productSales).reduce((a, b) => 
+      productSales[a] > productSales[b] ? a : b, 'Nenhum'
+    );
+
+    // Simulação básica de visitantes e conversão
+    const visitorsToday = Math.max(ordersToday.length * 8, 50);
     const visitorsYesterday = Math.max(ordersYesterday.length * 8, 50);
     const visitorsGrowth = visitorsYesterday > 0 ? 
       ((visitorsToday - visitorsYesterday) / visitorsYesterday) * 100 : 0;
+
+    const conversionRate = visitorsToday > 0 ? (ordersToday.length / visitorsToday) * 100 : 0;
 
     return {
       salesThisMonth: salesThisMonthTotal,
@@ -130,12 +170,16 @@ export const useDashboardMetrics = () => {
       salesGrowth,
       ordersGrowth,
       productsGrowth,
-      visitorsGrowth
+      visitorsGrowth,
+      totalCustomers: uniqueCustomers,
+      averageOrderValue,
+      conversionRate,
+      topSellingProduct
     };
   };
 
   return useQuery({
-    queryKey: ['dashboardMetrics', profile?.store_id],
+    queryKey: ['dashboardMetrics', profile?.store_id, dateRange],
     queryFn: fetchDashboardMetrics,
     enabled: !!profile?.store_id,
     refetchOnWindowFocus: false,

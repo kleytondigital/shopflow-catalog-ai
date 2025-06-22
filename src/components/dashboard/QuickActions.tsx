@@ -8,12 +8,9 @@ import {
   Eye, 
   BarChart3, 
   Tag, 
-  Package,
+  Truck,
   ExternalLink,
-  Palette,
-  Users,
-  Lock,
-  Truck
+  Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,7 +35,6 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
       return;
     }
 
-    // Priorizar slug da loja, fallback para ID
     const storeIdentifier = currentStore.url_slug || currentStore.id;
     const catalogUrl = `/catalog/${storeIdentifier}`;
     
@@ -54,50 +50,50 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
 
   const actions = [
     {
-      title: 'Novo Produto',
-      description: 'Adicionar produto ao catálogo',
+      title: 'Produto',
+      description: 'Adicionar novo',
       icon: Plus,
-      color: 'bg-blue-100 text-blue-600',
+      color: 'bg-blue-50 text-blue-600 border-blue-200',
       onClick: onNewProduct,
       requiresBenefit: null
     },
     {
-      title: 'Ver Catálogo',
-      description: 'Visualizar como cliente',
+      title: 'Catálogo',
+      description: 'Visualizar',
       icon: Eye,
-      color: 'bg-green-100 text-green-600',
+      color: 'bg-green-50 text-green-600 border-green-200',
       onClick: handleViewCatalog,
       requiresBenefit: null
     },
     {
-      title: 'Configurações',
-      description: 'Ajustes da loja',
+      title: 'Configurar',
+      description: 'Ajustar loja',
       icon: Settings,
-      color: 'bg-gray-100 text-gray-600',
+      color: 'bg-gray-50 text-gray-600 border-gray-200',
       onClick: () => navigate('/settings'),
       requiresBenefit: null
     },
     {
       title: 'Relatórios',
-      description: 'Análises e métricas',
+      description: 'Ver métricas',
       icon: BarChart3,
-      color: 'bg-purple-100 text-purple-600',
+      color: 'bg-purple-50 text-purple-600 border-purple-200',
       onClick: () => navigate('/reports'),
       requiresBenefit: 'dedicated_support'
     },
     {
       title: 'Cupons',
-      description: 'Gerenciar descontos',
+      description: 'Descontos',
       icon: Tag,
-      color: 'bg-orange-100 text-orange-600',
+      color: 'bg-orange-50 text-orange-600 border-orange-200',
       onClick: () => navigate('/coupons'),
       requiresBenefit: 'discount_coupons'
     },
     {
-      title: 'Calculadora de Frete',
-      description: 'Configurar entrega',
+      title: 'Entrega',
+      description: 'Frete',
       icon: Truck,
-      color: 'bg-indigo-100 text-indigo-600',
+      color: 'bg-indigo-50 text-indigo-600 border-indigo-200',
       onClick: () => navigate('/deliveries'),
       requiresBenefit: 'shipping_calculator'
     }
@@ -113,8 +109,8 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <ExternalLink className="h-5 w-5" />
           Ações Rápidas
         </CardTitle>
@@ -128,27 +124,27 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
               <Button
                 key={action.title}
                 variant="outline"
-                className={`h-auto p-3 flex flex-col items-center gap-2 hover:shadow-md transition-all relative ${
-                  isBlocked ? 'opacity-60 cursor-not-allowed' : ''
+                className={`h-20 p-3 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all relative border-2 ${action.color} ${
+                  isBlocked ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'
                 }`}
                 onClick={() => handleActionClick(action)}
               >
-                <div className={`p-2 rounded-lg ${action.color} relative`}>
+                <div className="flex items-center justify-center relative">
                   <action.icon className="h-5 w-5" />
                   {isBlocked && (
-                    <Lock className="h-3 w-3 absolute -top-1 -right-1 text-orange-500" />
+                    <Lock className="h-3 w-3 absolute -top-1 -right-1 text-orange-500 bg-white rounded-full" />
                   )}
                 </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <p className="text-sm font-medium">{action.title}</p>
+                <div className="text-center min-h-[32px] flex flex-col justify-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <p className="text-xs font-semibold leading-tight">{action.title}</p>
                     {isBlocked && (
-                      <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-orange-50 text-orange-700 border-orange-200">
                         Premium
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{action.description}</p>
                 </div>
               </Button>
             );

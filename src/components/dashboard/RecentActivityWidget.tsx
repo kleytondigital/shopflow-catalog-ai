@@ -1,10 +1,12 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Clock, Package, ShoppingCart, TrendingUp, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ActivityItem {
   id: string;
@@ -16,60 +18,132 @@ interface ActivityItem {
 }
 
 interface RecentActivityWidgetProps {
-  activities?: ActivityItem[];
   maxItems?: number;
 }
 
 const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({ 
-  activities = [], 
-  maxItems = 5 
+  maxItems = 8 
 }) => {
-  // Atividades de exemplo - em produção viriam de hooks de dados reais
-  const defaultActivities: ActivityItem[] = [
-    {
-      id: '1',
-      type: 'order',
-      title: 'Novo Pedido #1234',
-      description: 'João Silva - R$ 150,00',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min atrás
-      status: 'success'
-    },
-    {
-      id: '2',
-      type: 'product',
-      title: 'Produto Cadastrado',
-      description: 'Camiseta Polo Azul',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2h atrás
-      status: 'info'
-    },
-    {
-      id: '3',
-      type: 'stock',
-      title: 'Estoque Atualizado',
-      description: 'Tênis Esportivo - Nova entrada',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4h atrás
-      status: 'info'
-    },
-    {
-      id: '4',
-      type: 'order',
-      title: 'Pedido Confirmado #1230',
-      description: 'Maria Santos - R$ 89,90',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6h atrás
-      status: 'success'
-    },
-    {
-      id: '5',
-      type: 'customer',
-      title: 'Novo Cliente',
-      description: 'Carlos Oliveira se cadastrou',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8h atrás
-      status: 'info'
-    }
-  ];
+  const { profile } = useAuth();
 
-  const displayActivities = (activities.length > 0 ? activities : defaultActivities)
-    .slice(0, maxItems);
+  // Buscar pedidos recentes
+  const { data: recentOrders } = useQuery({
+    queryKey: ['recentOrders', profile?.store_id],
+    queryFn: async () => {
+      if (!profile?.store_id) return [];
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, customer_name, total_amount, status, created_at')
+        .eq('store_id', profile.store_id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.store_id
+  });
+
+  // Buscar produtos recentes
+  const { data: recentProducts } = useQuery({
+    queryKey: ['recentProducts', profile?.store_id],
+    queryFn: async () => {
+      if (!profile?.store_id) return [];
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, retail_price, created_at')
+        .eq('store_id', profile.store_id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.store_id
+  });
+
+  // Buscar movimentações de estoque recentes
+  const { data: recentStockMovements } = useQuery({
+    queryKey: ['recentStockMovements', profile?.store_id],
+    queryFn: async () => {
+      if (!profile?.store_id) return [];
+      
+      const { data, error } = await supabase
+        .from('stock_movements')
+        .select(`
+          id,
+          movement_type,
+          quantity,
+          created_at,
+          products!inner(name)
+        `)
+        .eq('store_id', profile.store_id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.store_id
+  });
+
+  // Gerar atividades combinadas
+  const generateActivities = (): ActivityItem[] => {
+    const activities: ActivityItem[] = [];
+
+    // Adicionar pedidos
+    recentOrders?.forEach(order => {
+      activities.push({
+        id: `order-${order.id}`,
+        type: 'order',
+        title: `Pedido #${order.id.slice(-6).toUpperCase()}`,
+        description: `${order.customer_name} - ${new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(Number(order.total_amount))}`,
+        timestamp: new Date(order.created_at),
+        status: order.status === 'confirmed' ? 'success' : 
+               order.status === 'pending' ? 'warning' : 'info'
+      });
+    });
+
+    // Adicionar produtos
+    recentProducts?.forEach(product => {
+      activities.push({
+        id: `product-${product.id}`,
+        type: 'product',
+        title: 'Produto Cadastrado',
+        description: `${product.name} - ${new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(Number(product.retail_price))}`,
+        timestamp: new Date(product.created_at),
+        status: 'info'
+      });
+    });
+
+    // Adicionar movimentações de estoque
+    recentStockMovements?.forEach(movement => {
+      const isPositive = movement.movement_type === 'entry' || movement.movement_type === 'adjustment_in';
+      activities.push({
+        id: `stock-${movement.id}`,
+        type: 'stock',
+        title: `Estoque ${isPositive ? 'Entrada' : 'Saída'}`,
+        description: `${movement.products?.name || 'Produto'} - ${isPositive ? '+' : '-'}${movement.quantity} un.`,
+        timestamp: new Date(movement.created_at),
+        status: isPositive ? 'success' : 'warning'
+      });
+    });
+
+    // Ordenar por data mais recente e limitar
+    return activities
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, maxItems);
+  };
+
+  const activities = generateActivities();
 
   const getActivityIcon = (type: ActivityItem['type']) => {
     switch (type) {
@@ -108,8 +182,8 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {displayActivities.map((activity) => {
+        <div className="space-y-3 max-h-80 overflow-y-auto">
+          {activities.map((activity) => {
             const IconComponent = getActivityIcon(activity.type);
             return (
               <div key={activity.id} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors">
@@ -141,10 +215,11 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
           })}
         </div>
         
-        {displayActivities.length === 0 && (
+        {activities.length === 0 && (
           <div className="text-center py-6 text-muted-foreground">
             <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nenhuma atividade recente</p>
+            <p className="text-xs mt-1">Suas próximas ações aparecerão aqui</p>
           </div>
         )}
       </CardContent>
