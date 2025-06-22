@@ -47,7 +47,7 @@ const StoreDashboard = () => {
   };
 
   return (
-    <div className="dashboard-container space-y-6 lg:space-y-8">
+    <div className="dashboard-container space-y-6 lg:space-y-8 max-w-full overflow-hidden">
       {/* Filtro de período - Fase 2 */}
       <DateRangeFilter 
         selectedRange={selectedDateRange}
@@ -66,19 +66,19 @@ const StoreDashboard = () => {
       <IntelligentAlerts />
 
       {/* Layout em grid responsivo */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Coluna 1: Atividade Recente */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-4">
           <RecentActivityWidget />
         </div>
         
         {/* Coluna 2: Ações Rápidas */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-4">
           <QuickActions onNewProduct={handleNewProduct} />
         </div>
 
         {/* Coluna 3: Centro de Controle - Fase 2 */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-4">
           <QuickControlCenter />
         </div>
       </div>

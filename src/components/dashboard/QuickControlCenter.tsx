@@ -11,11 +11,14 @@ import {
   Store, 
   Palette,
   RefreshCw,
-  Activity
+  Activity,
+  DollarSign,
+  Package
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCatalogMode } from '@/hooks/useCatalogMode';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +26,7 @@ const QuickControlCenter: React.FC = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { catalogMode } = useCatalogMode();
 
   // Buscar configurações da loja
   const { data: storeSettings, isLoading } = useQuery({
@@ -34,7 +38,7 @@ const QuickControlCenter: React.FC = () => {
         .from('store_settings')
         .select('*')
         .eq('store_id', profile.store_id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data;
@@ -47,14 +51,25 @@ const QuickControlCenter: React.FC = () => {
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
       if (!profile?.store_id) throw new Error('Store ID não encontrado');
       
-      const { error } = await supabase
-        .from('store_settings')
-        .upsert({
-          store_id: profile.store_id,
-          [key]: value
-        });
-
-      if (error) throw error;
+      if (storeSettings) {
+        // Atualizar registro existente
+        const { error } = await supabase
+          .from('store_settings')
+          .update({ [key]: value })
+          .eq('store_id', profile.store_id);
+        
+        if (error) throw error;
+      } else {
+        // Criar novo registro
+        const { error } = await supabase
+          .from('store_settings')
+          .insert({
+            store_id: profile.store_id,
+            [key]: value
+          });
+        
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['storeSettings', profile?.store_id] });
@@ -70,36 +85,60 @@ const QuickControlCenter: React.FC = () => {
     updateSettingsMutation.mutate({ key, value: !currentValue });
   };
 
-  const controls = [
-    {
-      id: 'retail_catalog_active',
-      label: 'Catálogo Varejo',
-      description: 'Permitir vendas no varejo',
-      value: storeSettings?.retail_catalog_active ?? true,
-      icon: Store
-    },
-    {
-      id: 'wholesale_catalog_active',
-      label: 'Catálogo Atacado',
-      description: 'Permitir vendas no atacado',
-      value: storeSettings?.wholesale_catalog_active ?? false,
-      icon: Store
-    },
-    {
-      id: 'show_prices',
-      label: 'Mostrar Preços',
-      description: 'Exibir preços no catálogo',
-      value: storeSettings?.show_prices ?? true,
-      icon: Eye
-    },
-    {
-      id: 'show_stock',
-      label: 'Mostrar Estoque',
-      description: 'Exibir quantidade em estoque',
-      value: storeSettings?.show_stock ?? true,
-      icon: Activity
+  // Definir controles baseados no modo do catálogo
+  const getControlsForMode = () => {
+    const baseControls = [
+      {
+        id: 'show_prices',
+        label: 'Mostrar Preços',
+        description: 'Exibir preços no catálogo',
+        value: storeSettings?.show_prices ?? true,
+        icon: DollarSign
+      },
+      {
+        id: 'show_stock',
+        label: 'Mostrar Estoque',
+        description: 'Exibir quantidade em estoque',
+        value: storeSettings?.show_stock ?? true,
+        icon: Activity
+      }
+    ];
+
+    // No modo híbrido, não faz sentido ter controles separados de varejo/atacado
+    if (catalogMode === 'hybrid') {
+      return [
+        {
+          id: 'retail_catalog_active',
+          label: 'Catálogo Ativo',
+          description: 'Catálogo híbrido (varejo + atacado)',
+          value: storeSettings?.retail_catalog_active ?? true,
+          icon: Store
+        },
+        ...baseControls
+      ];
     }
-  ];
+
+    // Modo separado ou toggle
+    return [
+      {
+        id: 'retail_catalog_active',
+        label: 'Catálogo Varejo',
+        description: 'Permitir vendas no varejo',
+        value: storeSettings?.retail_catalog_active ?? true,
+        icon: Store
+      },
+      {
+        id: 'wholesale_catalog_active',
+        label: 'Catálogo Atacado',
+        description: 'Permitir vendas no atacado',
+        value: storeSettings?.wholesale_catalog_active ?? false,
+        icon: Package
+      },
+      ...baseControls
+    ];
+  };
+
+  const controls = getControlsForMode();
 
   if (isLoading) {
     return (
@@ -112,7 +151,7 @@ const QuickControlCenter: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((index) => (
+            {[1, 2, 3].map((index) => (
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-1">
                   <div className="h-4 w-24 bg-muted rounded animate-pulse" />
@@ -136,7 +175,7 @@ const QuickControlCenter: React.FC = () => {
             Centro de Controle
           </div>
           <Badge variant="outline" className="text-xs">
-            Rápido
+            {catalogMode === 'hybrid' ? 'Híbrido' : catalogMode === 'toggle' ? 'Toggle' : 'Separado'}
           </Badge>
         </CardTitle>
       </CardHeader>

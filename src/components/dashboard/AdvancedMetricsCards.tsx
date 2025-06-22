@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Users, ShoppingBag, Percent, DollarSign } from 'lucide-react';
@@ -107,9 +108,9 @@ const AdvancedMetricsCards: React.FC<AdvancedMetricsCardsProps> = ({ dateRange }
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-6 overflow-hidden">
         {[1, 2, 3, 4, 5].map((index) => (
-          <Card key={index}>
+          <Card key={index} className="min-w-0">
             <CardHeader className="pb-2">
               <Skeleton className="h-4 w-20" />
             </CardHeader>
@@ -149,7 +150,7 @@ const AdvancedMetricsCards: React.FC<AdvancedMetricsCardsProps> = ({ dateRange }
     },
     {
       title: 'Top Categoria',
-      value: metrics.topCategory,
+      value: metrics.topCategory.length > 15 ? metrics.topCategory.substring(0, 15) + '...' : metrics.topCategory,
       description: formatCurrency(metrics.categorySales),
       icon: ShoppingBag,
       color: 'text-orange-600'
@@ -164,23 +165,25 @@ const AdvancedMetricsCards: React.FC<AdvancedMetricsCardsProps> = ({ dateRange }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      {cards.map((card, index) => (
-        <Card key={index} className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-              {card.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{card.value}</p>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="w-full overflow-hidden mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+        {cards.map((card, index) => (
+          <Card key={index} className="hover:shadow-md transition-shadow min-w-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <card.icon className={`h-4 w-4 ${card.color} flex-shrink-0`} />
+                <span className="truncate">{card.title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                <p className="text-xl md:text-2xl font-bold truncate" title={card.value}>{card.value}</p>
+                <p className="text-xs text-muted-foreground truncate" title={card.description}>{card.description}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
