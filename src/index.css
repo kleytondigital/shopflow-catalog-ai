@@ -10,8 +10,11 @@
 /* Importar variáveis CSS globais dos templates -  RESTRITO A TEMPLATES */
 @import './styles/template-variables.css';
 
-/* Importar estilos isolados do dashboard */
-@import './styles/dashboard-isolated.css';
+/* Importar estilos isolados do dashboard - REFATORADOS */
+@import './styles/dashboard/dashboard-base.css';
+@import './styles/dashboard/dashboard-cards.css';
+@import './styles/dashboard/dashboard-buttons.css';
+@import './styles/dashboard/dashboard-animations.css';
 
 @layer base {
   :root {
