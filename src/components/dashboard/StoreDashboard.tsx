@@ -35,9 +35,11 @@ const StoreDashboard = () => {
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="dashboard-container space-y-6 lg:space-y-8">
       {/* Cards principais */}
-      <DashboardCards userRole={isSuperadmin ? 'superadmin' : 'admin'} />
+      <div className="dashboard-grid">
+        <DashboardCards userRole={isSuperadmin ? 'superadmin' : 'admin'} />
+      </div>
 
       {/* Ações rápidas - apenas em desktop */}
       <div className="hidden lg:block">

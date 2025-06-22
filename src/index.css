@@ -4,10 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Importar estilos do template industrial */
-@import './styles/industrial-template.css';
+/* Importar estilos isolados do Dashboard */
+@import './styles/dashboard-isolated.css';
 
-/* Importar variáveis CSS globais dos templates */
+/* Importar estilos isolados do Catálogo */
+@import './styles/catalog-isolated.css';
+
+/* Importar variáveis CSS globais dos templates (isoladas) */
 @import './styles/template-variables.css';
 
 @layer base {
@@ -104,29 +107,4 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-}
-
-/* Aplicar estilos de template globalmente */
-.catalog-container,
-.template-container {
-  font-family: var(--template-font-family);
-}
-
-/* Garantir que botões primários sempre tenham gradiente */
-.btn-primary,
-.button-primary,
-button[class*="primary"] {
-  background: var(--template-gradient-primary) !important;
-  color: #FFFFFF !important;
-  border: none !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
-}
-
-.btn-primary:hover,
-.button-primary:hover,
-button[class*="primary"]:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: var(--template-shadow-lg) !important;
-  opacity: 0.9 !important;
 }

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
@@ -24,14 +25,9 @@ const ResponsiveDashboardCard = ({
   onClick 
 }: ResponsiveDashboardCardProps) => {
   const getCardClass = () => {
-    const baseClasses = "relative overflow-hidden rounded-2xl md:rounded-3xl p-5 md:p-8 lg:p-10 text-white shadow-xl hover:shadow-2xl backdrop-blur-sm border border-white/20 transition-all duration-300 ease-out transform-gpu";
-    const variantClasses = {
-      primary: 'bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600',
-      secondary: 'bg-gradient-to-br from-slate-500 via-slate-600 to-gray-700', 
-      success: 'bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600',
-      warning: 'bg-gradient-to-br from-orange-500 via-amber-600 to-red-500'
-    };
-    return `${baseClasses} ${variantClasses[variant]}`;
+    const baseClasses = "dashboard-card-" + variant;
+    const interactiveClasses = onClick ? 'cursor-pointer' : '';
+    return `${baseClasses} ${interactiveClasses}`;
   };
 
   const getIconContainerClass = () => {
@@ -40,8 +36,7 @@ const ResponsiveDashboardCard = ({
 
   return (
     <div 
-      className={`${getCardClass()} ${onClick ? 'cursor-pointer hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98]' : ''} 
-                  transition-all duration-300 ease-out transform-gpu touch-target group`}
+      className={getCardClass()}
       onClick={onClick}
     >
       {/* Header */}
@@ -97,7 +92,7 @@ const ResponsiveDashboardCard = ({
 
       {/* Overlay Hover Effect */}
       {onClick && (
-        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all duration-300 rounded-2xl pointer-events-none" />
+        <div className="absolute inset-0 bg-white/0 hover:bg-white/10 transition-all duration-300 rounded-2xl pointer-events-none" />
       )}
     </div>
   );
