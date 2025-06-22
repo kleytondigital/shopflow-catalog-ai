@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { TrendingUp, Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
-import ResponsiveDashboardCard from './ResponsiveDashboardCard';
+import { TrendingUp, Package, ShoppingCart, Users, DollarSign, Store } from 'lucide-react';
+import AppleDashboardCard from './AppleDashboardCard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useSuperadminMetrics } from '@/hooks/useSuperadminMetrics';
-import { Skeleton } from '@/components/ui/skeleton';
+import '@/styles/dashboard-apple.css';
 
 interface DashboardCardsProps {
   userRole: 'superadmin' | 'admin';
@@ -19,12 +19,14 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="apple-grid apple-grid-cols-1 apple-grid-md-2 apple-grid-lg-4">
         {[1, 2, 3, 4].map((index) => (
-          <div key={index} className="rounded-2xl p-6 space-y-4">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-4 w-16" />
+          <div key={index} className="apple-metric-card">
+            <div className="apple-metric-header">
+              <div className="flex-1">
+                <div className="apple-loading" />
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -52,7 +54,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.salesGrowth),
         isPositive: storeMetrics.salesGrowth >= 0
       } : undefined,
-      variant: 'success' as const
+      variant: 'green' as const
     },
     {
       title: 'Pedidos Hoje',
@@ -63,7 +65,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.ordersGrowth),
         isPositive: storeMetrics.ordersGrowth >= 0
       } : undefined,
-      variant: 'primary' as const
+      variant: 'blue' as const
     },
     {
       title: 'Produtos Ativos',
@@ -74,7 +76,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.productsGrowth),
         isPositive: storeMetrics.productsGrowth >= 0
       } : undefined,
-      variant: 'secondary' as const
+      variant: 'purple' as const
     },
     {
       title: 'Visitantes',
@@ -85,7 +87,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: Math.round(storeMetrics.visitorsGrowth),
         isPositive: storeMetrics.visitorsGrowth >= 0
       } : undefined,
-      variant: 'warning' as const
+      variant: 'orange' as const
     }
   ];
 
@@ -94,12 +96,12 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
       title: 'Total de Lojas',
       value: adminMetrics?.totalStores || 0,
       subtitle: 'lojas ativas',
-      icon: Users,
+      icon: Store,
       trend: adminMetrics ? {
         value: adminMetrics.storesGrowth,
         isPositive: adminMetrics.storesGrowth >= 0
       } : undefined,
-      variant: 'primary' as const
+      variant: 'blue' as const
     },
     {
       title: 'Receita Total',
@@ -110,7 +112,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.revenueGrowth,
         isPositive: adminMetrics.revenueGrowth >= 0
       } : undefined,
-      variant: 'success' as const
+      variant: 'green' as const
     },
     {
       title: 'Pedidos Hoje',
@@ -121,7 +123,7 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.ordersGrowth,
         isPositive: adminMetrics.ordersGrowth >= 0
       } : undefined,
-      variant: 'warning' as const
+      variant: 'orange' as const
     },
     {
       title: 'Produtos Cadastrados',
@@ -132,16 +134,16 @@ const DashboardCards = ({ userRole }: DashboardCardsProps) => {
         value: adminMetrics.productsGrowth,
         isPositive: adminMetrics.productsGrowth >= 0
       } : undefined,
-      variant: 'secondary' as const
+      variant: 'purple' as const
     }
   ];
 
   const stats = userRole === 'superadmin' ? superadminStats : adminStats;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="apple-grid apple-grid-cols-1 apple-grid-md-2 apple-grid-lg-4">
       {stats.map((stat, index) => (
-        <ResponsiveDashboardCard
+        <AppleDashboardCard
           key={index}
           title={stat.title}
           value={stat.value}
