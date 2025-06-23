@@ -5,6 +5,7 @@ import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useStores } from '@/hooks/useStores';
+import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
 
 interface CustomerData {
   name: string;
@@ -103,6 +104,15 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   // Preferir storeData (catálogo público), senão o contexto autenticado
   const currentStore = storeData || authenticatedStore;
 
+  // Usar o hook de opções de checkout para determinar as configurações corretas
+  const {
+    checkoutOptions,
+    availableOptions,
+    defaultOption,
+    canUseOnlinePayment,
+    hasWhatsAppConfigured
+  } = useCheckoutOptions(storeId);
+
   // Estado local
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
@@ -110,7 +120,16 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     phone: ''
   });
 
-  const [checkoutType, setCheckoutType] = useState<'whatsapp_only' | 'online_payment'>('whatsapp_only');
+  // Determinar tipo de checkout baseado nas configurações da loja
+  const effectiveSettings = settings || storeSettings || {};
+  const storeCheckoutType = effectiveSettings.checkout_type || 'both';
+  
+  // Lógica para determinar se é apenas WhatsApp
+  const isWhatsappOnly = storeCheckoutType === 'whatsapp' || (!canUseOnlinePayment && hasWhatsAppConfigured);
+  
+  const [checkoutType, setCheckoutType] = useState<'whatsapp_only' | 'online_payment'>(
+    isWhatsappOnly ? 'whatsapp_only' : 'online_payment'
+  );
   const [shippingMethod, setShippingMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState('whatsapp');
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
@@ -129,21 +148,50 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
-  // Unir as configurações
-  const effectiveSettings = settings || storeSettings || {};
-
-  // Para checkout público, sempre usar apenas WhatsApp
-  const isWhatsappOnly = true;
-  const canUseOnlinePayment = false;
-  const hasWhatsAppConfigured = true;
   const isTestEnvironment = false;
 
-  // Métodos vazios para compatibilidade
-  const availablePaymentMethods: any[] = [];
+  // Métodos de pagamento baseados nas configurações da loja
+  const availablePaymentMethods = React.useMemo(() => {
+    const methods = [];
+    
+    if (hasWhatsAppConfigured) {
+      methods.push({
+        id: 'whatsapp',
+        name: 'WhatsApp',
+        icon: 'MessageCircle'
+      });
+    }
+    
+    if (canUseOnlinePayment && effectiveSettings.payment_methods) {
+      if (effectiveSettings.payment_methods.pix) {
+        methods.push({
+          id: 'pix',
+          name: 'PIX',
+          icon: 'QrCode'
+        });
+      }
+      
+      if (effectiveSettings.payment_methods.credit_card) {
+        methods.push({
+          id: 'credit_card',
+          name: 'Cartão de Crédito',
+          icon: 'CreditCard'
+        });
+      }
+      
+      if (effectiveSettings.payment_methods.bank_slip) {
+        methods.push({
+          id: 'bank_slip',
+          name: 'Boleto',
+          icon: 'FileText'
+        });
+      }
+    }
+    
+    return methods;
+  }, [effectiveSettings, canUseOnlinePayment, hasWhatsAppConfigured]);
+
   const availableShippingMethods = [{ id: 'pickup', label: 'Retirar na loja' }];
-  const checkoutOptions = [{ key: 'whatsapp_only', label: 'WhatsApp', type: 'whatsapp_only' as const }];
-  const availableOptions = ['whatsapp_only'];
-  const defaultOption = 'whatsapp_only';
 
   const value: CheckoutContextType = {
     // Estado

@@ -26,21 +26,26 @@ export const useCheckoutOptions = (storeId?: string) => {
     const hasWhatsAppNumber = !!basicWhatsAppNumber || !!premiumWhatsAppNumber;
     const hasPaymentAccess = isSuperadmin || hasBenefit('payment_credit_card');
     
-    return [
+    // Verificar configuração específica da loja
+    const storeCheckoutType = settings?.checkout_type || 'both';
+    
+    const options = [
       {
-        type: 'whatsapp_only',
+        type: 'whatsapp_only' as const,
         name: 'Pedido via WhatsApp',
         description: 'Enviar resumo do pedido para WhatsApp da loja',
-        available: hasWhatsAppNumber,
+        available: hasWhatsAppNumber && (storeCheckoutType === 'whatsapp' || storeCheckoutType === 'both'),
       },
       {
-        type: 'online_payment',
+        type: 'online_payment' as const,
         name: 'Pagamento Online',
         description: 'PIX, Cartão de Crédito e Boleto',
-        available: hasPaymentAccess,
+        available: hasPaymentAccess && (storeCheckoutType === 'online' || storeCheckoutType === 'both'),
         requiresUpgrade: !hasPaymentAccess,
       }
     ];
+
+    return options;
   }, [settings, currentStore, hasBenefit, isSuperadmin]);
 
   const availableOptions = checkoutOptions.filter(option => option.available);
@@ -51,12 +56,17 @@ export const useCheckoutOptions = (storeId?: string) => {
   // Verificar se tem WhatsApp configurado (telefone da loja OU integração premium)
   const hasWhatsAppConfigured = !!(currentStore?.phone?.trim() || settings?.whatsapp_number?.trim());
 
+  // Determinar se deve mostrar apenas WhatsApp baseado nas configurações da loja
+  const storeCheckoutType = settings?.checkout_type || 'both';
+  const forceWhatsAppOnly = storeCheckoutType === 'whatsapp' || (!canUseOnlinePayment && hasWhatsAppConfigured);
+
   return {
     checkoutOptions,
     availableOptions,
     defaultOption,
-    canUseOnlinePayment,
+    canUseOnlinePayment: canUseOnlinePayment && (storeCheckoutType === 'online' || storeCheckoutType === 'both'),
     hasWhatsAppConfigured,
-    isPremiumRequired: !canUseOnlinePayment
+    isPremiumRequired: !canUseOnlinePayment,
+    forceWhatsAppOnly
   };
 };
