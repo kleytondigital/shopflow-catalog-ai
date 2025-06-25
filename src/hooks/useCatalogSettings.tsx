@@ -19,6 +19,21 @@ export interface CatalogSettingsData {
   text_color?: string;
   border_color?: string;
   mobile_columns?: number;
+  catalog_mode?: string;
+  custom_domain?: string;
+  catalog_url_slug?: string;
+  payment_methods?: any;
+  business_hours?: any;
+  shipping_options?: any;
+  facebook_url?: string;
+  instagram_url?: string;
+  twitter_url?: string;
+  whatsapp_number?: string;
+  font_family?: string;
+  layout_spacing?: number;
+  border_radius?: number;
+  retail_catalog_active?: boolean;
+  wholesale_catalog_active?: boolean;
 }
 
 export const useCatalogSettings = (storeIdentifier?: string) => {
@@ -71,6 +86,21 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           text_color: data.text_color,
           border_color: data.border_color,
           mobile_columns: data.mobile_columns,
+          catalog_mode: data.catalog_mode,
+          custom_domain: data.custom_domain,
+          catalog_url_slug: data.catalog_url_slug,
+          payment_methods: data.payment_methods,
+          business_hours: data.business_hours,
+          shipping_options: data.shipping_options,
+          facebook_url: data.facebook_url,
+          instagram_url: data.instagram_url,
+          twitter_url: data.twitter_url,
+          whatsapp_number: data.whatsapp_number,
+          font_family: data.font_family,
+          layout_spacing: data.layout_spacing,
+          border_radius: data.border_radius,
+          retail_catalog_active: data.retail_catalog_active,
+          wholesale_catalog_active: data.wholesale_catalog_active,
         });
       } else {
         setSettings({});
