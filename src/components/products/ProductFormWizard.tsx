@@ -3,9 +3,9 @@ import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useProductFormWizard } from '@/hooks/useProductFormWizard';
 import { useDraftImages } from '@/hooks/useDraftImages';
-import WizardStepNavigation from './wizard/WizardStepNavigation';
+import ImprovedWizardStepNavigation from './wizard/ImprovedWizardStepNavigation';
 import WizardStepContent from './wizard/WizardStepContent';
-import WizardActionButtons from './wizard/WizardActionButtons';
+import ImprovedWizardActionButtons from './wizard/ImprovedWizardActionButtons';
 
 interface ProductFormWizardProps {
   isOpen: boolean;
@@ -56,10 +56,10 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
         stock_alert_threshold: editingProduct.stock_alert_threshold || 5,
       });
 
-      // Carregar imagens existentes
+      // Carregar imagens existentes apenas uma vez
       loadExistingImages(editingProduct.id);
     }
-  }, [editingProduct, isOpen, updateFormData, loadExistingImages]);
+  }, [editingProduct?.id, isOpen]); // Dependências otimizadas
 
   // Limpar form ao fechar
   useEffect(() => {
@@ -82,12 +82,13 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
   };
 
   const isLastStep = currentStep === steps.length - 1;
+  
   const canProceed = () => {
     switch (currentStep) {
       case 0: // Básico
-        return formData.name.trim() !== '';
+        return formData.name.trim() !== '' && formData.retail_price > 0;
       case 1: // Preços
-        return formData.retail_price > 0;
+        return formData.retail_price > 0 && formData.stock >= 0;
       case 2: // Imagens
         return true; // Imagens são opcionais
       case 3: // SEO
@@ -99,47 +100,55 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
     }
   };
 
+  // Calcular steps completados
+  const completedSteps: number[] = [];
+  if (formData.name && formData.retail_price > 0) completedSteps.push(0);
+  if (formData.retail_price > 0 && formData.stock >= 0) completedSteps.push(1);
+  // Imagens e SEO sempre podem ser marcados como completados
+  completedSteps.push(2, 3, 4);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+      <DialogContent className="max-w-5xl w-full max-h-[95vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
+          <DialogTitle className="text-xl font-semibold">
+            {editingProduct ? `Editar: ${editingProduct.name}` : 'Novo Produto'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Navegação dos Steps */}
-          <WizardStepNavigation
+          <ImprovedWizardStepNavigation
             steps={steps}
             currentStep={currentStep}
             onStepClick={goToStep}
+            completedSteps={completedSteps.filter(step => step < currentStep)}
           />
 
           {/* Conteúdo do Step */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <WizardStepContent
-              currentStep={currentStep}
-              formData={formData}
-              updateFormData={updateFormData}
-              productId={editingProduct?.id}
-            />
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6">
+              <WizardStepContent
+                currentStep={currentStep}
+                formData={formData}
+                updateFormData={updateFormData}
+                productId={editingProduct?.id}
+              />
+            </div>
           </div>
 
           {/* Botões de Ação */}
-          <div className="border-t p-6">
-            <WizardActionButtons
-              currentStep={currentStep}
-              totalSteps={steps.length}
-              canProceed={canProceed()}
-              isSaving={isSaving}
-              onPrevious={prevStep}
-              onNext={nextStep}
-              onSave={handleSave}
-              onCancel={handleClose}
-              isLastStep={isLastStep}
-            />
-          </div>
+          <ImprovedWizardActionButtons
+            currentStep={currentStep}
+            totalSteps={steps.length}
+            canProceed={canProceed()}
+            isSaving={isSaving}
+            onPrevious={prevStep}
+            onNext={nextStep}
+            onSave={handleSave}
+            onCancel={handleClose}
+            isLastStep={isLastStep}
+          />
         </div>
       </DialogContent>
     </Dialog>

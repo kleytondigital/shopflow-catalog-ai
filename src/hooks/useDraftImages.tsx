@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,6 +14,8 @@ export interface DraftImage {
 export const useDraftImages = () => {
   const [draftImages, setDraftImages] = useState<DraftImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const loadedProductIdRef = useRef<string | null>(null);
   const { toast } = useToast();
 
   const addDraftImages = useCallback((files: File[]) => {
@@ -61,11 +63,6 @@ export const useDraftImages = () => {
 
         if (uploadError) {
           console.error('Erro no upload da imagem:', uploadError);
-          toast({
-            title: 'Erro no upload',
-            description: `Falha ao enviar imagem: ${uploadError.message}`,
-            variant: 'destructive',
-          });
           continue;
         }
 
@@ -89,11 +86,6 @@ export const useDraftImages = () => {
 
         if (dbError) {
           console.error('Erro ao salvar imagem no banco:', dbError);
-          toast({
-            title: 'Erro ao salvar',
-            description: 'Imagem enviada mas não foi salva no banco de dados',
-            variant: 'destructive',
-          });
         }
 
         // Marcar como enviada
@@ -104,18 +96,18 @@ export const useDraftImages = () => {
         ));
       }
 
-      // Atualizar image_url principal do produto
       if (uploadedUrls.length > 0) {
+        // Atualizar image_url principal do produto
         await supabase
           .from('products')
           .update({ image_url: uploadedUrls[0] })
           .eq('id', productId);
-      }
 
-      toast({
-        title: 'Sucesso!',
-        description: `${uploadedUrls.length} imagem(ns) enviada(s) com sucesso`,
-      });
+        toast({
+          title: 'Sucesso!',
+          description: `${uploadedUrls.length} imagem(ns) enviada(s) com sucesso`,
+        });
+      }
 
       return uploadedUrls;
     } catch (error) {
@@ -138,9 +130,18 @@ export const useDraftImages = () => {
       }
     });
     setDraftImages([]);
+    loadedProductIdRef.current = null;
   }, [draftImages]);
 
   const loadExistingImages = useCallback(async (productId: string) => {
+    // Evitar carregar o mesmo produto múltiplas vezes
+    if (loadedProductIdRef.current === productId || isLoading) {
+      return;
+    }
+
+    setIsLoading(true);
+    loadedProductIdRef.current = productId;
+
     try {
       const { data: images, error } = await supabase
         .from('product_images')
@@ -154,7 +155,7 @@ export const useDraftImages = () => {
       }
 
       if (images && images.length > 0) {
-        const existingImages: DraftImage[] = images.map((img, index) => ({
+        const existingImages: DraftImage[] = images.map((img) => ({
           id: img.id,
           file: new File([], ''), // File vazio para imagens já salvas
           preview: img.image_url,
@@ -166,12 +167,15 @@ export const useDraftImages = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar imagens:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [isLoading]);
 
   return {
     draftImages,
     isUploading,
+    isLoading,
     addDraftImages,
     removeDraftImage,
     uploadDraftImages,

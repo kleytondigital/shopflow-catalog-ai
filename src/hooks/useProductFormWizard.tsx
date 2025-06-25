@@ -27,11 +27,12 @@ export interface WizardStep {
   id: string;
   title: string;
   description: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 export const useProductFormWizard = () => {
   const { createProduct, updateProduct } = useProducts();
-  const { draftImages, uploadDraftImages } = useDraftImages();
+  const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
   const { toast } = useToast();
   const { profile } = useAuth();
   
@@ -103,6 +104,8 @@ export const useProductFormWizard = () => {
   };
 
   const saveProduct = async (productId?: string): Promise<string | null> => {
+    if (isSaving) return null;
+
     try {
       setIsSaving(true);
       
@@ -110,45 +113,51 @@ export const useProductFormWizard = () => {
       const productData = {
         ...formData,
         store_id: profile?.store_id || '',
-        image_url: formData.image_url || '',
       };
 
       let result;
+      let savedProductId: string;
+
       if (productId) {
-        // Incluir o id para atualização
+        // Atualizar produto existente
         result = await updateProduct({
           ...productData,
           id: productId
         });
+        savedProductId = productId;
       } else {
+        // Criar novo produto
         result = await createProduct(productData);
+        savedProductId = result.data?.id;
       }
 
-      if (result.error) throw new Error(result.error);
+      if (result.error || !savedProductId) {
+        throw new Error(result.error || 'Erro ao salvar produto');
+      }
 
-      const savedProductId = result.data?.id || productId;
-      
-      // Upload das imagens após salvar o produto
-      if (savedProductId && draftImages.length > 0) {
+      // Upload das imagens se houver
+      if (draftImages.length > 0) {
         const uploadedUrls = await uploadDraftImages(savedProductId);
         if (uploadedUrls.length > 0) {
           // Atualizar produto com a primeira imagem como principal
-          const updateData = { 
+          await updateProduct({
             id: savedProductId,
-            image_url: uploadedUrls[0] 
-          };
-          await updateProduct(updateData);
+            image_url: uploadedUrls[0]
+          });
         }
       }
 
       toast({ 
-        title: productId ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!' 
+        title: productId ? 'Produto atualizado!' : 'Produto criado!',
+        description: `${formData.name} foi ${productId ? 'atualizado' : 'criado'} com sucesso.`
       });
       
-      // Reset form
-      resetForm();
+      // Reset form apenas para produtos novos
+      if (!productId) {
+        resetForm();
+      }
       
-      return savedProductId || null;
+      return savedProductId;
     } catch (error) {
       console.error('Error saving product:', error);
       toast({
@@ -181,6 +190,7 @@ export const useProductFormWizard = () => {
       stock_alert_threshold: 5,
     });
     setCurrentStep(0);
+    clearDraftImages();
   };
 
   return {
