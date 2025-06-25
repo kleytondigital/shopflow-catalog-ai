@@ -115,7 +115,11 @@ export const useProductFormWizard = () => {
 
       let result;
       if (productId) {
-        result = await updateProduct(productData);
+        // Incluir o id para atualização
+        result = await updateProduct({
+          ...productData,
+          id: productId
+        });
       } else {
         result = await createProduct(productData);
       }
@@ -129,7 +133,10 @@ export const useProductFormWizard = () => {
         const uploadedUrls = await uploadDraftImages(savedProductId);
         if (uploadedUrls.length > 0) {
           // Atualizar produto com a primeira imagem como principal
-          const updateData = { image_url: uploadedUrls[0] };
+          const updateData = { 
+            id: savedProductId,
+            image_url: uploadedUrls[0] 
+          };
           await updateProduct(updateData);
         }
       }
