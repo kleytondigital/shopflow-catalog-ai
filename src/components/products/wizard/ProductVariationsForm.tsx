@@ -1,17 +1,15 @@
 
 import React from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import ProductVariationsManager, { ProductVariation } from '../ProductVariationsManager';
+import ProductVariationsManager from '../ProductVariationsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProductVariation } from '@/hooks/useProductFormWizard';
 
 interface ProductVariationsFormProps {
-  form: UseFormReturn<any>;
   variations: ProductVariation[];
   onVariationsChange: (variations: ProductVariation[]) => void;
 }
 
 const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
-  form,
   variations,
   onVariationsChange
 }) => {
@@ -39,7 +37,7 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
             <div className="text-sm text-muted-foreground space-y-1">
               <p>Total de variações: <strong>{variations.length}</strong></p>
               <p>Estoque total das variações: <strong>{variations.reduce((sum, v) => sum + v.stock, 0)}</strong></p>
-              <p>Variações com imagem própria: <strong>{variations.filter(v => v.image_url).length}</strong></p>
+              <p>Variações com imagem própria: <strong>{variations.filter(v => v.image_url || v.image_file).length}</strong></p>
             </div>
           </CardContent>
         </Card>

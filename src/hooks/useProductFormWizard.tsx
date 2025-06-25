@@ -4,23 +4,22 @@ import { useProducts } from '@/hooks/useProducts';
 import { useDraftImages } from '@/hooks/useDraftImages';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { CreateProductData } from '@/types/product';
 
-export interface ProductFormData {
-  name: string;
-  description?: string;
-  retail_price: number;
-  wholesale_price?: number;
-  category?: string;
+export interface ProductVariation {
+  id?: string;
+  color?: string;
+  size?: string;
+  sku?: string;
   stock: number;
-  min_wholesale_qty?: number;
+  price_adjustment: number;
+  is_active: boolean;
   image_url?: string;
-  meta_title?: string;
-  meta_description?: string;
-  keywords?: string;
-  seo_slug?: string;
-  is_featured?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
+  image_file?: File;
+}
+
+export interface ProductFormData extends CreateProductData {
+  variations?: ProductVariation[];
 }
 
 export interface WizardStep {
@@ -39,6 +38,7 @@ export const useProductFormWizard = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
+    store_id: '',
     name: '',
     description: '',
     retail_price: 0,
@@ -46,7 +46,6 @@ export const useProductFormWizard = () => {
     category: '',
     stock: 0,
     min_wholesale_qty: 1,
-    image_url: '',
     meta_title: '',
     meta_description: '',
     keywords: '',
@@ -54,11 +53,14 @@ export const useProductFormWizard = () => {
     is_featured: false,
     allow_negative_stock: false,
     stock_alert_threshold: 5,
+    is_active: true,
+    variations: []
   });
 
   const steps: WizardStep[] = [
     { id: 'basic', title: 'Informações Básicas', description: 'Nome, descrição e categoria' },
     { id: 'pricing', title: 'Preços e Estoque', description: 'Valores e quantidades' },
+    { id: 'variations', title: 'Variações', description: 'Cores, tamanhos e opções' },
     { id: 'images', title: 'Imagens', description: 'Fotos do produto' },
     { id: 'seo', title: 'SEO e Metadados', description: 'Otimização para buscas' },
     { id: 'advanced', title: 'Configurações Avançadas', description: 'Opções extras' }
@@ -98,11 +100,13 @@ export const useProductFormWizard = () => {
         return !!(formData.name?.trim() && formData.retail_price > 0);
       case 1: // Preços e Estoque
         return formData.retail_price > 0 && formData.stock >= 0;
-      case 2: // Imagens
+      case 2: // Variações
         return true; // Opcional
-      case 3: // SEO
+      case 3: // Imagens
         return true; // Opcional
-      case 4: // Avançado
+      case 4: // SEO
+        return true; // Opcional
+      case 5: // Avançado
         return true; // Opcional
       default:
         return true;
@@ -114,6 +118,7 @@ export const useProductFormWizard = () => {
     console.log('Product ID recebido:', productId);
     console.log('Form Data:', formData);
     console.log('Draft Images count:', draftImages.length);
+    console.log('Variations count:', formData.variations?.length || 0);
 
     if (isSaving) {
       console.log('Já está salvando, ignorando chamada...');
@@ -151,23 +156,14 @@ export const useProductFormWizard = () => {
     setIsSaving(true);
 
     try {
-      // 1. Preparar dados do produto - GARANTINDO que não há campo 'price'
-      const productData = {
+      // 1. Preparar dados do produto (sem variações)
+      const { variations, ...productDataWithoutVariations } = formData;
+      const productData: CreateProductData = {
+        ...productDataWithoutVariations,
         store_id: profile.store_id,
         name: formData.name.trim(),
-        description: formData.description?.trim() || null,
-        retail_price: formData.retail_price,
-        wholesale_price: formData.wholesale_price || null,
-        category: formData.category?.trim() || null,
-        stock: formData.stock,
-        min_wholesale_qty: formData.min_wholesale_qty || 1,
-        meta_title: formData.meta_title?.trim() || null,
-        meta_description: formData.meta_description?.trim() || null,
-        keywords: formData.keywords?.trim() || null,
-        seo_slug: formData.seo_slug?.trim() || null,
-        is_featured: formData.is_featured || false,
-        allow_negative_stock: formData.allow_negative_stock || false,
-        stock_alert_threshold: formData.stock_alert_threshold || 5,
+        description: formData.description?.trim() || '',
+        category: formData.category?.trim() || '',
       };
 
       console.log('=== SALVANDO DADOS DO PRODUTO ===');
@@ -207,7 +203,14 @@ export const useProductFormWizard = () => {
         console.log('=== UPLOAD DE IMAGENS CONCLUÍDO ===');
       }
 
-      // 3. Exibir sucesso
+      // 3. Salvar variações se houver
+      if (formData.variations && formData.variations.length > 0) {
+        console.log('=== SALVANDO VARIAÇÕES ===');
+        // TODO: Implementar salvamento de variações
+        console.log('Variações para salvar:', formData.variations);
+      }
+
+      // 4. Exibir sucesso
       toast({ 
         title: productId ? 'Produto atualizado!' : 'Produto criado!',
         description: `${formData.name} foi ${productId ? 'atualizado' : 'criado'} com sucesso.`
@@ -233,6 +236,7 @@ export const useProductFormWizard = () => {
   const resetForm = useCallback(() => {
     console.log('=== RESETANDO FORMULÁRIO ===');
     setFormData({
+      store_id: '',
       name: '',
       description: '',
       retail_price: 0,
@@ -240,7 +244,6 @@ export const useProductFormWizard = () => {
       category: '',
       stock: 0,
       min_wholesale_qty: 1,
-      image_url: '',
       meta_title: '',
       meta_description: '',
       keywords: '',
@@ -248,6 +251,8 @@ export const useProductFormWizard = () => {
       is_featured: false,
       allow_negative_stock: false,
       stock_alert_threshold: 5,
+      is_active: true,
+      variations: []
     });
     setCurrentStep(0);
     clearDraftImages();

@@ -2,6 +2,7 @@
 import React from 'react';
 import ProductBasicInfoForm from './ProductBasicInfoForm';
 import ProductPricingForm from './ProductPricingForm';
+import ProductVariationsForm from './ProductVariationsForm';
 import ImprovedDraftImageUpload from '../ImprovedDraftImageUpload';
 import ProductSeoForm from './ProductSeoForm';
 import ProductAdvancedForm from './ProductAdvancedForm';
@@ -37,18 +38,25 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
     case 2:
       return (
+        <ProductVariationsForm
+          variations={formData.variations || []}
+          onVariationsChange={(variations) => updateFormData({ variations })}
+        />
+      );
+    case 3:
+      return (
         <ImprovedDraftImageUpload
           productId={productId}
         />
       );
-    case 3:
+    case 4:
       return (
         <ProductSeoForm
           formData={formData}
           updateFormData={updateFormData}
         />
       );
-    case 4:
+    case 5:
       return (
         <ProductAdvancedForm
           formData={formData}

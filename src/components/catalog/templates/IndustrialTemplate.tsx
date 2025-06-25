@@ -339,10 +339,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(({
 
       {/* Product Details Modal */}
       <ProductDetailsModal
-        product={{
-          ...product,
-          description: product.description || ''
-        }}
+        product={product}
         catalogType={catalogType}
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}

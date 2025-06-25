@@ -321,10 +321,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = memo(({
 
       {/* Product Details Modal */}
       <ProductDetailsModal
-        product={{
-          ...product,
-          description: product.description || ''
-        }}
+        product={product}
         catalogType={catalogType}
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}

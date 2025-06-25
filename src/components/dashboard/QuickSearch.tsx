@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Search, Package, ShoppingCart, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';

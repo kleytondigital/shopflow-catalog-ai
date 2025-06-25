@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { CreateProductData } from '@/hooks/useProducts';
+import { CreateProductData } from '@/types/product';
 
 interface ProductFormAdvancedProps {
   formData: CreateProductData;
@@ -13,8 +14,7 @@ interface ProductFormAdvancedProps {
 const ProductFormAdvanced = ({ formData, updateFormData }: ProductFormAdvancedProps) => {
   const handleChange = (field: string, value: any) => {
     const updates: Partial<CreateProductData> = {
-      [field]: value,
-      is_active: formData.is_active ?? true
+      [field]: value
     };
     updateFormData(updates);
   };
@@ -92,7 +92,7 @@ const ProductFormAdvanced = ({ formData, updateFormData }: ProductFormAdvancedPr
       {/* Stock Alert Threshold */}
       <div>
         <Label htmlFor="stock_alert_threshold">
-          Limite de Alerta de Estoque ({formData.stock_alert_threshold})
+          Limite de Alerta de Estoque ({formData.stock_alert_threshold || 5})
         </Label>
         <Slider
           id="stock_alert_threshold"
@@ -101,6 +101,16 @@ const ProductFormAdvanced = ({ formData, updateFormData }: ProductFormAdvancedPr
           max={50}
           step={1}
           onValueChange={(value) => handleChange('stock_alert_threshold', value[0])}
+        />
+      </div>
+
+      {/* Is Active */}
+      <div className="flex items-center justify-between">
+        <Label htmlFor="is_active">Produto Ativo</Label>
+        <Switch
+          id="is_active"
+          checked={formData.is_active ?? true}
+          onCheckedChange={(checked) => handleChange('is_active', checked)}
         />
       </div>
     </div>

@@ -9,6 +9,7 @@ import ProductFormModal from '@/components/products/ProductFormModal';
 import ImprovedAIToolsModal from '@/components/products/ImprovedAIToolsModal';
 import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
+import { Product } from '@/types/product';
 
 const Products = () => {
   const [showProductForm, setShowProductForm] = useState(false);
@@ -114,12 +115,11 @@ const Products = () => {
     );
   }
 
-  // Mapear produtos para o formato esperado pelo ProductList
-  const mappedProducts = products.map(product => ({
+  // Mapear produtos para garantir compatibilidade com ProductList
+  const mappedProducts: Product[] = products.map(product => ({
     ...product,
-    description: product.description || '', // Garantir que description não seja undefined
-    category: product.category || '', // Garantir que category não seja undefined
-    status: product.is_active ? 'active' as const : 'inactive' as const
+    description: product.description || '',
+    category: product.category || '',
   }));
 
   return (

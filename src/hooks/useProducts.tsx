@@ -3,60 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { Product, CreateProductData, UpdateProductData } from '@/types/product';
 
-export interface Product {
-  id: string;
-  store_id: string;
-  name: string;
-  description?: string;
-  retail_price: number;
-  wholesale_price?: number;
-  category?: string;
-  stock: number;
-  min_wholesale_qty?: number;
-  image_url?: string;
-  meta_title?: string;
-  meta_description?: string;
-  keywords?: string;
-  seo_slug?: string;
-  is_featured?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
-  is_active?: boolean;
-  reserved_stock?: number;
-  created_at?: string;
-  updated_at?: string;
-  variations?: Array<{
-    id: string;
-    size?: string;
-    color?: string;
-    price_adjustment?: number;
-    stock: number;
-  }>;
-}
-
-export interface CreateProductData {
-  store_id: string;
-  name: string;
-  description?: string;
-  retail_price: number;
-  wholesale_price?: number;
-  category?: string;
-  stock: number;
-  min_wholesale_qty?: number;
-  meta_title?: string;
-  meta_description?: string;
-  keywords?: string;
-  seo_slug?: string;
-  is_featured?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
-  is_active?: boolean;
-}
-
-export interface UpdateProductData extends CreateProductData {
-  id: string;
-}
+export { Product, CreateProductData, UpdateProductData };
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -121,7 +70,7 @@ export const useProducts = () => {
         throw new Error('Store ID é obrigatório');
       }
 
-      // Preparar dados limpos para inserção - REMOVENDO qualquer referência a 'price'
+      // Preparar dados limpos para inserção
       const cleanData = {
         store_id: productData.store_id,
         name: productData.name.trim(),
@@ -196,7 +145,7 @@ export const useProducts = () => {
         throw new Error('Preço de varejo deve ser maior que zero');
       }
 
-      // Preparar dados limpos para atualização - REMOVENDO qualquer referência a 'price'
+      // Preparar dados limpos para atualização
       const cleanData = {
         name: productData.name.trim(),
         description: productData.description?.trim() || null,

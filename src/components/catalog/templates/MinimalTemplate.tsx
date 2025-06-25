@@ -3,7 +3,7 @@ import { Heart, ShoppingCart, Eye, Share2, TrendingUp, AlertCircle } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Product } from '@/hooks/useProducts';
+import { Product } from '@/types/product';
 import { CatalogType } from '@/hooks/useCatalog';
 import { useProductVariations } from '@/hooks/useProductVariations';
 import { useCart } from '@/hooks/useCart';
@@ -282,10 +282,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = memo(({
 
       {/* Product Details Modal */}
       <ProductDetailsModal
-        product={{
-          ...product,
-          description: product.description || ''
-        }}
+        product={product}
         catalogType={catalogType}
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}

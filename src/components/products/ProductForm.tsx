@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -5,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
-import { CreateProductData } from '@/hooks/useProducts';
+import { CreateProductData } from '@/types/product';
 
 interface ProductFormProps {
   onSubmit: (data: CreateProductData) => void;
@@ -40,12 +41,23 @@ const ProductForm = ({ onSubmit, initialData, mode = 'create' }: ProductFormProp
   }, [initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
+    const { name, value, type } = e.target;
+    let newValue: any = value;
+
+    if (type === 'number') {
+      newValue = value === '' ? 0 : parseFloat(value);
+    }
 
     setFormData(prev => ({
       ...prev,
       [name]: newValue
+    }));
+  };
+
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked
     }));
   };
 
@@ -191,18 +203,16 @@ const ProductForm = ({ onSubmit, initialData, mode = 'create' }: ProductFormProp
         <Label htmlFor="is_featured">Em Destaque</Label>
         <Switch
           id="is_featured"
-          name="is_featured"
           checked={formData.is_featured || false}
-          onCheckedChange={(checked) => handleChange({ target: { name: 'is_featured', value: checked, type: 'checkbox' } } as any)}
+          onCheckedChange={(checked) => handleSwitchChange('is_featured', checked)}
         />
       </div>
       <div className="flex items-center space-x-2">
         <Label htmlFor="allow_negative_stock">Permitir Estoque Negativo</Label>
         <Switch
           id="allow_negative_stock"
-          name="allow_negative_stock"
           checked={formData.allow_negative_stock || false}
-          onCheckedChange={(checked) => handleChange({ target: { name: 'allow_negative_stock', value: checked, type: 'checkbox' } } as any)}
+          onCheckedChange={(checked) => handleSwitchChange('allow_negative_stock', checked)}
         />
       </div>
       <div>
@@ -219,9 +229,8 @@ const ProductForm = ({ onSubmit, initialData, mode = 'create' }: ProductFormProp
         <Label htmlFor="is_active">Ativo</Label>
         <Switch
           id="is_active"
-          name="is_active"
           checked={formData.is_active || false}
-          onCheckedChange={(checked) => handleChange({ target: { name: 'is_active', value: checked, type: 'checkbox' } } as any)}
+          onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
         />
       </div>
       <Button type="submit">{mode === 'edit' ? 'Atualizar Produto' : 'Criar Produto'}</Button>
