@@ -2,7 +2,7 @@
 import React from 'react';
 import ProductBasicInfoForm from './ProductBasicInfoForm';
 import ProductPricingForm from './ProductPricingForm';
-import ProductImagesForm from './ProductImagesForm';
+import ImprovedDraftImageUpload from '../ImprovedDraftImageUpload';
 import ProductSeoForm from './ProductSeoForm';
 import ProductAdvancedForm from './ProductAdvancedForm';
 import { ProductFormData } from '@/hooks/useProductFormWizard';
@@ -37,7 +37,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
     case 2:
       return (
-        <ProductImagesForm
+        <ImprovedDraftImageUpload
           productId={productId}
         />
       );

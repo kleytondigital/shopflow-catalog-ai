@@ -41,6 +41,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
       console.log('=== CARREGANDO PRODUTO PARA EDIÇÃO ===');
       console.log('Produto:', editingProduct);
       
+      // Preparar dados do formulário com os campos corretos - SEM 'price'
       updateFormData({
         name: editingProduct.name || '',
         description: editingProduct.description || '',
@@ -52,6 +53,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
         keywords: editingProduct.keywords || '',
         meta_title: editingProduct.meta_title || '',
         meta_description: editingProduct.meta_description || '',
+        seo_slug: editingProduct.seo_slug || '',
         is_featured: editingProduct.is_featured || false,
         allow_negative_stock: editingProduct.allow_negative_stock || false,
         stock_alert_threshold: editingProduct.stock_alert_threshold || 5,
@@ -63,7 +65,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
         loadExistingImages(editingProduct.id);
       }
     }
-  }, [editingProduct?.id, isOpen]);
+  }, [editingProduct?.id, isOpen, updateFormData, loadExistingImages]);
 
   // Limpar form ao fechar
   useEffect(() => {
@@ -72,7 +74,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
       resetForm();
       clearDraftImages();
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm, clearDraftImages]);
 
   const handleSave = async () => {
     console.log('=== INICIANDO PROCESSO DE SALVAMENTO ===');
@@ -109,7 +111,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
   const canProceed = () => {
     switch (currentStep) {
       case 0: // Básico
-        return formData.name.trim() !== '' && formData.retail_price > 0;
+        return !!(formData.name?.trim() && formData.retail_price > 0);
       case 1: // Preços
         return formData.retail_price > 0 && formData.stock >= 0;
       case 2: // Imagens

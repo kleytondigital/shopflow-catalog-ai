@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,26 +20,48 @@ export const useDraftImages = () => {
   const activeBlobUrls = useRef<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // Função para criar blob URL e registrar para cleanup
+  // Cleanup automático das blob URLs quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      console.log('=== CLEANUP AUTOMÁTICO DAS BLOB URLS ===');
+      activeBlobUrls.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.warn('Erro ao revogar blob URL:', error);
+        }
+      });
+      activeBlobUrls.current.clear();
+    };
+  }, []);
+
   const createBlobUrl = useCallback((file: File): string => {
     const url = URL.createObjectURL(file);
     activeBlobUrls.current.add(url);
+    console.log('Blob URL criada:', url);
     return url;
   }, []);
 
-  // Função para limpar blob URL específico
   const revokeBlobUrl = useCallback((url: string) => {
     if (url && url.startsWith('blob:') && activeBlobUrls.current.has(url)) {
-      URL.revokeObjectURL(url);
-      activeBlobUrls.current.delete(url);
+      try {
+        URL.revokeObjectURL(url);
+        activeBlobUrls.current.delete(url);
+        console.log('Blob URL revogada:', url);
+      } catch (error) {
+        console.warn('Erro ao revogar blob URL:', error);
+      }
     }
   }, []);
 
-  // Cleanup de todas as blob URLs ativas
   const cleanupAllBlobUrls = useCallback(() => {
     console.log('=== LIMPANDO TODAS AS BLOB URLS ===');
     activeBlobUrls.current.forEach(url => {
-      URL.revokeObjectURL(url);
+      try {
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.warn('Erro ao revogar blob URL:', error);
+      }
     });
     activeBlobUrls.current.clear();
   }, []);
@@ -51,7 +73,7 @@ export const useDraftImages = () => {
     const newImages: DraftImage[] = files.map((file) => {
       const preview = createBlobUrl(file);
       return {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         file,
         preview,
         uploaded: false,
@@ -59,7 +81,7 @@ export const useDraftImages = () => {
       };
     });
     
-    console.log('Imagens criadas:', newImages.length);
+    console.log('Novas imagens criadas:', newImages.length);
     setDraftImages(prev => {
       const updated = [...prev, ...newImages];
       console.log('Total de imagens após adição:', updated.length);
@@ -77,7 +99,7 @@ export const useDraftImages = () => {
       const imageToRemove = prev.find(img => img.id === id);
       
       // Cleanup de blob URL apenas se for uma nova imagem
-      if (imageToRemove && !imageToRemove.isExisting) {
+      if (imageToRemove && !imageToRemove.isExisting && imageToRemove.preview.startsWith('blob:')) {
         revokeBlobUrl(imageToRemove.preview);
       }
       

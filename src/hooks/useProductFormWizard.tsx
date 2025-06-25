@@ -151,7 +151,7 @@ export const useProductFormWizard = () => {
     setIsSaving(true);
 
     try {
-      // 1. Preparar dados do produto - CORRIGIDO: removendo referências a 'price'
+      // 1. Preparar dados do produto - GARANTINDO que não há campo 'price'
       const productData = {
         store_id: profile.store_id,
         name: formData.name.trim(),
