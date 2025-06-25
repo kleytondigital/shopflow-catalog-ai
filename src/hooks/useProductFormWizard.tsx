@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
+import { useDraftImages } from '@/hooks/useDraftImages';
 import { useToast } from '@/hooks/use-toast';
 
 export interface ProductFormData {
@@ -21,11 +22,19 @@ export interface ProductFormData {
   stock_alert_threshold?: number;
 }
 
+export interface WizardStep {
+  id: string;
+  title: string;
+  description: string;
+}
+
 export const useProductFormWizard = () => {
   const { createProduct, updateProduct } = useProducts();
+  const { draftImages, uploadDraftImages } = useDraftImages();
   const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
@@ -44,12 +53,12 @@ export const useProductFormWizard = () => {
     stock_alert_threshold: 5,
   });
 
-  const steps = [
-    { id: 'basic', title: 'Informações Básicas' },
-    { id: 'pricing', title: 'Preços e Estoque' },
-    { id: 'images', title: 'Imagens' },
-    { id: 'seo', title: 'SEO e Metadados' },
-    { id: 'advanced', title: 'Configurações Avançadas' }
+  const steps: WizardStep[] = [
+    { id: 'basic', title: 'Informações Básicas', description: 'Nome, descrição e categoria' },
+    { id: 'pricing', title: 'Preços e Estoque', description: 'Valores e quantidades' },
+    { id: 'images', title: 'Imagens', description: 'Fotos do produto' },
+    { id: 'seo', title: 'SEO e Metadados', description: 'Otimização para buscas' },
+    { id: 'advanced', title: 'Configurações Avançadas', description: 'Opções extras' }
   ];
 
   const updateFormData = (updates: Partial<ProductFormData>) => {
@@ -91,47 +100,49 @@ export const useProductFormWizard = () => {
     }
   };
 
-  const submitProduct = async (productId?: string) => {
+  const saveProduct = async (productId?: string): Promise<string | null> => {
     try {
-      if (productId) {
-        const { error } = await updateProduct(productId, formData);
-        if (error) throw error;
-        toast({ title: 'Produto atualizado com sucesso!' });
-      } else {
-        const { error } = await createProduct(formData);
-        if (error) throw error;
-        toast({ title: 'Produto criado com sucesso!' });
+      setIsSaving(true);
+      
+      // Upload das imagens primeiro
+      let uploadedImages: string[] = [];
+      if (draftImages.length > 0) {
+        uploadedImages = await uploadDraftImages(productId);
       }
+
+      // Preparar dados do produto
+      const productData = {
+        ...formData,
+        image_url: uploadedImages[0] || formData.image_url || '',
+      };
+
+      let result;
+      if (productId) {
+        result = await updateProduct(productId, productData);
+      } else {
+        result = await createProduct(productData);
+      }
+
+      if (result.error) throw new Error(result.error);
+
+      toast({ 
+        title: productId ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!' 
+      });
       
       // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        retail_price: 0,
-        wholesale_price: 0,
-        category: '',
-        stock: 0,
-        min_wholesale_qty: 1,
-        image_url: '',
-        meta_title: '',
-        meta_description: '',
-        keywords: '',
-        seo_slug: '',
-        is_featured: false,
-        allow_negative_stock: false,
-        stock_alert_threshold: 5,
-      });
-      setCurrentStep(0);
+      resetForm();
       
-      return { success: true };
+      return result.data?.id || productId || null;
     } catch (error) {
-      console.error('Error submitting product:', error);
+      console.error('Error saving product:', error);
       toast({
         title: 'Erro ao salvar produto',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: 'destructive'
       });
-      return { success: false, error };
+      return null;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -160,12 +171,13 @@ export const useProductFormWizard = () => {
     currentStep,
     steps,
     formData,
+    isSaving,
     updateFormData,
     nextStep,
     prevStep,
     goToStep,
     validateCurrentStep,
-    submitProduct,
+    saveProduct,
     resetForm,
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === steps.length - 1,
