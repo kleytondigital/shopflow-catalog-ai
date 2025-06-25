@@ -21,6 +21,8 @@ export type Database = {
           is_active: boolean
           link_url: string | null
           position: number
+          product_id: string | null
+          source_type: string | null
           start_date: string | null
           store_id: string
           title: string
@@ -37,6 +39,8 @@ export type Database = {
           is_active?: boolean
           link_url?: string | null
           position?: number
+          product_id?: string | null
+          source_type?: string | null
           start_date?: string | null
           store_id: string
           title: string
@@ -53,12 +57,22 @@ export type Database = {
           is_active?: boolean
           link_url?: string | null
           position?: number
+          product_id?: string | null
+          source_type?: string | null
           start_date?: string | null
           store_id?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalog_banners_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogs: {
         Row: {

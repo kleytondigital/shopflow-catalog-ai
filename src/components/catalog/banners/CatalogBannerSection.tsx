@@ -22,18 +22,18 @@ const CatalogBannerSection: React.FC<CatalogBannerSectionProps> = ({
   return (
     <div className={`banner-section ${className}`}>
       {banners.map((banner) => (
-        <div key={banner.id} className="banner-item">
+        <div key={banner.id} className="banner-item mb-6">
           {banner.link_url ? (
             <a 
               href={banner.link_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="block"
+              className="block group"
             >
               <img
                 src={banner.image_url}
                 alt={banner.title}
-                className="w-full h-auto rounded-lg hover:opacity-90 transition-opacity"
+                className="w-full h-auto rounded-lg group-hover:opacity-90 transition-opacity duration-200"
                 loading="lazy"
               />
             </a>
@@ -45,11 +45,18 @@ const CatalogBannerSection: React.FC<CatalogBannerSectionProps> = ({
               loading="lazy"
             />
           )}
-          {banner.title && (
-            <div className="banner-content mt-2">
-              <h3 className="text-lg font-semibold text-gray-800">{banner.title}</h3>
+          
+          {(banner.title || banner.description) && (
+            <div className="banner-content mt-3 text-center">
+              {banner.title && (
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                  {banner.title}
+                </h3>
+              )}
               {banner.description && (
-                <p className="text-sm text-gray-600 mt-1">{banner.description}</p>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {banner.description}
+                </p>
               )}
             </div>
           )}

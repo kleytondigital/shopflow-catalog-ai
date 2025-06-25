@@ -1,180 +1,174 @@
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
-import { useDraftImages } from '@/hooks/useDraftImages';
-import { useAuth } from '@/hooks/useAuth';
 
 export interface ProductFormData {
   name: string;
-  description: string;
+  description?: string;
   retail_price: number;
   wholesale_price?: number;
-  min_wholesale_qty?: number;
+  category?: string;
   stock: number;
-  category: string;
-  keywords: string;
-  meta_title: string;
-  meta_description: string;
+  min_wholesale_qty?: number;
+  image_url?: string;
+  meta_title?: string;
+  meta_description?: string;
+  keywords?: string;
+  seo_slug?: string;
   is_featured?: boolean;
   allow_negative_stock?: boolean;
   stock_alert_threshold?: number;
 }
 
 export const useProductFormWizard = () => {
+  const { createProduct, updateProduct } = useProducts();
+  const { toast } = useToast();
+  
   const [currentStep, setCurrentStep] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
     retail_price: 0,
-    wholesale_price: undefined,
-    min_wholesale_qty: 1,
-    stock: 0,
+    wholesale_price: 0,
     category: '',
-    keywords: '',
+    stock: 0,
+    min_wholesale_qty: 1,
+    image_url: '',
     meta_title: '',
     meta_description: '',
+    keywords: '',
+    seo_slug: '',
     is_featured: false,
     allow_negative_stock: false,
     stock_alert_threshold: 5,
   });
 
-  const { createProduct, updateProduct } = useProducts();
-  const { uploadDraftImages, clearDraftImages, draftImages } = useDraftImages();
-  const { toast } = useToast();
-  const { profile } = useAuth();
+  const steps = [
+    { id: 'basic', title: 'Informações Básicas' },
+    { id: 'pricing', title: 'Preços e Estoque' },
+    { id: 'images', title: 'Imagens' },
+    { id: 'seo', title: 'SEO e Metadados' },
+    { id: 'advanced', title: 'Configurações Avançadas' }
+  ];
 
-  const updateFormData = useCallback((updates: Partial<ProductFormData>) => {
+  const updateFormData = (updates: Partial<ProductFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
-  }, []);
+  };
 
-  const nextStep = useCallback(() => {
-    setCurrentStep(prev => prev + 1);
-  }, []);
-
-  const prevStep = useCallback(() => {
-    setCurrentStep(prev => prev - 1);
-  }, []);
-
-  const goToStep = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
-
-  const saveProduct = useCallback(async (productId?: string): Promise<string | null> => {
-    if (!profile?.store_id) {
-      toast({
-        title: 'Erro',
-        description: 'Store ID não encontrado',
-        variant: 'destructive',
-      });
-      return null;
+  const nextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
     }
+  };
 
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const goToStep = (stepIndex: number) => {
+    if (stepIndex >= 0 && stepIndex < steps.length) {
+      setCurrentStep(stepIndex);
+    }
+  };
+
+  const validateCurrentStep = (): boolean => {
+    switch (currentStep) {
+      case 0: // Informações Básicas
+        return !!(formData.name && formData.retail_price > 0);
+      case 1: // Preços e Estoque
+        return formData.retail_price > 0 && formData.stock >= 0;
+      case 2: // Imagens
+        return true; // Opcional
+      case 3: // SEO
+        return true; // Opcional
+      case 4: // Avançado
+        return true; // Opcional
+      default:
+        return true;
+    }
+  };
+
+  const submitProduct = async (productId?: string) => {
     try {
-      setIsSaving(true);
-      console.log('🔄 Salvando produto...', { productId, hasImages: draftImages.length > 0 });
-      
-      // Preparar dados do produto
-      const productData = {
-        ...formData,
-        store_id: profile.store_id,
-        image_url: undefined
-      };
-
-      let finalProductId: string;
-
       if (productId) {
-        // Atualizar produto existente
-        const { data: updatedProduct, error } = await updateProduct(productId, productData);
-        if (error || !updatedProduct) {
-          throw new Error(error || 'Falha ao atualizar produto');
-        }
-        finalProductId = productId;
-        console.log('✅ Produto atualizado:', finalProductId);
+        const { error } = await updateProduct(productId, formData);
+        if (error) throw error;
+        toast({ title: 'Produto atualizado com sucesso!' });
       } else {
-        // Criar novo produto
-        const { data: newProduct, error } = await createProduct(productData);
-        if (error || !newProduct) {
-          throw new Error(error || 'Falha ao criar produto');
-        }
-        finalProductId = newProduct.id;
-        console.log('✅ Produto criado:', finalProductId);
+        const { error } = await createProduct(formData);
+        if (error) throw error;
+        toast({ title: 'Produto criado com sucesso!' });
       }
-
-      // Upload das imagens se houver
-      if (draftImages.length > 0) {
-        console.log('📸 Iniciando upload de imagens...');
-        const uploadedUrls = await uploadDraftImages(finalProductId);
-        console.log('📸 Upload concluído:', uploadedUrls.length, 'imagens');
-        
-        if (uploadedUrls.length === 0) {
-          toast({
-            title: 'Aviso',
-            description: 'Produto salvo, mas houve problemas no upload das imagens',
-            variant: 'destructive',
-          });
-        }
-      }
-
-      toast({
-        title: 'Sucesso!',
-        description: productId ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!',
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        retail_price: 0,
+        wholesale_price: 0,
+        category: '',
+        stock: 0,
+        min_wholesale_qty: 1,
+        image_url: '',
+        meta_title: '',
+        meta_description: '',
+        keywords: '',
+        seo_slug: '',
+        is_featured: false,
+        allow_negative_stock: false,
+        stock_alert_threshold: 5,
       });
-
-      return finalProductId;
-
+      setCurrentStep(0);
+      
+      return { success: true };
     } catch (error) {
-      console.error('❌ Erro ao salvar produto:', error);
+      console.error('Error submitting product:', error);
       toast({
-        title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao salvar produto',
-        variant: 'destructive',
+        title: 'Erro ao salvar produto',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive'
       });
-      return null;
-    } finally {
-      setIsSaving(false);
+      return { success: false, error };
     }
-  }, [formData, draftImages, createProduct, updateProduct, uploadDraftImages, toast, profile?.store_id]);
+  };
 
-  const resetForm = useCallback(() => {
-    setCurrentStep(0);
+  const resetForm = () => {
     setFormData({
       name: '',
       description: '',
       retail_price: 0,
-      wholesale_price: undefined,
-      min_wholesale_qty: 1,
-      stock: 0,
+      wholesale_price: 0,
       category: '',
-      keywords: '',
+      stock: 0,
+      min_wholesale_qty: 1,
+      image_url: '',
       meta_title: '',
       meta_description: '',
+      keywords: '',
+      seo_slug: '',
       is_featured: false,
       allow_negative_stock: false,
       stock_alert_threshold: 5,
     });
-    clearDraftImages();
-  }, [clearDraftImages]);
-
-  const steps = [
-    { id: 'basic', title: 'Informações Básicas', description: 'Nome, descrição e categoria' },
-    { id: 'pricing', title: 'Preços e Estoque', description: 'Valores e quantidades' },
-    { id: 'images', title: 'Imagens', description: 'Fotos do produto' },
-    { id: 'seo', title: 'SEO', description: 'Otimização para busca' },
-    { id: 'advanced', title: 'Avançado', description: 'Configurações extras' },
-  ];
+    setCurrentStep(0);
+  };
 
   return {
     currentStep,
-    formData,
     steps,
-    isSaving,
+    formData,
     updateFormData,
     nextStep,
     prevStep,
     goToStep,
-    saveProduct,
+    validateCurrentStep,
+    submitProduct,
     resetForm,
+    isFirstStep: currentStep === 0,
+    isLastStep: currentStep === steps.length - 1,
+    canProceed: validateCurrentStep()
   };
 };
