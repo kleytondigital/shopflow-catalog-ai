@@ -2,7 +2,7 @@
 import React from 'react';
 import ProductVariationsManager from '../ProductVariationsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ProductVariation } from '@/hooks/useProductFormWizard';
+import { ProductVariation } from '@/types/variation';
 
 interface ProductVariationsFormProps {
   variations: ProductVariation[];

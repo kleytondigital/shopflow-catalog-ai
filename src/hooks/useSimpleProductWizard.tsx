@@ -1,13 +1,13 @@
-
 import { useState, useCallback } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useProductVariations } from '@/hooks/useProductVariations';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateProductData } from '@/types/product';
+import { ProductVariation } from '@/types/variation';
 
 export interface SimpleProductFormData extends CreateProductData {
-  variations?: any[];
+  variations?: ProductVariation[];
 }
 
 export interface SimpleWizardStep {
@@ -72,7 +72,8 @@ export const useSimpleProductWizard = () => {
         nameLength: newData.name?.length || 0,
         description: newData.description,
         retail_price: newData.retail_price,
-        stock: newData.stock
+        stock: newData.stock,
+        variationsCount: newData.variations?.length || 0
       });
       
       return newData;
@@ -156,7 +157,8 @@ export const useSimpleProductWizard = () => {
       description: formData.description,
       retail_price: formData.retail_price,
       stock: formData.stock,
-      store_id: storeId
+      store_id: storeId,
+      variationsCount: formData.variations?.length || 0
     });
 
     if (!storeId) {
@@ -227,20 +229,11 @@ export const useSimpleProductWizard = () => {
         }
       }
 
-      // Salvar variações
+      // Salvar variações com upload de imagens
       if (formData.variations && formData.variations.length > 0) {
         try {
-          const variationsToSave = formData.variations.map(variation => ({
-            color: variation.color || null,
-            size: variation.size || null,
-            sku: variation.sku || null,
-            stock: variation.stock,
-            price_adjustment: variation.price_adjustment,
-            is_active: variation.is_active,
-            image_url: variation.image_url || null
-          }));
-
-          await saveVariations(savedProductId, variationsToSave);
+          console.log('💾 Salvando variações:', formData.variations.length);
+          await saveVariations(savedProductId, formData.variations);
         } catch (variationError) {
           console.error('Erro nas variações:', variationError);
         }

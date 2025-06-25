@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Trash2, Plus, Image } from 'lucide-react';
-import { ProductVariation } from '@/hooks/useProductFormWizard';
+import { ProductVariation } from '@/types/variation';
 import VariationImageUpload from './VariationImageUpload';
 
 interface ProductVariationsManagerProps {
@@ -33,7 +34,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
       stock: 0,
       price_adjustment: 0,
       is_active: true,
-      image_url: ''
+      image_url: null
     };
     
     onChange([...variations, newVariation]);
@@ -48,6 +49,13 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
   };
 
   const removeVariation = (index: number) => {
+    const variation = variations[index];
+    
+    // Revogar blob URL se existir
+    if (variation.image_url && variation.image_url.startsWith('blob:')) {
+      URL.revokeObjectURL(variation.image_url);
+    }
+    
     const updatedVariations = variations.filter((_, i) => i !== index);
     onChange(updatedVariations);
     if (updatedVariations.length === 0) {
@@ -84,7 +92,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
     
     updateVariation(index, { 
       image_file: undefined,
-      image_url: ''
+      image_url: null
     });
   };
 
@@ -122,7 +130,7 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
       ) : (
         <div className="space-y-4">
           {variations.map((variation, index) => (
-            <Card key={index}>
+            <Card key={`variation-${index}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">
@@ -144,27 +152,27 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor={`color-${index}`}>Cor</Label>
+                    <Label htmlFor={`variation-color-${index}`}>Cor</Label>
                     <Input
-                      id={`color-${index}`}
+                      id={`variation-color-${index}`}
                       value={variation.color || ''}
                       onChange={(e) => updateVariation(index, { color: e.target.value })}
                       placeholder="Ex: Azul, Vermelho"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`size-${index}`}>Tamanho</Label>
+                    <Label htmlFor={`variation-size-${index}`}>Tamanho</Label>
                     <Input
-                      id={`size-${index}`}
+                      id={`variation-size-${index}`}
                       value={variation.size || ''}
                       onChange={(e) => updateVariation(index, { size: e.target.value })}
                       placeholder="Ex: P, M, G, GG"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`sku-${index}`}>SKU</Label>
+                    <Label htmlFor={`variation-sku-${index}`}>SKU</Label>
                     <Input
-                      id={`sku-${index}`}
+                      id={`variation-sku-${index}`}
                       value={variation.sku || ''}
                       onChange={(e) => updateVariation(index, { sku: e.target.value })}
                       placeholder="Código único"
@@ -174,9 +182,9 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor={`stock-${index}`}>Estoque</Label>
+                    <Label htmlFor={`variation-stock-${index}`}>Estoque</Label>
                     <Input
-                      id={`stock-${index}`}
+                      id={`variation-stock-${index}`}
                       type="number"
                       min="0"
                       value={variation.stock}
@@ -184,9 +192,9 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`price-adjustment-${index}`}>Ajuste de Preço (R$)</Label>
+                    <Label htmlFor={`variation-price-adjustment-${index}`}>Ajuste de Preço (R$)</Label>
                     <Input
-                      id={`price-adjustment-${index}`}
+                      id={`variation-price-adjustment-${index}`}
                       type="number"
                       step="0.01"
                       value={variation.price_adjustment}
@@ -202,13 +210,13 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor={`active-${index}`}>Variação Ativa</Label>
+                      <Label htmlFor={`variation-active-${index}`}>Variação Ativa</Label>
                       <p className="text-sm text-muted-foreground">
                         Variações inativas não aparecem no catálogo
                       </p>
                     </div>
                     <Switch
-                      id={`active-${index}`}
+                      id={`variation-active-${index}`}
                       checked={variation.is_active}
                       onCheckedChange={(checked) => updateVariation(index, { is_active: checked })}
                     />
