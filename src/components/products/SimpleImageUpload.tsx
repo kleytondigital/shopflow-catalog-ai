@@ -9,11 +9,13 @@ import { useToast } from '@/hooks/use-toast';
 interface SimpleImageUploadProps {
   productId?: string;
   maxImages?: number;
+  onImagesChange?: (images: any[]) => void;
 }
 
 const SimpleImageUpload = ({ 
   productId,
-  maxImages = 5
+  maxImages = 5,
+  onImagesChange
 }: SimpleImageUploadProps) => {
   const {
     images,
@@ -21,15 +23,25 @@ const SimpleImageUpload = ({
     isLoading,
     addImages,
     removeImage,
-    loadExistingImages
+    loadExistingImages,
+    uploadImages
   } = useSimpleDraftImages();
   const { toast } = useToast();
 
+  // Carregar imagens existentes apenas uma vez quando productId mudar
   React.useEffect(() => {
     if (productId) {
+      console.log('🔄 SimpleImageUpload - Carregando imagens para:', productId);
       loadExistingImages(productId);
     }
   }, [productId, loadExistingImages]);
+
+  // Notificar mudanças nas imagens para o componente pai
+  React.useEffect(() => {
+    if (onImagesChange) {
+      onImagesChange(images);
+    }
+  }, [images, onImagesChange]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -47,6 +59,8 @@ const SimpleImageUpload = ({
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     handleFiles(files);
+    // Limpar o input para permitir selecionar os mesmos arquivos novamente
+    e.target.value = '';
   };
 
   const handleFiles = (files: File[]) => {
@@ -86,9 +100,29 @@ const SimpleImageUpload = ({
     });
 
     if (validFiles.length > 0) {
+      console.log('📤 Adicionando', validFiles.length, 'arquivos válidos');
       addImages(validFiles);
     }
   };
+
+  const handleUploadClick = () => {
+    const input = document.getElementById('simple-image-upload');
+    if (input && !isUploading) {
+      console.log('🖱️ Clique no upload - abrindo seletor de arquivos');
+      input.click();
+    }
+  };
+
+  // Função para ser chamada pelo wizard principal
+  const handleUploadImages = React.useCallback(async (productId: string) => {
+    console.log('📤 Iniciando upload das imagens para produto:', productId);
+    return await uploadImages(productId);
+  }, [uploadImages]);
+
+  // Expor a função de upload para o componente pai
+  React.useImperativeHandle(React.forwardRef(() => null), () => ({
+    uploadImages: handleUploadImages
+  }));
 
   if (isLoading) {
     return (
@@ -123,7 +157,7 @@ const SimpleImageUpload = ({
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            onClick={() => !isUploading && document.getElementById('simple-image-upload')?.click()}
+            onClick={handleUploadClick}
           >
             <div className="flex flex-col items-center">
               <Upload className="h-12 w-12 text-gray-400 mb-4" />

@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { useProducts } from '@/hooks/useProducts';
-import { useSimpleDraftImages } from '@/hooks/useSimpleDraftImages';
 import { useProductVariations } from '@/hooks/useProductVariations';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +19,6 @@ export interface SimpleWizardStep {
 
 export const useSimpleProductWizard = () => {
   const { createProduct, updateProduct } = useProducts();
-  const { images, uploadImages, clearImages, loadExistingImages } = useSimpleDraftImages();
   const { saveVariations } = useProductVariations();
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -59,7 +57,7 @@ export const useSimpleProductWizard = () => {
   ];
 
   const updateFormData = useCallback((updates: Partial<SimpleProductFormData>) => {
-    console.log('🔧 updateFormData - Recebendo atualizações:', Object.keys(updates));
+    console.log('🔧 updateFormData - Atualizando:', Object.keys(updates));
     
     setFormData(prev => {
       const newData = { ...prev, ...updates };
@@ -69,11 +67,10 @@ export const useSimpleProductWizard = () => {
         newData.store_id = profile.store_id;
       }
       
-      console.log('📊 updateFormData - Dados atualizados:', {
+      console.log('📊 Dados atualizados:', {
         name: newData.name,
         nameLength: newData.name?.length || 0,
         description: newData.description,
-        descriptionLength: newData.description?.length || 0,
         retail_price: newData.retail_price,
         stock: newData.stock
       });
@@ -147,7 +144,7 @@ export const useSimpleProductWizard = () => {
     }
   }, [steps.length]);
 
-  const saveProduct = useCallback(async (productId?: string): Promise<string | null> => {
+  const saveProduct = useCallback(async (productId?: string, imageUploadFn?: (productId: string) => Promise<void>): Promise<string | null> => {
     if (isSaving) return null;
 
     const storeId = formData.store_id || profile?.store_id;
@@ -159,8 +156,7 @@ export const useSimpleProductWizard = () => {
       description: formData.description,
       retail_price: formData.retail_price,
       stock: formData.stock,
-      store_id: storeId,
-      imagesCount: images.length
+      store_id: storeId
     });
 
     if (!storeId) {
@@ -222,9 +218,9 @@ export const useSimpleProductWizard = () => {
       }
 
       // Upload de imagens APÓS salvar produto
-      if (images.length > 0) {
+      if (imageUploadFn) {
         try {
-          await uploadImages(savedProductId);
+          await imageUploadFn(savedProductId);
         } catch (uploadError) {
           console.error('Erro no upload:', uploadError);
           // Não falhar por causa das imagens
@@ -268,7 +264,7 @@ export const useSimpleProductWizard = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, profile?.store_id, images, createProduct, updateProduct, uploadImages, saveVariations, toast, isSaving]);
+  }, [formData, profile?.store_id, createProduct, updateProduct, saveVariations, toast, isSaving]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -291,8 +287,7 @@ export const useSimpleProductWizard = () => {
       variations: []
     });
     setCurrentStep(0);
-    clearImages();
-  }, [clearImages, profile?.store_id]);
+  }, [profile?.store_id]);
 
   const loadProductData = useCallback((product: any) => {
     if (!product) return;
@@ -323,12 +318,7 @@ export const useSimpleProductWizard = () => {
     
     // Atualizar formData de uma vez
     setFormData(productData);
-    
-    // Carregar imagens existentes
-    if (product.id) {
-      loadExistingImages(product.id);
-    }
-  }, [loadExistingImages, profile?.store_id]);
+  }, [profile?.store_id]);
 
   return {
     currentStep,

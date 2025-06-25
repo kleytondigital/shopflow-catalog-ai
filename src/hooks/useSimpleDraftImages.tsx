@@ -17,6 +17,7 @@ export const useSimpleDraftImages = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const blobUrlsRef = useRef<Set<string>>(new Set());
+  const loadedProductIdRef = useRef<string | null>(null);
   const { toast } = useToast();
 
   // Cleanup seguro das blob URLs
@@ -83,7 +84,7 @@ export const useSimpleDraftImages = () => {
     setImages(prev => {
       const imageToRemove = prev.find(img => img.id === id);
       
-      if (imageToRemove?.preview) {
+      if (imageToRemove?.preview && imageToRemove.preview.startsWith('blob:')) {
         revokeBlobUrl(imageToRemove.preview);
       }
       
@@ -183,9 +184,18 @@ export const useSimpleDraftImages = () => {
   }, [images, toast, isUploading]);
 
   const loadExistingImages = useCallback(async (productId: string) => {
-    if (!productId || isLoading) return;
+    // Evitar chamadas duplicadas para o mesmo produto
+    if (!productId || isLoading || loadedProductIdRef.current === productId) {
+      console.log('🚫 Carregamento de imagens ignorado:', { 
+        productId, 
+        isLoading, 
+        alreadyLoaded: loadedProductIdRef.current === productId 
+      });
+      return;
+    }
 
     setIsLoading(true);
+    loadedProductIdRef.current = productId;
     console.log('📥 Carregando imagens existentes para produto:', productId);
     
     try {
@@ -231,6 +241,7 @@ export const useSimpleDraftImages = () => {
     });
     
     setImages([]);
+    loadedProductIdRef.current = null;
   }, [images, revokeBlobUrl]);
 
   return {

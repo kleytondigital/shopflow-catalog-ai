@@ -1,8 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSimpleProductWizard } from '@/hooks/useSimpleProductWizard';
 import { useProductVariations } from '@/hooks/useProductVariations';
+import { useSimpleDraftImages } from '@/hooks/useSimpleDraftImages';
 import ImprovedWizardStepNavigation from './wizard/ImprovedWizardStepNavigation';
 import WizardStepContent from './wizard/WizardStepContent';
 import ImprovedWizardActionButtons from './wizard/ImprovedWizardActionButtons';
@@ -36,12 +37,17 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   } = useSimpleProductWizard();
 
   const { variations, loading: variationsLoading } = useProductVariations(editingProduct?.id);
+  const { uploadImages, clearImages } = useSimpleDraftImages();
+  
+  // Ref para evitar múltiplas chamadas
+  const loadedProductRef = useRef<string | null>(null);
 
   // Carregar dados do produto para edição
   useEffect(() => {
-    if (editingProduct && isOpen) {
+    if (editingProduct && isOpen && loadedProductRef.current !== editingProduct.id) {
       console.log('📂 Carregando produto para edição:', editingProduct.name);
       loadProductData(editingProduct);
+      loadedProductRef.current = editingProduct.id;
     }
   }, [editingProduct?.id, isOpen, loadProductData]);
 
@@ -65,24 +71,41 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   // Limpar form ao fechar
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && loadedProductRef.current) {
+      console.log('🧹 Limpando dados do wizard');
       resetForm();
+      clearImages();
+      loadedProductRef.current = null;
     }
-  }, [isOpen, resetForm]);
+  }, [isOpen, resetForm, clearImages]);
 
   const handleSave = async () => {
     try {
-      const productId = await saveProduct(editingProduct?.id);
+      console.log('💾 Iniciando salvamento do produto');
+      
+      // Função para fazer upload das imagens após salvar o produto
+      const imageUploadFn = async (productId: string) => {
+        console.log('📤 Fazendo upload das imagens para produto:', productId);
+        await uploadImages(productId);
+      };
+
+      const productId = await saveProduct(editingProduct?.id, imageUploadFn);
       
       if (productId) {
+        console.log('✅ Produto salvo com sucesso:', productId);
         if (onSuccess) {
           onSuccess();
         }
         onClose();
       }
     } catch (error) {
-      console.error('Erro durante salvamento:', error);
+      console.error('💥 Erro durante salvamento:', error);
     }
+  };
+
+  const handleClose = () => {
+    clearImages();
+    onClose();
   };
 
   const isLastStep = currentStep === steps.length - 1;
@@ -104,7 +127,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   completedSteps.push(2, 3, 4, 5);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl w-full max-h-[95vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-xl font-semibold">
@@ -142,7 +165,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
             onPrevious={prevStep}
             onNext={nextStep}
             onSave={handleSave}
-            onCancel={onClose}
+            onCancel={handleClose}
             isLastStep={isLastStep}
           />
         </div>
