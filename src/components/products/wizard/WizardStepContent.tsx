@@ -13,13 +13,15 @@ interface WizardStepContentProps {
   formData: SimpleProductFormData;
   updateFormData: (updates: Partial<SimpleProductFormData>) => void;
   productId?: string;
+  onImageUploadReady?: (uploadFn: (productId: string) => Promise<string[]>) => void;
 }
 
 const WizardStepContent: React.FC<WizardStepContentProps> = ({
   currentStep,
   formData,
   updateFormData,
-  productId
+  productId,
+  onImageUploadReady
 }) => {
   switch (currentStep) {
     case 0: // Informações Básicas
@@ -50,6 +52,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       return (
         <SimpleImageUpload
           productId={productId}
+          onUploadReady={onImageUploadReady}
         />
       );
       

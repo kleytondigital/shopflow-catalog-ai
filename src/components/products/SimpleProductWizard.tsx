@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSimpleProductWizard } from '@/hooks/useSimpleProductWizard';
 import { useProductVariations } from '@/hooks/useProductVariations';
@@ -37,10 +37,11 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   } = useSimpleProductWizard();
 
   const { variations, loading: variationsLoading } = useProductVariations(editingProduct?.id);
-  const { uploadImages, clearImages } = useSimpleDraftImages();
+  const { clearImages } = useSimpleDraftImages();
   
   // Ref para evitar múltiplas chamadas
   const loadedProductRef = useRef<string | null>(null);
+  const imageUploadFunctionRef = useRef<((productId: string) => Promise<string[]>) | null>(null);
 
   // Carregar dados do produto para edição
   useEffect(() => {
@@ -76,8 +77,14 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       resetForm();
       clearImages();
       loadedProductRef.current = null;
+      imageUploadFunctionRef.current = null;
     }
   }, [isOpen, resetForm, clearImages]);
+
+  // Callback para receber a função de upload do componente de imagens
+  const handleImageUploadReady = useCallback((uploadFn: (productId: string) => Promise<string[]>) => {
+    imageUploadFunctionRef.current = uploadFn;
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -85,8 +92,10 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       
       // Função para fazer upload das imagens após salvar o produto
       const imageUploadFn = async (productId: string) => {
-        console.log('📤 Fazendo upload das imagens para produto:', productId);
-        await uploadImages(productId);
+        if (imageUploadFunctionRef.current) {
+          console.log('📤 Fazendo upload das imagens para produto:', productId);
+          await imageUploadFunctionRef.current(productId);
+        }
       };
 
       const productId = await saveProduct(editingProduct?.id, imageUploadFn);
@@ -152,6 +161,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
                 formData={formData}
                 updateFormData={updateFormData}
                 productId={editingProduct?.id}
+                onImageUploadReady={handleImageUploadReady}
               />
             </div>
           </div>

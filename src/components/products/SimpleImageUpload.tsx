@@ -10,12 +10,14 @@ interface SimpleImageUploadProps {
   productId?: string;
   maxImages?: number;
   onImagesChange?: (images: any[]) => void;
+  onUploadReady?: (uploadFn: (productId: string) => Promise<string[]>) => void;
 }
 
 const SimpleImageUpload = ({ 
   productId,
   maxImages = 5,
-  onImagesChange
+  onImagesChange,
+  onUploadReady
 }: SimpleImageUploadProps) => {
   const {
     images,
@@ -42,6 +44,13 @@ const SimpleImageUpload = ({
       onImagesChange(images);
     }
   }, [images, onImagesChange]);
+
+  // Expor função de upload para o componente pai
+  React.useEffect(() => {
+    if (onUploadReady) {
+      onUploadReady(uploadImages);
+    }
+  }, [onUploadReady, uploadImages]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -112,17 +121,6 @@ const SimpleImageUpload = ({
       input.click();
     }
   };
-
-  // Função para ser chamada pelo wizard principal
-  const handleUploadImages = React.useCallback(async (productId: string) => {
-    console.log('📤 Iniciando upload das imagens para produto:', productId);
-    return await uploadImages(productId);
-  }, [uploadImages]);
-
-  // Expor a função de upload para o componente pai
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
-    uploadImages: handleUploadImages
-  }));
 
   if (isLoading) {
     return (
