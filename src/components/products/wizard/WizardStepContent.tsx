@@ -3,15 +3,15 @@ import React from 'react';
 import ProductBasicInfoForm from './ProductBasicInfoForm';
 import ProductPricingForm from './ProductPricingForm';
 import ProductVariationsForm from './ProductVariationsForm';
-import ImprovedDraftImageUpload from '../ImprovedDraftImageUpload';
+import SimpleImageUpload from '../SimpleImageUpload';
 import ProductSeoForm from './ProductSeoForm';
 import ProductAdvancedForm from './ProductAdvancedForm';
-import { ProductFormData } from '@/hooks/useImprovedProductFormWizard';
+import { SimpleProductFormData } from '@/hooks/useSimpleProductWizard';
 
 interface WizardStepContentProps {
   currentStep: number;
-  formData: ProductFormData;
-  updateFormData: (updates: Partial<ProductFormData>) => void;
+  formData: SimpleProductFormData;
+  updateFormData: (updates: Partial<SimpleProductFormData>) => void;
   productId?: string;
 }
 
@@ -21,11 +21,8 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   updateFormData,
   productId
 }) => {
-  console.log('📄 WIZARD STEP CONTENT - Renderizando step:', currentStep);
-
   switch (currentStep) {
     case 0: // Informações Básicas
-      console.log('📝 WIZARD STEP CONTENT - Renderizando básico');
       return (
         <ProductBasicInfoForm
           formData={formData}
@@ -34,7 +31,6 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
       
     case 1: // Preços e Estoque
-      console.log('💰 WIZARD STEP CONTENT - Renderizando preços');
       return (
         <ProductPricingForm
           formData={formData}
@@ -43,7 +39,6 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
       
     case 2: // Variações
-      console.log('🎨 WIZARD STEP CONTENT - Renderizando variações');
       return (
         <ProductVariationsForm
           variations={formData.variations || []}
@@ -52,15 +47,13 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
       
     case 3: // Imagens
-      console.log('📷 WIZARD STEP CONTENT - Renderizando imagens');
       return (
-        <ImprovedDraftImageUpload
+        <SimpleImageUpload
           productId={productId}
         />
       );
       
     case 4: // SEO
-      console.log('🔍 WIZARD STEP CONTENT - Renderizando SEO');
       return (
         <ProductSeoForm
           formData={formData}
@@ -69,7 +62,6 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
       
     case 5: // Avançado
-      console.log('⚙️ WIZARD STEP CONTENT - Renderizando avançado');
       return (
         <ProductAdvancedForm
           formData={formData}
@@ -78,7 +70,6 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
       );
       
     default:
-      console.error('❌ WIZARD STEP CONTENT - Step inválido:', currentStep);
       return (
         <div className="text-center p-8">
           <p className="text-red-500">Step inválido: {currentStep}</p>
