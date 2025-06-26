@@ -108,8 +108,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   };
 
   const handleAddToCart = () => {
+    console.log('🛒 MODAL - Tentando adicionar ao carrinho:', {
+      hasVariations,
+      requiresVariationSelection,
+      selectedVariation: selectedVariation ? {
+        id: selectedVariation.id,
+        color: selectedVariation.color,
+        size: selectedVariation.size
+      } : null
+    });
+
     // Validar seleção de variação obrigatória
     if (requiresVariationSelection && !selectedVariation) {
+      console.log('❌ MODAL - Variação obrigatória não selecionada');
       setShowVariationError(true);
       return;
     }
@@ -128,6 +139,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       
       onAddToCart(product, quantity, selectedVariation || undefined);
       onClose();
+    } else {
+      console.log('❌ MODAL - onAddToCart não fornecido');
     }
   };
 
@@ -139,6 +152,13 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   const isOutOfStock = availableStock === 0;
   const canAddToCart = !isOutOfStock && (!requiresVariationSelection || selectedVariation);
+
+  console.log('🎯 MODAL - Estado do botão:', {
+    isOutOfStock,
+    requiresVariationSelection,
+    hasSelectedVariation: !!selectedVariation,
+    canAddToCart
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -333,6 +353,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 <div>Pode adicionar: {canAddToCart ? 'Sim' : 'Não'}</div>
                 <div>Estoque disponível: {availableStock}</div>
                 <div>Preço final: R$ {finalPrice.toFixed(2)}</div>
+                <div>onAddToCart disponível: {onAddToCart ? 'Sim' : 'Não'}</div>
               </div>
             )}
           </div>
