@@ -105,9 +105,9 @@ const EnhancedWhatsAppCheckout: React.FC<EnhancedWhatsAppCheckoutProps> = ({
                     <p className="text-xs text-gray-600">
                       {item.quantity}x R$ {item.price.toFixed(2)}
                     </p>
-                    {item.variations && (
+                    {item.variation && (
                       <p className="text-xs text-gray-500">
-                        {item.variations.size} {item.variations.color}
+                        {item.variation.size} {item.variation.color}
                       </p>
                     )}
                   </div>
@@ -176,4 +176,3 @@ const EnhancedWhatsAppCheckout: React.FC<EnhancedWhatsAppCheckoutProps> = ({
 };
 
 export default EnhancedWhatsAppCheckout;
-

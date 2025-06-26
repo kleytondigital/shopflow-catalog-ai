@@ -2,19 +2,20 @@
 import { Product } from '@/hooks/useProducts';
 import { CatalogType } from '@/hooks/useCatalog';
 import { CartItem } from '@/hooks/useCart';
+import { ProductVariation } from '@/types/variation';
 
 export const createCartItem = (
   product: Product, 
   catalogType: CatalogType,
   quantity: number = 1,
-  variations?: { size?: string; color?: string }
+  variation?: ProductVariation
 ): CartItem => {
   const price = catalogType === 'wholesale' && product.wholesale_price 
     ? product.wholesale_price 
     : product.retail_price;
 
   return {
-    id: `${product.id}-${catalogType}-${JSON.stringify(variations || {})}`,
+    id: `${product.id}-${catalogType}-${JSON.stringify(variation || {})}`,
     product: {
       id: product.id,
       name: product.name,
@@ -25,8 +26,8 @@ export const createCartItem = (
     },
     quantity,
     price,
-    originalPrice: product.retail_price, // Adicionar originalPrice obrigatório
-    variations,
+    originalPrice: product.retail_price,
+    variation,
     catalogType
   };
 };

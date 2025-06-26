@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { ShoppingCart, Trash2, Plus, Minus, X, TrendingUp, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -186,9 +187,9 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                                   Varejo
                                 </Badge>
                               )}
-                              {item.variations && (
+                              {item.variation && (
                                 <span className="text-xs text-gray-500">
-                                  {item.variations.size} {item.variations.color}
+                                  {item.variation.size} {item.variation.color}
                                 </span>
                               )}
                             </div>
