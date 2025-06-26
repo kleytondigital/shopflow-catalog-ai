@@ -19,7 +19,13 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
   onVariationsChange,
   productId
 }) => {
-  const [systemType, setSystemType] = useState<'simple' | 'hierarchical'>('hierarchical');
+  const [systemType, setSystemType] = useState<'simple' | 'hierarchical'>('simple');
+
+  console.log('🎯 PRODUCT VARIATIONS FORM - Renderizando:', {
+    productId,
+    variationsCount: variations.length,
+    systemType
+  });
 
   return (
     <div className="space-y-6">
@@ -32,41 +38,16 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
 
       <Tabs value={systemType} onValueChange={(value) => setSystemType(value as 'simple' | 'hierarchical')}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="hierarchical" className="flex items-center gap-2">
-            <Layers className="w-4 h-4" />
-            Sistema Hierárquico
-            <Badge variant="secondary" className="ml-1">Recomendado</Badge>
-          </TabsTrigger>
           <TabsTrigger value="simple" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Sistema Simples
           </TabsTrigger>
+          <TabsTrigger value="hierarchical" className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Sistema Hierárquico
+            <Badge variant="secondary" className="ml-1">Novo</Badge>
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="hierarchical" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Layers className="w-5 h-5 text-primary" />
-                Sistema Hierárquico de Variações
-                <Badge variant="default">Novo</Badge>
-              </CardTitle>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>✅ <strong>Ideal para produtos com múltiplas características</strong> (ex: cor + tamanho)</p>
-                <p>✅ <strong>Cadastro 10x mais rápido</strong> para produtos com muitas variações</p>
-                <p>✅ <strong>Experiência melhor</strong> para o cliente no catálogo</p>
-                <p>✅ <strong>Gestão organizada</strong> de estoque por grupo</p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <HierarchicalVariationsManager
-                productId={productId}
-                variations={variations}
-                onChange={onVariationsChange}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="simple" className="space-y-4">
           <Card>
@@ -78,7 +59,7 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>• Cada variação é cadastrada individualmente</p>
                 <p>• Adequado para produtos com poucas variações</p>
-                <p>• Sistema tradicional</p>
+                <p>• Sistema tradicional e fácil de usar</p>
               </div>
             </CardHeader>
             <CardContent>
@@ -86,6 +67,39 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
                 variations={variations}
                 onChange={onVariationsChange}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hierarchical" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="w-5 h-5 text-primary" />
+                Sistema Hierárquico de Variações
+                <Badge variant="default">Avançado</Badge>
+              </CardTitle>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>✅ <strong>Ideal para produtos com múltiplas características</strong> (ex: cor + tamanho)</p>
+                <p>✅ <strong>Cadastro 10x mais rápido</strong> para produtos com muitas variações</p>
+                <p>✅ <strong>Experiência melhor</strong> para o cliente no catálogo</p>
+                <p>✅ <strong>Gestão organizada</strong> de estoque por grupo</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {productId ? (
+                <HierarchicalVariationsManager
+                  productId={productId}
+                  variations={variations}
+                  onChange={onVariationsChange}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">
+                    O sistema hierárquico estará disponível após salvar o produto
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
