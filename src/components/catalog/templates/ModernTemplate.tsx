@@ -127,6 +127,23 @@ const ModernTemplate: React.FC<ModernTemplateProps> = memo(({
     setImageError(true);
   }, []);
 
+  // Função para adicionar ao carrinho via modal
+  const handleModalAddToCart = useCallback((product: Product, quantity: number, variation?: any) => {
+    console.log('🛒 ModernTemplate - Adicionando ao carrinho via modal:', {
+      product: product.name,
+      quantity,
+      variation
+    });
+    
+    const cartItem = createCartItem(product, catalogType, quantity, variation);
+    addItem(cartItem);
+    
+    toast({
+      title: "Produto adicionado!",
+      description: `${product.name} foi adicionado ao carrinho.`,
+    });
+  }, [catalogType, addItem, toast]);
+
   const getStockStatus = () => {
     if (product.stock === 0) return { text: 'Esgotado', color: 'bg-red-500' };
     if (product.stock <= 5) return { text: 'Últimas unidades', color: 'bg-orange-500' };
@@ -315,12 +332,15 @@ const ModernTemplate: React.FC<ModernTemplateProps> = memo(({
         </CardContent>
       </Card>
 
-      {/* Product Details Modal */}
+      {/* Product Details Modal - Agora com todas as props necessárias */}
       <ProductDetailsModal
         product={product}
         catalogType={catalogType}
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
+        onAddToCart={handleModalAddToCart}
+        onAddToWishlist={handleAddToWishlist}
+        isInWishlist={isInWishlist}
       />
     </>
   );
