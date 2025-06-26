@@ -13,7 +13,7 @@ interface GenericProductFormData {
   description?: string;
   retail_price: number;
   wholesale_price?: number;
-  min_wholesale_qty: number;
+  min_wholesale_qty?: number; // Tornando opcional para compatibilidade
   stock: number;
   category: string;
   keywords: string;
@@ -24,7 +24,7 @@ interface GenericProductFormData {
   allow_negative_stock: boolean;
   stock_alert_threshold: number;
   variations?: any[];
-  store_id?: string;
+  store_id?: string; // Mantendo opcional para compatibilidade
 }
 
 interface WizardStepContentProps {
@@ -42,11 +42,18 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   productId,
   onImageUploadReady
 }) => {
+  // Garantir valores padrão para propriedades que podem estar ausentes
+  const safeFormData = {
+    ...formData,
+    min_wholesale_qty: formData.min_wholesale_qty ?? 1,
+    store_id: formData.store_id || ''
+  };
+
   switch (currentStep) {
     case 0: // Informações Básicas
       return (
         <ProductBasicInfoForm
-          formData={formData}
+          formData={safeFormData}
           updateFormData={updateFormData}
         />
       );
@@ -54,7 +61,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
     case 1: // Preços e Estoque
       return (
         <ProductPricingForm
-          formData={formData}
+          formData={safeFormData}
           updateFormData={updateFormData}
         />
       );
@@ -78,7 +85,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
     case 4: // SEO
       return (
         <ProductSeoForm
-          formData={formData}
+          formData={safeFormData}
           updateFormData={updateFormData}
         />
       );
@@ -86,7 +93,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
     case 5: // Avançado
       return (
         <ProductAdvancedForm
-          formData={formData}
+          formData={safeFormData}
           updateFormData={updateFormData}
         />
       );

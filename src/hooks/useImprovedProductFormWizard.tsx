@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +9,7 @@ export interface ProductFormData {
   description?: string; // Tornando opcional para compatibilidade
   retail_price: number;
   wholesale_price?: number;
-  min_wholesale_qty: number;
+  min_wholesale_qty?: number; // Tornando opcional para compatibilidade
   stock: number;
   category: string;
   keywords: string;
@@ -66,6 +65,10 @@ export const useImprovedProductFormWizard = () => {
       // Garantir que store_id está sempre presente
       if (!updated.store_id && profile?.store_id) {
         updated.store_id = profile.store_id;
+      }
+      // Garantir que min_wholesale_qty tenha um valor padrão
+      if (updated.min_wholesale_qty === undefined) {
+        updated.min_wholesale_qty = 1;
       }
       return updated;
     });
