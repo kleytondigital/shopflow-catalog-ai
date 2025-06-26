@@ -19,6 +19,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 }) => {
   const { images, loading } = useProductImages(productId);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
 
   // Combinar imagens do produto com imagem da variação selecionada
   const allImages = React.useMemo(() => {
@@ -81,25 +82,40 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
     );
   };
 
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.error('Erro ao carregar imagem:', currentImage);
+    setImageLoading(false);
+    e.currentTarget.style.display = 'none';
+    const parent = e.currentTarget.parentElement;
+    if (parent) {
+      const errorDiv = parent.querySelector('.error-placeholder');
+      if (errorDiv) {
+        (errorDiv as HTMLElement).style.display = 'flex';
+      }
+    }
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Imagem Principal */}
       <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
+        {/* Loading Overlay - NÃO bloqueia interações */}
+        {imageLoading && (
+          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center pointer-events-none z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
         <img
           src={currentImage}
           alt={`${productName} - Imagem ${currentImageIndex + 1}`}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            console.error('Erro ao carregar imagem:', currentImage);
-            e.currentTarget.style.display = 'none';
-            const parent = e.currentTarget.parentElement;
-            if (parent) {
-              const errorDiv = parent.querySelector('.error-placeholder');
-              if (errorDiv) {
-                (errorDiv as HTMLElement).style.display = 'flex';
-              }
-            }
-          }}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
         
         {/* Placeholder de erro */}
@@ -125,7 +141,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
               onClick={goToPrevious}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -133,7 +149,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
               onClick={goToNext}
             >
               <ChevronRight className="h-4 w-4" />
@@ -143,7 +159,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
         {/* Contador de imagens */}
         {showNavigation && (
-          <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+          <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded z-20">
             {currentImageIndex + 1} / {allImages.length}
           </div>
         )}
@@ -157,7 +173,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
               key={`thumb-${index}`}
               onClick={() => setCurrentImageIndex(index)}
               className={`
-                flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden transition-all
+                flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden transition-all relative
                 ${index === currentImageIndex 
                   ? 'border-primary shadow-md' 
                   : 'border-gray-200 hover:border-gray-300'
@@ -177,11 +193,9 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
                   }
                 }}
               />
-              {/* Indicador de variação na miniatura */}
+              {/* Indicador de variação na miniatura - SEM position absolute que bloqueia */}
               {selectedVariationImage && index === 0 && (
-                <div className="absolute inset-0 bg-primary bg-opacity-20 flex items-center justify-center">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                </div>
+                <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full pointer-events-none"></div>
               )}
             </button>
           ))}

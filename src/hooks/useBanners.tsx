@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreResolver } from '@/hooks/useStoreResolver';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Banner {
@@ -39,18 +40,61 @@ export interface BannerCreateData {
   store_id: string;
 }
 
-export const useBanners = (storeId?: string, bannerType?: Banner['banner_type']) => {
+export const useBanners = (storeIdentifier?: string, bannerType?: Banner['banner_type']) => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { resolveStoreId } = useStoreResolver();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | null>(null);
+
+  // Resolver store ID uma vez
+  useEffect(() => {
+    const resolveStore = async () => {
+      try {
+        setError(null);
+        const targetIdentifier = storeIdentifier || profile?.store_id;
+        
+        if (!targetIdentifier) {
+          console.log('useBanners: Nenhum identificador de loja disponível');
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useBanners: Resolvendo store ID para:', targetIdentifier);
+        const storeId = await resolveStoreId(targetIdentifier);
+        
+        if (!storeId) {
+          console.error('useBanners: Loja não encontrada para:', targetIdentifier);
+          setError('Loja não encontrada');
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useBanners: Store ID resolvido:', storeId);
+        setResolvedStoreId(storeId);
+      } catch (err) {
+        console.error('useBanners: Erro ao resolver store ID:', err);
+        setError('Erro ao carregar configurações da loja');
+        setResolvedStoreId(null);
+      }
+    };
+
+    resolveStore();
+  }, [storeIdentifier, profile?.store_id, resolveStoreId]);
 
   const fetchBanners = async () => {
+    if (!resolvedStoreId) {
+      console.log('useBanners: Store ID não resolvido ainda');
+      return;
+    }
+
     try {
       setLoading(true);
-      
-      const targetStoreId = storeId || profile?.store_id;
-      if (!targetStoreId) return;
+      setError(null);
+
+      console.log('useBanners: Buscando banners para store_id:', resolvedStoreId);
 
       let query = supabase
         .from('catalog_banners')
@@ -58,7 +102,7 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
           *,
           products!left(id, name, image_url, description)
         `)
-        .eq('store_id', targetStoreId)
+        .eq('store_id', resolvedStoreId)
         .eq('is_active', true);
 
       if (bannerType) {
@@ -72,10 +116,11 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
 
       query = query.order('display_order').order('created_at');
 
-      const { data, error } = await query;
+      const { data, error: fetchError } = await query;
 
-      if (error) {
-        console.error('Error fetching banners:', error);
+      if (fetchError) {
+        console.error('useBanners: Erro ao buscar banners:', fetchError);
+        setError('Erro ao carregar banners');
         return;
       }
 
@@ -92,30 +137,33 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
         return banner;
       });
 
+      console.log('useBanners: Banners carregados:', processedBanners.length);
       setBanners(processedBanners);
     } catch (error) {
-      console.error('Error in fetchBanners:', error);
+      console.error('useBanners: Erro geral:', error);
+      setError('Erro ao carregar banners');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBanners();
-  }, [storeId, bannerType, profile?.store_id]);
+    if (resolvedStoreId) {
+      fetchBanners();
+    }
+  }, [resolvedStoreId, bannerType]);
 
   const createBanner = async (bannerData: BannerCreateData) => {
-    try {
-      const targetStoreId = bannerData.store_id || profile?.store_id;
-      if (!targetStoreId) {
-        throw new Error('Store ID não encontrado');
-      }
+    if (!resolvedStoreId) {
+      throw new Error('Store ID não encontrado');
+    }
 
+    try {
       const { data, error } = await supabase
         .from('catalog_banners')
         .insert({
           ...bannerData,
-          store_id: targetStoreId,
+          store_id: resolvedStoreId,
         })
         .select()
         .single();
@@ -125,7 +173,7 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
       await fetchBanners();
       return { data, error: null };
     } catch (error) {
-      console.error('Error creating banner:', error);
+      console.error('useBanners: Erro ao criar banner:', error);
       return { data: null, error };
     }
   };
@@ -144,7 +192,7 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
       await fetchBanners();
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating banner:', error);
+      console.error('useBanners: Erro ao atualizar banner:', error);
       return { data: null, error };
     }
   };
@@ -161,7 +209,7 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
       await fetchBanners();
       return { error: null };
     } catch (error) {
-      console.error('Error deleting banner:', error);
+      console.error('useBanners: Erro ao deletar banner:', error);
       return { error };
     }
   };
@@ -169,6 +217,7 @@ export const useBanners = (storeId?: string, bannerType?: Banner['banner_type'])
   return {
     banners,
     loading,
+    error,
     createBanner,
     updateBanner,
     deleteBanner,

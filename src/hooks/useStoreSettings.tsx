@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreResolver } from '@/hooks/useStoreResolver';
 
 export interface StoreSettings {
   id: string;
@@ -17,33 +18,69 @@ export interface StoreSettings {
   updated_at: string;
 }
 
-export const useStoreSettings = (storeId?: string) => {
+export const useStoreSettings = (storeIdentifier?: string) => {
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { profile } = useAuth();
+  const { resolveStoreId } = useStoreResolver();
   
   // Cache e controle de requests
   const cacheRef = useRef<Map<string, { data: StoreSettings; timestamp: number }>>(new Map());
   const requestRef = useRef<Promise<void> | null>(null);
-  
-  const targetStoreId = storeId || profile?.store_id;
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | null>(null);
+
+  // Resolver store ID uma vez
+  useEffect(() => {
+    const resolveStore = async () => {
+      try {
+        setError(null);
+        const targetIdentifier = storeIdentifier || profile?.store_id;
+        
+        if (!targetIdentifier) {
+          console.log('useStoreSettings: Nenhum identificador de loja disponível');
+          setSettings(null);
+          setError('Store ID não disponível');
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useStoreSettings: Resolvendo store ID para:', targetIdentifier);
+        const storeId = await resolveStoreId(targetIdentifier);
+        
+        if (!storeId) {
+          console.error('useStoreSettings: Loja não encontrada para:', targetIdentifier);
+          setError('Loja não encontrada');
+          setSettings(null);
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useStoreSettings: Store ID resolvido:', storeId);
+        setResolvedStoreId(storeId);
+      } catch (err) {
+        console.error('useStoreSettings: Erro ao resolver store ID:', err);
+        setError('Erro ao carregar configurações da loja');
+        setSettings(null);
+        setResolvedStoreId(null);
+      }
+    };
+
+    resolveStore();
+  }, [storeIdentifier, profile?.store_id, resolveStoreId]);
 
   // Função de fetch isolada sem dependências circulares
   const fetchSettings = useCallback(async (forceRefresh = false): Promise<void> => {
-    if (!targetStoreId) {
-      console.log('useStoreSettings: Nenhum store_id disponível');
-      setSettings(null);
-      setLoading(false);
-      setError('Store ID não disponível');
+    if (!resolvedStoreId) {
+      console.log('useStoreSettings: Store ID não resolvido ainda');
       return;
     }
 
     // Verificar cache (válido por 5 minutos)
-    const cached = cacheRef.current.get(targetStoreId);
+    const cached = cacheRef.current.get(resolvedStoreId);
     const now = Date.now();
     if (!forceRefresh && cached && now - cached.timestamp < 300000) {
-      console.log('useStoreSettings: Usando dados do cache para store_id:', targetStoreId);
+      console.log('useStoreSettings: Usando dados do cache para store_id:', resolvedStoreId);
       setSettings(cached.data);
       setLoading(false);
       setError(null);
@@ -56,7 +93,7 @@ export const useStoreSettings = (storeId?: string) => {
       return requestRef.current;
     }
 
-    console.log('useStoreSettings: Iniciando busca para store_id:', targetStoreId);
+    console.log('useStoreSettings: Iniciando busca para store_id:', resolvedStoreId);
     setLoading(true);
     setError(null);
 
@@ -65,7 +102,7 @@ export const useStoreSettings = (storeId?: string) => {
         const { data, error: fetchError } = await supabase
           .from('store_settings')
           .select('*')
-          .eq('store_id', targetStoreId)
+          .eq('store_id', resolvedStoreId)
           .maybeSingle();
 
         if (fetchError) {
@@ -77,10 +114,10 @@ export const useStoreSettings = (storeId?: string) => {
         
         // Se não existir configuração, criar uma padrão
         if (!data) {
-          console.log('useStoreSettings: Criando configurações padrão para store_id:', targetStoreId);
+          console.log('useStoreSettings: Criando configurações padrão para store_id:', resolvedStoreId);
           
           const defaultSettings = {
-            store_id: targetStoreId,
+            store_id: resolvedStoreId,
             retail_catalog_active: true,
             wholesale_catalog_active: false,
             whatsapp_integration_active: false,
@@ -112,12 +149,12 @@ export const useStoreSettings = (storeId?: string) => {
         }
 
         // Atualizar cache
-        cacheRef.current.set(targetStoreId, {
+        cacheRef.current.set(resolvedStoreId, {
           data: finalData,
           timestamp: now
         });
         
-        console.log('useStoreSettings: Configurações carregadas com sucesso:', finalData);
+        console.log('useStoreSettings: Configurações carregadas com sucesso');
         setSettings(finalData);
         setError(null);
         
@@ -134,7 +171,7 @@ export const useStoreSettings = (storeId?: string) => {
 
     requestRef.current = fetchPromise;
     return fetchPromise;
-  }, [targetStoreId]);
+  }, [resolvedStoreId]);
 
   const updateSettings = useCallback(async (updates: Partial<StoreSettings>) => {
     if (!settings) {
@@ -158,8 +195,8 @@ export const useStoreSettings = (storeId?: string) => {
       }
       
       // Atualizar cache
-      if (targetStoreId) {
-        cacheRef.current.set(targetStoreId, {
+      if (resolvedStoreId) {
+        cacheRef.current.set(resolvedStoreId, {
           data,
           timestamp: Date.now()
         });
@@ -172,25 +209,23 @@ export const useStoreSettings = (storeId?: string) => {
       console.error('useStoreSettings: Erro na atualização:', error);
       return { data: null, error };
     }
-  }, [settings, targetStoreId]);
+  }, [settings, resolvedStoreId]);
 
-  // Effect simplificado - buscar apenas quando store_id estiver disponível
+  // Effect para buscar quando store ID estiver disponível
   useEffect(() => {
-    if (targetStoreId) {
-      console.log('useStoreSettings: Store ID disponível, iniciando fetch:', targetStoreId);
+    if (resolvedStoreId) {
+      console.log('useStoreSettings: Store ID resolvido, buscando configurações');
       fetchSettings();
-    } else {
-      console.log('useStoreSettings: Store ID não disponível, aguardando...');
+    } else if (resolvedStoreId === null && !loading) {
       setLoading(false);
-      setError('Store ID não disponível');
     }
-  }, [targetStoreId]); // Apenas targetStoreId como dependência
+  }, [resolvedStoreId, fetchSettings]);
 
   return {
     settings,
     loading,
     error,
-    fetchSettings: useCallback(() => fetchSettings(true), [fetchSettings]),
-    updateSettings
+    updateSettings,
+    refetch: () => fetchSettings(true)
   };
 };

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreResolver } from '@/hooks/useStoreResolver';
 
 export interface CatalogSettingsData {
   store_id?: string;
@@ -49,38 +50,77 @@ export interface CatalogSettingsData {
 
 export const useCatalogSettings = (storeIdentifier?: string) => {
   const { profile } = useAuth();
+  const { resolveStoreId } = useStoreResolver();
   const [settings, setSettings] = useState<CatalogSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | null>(null);
+
+  // Resolver store ID uma vez
+  useEffect(() => {
+    const resolveStore = async () => {
+      try {
+        setError(null);
+        const targetIdentifier = storeIdentifier || profile?.store_id;
+        
+        if (!targetIdentifier) {
+          console.log('useCatalogSettings: Nenhum identificador de loja disponível');
+          setSettings({});
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useCatalogSettings: Resolvendo store ID para:', targetIdentifier);
+        const storeId = await resolveStoreId(targetIdentifier);
+        
+        if (!storeId) {
+          console.error('useCatalogSettings: Loja não encontrada para:', targetIdentifier);
+          setError('Loja não encontrada');
+          setSettings({});
+          setResolvedStoreId(null);
+          return;
+        }
+
+        console.log('useCatalogSettings: Store ID resolvido:', storeId);
+        setResolvedStoreId(storeId);
+      } catch (err) {
+        console.error('useCatalogSettings: Erro ao resolver store ID:', err);
+        setError('Erro ao carregar configurações da loja');
+        setSettings({});
+        setResolvedStoreId(null);
+      }
+    };
+
+    resolveStore();
+  }, [storeIdentifier, profile?.store_id, resolveStoreId]);
 
   const fetchSettings = async () => {
+    if (!resolvedStoreId) {
+      console.log('useCatalogSettings: Store ID não resolvido ainda');
+      return;
+    }
+
     try {
       setLoading(true);
-      
-      let storeId = storeIdentifier;
-      
-      if (!storeId && profile?.store_id) {
-        storeId = profile.store_id;
-      }
+      setError(null);
 
-      if (!storeId) {
-        console.log('No store ID available for settings');
-        setSettings({});
-        return;
-      }
+      console.log('useCatalogSettings: Buscando configurações para store_id:', resolvedStoreId);
 
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('store_settings')
         .select('*')
-        .eq('store_id', storeId)
+        .eq('store_id', resolvedStoreId)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching catalog settings:', error);
+      if (fetchError) {
+        console.error('useCatalogSettings: Erro ao buscar configurações:', fetchError);
+        setError('Erro ao carregar configurações');
         setSettings({});
         return;
       }
 
       if (data) {
+        console.log('useCatalogSettings: Configurações carregadas');
         setSettings({
           store_id: data.store_id,
           template_name: data.template_name,
@@ -125,10 +165,12 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           watermark_color: data.watermark_color,
         });
       } else {
+        console.log('useCatalogSettings: Nenhuma configuração encontrada, usando padrões');
         setSettings({});
       }
     } catch (error) {
-      console.error('Error in fetchSettings:', error);
+      console.error('useCatalogSettings: Erro geral:', error);
+      setError('Erro ao carregar configurações');
       setSettings({});
     } finally {
       setLoading(false);
@@ -136,25 +178,23 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, [profile?.store_id, storeIdentifier]);
+    if (resolvedStoreId) {
+      fetchSettings();
+    } else if (resolvedStoreId === null && !loading) {
+      setLoading(false);
+    }
+  }, [resolvedStoreId]);
 
   const updateSettings = async (updates: Partial<CatalogSettingsData>) => {
+    if (!resolvedStoreId) {
+      throw new Error('Store ID não disponível');
+    }
+
     try {
-      let storeId = storeIdentifier;
-      
-      if (!storeId && profile?.store_id) {
-        storeId = profile.store_id;
-      }
-
-      if (!storeId) {
-        throw new Error('No store ID available');
-      }
-
       const { data, error } = await supabase
         .from('store_settings')
         .upsert({
-          store_id: storeId,
+          store_id: resolvedStoreId,
           ...updates
         }, {
           onConflict: 'store_id'
@@ -169,7 +209,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
       await fetchSettings();
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('useCatalogSettings: Erro ao atualizar configurações:', error);
       return { data: null, error };
     }
   };
@@ -177,6 +217,7 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
   return {
     settings,
     loading,
+    error,
     updateSettings,
     refetch: fetchSettings
   };
