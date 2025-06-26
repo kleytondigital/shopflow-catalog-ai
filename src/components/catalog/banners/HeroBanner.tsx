@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useBanners } from '@/hooks/useBanners';
 import {
   Carousel,
@@ -7,6 +7,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from '@/components/ui/carousel';
 
 interface HeroBannerProps {
@@ -16,6 +17,22 @@ interface HeroBannerProps {
 
 const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
   const { banners, loading } = useBanners(storeId, 'hero');
+  const [api, setApi] = React.useState<CarouselApi>();
+
+  // Implementar autoplay usando useEffect
+  useEffect(() => {
+    if (!api) return;
+
+    const interval = setInterval(() => {
+      if (api.canScrollNext()) {
+        api.scrollNext();
+      } else {
+        api.scrollTo(0);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [api]);
 
   if (loading || banners.length === 0) {
     return null;
@@ -90,30 +107,12 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
   return (
     <div className={`hero-banner relative ${className}`}>
       <Carousel
+        setApi={setApi}
         opts={{
           align: "start",
           loop: true,
         }}
         className="w-full"
-        plugins={[
-          {
-            init: (embla) => {
-              const autoplay = () => {
-                if (embla.canScrollNext()) {
-                  embla.scrollNext();
-                } else {
-                  embla.scrollTo(0);
-                }
-              };
-              
-              const interval = setInterval(autoplay, 5000);
-              
-              embla.on('destroy', () => {
-                clearInterval(interval);
-              });
-            }
-          }
-        ]}
       >
         <CarouselContent>
           {banners.map((banner, index) => (
