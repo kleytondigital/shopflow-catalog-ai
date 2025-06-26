@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,7 +68,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
     
     // Inicializar com estrutura vazia baseada no template
     const template = VARIATION_TEMPLATES.find(t => 
-      t.secondary_attribute 
+      t.secondary 
         ? `${t.primary}+${t.secondary}` === templateKey
         : t.primary === templateKey
     );
@@ -118,7 +117,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
     if (!productId || !currentTemplate) return;
 
     const template = VARIATION_TEMPLATES.find(t => 
-      t.secondary_attribute 
+      t.secondary 
         ? `${t.primary}+${t.secondary}` === currentTemplate
         : t.primary === currentTemplate
     );
@@ -140,7 +139,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
 
   const hasVariations = groups.length > 0 || localVariations.length > 0;
   const selectedTemplate = VARIATION_TEMPLATES.find(t => 
-    t.secondary_attribute 
+    t.secondary 
       ? `${t.primary}+${t.secondary}` === currentTemplate
       : t.primary === currentTemplate
   );

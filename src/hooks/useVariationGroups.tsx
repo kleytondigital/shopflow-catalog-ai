@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +46,7 @@ export const useVariationGroups = (productId?: string) => {
         product_id: v.product_id,
         variation_group_id: v.variation_group_id,
         parent_variation_id: v.parent_variation_id,
-        variation_type: v.variation_type || 'simple',
+        variation_type: (v.variation_type || 'simple') as 'main' | 'sub' | 'simple',
         variation_value: v.variation_value || '',
         color: v.color,
         size: v.size,

@@ -269,7 +269,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                             id={`main-${index}-stock`}
                             type="number"
                             min="0"
-                            value={variation.stock}
+                            value={variation.stock.toString()}
                             onChange={(e) => updateMainVariation(index, { stock: parseInt(e.target.value) || 0 })}
                           />
                         </div>
@@ -279,7 +279,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                             id={`main-${index}-price`}
                             type="number"
                             step="0.01"
-                            value={variation.price_adjustment}
+                            value={variation.price_adjustment.toString()}
                             onChange={(e) => updateMainVariation(index, { price_adjustment: parseFloat(e.target.value) || 0 })}
                           />
                         </div>
@@ -376,7 +376,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                         <Input
                           type="number"
                           min="0"
-                          value={subVariation.stock}
+                          value={subVariation.stock.toString()}
                           onChange={(e) => updateSubVariation(selectedMainIndex, subIndex, { stock: parseInt(e.target.value) || 0 })}
                           size="sm"
                         />
@@ -386,7 +386,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                         <Input
                           type="number"
                           step="0.01"
-                          value={subVariation.price_adjustment}
+                          value={subVariation.price_adjustment.toString()}
                           onChange={(e) => updateSubVariation(selectedMainIndex, subIndex, { price_adjustment: parseFloat(e.target.value) || 0 })}
                           placeholder="0.00"
                           size="sm"
@@ -407,7 +407,6 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                       <Switch
                         checked={subVariation.is_active}
                         onCheckedChange={(checked) => updateSubVariation(selectedMainIndex, subIndex, { is_active: checked })}
-                        size="sm"
                       />
                       <Button
                         variant="ghost"
