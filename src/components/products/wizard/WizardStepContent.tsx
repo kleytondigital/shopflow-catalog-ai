@@ -20,9 +20,9 @@ interface GenericProductFormData {
   meta_title?: string; // Tornando opcional para compatibilidade
   meta_description?: string; // Tornando opcional para compatibilidade
   seo_slug?: string; // Tornando opcional para compatibilidade
-  is_featured: boolean;
-  allow_negative_stock: boolean;
-  stock_alert_threshold: number;
+  is_featured?: boolean; // Tornando opcional para compatibilidade
+  allow_negative_stock?: boolean; // Tornando opcional para compatibilidade
+  stock_alert_threshold?: number; // Tornando opcional para compatibilidade
   variations?: any[];
   store_id?: string; // Mantendo opcional para compatibilidade
 }
@@ -51,6 +51,9 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
     meta_title: formData.meta_title || '',
     meta_description: formData.meta_description || '',
     seo_slug: formData.seo_slug || '',
+    is_featured: formData.is_featured || false,
+    allow_negative_stock: formData.allow_negative_stock || false,
+    stock_alert_threshold: formData.stock_alert_threshold || 5,
     store_id: formData.store_id || ''
   };
 
