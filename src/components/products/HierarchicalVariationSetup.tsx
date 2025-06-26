@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { Trash2, Plus, Copy, Image } from 'lucide-react';
+import { Trash2, Plus, Copy } from 'lucide-react';
 import { HierarchicalVariation, VariationTemplate } from '@/types/variation';
 import VariationImageUpload from './VariationImageUpload';
 
@@ -30,7 +30,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     selectedMainIndex
   });
 
-  const addMainVariation = () => {
+  const addMainVariation = useCallback(() => {
     const newVariation: HierarchicalVariation = {
       variation_type: 'main',
       variation_value: '',
@@ -44,18 +44,19 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       children: []
     };
     
-    onChange([...variations, newVariation]);
+    const updatedVariations = [...variations, newVariation];
+    onChange(updatedVariations);
     setSelectedMainIndex(variations.length);
-  };
+  }, [variations, onChange, template.primary]);
 
-  const updateMainVariation = (index: number, updates: Partial<HierarchicalVariation>) => {
+  const updateMainVariation = useCallback((index: number, updates: Partial<HierarchicalVariation>) => {
     const updatedVariations = variations.map((variation, i) => 
       i === index ? { ...variation, ...updates } : variation
     );
     onChange(updatedVariations);
-  };
+  }, [variations, onChange]);
 
-  const removeMainVariation = (index: number) => {
+  const removeMainVariation = useCallback((index: number) => {
     const variation = variations[index];
     
     // Revogar blob URLs se existirem
@@ -74,9 +75,9 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     if (selectedMainIndex >= updatedVariations.length) {
       setSelectedMainIndex(Math.max(0, updatedVariations.length - 1));
     }
-  };
+  }, [variations, onChange, selectedMainIndex]);
 
-  const addSubVariation = (mainIndex: number) => {
+  const addSubVariation = useCallback((mainIndex: number) => {
     if (!template.secondary) return;
 
     const newSubVariation: HierarchicalVariation = {
@@ -97,9 +98,9 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     }
     updatedVariations[mainIndex].children!.push(newSubVariation);
     onChange(updatedVariations);
-  };
+  }, [variations, onChange, template.secondary]);
 
-  const updateSubVariation = (mainIndex: number, subIndex: number, updates: Partial<HierarchicalVariation>) => {
+  const updateSubVariation = useCallback((mainIndex: number, subIndex: number, updates: Partial<HierarchicalVariation>) => {
     const updatedVariations = [...variations];
     if (updatedVariations[mainIndex].children) {
       updatedVariations[mainIndex].children![subIndex] = {
@@ -108,9 +109,9 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       };
       onChange(updatedVariations);
     }
-  };
+  }, [variations, onChange]);
 
-  const removeSubVariation = (mainIndex: number, subIndex: number) => {
+  const removeSubVariation = useCallback((mainIndex: number, subIndex: number) => {
     const updatedVariations = [...variations];
     if (updatedVariations[mainIndex].children) {
       const subVariation = updatedVariations[mainIndex].children[subIndex];
@@ -123,9 +124,9 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       updatedVariations[mainIndex].children!.splice(subIndex, 1);
       onChange(updatedVariations);
     }
-  };
+  }, [variations, onChange]);
 
-  const copySubVariationsFrom = (sourceIndex: number, targetIndex: number) => {
+  const copySubVariationsFrom = useCallback((sourceIndex: number, targetIndex: number) => {
     if (sourceIndex === targetIndex || !variations[sourceIndex].children) return;
 
     const sourceChildren = variations[sourceIndex].children!;
@@ -140,17 +141,17 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     const updatedVariations = [...variations];
     updatedVariations[targetIndex].children = copiedChildren;
     onChange(updatedVariations);
-  };
+  }, [variations, onChange, template.secondary]);
 
-  const handleMainImageUpload = (index: number, file: File) => {
+  const handleMainImageUpload = useCallback((index: number, file: File) => {
     const previewUrl = URL.createObjectURL(file);
     updateMainVariation(index, { 
       image_file: file,
       image_url: previewUrl
     });
-  };
+  }, [updateMainVariation]);
 
-  const handleMainImageRemove = (index: number) => {
+  const handleMainImageRemove = useCallback((index: number) => {
     const variation = variations[index];
     if (variation.image_url && variation.image_url.startsWith('blob:')) {
       URL.revokeObjectURL(variation.image_url);
@@ -159,9 +160,9 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       image_file: undefined,
       image_url: null
     });
-  };
+  }, [variations, updateMainVariation]);
 
-  const getAttributeLabel = (attribute: string) => {
+  const getAttributeLabel = useCallback((attribute: string) => {
     const labels: Record<string, string> = {
       color: 'Cor',
       size: 'Tamanho',
@@ -170,7 +171,20 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       weight: 'Peso'
     };
     return labels[attribute] || attribute;
-  };
+  }, []);
+
+  // Memoizar o componente de subvariações para evitar re-renders
+  const selectedMainVariation = useMemo(() => {
+    return variations[selectedMainIndex];
+  }, [variations, selectedMainIndex]);
+
+  const hasSubVariations = useMemo(() => {
+    return selectedMainVariation?.children && selectedMainVariation.children.length > 0;
+  }, [selectedMainVariation]);
+
+  const canCopyFromOther = useMemo(() => {
+    return variations.some((v, i) => i !== selectedMainIndex && v.children && v.children.length > 0);
+  }, [variations, selectedMainIndex]);
 
   return (
     <div className="space-y-6">
@@ -215,7 +229,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
         ) : (
           <div className="grid gap-4">
             {variations.map((variation, index) => (
-              <Card key={`main-${index}`} className={selectedMainIndex === index ? 'ring-2 ring-primary' : ''}>
+              <Card key={`main-${index}-${variation.variation_value}`} className={selectedMainIndex === index ? 'ring-2 ring-primary' : ''}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">
@@ -309,15 +323,15 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
       </div>
 
       {/* Configuração de subvariações */}
-      {template.secondary && variations.length > 0 && selectedMainIndex < variations.length && (
-        <Card>
+      {template.secondary && variations.length > 0 && selectedMainIndex < variations.length && selectedMainVariation && (
+        <Card key={`sub-config-${selectedMainIndex}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                {getAttributeLabel(template.secondary)} para: {variations[selectedMainIndex]?.variation_value || 'Selecionado'}
+                {getAttributeLabel(template.secondary)} para: {selectedMainVariation.variation_value || 'Selecionado'}
               </CardTitle>
               <div className="flex items-center gap-2">
-                {variations.some((v, i) => i !== selectedMainIndex && v.children && v.children.length > 0) && (
+                {canCopyFromOther && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -343,7 +357,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
             </div>
           </CardHeader>
           <CardContent>
-            {!variations[selectedMainIndex]?.children || variations[selectedMainIndex].children!.length === 0 ? (
+            {!hasSubVariations ? (
               <div className="text-center py-6">
                 <p className="text-sm text-gray-500 mb-3">
                   Nenhum {getAttributeLabel(template.secondary).toLowerCase()} adicionado para esta {getAttributeLabel(template.primary).toLowerCase()}
@@ -354,8 +368,8 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {variations[selectedMainIndex].children!.map((subVariation, subIndex) => (
-                  <div key={`sub-${selectedMainIndex}-${subIndex}`} className="border rounded-lg p-4 space-y-4">
+                {selectedMainVariation.children!.map((subVariation, subIndex) => (
+                  <div key={`sub-${selectedMainIndex}-${subIndex}-${subVariation.variation_value}`} className="border rounded-lg p-4 space-y-4">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <Label className="text-xs">{getAttributeLabel(template.secondary!)}</Label>

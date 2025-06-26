@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Trash2, Plus, Image } from 'lucide-react';
 import { ProductVariation } from '@/types/variation';
 import VariationImageUpload from './VariationImageUpload';
@@ -192,14 +193,10 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`variation-price-adjustment-${index}`}>Ajuste de Preço (R$)</Label>
-                    <Input
-                      id={`variation-price-adjustment-${index}`}
-                      type="number"
-                      step="0.01"
+                    <Label htmlFor={`variation-price-adjustment-${index}`}>Ajuste de Preço</Label>
+                    <CurrencyInput
                       value={variation.price_adjustment}
-                      onChange={(e) => updateVariation(index, { price_adjustment: parseFloat(e.target.value) || 0 })}
-                      placeholder="0.00"
+                      onChange={(value) => updateVariation(index, { price_adjustment: value })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Valor a ser somado/subtraído do preço base

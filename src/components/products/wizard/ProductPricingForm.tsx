@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { ProductFormData } from '@/hooks/useProductFormWizard';
 
 interface ProductPricingFormProps {
@@ -19,27 +20,17 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="retail_price">Preço Varejo *</Label>
-          <Input
-            id="retail_price"
-            type="number"
-            step="0.01"
-            min="0"
+          <CurrencyInput
             value={formData.retail_price}
-            onChange={(e) => updateFormData({ retail_price: parseFloat(e.target.value) || 0 })}
-            placeholder="0,00"
+            onChange={(value) => updateFormData({ retail_price: value })}
           />
         </div>
 
         <div>
           <Label htmlFor="wholesale_price">Preço Atacado</Label>
-          <Input
-            id="wholesale_price"
-            type="number"
-            step="0.01"
-            min="0"
-            value={formData.wholesale_price || ''}
-            onChange={(e) => updateFormData({ wholesale_price: parseFloat(e.target.value) || undefined })}
-            placeholder="0,00"
+          <CurrencyInput
+            value={formData.wholesale_price || 0}
+            onChange={(value) => updateFormData({ wholesale_price: value || undefined })}
           />
         </div>
       </div>

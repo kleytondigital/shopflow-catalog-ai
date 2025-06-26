@@ -9,6 +9,8 @@ export const useStorageBucket = (bucketName: string) => {
   useEffect(() => {
     const checkBucket = async () => {
       try {
+        console.log('📦 STORAGE - Verificando bucket:', bucketName);
+        
         const { data, error } = await supabase.storage.getBucket(bucketName);
         
         if (error) {
