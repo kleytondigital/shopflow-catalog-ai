@@ -1,15 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ShoppingCart, Heart, Package, Minus, Plus, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Heart, Package, Minus, Plus, AlertCircle, Loader2 } from 'lucide-react';
 import { Product } from '@/types/product';
 import { ProductVariation } from '@/types/variation';
 import ProductImageGallery from '@/components/products/ProductImageGallery';
 import ProductVariationSelector from '@/components/catalog/ProductVariationSelector';
 import { useProductVariations } from '@/hooks/useProductVariations';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -33,41 +34,47 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [showVariationError, setShowVariationError] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [quantityChangeKey, setQuantityChangeKey] = useState(0);
+  const { toast } = useToast();
 
   // Hook para carregar variações do produto
   const { variations, loading: variationsLoading } = useProductVariations(product?.id);
 
-  console.log('🎨 MODAL - Dados recebidos:', {
+  console.log('🎨 MODAL - Estado atual:', {
     productId: product?.id,
     productName: product?.name,
     isOpen,
-    variationsCount: variations?.length || 0,
-    onAddToCartAvailable: !!onAddToCart,
+    quantity,
     selectedVariation: selectedVariation ? {
       id: selectedVariation.id,
       color: selectedVariation.color,
-      size: selectedVariation.size
-    } : null
+      size: selectedVariation.size,
+      stock: selectedVariation.stock
+    } : null,
+    variationsCount: variations?.length || 0,
+    onAddToCartAvailable: !!onAddToCart,
+    quantityChangeKey
   });
 
   // Reset quando produto muda
   useEffect(() => {
-    if (product) {
+    if (product && isOpen) {
+      console.log('🔄 MODAL - Reset para produto:', product.name);
       setQuantity(1);
       setSelectedVariation(null);
       setShowVariationError(false);
-      console.log('🔄 MODAL - Reset para produto:', product.name);
+      setIsAddingToCart(false);
+      setQuantityChangeKey(prev => prev + 1);
     }
-  }, [product?.id]);
+  }, [product?.id, isOpen]);
 
   // Reset variação selecionada quando variações carregam
   useEffect(() => {
     if (variations && variations.length > 0 && !selectedVariation) {
-      // Não selecionar automaticamente - deixar usuário escolher
       setSelectedVariation(null);
       console.log('🎯 MODAL - Variações carregadas:', variations.length);
     } else if (variations && variations.length === 0) {
-      // Se não há variações, limpar seleção
       setSelectedVariation(null);
     }
   }, [variations, selectedVariation]);
@@ -96,34 +103,89 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   const isWholesale = catalogType === 'wholesale';
   const minQty = isWholesale ? (product.min_wholesale_qty || 1) : 1;
+  const maxQty = Math.min(availableStock, 999); // Limite máximo de 999 unidades
 
-  const handleQuantityChange = (newQuantity: number) => {
-    const maxQty = Math.max(minQty, Math.min(newQuantity, availableStock));
-    if (newQuantity >= minQty && newQuantity <= availableStock) {
-      setQuantity(newQuantity);
+  console.log('📊 MODAL - Cálculos:', {
+    basePrice,
+    finalPrice,
+    availableStock,
+    minQty,
+    maxQty,
+    currentQuantity: quantity,
+    hasVariations,
+    requiresVariationSelection
+  });
+
+  // Função melhorada para mudança de quantidade
+  const handleQuantityChange = useCallback((newQuantity: number) => {
+    console.log('🔢 MODAL - Tentando alterar quantidade:', {
+      from: quantity,
+      to: newQuantity,
+      minQty,
+      maxQty,
+      availableStock
+    });
+
+    // Validar limites
+    let validQuantity = newQuantity;
+    
+    if (validQuantity < minQty) {
+      validQuantity = minQty;
+      console.log('⚠️ MODAL - Quantidade ajustada para mínimo:', validQuantity);
     }
-  };
+    
+    if (validQuantity > maxQty) {
+      validQuantity = maxQty;
+      console.log('⚠️ MODAL - Quantidade ajustada para máximo:', validQuantity);
+    }
 
-  const handleVariationChange = (variation: ProductVariation | null) => {
+    // Atualizar estado apenas se houve mudança
+    if (validQuantity !== quantity) {
+      setQuantity(validQuantity);
+      setQuantityChangeKey(prev => prev + 1);
+      
+      // Feedback visual
+      toast({
+        title: "Quantidade atualizada",
+        description: `Quantidade alterada para ${validQuantity} unidade${validQuantity > 1 ? 's' : ''}`,
+        duration: 1500,
+      });
+
+      console.log('✅ MODAL - Quantidade atualizada:', {
+        old: quantity,
+        new: validQuantity,
+        key: quantityChangeKey + 1
+      });
+    } else {
+      console.log('🔄 MODAL - Quantidade já é a mesma, não alterando');
+    }
+  }, [quantity, minQty, maxQty, availableStock, quantityChangeKey, toast]);
+
+  const handleVariationChange = useCallback((variation: ProductVariation | null) => {
     console.log('🎯 MODAL - Variação selecionada:', variation);
     setSelectedVariation(variation);
     setShowVariationError(false);
     
     // Ajustar quantidade se exceder o estoque da variação
     if (variation && quantity > variation.stock) {
-      setQuantity(Math.max(1, Math.min(variation.stock, quantity)));
+      const newQuantity = Math.max(minQty, Math.min(variation.stock, quantity));
+      handleQuantityChange(newQuantity);
+      console.log('📦 MODAL - Quantidade ajustada para estoque da variação:', newQuantity);
     }
-  };
+  }, [quantity, minQty, handleQuantityChange]);
 
-  const handleAddToCart = () => {
-    console.log('🛒 MODAL - Tentando adicionar ao carrinho:', {
+  const handleAddToCart = useCallback(async () => {
+    console.log('🛒 MODAL - Iniciando adição ao carrinho:', {
       hasVariations,
       requiresVariationSelection,
       selectedVariation: selectedVariation ? {
         id: selectedVariation.id,
         color: selectedVariation.color,
-        size: selectedVariation.size
+        size: selectedVariation.size,
+        stock: selectedVariation.stock,
+        price_adjustment: selectedVariation.price_adjustment
       } : null,
+      quantity,
       onAddToCartAvailable: !!onAddToCart
     });
 
@@ -131,10 +193,41 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     if (requiresVariationSelection && !selectedVariation) {
       console.log('❌ MODAL - Variação obrigatória não selecionada');
       setShowVariationError(true);
+      toast({
+        title: "Seleção obrigatória",
+        description: "Por favor, selecione uma opção antes de adicionar ao carrinho.",
+        variant: "destructive",
+        duration: 3000,
+      });
       return;
     }
 
-    if (onAddToCart) {
+    // Validar estoque disponível
+    if (quantity > availableStock) {
+      console.log('❌ MODAL - Quantidade excede estoque disponível');
+      toast({
+        title: "Estoque insuficiente",
+        description: `Apenas ${availableStock} unidade${availableStock > 1 ? 's' : ''} disponível${availableStock > 1 ? 'eis' : ''}.`,
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!onAddToCart) {
+      console.log('❌ MODAL - onAddToCart não fornecido');
+      toast({
+        title: "Erro",
+        description: "Função de adicionar ao carrinho não disponível.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      setIsAddingToCart(true);
+
       console.log('✅ MODAL - Adicionando ao carrinho:', {
         product: product.name,
         quantity,
@@ -142,32 +235,71 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
           id: selectedVariation.id,
           color: selectedVariation.color,
           size: selectedVariation.size,
-          price_adjustment: selectedVariation.price_adjustment
-        } : null
+          price_adjustment: selectedVariation.price_adjustment,
+          stock: selectedVariation.stock
+        } : null,
+        finalPrice
       });
       
-      onAddToCart(product, quantity, selectedVariation || undefined);
+      await onAddToCart(product, quantity, selectedVariation || undefined);
+      
+      toast({
+        title: "Produto adicionado!",
+        description: `${product.name} foi adicionado ao carrinho com sucesso.`,
+        duration: 2000,
+      });
+      
       onClose();
-    } else {
-      console.log('❌ MODAL - onAddToCart não fornecido');
+      
+    } catch (error) {
+      console.error('💥 MODAL - Erro ao adicionar ao carrinho:', error);
+      toast({
+        title: "Erro ao adicionar",
+        description: "Ocorreu um erro ao adicionar o produto ao carrinho. Tente novamente.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsAddingToCart(false);
     }
-  };
+  }, [
+    requiresVariationSelection,
+    selectedVariation,
+    quantity,
+    availableStock,
+    onAddToCart,
+    product,
+    finalPrice,
+    onClose,
+    toast
+  ]);
 
-  const handleAddToWishlist = () => {
+  const handleAddToWishlist = useCallback(() => {
     if (onAddToWishlist) {
       onAddToWishlist(product);
+      toast({
+        title: isInWishlist ? "Removido da lista" : "Adicionado à lista",
+        description: `${product.name} foi ${isInWishlist ? 'removido da' : 'adicionado à'} lista de desejos.`,
+        duration: 2000,
+      });
     }
-  };
+  }, [onAddToWishlist, product, isInWishlist, toast]);
 
   const isOutOfStock = availableStock === 0;
-  const canAddToCart = !isOutOfStock && (!requiresVariationSelection || selectedVariation);
+  const canAddToCart = !isOutOfStock && (!requiresVariationSelection || selectedVariation) && !isAddingToCart;
 
-  console.log('🎯 MODAL - Estado do botão:', {
+  // Verificar se os botões de quantidade devem estar habilitados
+  const canDecreaseQuantity = quantity > minQty && !isAddingToCart;
+  const canIncreaseQuantity = quantity < maxQty && !isAddingToCart;
+
+  console.log('🎯 MODAL - Estado dos botões:', {
     isOutOfStock,
     requiresVariationSelection,
     hasSelectedVariation: !!selectedVariation,
     canAddToCart,
-    onAddToCartAvailable: !!onAddToCart
+    canDecreaseQuantity,
+    canIncreaseQuantity,
+    isAddingToCart
   });
 
   return (
@@ -285,27 +417,40 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => handleQuantityChange(quantity - 1)}
-                      disabled={quantity <= minQty}
+                      disabled={!canDecreaseQuantity}
+                      className="h-10 w-10 p-0"
                     >
-                      <Minus className="h-4 w-4" />
+                      {isAddingToCart ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Minus className="h-4 w-4" />
+                      )}
                     </Button>
-                    <span className="w-16 text-center font-medium">
-                      {quantity}
-                    </span>
+                    <div className="w-20 text-center">
+                      <span className="text-lg font-medium border-2 border-gray-200 rounded px-3 py-2 bg-white inline-block min-w-[60px]">
+                        {quantity}
+                      </span>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleQuantityChange(quantity + 1)}
-                      disabled={quantity >= availableStock}
+                      disabled={!canIncreaseQuantity}
+                      className="h-10 w-10 p-0"
                     >
-                      <Plus className="h-4 w-4" />
+                      {isAddingToCart ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
-                  {minQty > 1 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Mínimo: {minQty} unidades
-                    </p>
-                  )}
+                  <div className="text-xs text-gray-500 mt-2 space-y-1">
+                    {minQty > 1 && (
+                      <p>Mínimo: {minQty} unidades</p>
+                    )}
+                    <p>Máximo: {maxQty} unidades</p>
+                  </div>
                 </div>
 
                 {/* Botões de Ação */}
@@ -314,10 +459,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     onClick={handleAddToCart}
                     className="w-full"
                     size="lg"
-                    disabled={!canAddToCart || !onAddToCart}
+                    disabled={!canAddToCart}
                   >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Adicionar ao Carrinho
+                    {isAddingToCart ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Adicionando...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                        Adicionar ao Carrinho
+                      </>
+                    )}
                   </Button>
                   
                   <Button
@@ -325,6 +479,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     onClick={handleAddToWishlist}
                     className="w-full"
                     size="lg"
+                    disabled={isAddingToCart}
                   >
                     <Heart className={`h-5 w-5 mr-2 ${isInWishlist ? 'fill-current' : ''}`} />
                     {isInWishlist ? 'Remover da Lista' : 'Adicionar à Lista de Desejos'}
@@ -346,6 +501,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   variant="outline"
                   onClick={handleAddToWishlist}
                   className="w-full"
+                  disabled={isAddingToCart}
                 >
                   <Heart className={`h-5 w-5 mr-2 ${isInWishlist ? 'fill-current' : ''}`} />
                   Adicionar à Lista de Desejos
@@ -364,8 +520,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 <div>Requer seleção: {requiresVariationSelection ? 'Sim' : 'Não'}</div>
                 <div>Pode adicionar: {canAddToCart ? 'Sim' : 'Não'}</div>
                 <div>Estoque disponível: {availableStock}</div>
+                <div>Quantidade atual: {quantity}</div>
                 <div>Preço final: R$ {finalPrice.toFixed(2)}</div>
                 <div>onAddToCart disponível: {onAddToCart ? 'Sim' : 'Não'}</div>
+                <div>Quantidade key: {quantityChangeKey}</div>
+                <div>Adicionando ao carrinho: {isAddingToCart ? 'Sim' : 'Não'}</div>
               </div>
             )}
           </div>
