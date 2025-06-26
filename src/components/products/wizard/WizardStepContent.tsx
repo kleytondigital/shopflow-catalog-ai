@@ -6,12 +6,12 @@ import ProductVariationsForm from './ProductVariationsForm';
 import SimpleImageUpload from '../SimpleImageUpload';
 import ProductSeoForm from './ProductSeoForm';
 import ProductAdvancedForm from './ProductAdvancedForm';
-import { SimpleProductFormData } from '@/hooks/useSimpleProductWizard';
+import { ProductFormData } from '@/hooks/useImprovedProductFormWizard';
 
 interface WizardStepContentProps {
   currentStep: number;
-  formData: SimpleProductFormData;
-  updateFormData: (updates: Partial<SimpleProductFormData>) => void;
+  formData: ProductFormData;
+  updateFormData: (updates: Partial<ProductFormData>) => void;
   productId?: string;
   onImageUploadReady?: (uploadFn: (productId: string) => Promise<string[]>) => void;
 }
@@ -40,19 +40,19 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
         />
       );
       
-    case 2: // Variações
-      return (
-        <ProductVariationsForm
-          variations={formData.variations || []}
-          onVariationsChange={(variations) => updateFormData({ variations })}
-        />
-      );
-      
-    case 3: // Imagens
+    case 2: // Imagens
       return (
         <SimpleImageUpload
           productId={productId}
           onUploadReady={onImageUploadReady}
+        />
+      );
+      
+    case 3: // Variações
+      return (
+        <ProductVariationsForm
+          variations={formData.variations || []}
+          onVariationsChange={(variations) => updateFormData({ variations })}
         />
       );
       

@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDraftImages } from '@/hooks/useDraftImages';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface ProductFormData {
   name: string;
@@ -20,6 +21,7 @@ export interface ProductFormData {
   allow_negative_stock: boolean;
   stock_alert_threshold: number;
   variations: any[];
+  store_id?: string; // Adicionando store_id para compatibilidade
 }
 
 const initialFormData: ProductFormData = {
@@ -45,7 +47,8 @@ export const useImprovedProductFormWizard = () => {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { draftImages, uploadAllImages, clearDraftImages } = useDraftImages();
+  const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
+  const { profile } = useAuth();
 
   const steps = useMemo(() => [
     { id: 'basic', title: 'Informações Básicas', description: 'Nome, categoria e descrição' },
@@ -102,6 +105,16 @@ export const useImprovedProductFormWizard = () => {
       return null;
     }
 
+    if (!profile?.store_id) {
+      console.error('❌ WIZARD SAVE - Store ID não encontrado');
+      toast({
+        title: "Erro",
+        description: "ID da loja não encontrado",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     setIsSaving(true);
     
     try {
@@ -111,10 +124,11 @@ export const useImprovedProductFormWizard = () => {
         nameLength: formData.name?.trim()?.length,
         retail_price: formData.retail_price,
         stock: formData.stock,
+        store_id: profile.store_id,
         isEditing: !!editingProductId
       });
 
-      // Preparar dados do produto
+      // Preparar dados do produto - incluindo store_id obrigatório
       const productData = {
         name: formData.name.trim(),
         description: formData.description || '',
@@ -129,7 +143,8 @@ export const useImprovedProductFormWizard = () => {
         seo_slug: formData.seo_slug || '',
         is_featured: formData.is_featured || false,
         allow_negative_stock: formData.allow_negative_stock || false,
-        stock_alert_threshold: formData.stock_alert_threshold || 5
+        stock_alert_threshold: formData.stock_alert_threshold || 5,
+        store_id: profile.store_id // Incluindo store_id obrigatório
       };
 
       console.log('📋 WIZARD SAVE - Dados preparados:', productData);
@@ -169,9 +184,9 @@ export const useImprovedProductFormWizard = () => {
       // Upload de imagens se houver
       if (draftImages.length > 0 && productId) {
         console.log('📷 WIZARD SAVE - Uploading imagens:', draftImages.length);
-        const uploadResult = await uploadAllImages(productId);
-        if (!uploadResult.success) {
-          console.warn('⚠️ WIZARD SAVE - Erro no upload de algumas imagens:', uploadResult.error);
+        const uploadResult = await uploadDraftImages(productId); // Usando o método correto
+        if (uploadResult.length === 0) {
+          console.warn('⚠️ WIZARD SAVE - Nenhuma imagem foi enviada');
         }
       }
 

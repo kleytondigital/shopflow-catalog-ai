@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -347,6 +346,7 @@ export const useDraftImages = () => {
     addDraftImages,
     removeDraftImage,
     uploadDraftImages,
+    uploadAllImages: uploadDraftImages, // Alias para compatibilidade
     clearDraftImages,
     loadExistingImages
   };
