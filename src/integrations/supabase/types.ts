@@ -733,43 +733,65 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          display_order: number | null
           id: string
           image_url: string | null
           is_active: boolean
+          parent_variation_id: string | null
           price_adjustment: number | null
           product_id: string
           size: string | null
           sku: string | null
           stock: number
           updated_at: string
+          variation_group_id: string | null
+          variation_type: string | null
+          variation_value: string | null
         }
         Insert: {
           color?: string | null
           created_at?: string
+          display_order?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          parent_variation_id?: string | null
           price_adjustment?: number | null
           product_id: string
           size?: string | null
           sku?: string | null
           stock?: number
           updated_at?: string
+          variation_group_id?: string | null
+          variation_type?: string | null
+          variation_value?: string | null
         }
         Update: {
           color?: string | null
           created_at?: string
+          display_order?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          parent_variation_id?: string | null
           price_adjustment?: number | null
           product_id?: string
           size?: string | null
           sku?: string | null
           stock?: number
           updated_at?: string
+          variation_group_id?: string | null
+          variation_type?: string | null
+          variation_value?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_variations_parent_variation_id_fkey"
+            columns: ["parent_variation_id"]
+            isOneToOne: false
+            referencedRelation: "product_variations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_variations_product_id_fkey"
             columns: ["product_id"]
@@ -1309,6 +1331,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      variation_groups: {
+        Row: {
+          created_at: string
+          id: string
+          primary_attribute: string
+          product_id: string
+          secondary_attribute: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          primary_attribute: string
+          product_id: string
+          secondary_attribute?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          primary_attribute?: string
+          product_id?: string
+          secondary_attribute?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variation_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_integrations: {
         Row: {

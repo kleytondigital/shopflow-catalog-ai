@@ -22,7 +22,7 @@ export const useProductVariations = (productId?: string) => {
         .select('*')
         .eq('product_id', id)
         .eq('is_active', true)
-        .order('created_at', { ascending: true });
+        .order('display_order', { ascending: true });
 
       if (fetchError) {
         console.error('❌ Erro ao buscar variações:', fetchError);
@@ -31,8 +31,23 @@ export const useProductVariations = (productId?: string) => {
         return;
       }
 
-      console.log('✅ VARIAÇÕES - Carregadas com sucesso:', data?.length || 0);
-      setVariations(data || []);
+      // Processar variações para o formato compatível
+      const processedVariations = data?.map(v => ({
+        id: v.id,
+        product_id: v.product_id,
+        color: v.color,
+        size: v.size,
+        sku: v.sku,
+        stock: v.stock,
+        price_adjustment: v.price_adjustment,
+        is_active: v.is_active,
+        image_url: v.image_url,
+        created_at: v.created_at,
+        updated_at: v.updated_at
+      })) || [];
+
+      console.log('✅ VARIAÇÕES - Carregadas com sucesso:', processedVariations.length);
+      setVariations(processedVariations);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('🚨 Erro inesperado ao carregar variações:', err);
@@ -78,11 +93,12 @@ export const useProductVariations = (productId?: string) => {
     try {
       console.log('💾 VARIAÇÕES - Salvando variações:', variations.length);
 
-      // 1. Remover variações existentes
+      // 1. Remover variações existentes que não são hierárquicas
       const { error: deleteError } = await supabase
         .from('product_variations')
         .delete()
-        .eq('product_id', productId);
+        .eq('product_id', productId)
+        .or('variation_type.is.null,variation_type.eq.simple');
 
       if (deleteError) {
         console.error('❌ Erro ao remover variações antigas:', deleteError);
@@ -107,13 +123,16 @@ export const useProductVariations = (productId?: string) => {
 
           variationsToInsert.push({
             product_id: productId,
+            variation_type: 'simple',
+            variation_value: variation.color || variation.size || `Variação ${i + 1}`,
             color: variation.color,
             size: variation.size,
             sku: variation.sku,
             stock: variation.stock,
             price_adjustment: variation.price_adjustment,
             is_active: variation.is_active,
-            image_url: imageUrl
+            image_url: imageUrl,
+            display_order: i
           });
         }
 
@@ -128,7 +147,23 @@ export const useProductVariations = (productId?: string) => {
         }
 
         console.log('✅ VARIAÇÕES - Salvas com sucesso:', data?.length || 0);
-        setVariations(data || []);
+        
+        // Atualizar estado local
+        const processedVariations = data?.map(v => ({
+          id: v.id,
+          product_id: v.product_id,
+          color: v.color,
+          size: v.size,
+          sku: v.sku,
+          stock: v.stock,
+          price_adjustment: v.price_adjustment,
+          is_active: v.is_active,
+          image_url: v.image_url,
+          created_at: v.created_at,
+          updated_at: v.updated_at
+        })) || [];
+        
+        setVariations(processedVariations);
       } else {
         setVariations([]);
       }
