@@ -20,19 +20,16 @@ const ProductSeoForm: React.FC<ProductSeoFormProps> = ({
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleSeoGenerated = (seoContent: string) => {
-    try {
-      // Tentar parsear como JSON se vier estruturado
-      const parsed = JSON.parse(seoContent);
-      updateFormData({
-        meta_title: parsed.title || formData.meta_title,
-        meta_description: parsed.description || formData.meta_description,
-        keywords: parsed.keywords || formData.keywords
-      });
-    } catch {
-      // Se não for JSON, usar como meta_description
-      updateFormData({ meta_description: seoContent });
-    }
+  const handleSeoGenerated = (metaDescription: string) => {
+    updateFormData({ meta_description: metaDescription });
+  };
+
+  const handleTitleGenerated = (title: string) => {
+    updateFormData({ meta_title: title });
+  };
+
+  const handleKeywordsGenerated = (keywords: string) => {
+    updateFormData({ keywords: keywords });
   };
 
   const generateSeoSlug = () => {
@@ -73,9 +70,11 @@ const ProductSeoForm: React.FC<ProductSeoFormProps> = ({
                 </p>
               </div>
               <AIContentGenerator
-                productName={formData.name}
+                productName={formData.name || ''}
                 category={formData.category || 'produto'}
                 onDescriptionGenerated={handleSeoGenerated}
+                onTitleGenerated={handleTitleGenerated}
+                onKeywordsGenerated={handleKeywordsGenerated}
                 disabled={!formData.name || isGenerating}
                 variant="seo"
                 size="sm"
@@ -85,7 +84,17 @@ const ProductSeoForm: React.FC<ProductSeoFormProps> = ({
 
           {/* Título SEO */}
           <div className="space-y-2">
-            <Label htmlFor="meta_title">Título SEO</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="meta_title">Título SEO</Label>
+              <AIContentGenerator
+                productName={formData.name || ''}
+                category={formData.category || 'produto'}
+                onDescriptionGenerated={handleTitleGenerated}
+                disabled={!formData.name}
+                variant="title"
+                size="sm"
+              />
+            </div>
             <Input
               id="meta_title"
               value={formData.meta_title || ''}
@@ -100,7 +109,17 @@ const ProductSeoForm: React.FC<ProductSeoFormProps> = ({
 
           {/* Descrição SEO */}
           <div className="space-y-2">
-            <Label htmlFor="meta_description">Descrição SEO</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="meta_description">Descrição SEO</Label>
+              <AIContentGenerator
+                productName={formData.name || ''}
+                category={formData.category || 'produto'}
+                onDescriptionGenerated={handleSeoGenerated}
+                disabled={!formData.name}
+                variant="description"
+                size="sm"
+              />
+            </div>
             <Textarea
               id="meta_description"
               value={formData.meta_description || ''}
@@ -117,7 +136,17 @@ const ProductSeoForm: React.FC<ProductSeoFormProps> = ({
 
           {/* Palavras-chave */}
           <div className="space-y-2">
-            <Label htmlFor="keywords">Palavras-chave</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="keywords">Palavras-chave</Label>
+              <AIContentGenerator
+                productName={formData.name || ''}
+                category={formData.category || 'produto'}
+                onDescriptionGenerated={handleKeywordsGenerated}
+                disabled={!formData.name}
+                variant="keywords"
+                size="sm"
+              />
+            </div>
             <Input
               id="keywords"
               value={formData.keywords || ''}

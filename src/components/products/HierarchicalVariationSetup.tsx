@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { Trash2, Plus, Copy } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { HierarchicalVariation, VariationTemplate } from '@/types/variation';
 import VariationImageUpload from './VariationImageUpload';
-import { useDebounce } from '@/hooks/useDebounce';
 
 interface HierarchicalVariationSetupProps {
   template: VariationTemplate;
@@ -31,8 +30,11 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     selectedMainIndex
   });
 
+  const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
   const addMainVariation = useCallback(() => {
     const newVariation: HierarchicalVariation = {
+      id: generateId(),
       variation_type: 'main',
       variation_value: '',
       color: template.primary === 'color' ? '' : null,
@@ -52,14 +54,17 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
 
   const updateMainVariation = useCallback((index: number, updates: Partial<HierarchicalVariation>) => {
     const updatedVariations = [...variations];
-    updatedVariations[index] = { ...updatedVariations[index], ...updates };
+    updatedVariations[index] = { 
+      ...updatedVariations[index], 
+      ...updates,
+      id: updatedVariations[index].id || generateId()
+    };
     onChange(updatedVariations);
   }, [variations, onChange]);
 
   const removeMainVariation = useCallback((index: number) => {
     const variation = variations[index];
     
-    // Revogar blob URLs se existirem
     if (variation.image_url && variation.image_url.startsWith('blob:')) {
       URL.revokeObjectURL(variation.image_url);
     }
@@ -81,6 +86,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     if (!template.secondary) return;
 
     const newSubVariation: HierarchicalVariation = {
+      id: generateId(),
       variation_type: 'sub',
       variation_value: '',
       color: template.secondary === 'color' ? '' : variations[mainIndex].color,
@@ -105,7 +111,8 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     if (updatedVariations[mainIndex].children && updatedVariations[mainIndex].children![subIndex]) {
       updatedVariations[mainIndex].children![subIndex] = {
         ...updatedVariations[mainIndex].children![subIndex],
-        ...updates
+        ...updates,
+        id: updatedVariations[mainIndex].children![subIndex].id || generateId()
       };
       onChange(updatedVariations);
     }
@@ -116,7 +123,6 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     if (updatedVariations[mainIndex].children) {
       const subVariation = updatedVariations[mainIndex].children[subIndex];
       
-      // Revogar blob URL se existir
       if (subVariation.image_url && subVariation.image_url.startsWith('blob:')) {
         URL.revokeObjectURL(subVariation.image_url);
       }
@@ -137,40 +143,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
     return labels[attribute] || attribute;
   }, []);
 
-  // Memoizar componentes para evitar re-renders
-  const MainVariationInput = React.memo<{
-    index: number;
-    variation: HierarchicalVariation;
-  }>(({ index, variation }) => (
-    <Input
-      key={`main-input-${index}`}
-      value={variation.variation_value}
-      onChange={(e) => updateMainVariation(index, { 
-        variation_value: e.target.value,
-        [template.primary]: e.target.value
-      })}
-      placeholder={`Ex: ${template.primary === 'color' ? 'Azul' : template.primary === 'size' ? 'M' : 'Valor'}`}
-    />
-  ));
-
-  const SubVariationInput = React.memo<{
-    mainIndex: number;
-    subIndex: number;
-    subVariation: HierarchicalVariation;
-  }>(({ mainIndex, subIndex, subVariation }) => (
-    <Input
-      key={`sub-input-${mainIndex}-${subIndex}`}
-      value={subVariation.variation_value}
-      onChange={(e) => updateSubVariation(mainIndex, subIndex, { 
-        variation_value: e.target.value,
-        [template.secondary!]: e.target.value
-      })}
-      placeholder={`Ex: ${template.secondary === 'size' ? '38' : 'Valor'}`}
-    />
-  ));
-
-  // Usar selectedMainIndex válido
-  const validSelectedIndex = Math.min(selectedMainIndex, variations.length - 1);
+  const validSelectedIndex = Math.min(selectedMainIndex, Math.max(0, variations.length - 1));
   const selectedMainVariation = variations[validSelectedIndex];
 
   return (
@@ -217,7 +190,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
           <div className="grid gap-4">
             {variations.map((variation, index) => (
               <Card 
-                key={`main-variation-${variation.variation_value || index}`} 
+                key={variation.id || `main-${index}`}
                 className={validSelectedIndex === index ? 'ring-2 ring-primary' : ''}
               >
                 <CardHeader className="pb-3">
@@ -252,18 +225,27 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor={`main-${index}-value`}>
+                      <Label htmlFor={`main-${variation.id}-value`}>
                         {getAttributeLabel(template.primary)}
                       </Label>
-                      <MainVariationInput index={index} variation={variation} />
+                      <Input
+                        key={`main-input-${variation.id}`}
+                        id={`main-${variation.id}-value`}
+                        value={variation.variation_value || ''}
+                        onChange={(e) => updateMainVariation(index, { 
+                          variation_value: e.target.value,
+                          [template.primary]: e.target.value
+                        })}
+                        placeholder={`Ex: ${template.primary === 'color' ? 'Azul' : template.primary === 'size' ? 'M' : 'Valor'}`}
+                      />
                     </div>
                     
                     {!template.secondary && (
                       <>
                         <div>
-                          <Label htmlFor={`main-${index}-stock`}>Estoque</Label>
+                          <Label htmlFor={`main-${variation.id}-stock`}>Estoque</Label>
                           <Input
-                            id={`main-${index}-stock`}
+                            id={`main-${variation.id}-stock`}
                             type="number"
                             min="0"
                             value={variation.stock.toString()}
@@ -271,7 +253,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`main-${index}-price`}>Ajuste de Preço</Label>
+                          <Label htmlFor={`main-${variation.id}-price`}>Ajuste de Preço</Label>
                           <CurrencyInput
                             value={variation.price_adjustment}
                             onChange={(value) => updateMainVariation(index, { price_adjustment: value })}
@@ -284,11 +266,11 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        id={`main-${index}-active`}
+                        id={`main-${variation.id}-active`}
                         checked={variation.is_active}
                         onCheckedChange={(checked) => updateMainVariation(index, { is_active: checked })}
                       />
-                      <Label htmlFor={`main-${index}-active`}>Ativo</Label>
+                      <Label htmlFor={`main-${variation.id}-active`}>Ativo</Label>
                     </div>
                   </div>
 
@@ -320,7 +302,7 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
 
       {/* Configuração de subvariações */}
       {template.secondary && variations.length > 0 && validSelectedIndex < variations.length && selectedMainVariation && (
-        <Card key={`sub-config-${validSelectedIndex}-${selectedMainVariation.variation_value}`}>
+        <Card key={`sub-config-${validSelectedIndex}-${selectedMainVariation.id}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
@@ -349,16 +331,20 @@ const HierarchicalVariationSetup: React.FC<HierarchicalVariationSetupProps> = ({
               <div className="space-y-3">
                 {selectedMainVariation.children.map((subVariation, subIndex) => (
                   <div 
-                    key={`sub-variation-${validSelectedIndex}-${subIndex}-${subVariation.variation_value}`} 
+                    key={subVariation.id || `sub-${validSelectedIndex}-${subIndex}`}
                     className="border rounded-lg p-4 space-y-4"
                   >
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <Label className="text-xs">{getAttributeLabel(template.secondary!)}</Label>
-                        <SubVariationInput 
-                          mainIndex={validSelectedIndex} 
-                          subIndex={subIndex} 
-                          subVariation={subVariation} 
+                        <Input
+                          key={`sub-input-${subVariation.id}`}
+                          value={subVariation.variation_value || ''}
+                          onChange={(e) => updateSubVariation(validSelectedIndex, subIndex, { 
+                            variation_value: e.target.value,
+                            [template.secondary!]: e.target.value
+                          })}
+                          placeholder={`Ex: ${template.secondary === 'size' ? '38' : 'Valor'}`}
                         />
                       </div>
                       <div>

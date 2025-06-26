@@ -1,252 +1,193 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { Sparkles, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { usePlanPermissions } from '@/hooks/usePlanPermissions';
-import PlanUpgradeModal from '@/components/billing/PlanUpgradeModal';
 
 interface AIContentGeneratorProps {
   productName: string;
   category?: string;
-  description?: string;
-  onDescriptionGenerated?: (description: string) => void;
-  onSEOGenerated?: (seo: any) => void;
+  onDescriptionGenerated: (description: string) => void;
+  onTitleGenerated?: (title: string) => void;
+  onKeywordsGenerated?: (keywords: string) => void;
+  onAdCopyGenerated?: (adCopy: string) => void;
   disabled?: boolean;
-  variant?: 'description' | 'seo' | 'both';
-  size?: 'sm' | 'lg' | 'default';
+  variant?: 'description' | 'seo' | 'title' | 'keywords' | 'ad-copy';
+  size?: 'sm' | 'default' | 'lg';
 }
 
-const AIContentGenerator = ({ 
-  productName, 
-  category, 
-  description,
+const AIContentGenerator: React.FC<AIContentGeneratorProps> = ({
+  productName,
+  category = 'produto',
   onDescriptionGenerated,
-  onSEOGenerated,
-  disabled,
+  onTitleGenerated,
+  onKeywordsGenerated,
+  onAdCopyGenerated,
+  disabled = false,
   variant = 'description',
-  size = 'sm'
-}: AIContentGeneratorProps) => {
-  const [loadingDescription, setLoadingDescription] = useState(false);
-  const [loadingSEO, setLoadingSEO] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  size = 'default'
+}) => {
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
-  const { checkAIUsage } = usePlanPermissions();
-
-  const validateAIAccess = () => {
-    const aiAccess = checkAIUsage();
-    if (!aiAccess.hasAccess) {
-      setShowUpgradeModal(true);
-      return false;
-    }
-    return true;
-  };
 
   const generateDescription = async () => {
-    if (!productName.trim()) {
+    if (!productName?.trim()) {
       toast({
-        title: "Nome do produto obrigatório",
-        description: "Por favor, insira o nome do produto antes de gerar a descrição",
-        variant: "destructive"
+        title: "Nome obrigatório",
+        description: "Digite o nome do produto para gerar a descrição",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!validateAIAccess()) return;
-
-    setLoadingDescription(true);
-
+    setIsGenerating(true);
+    
     try {
-      console.log('Chamando função ai-product-description...');
+      console.log('🤖 Gerando descrição para:', productName, 'categoria:', category);
+      
       const { data, error } = await supabase.functions.invoke('ai-product-description', {
-        body: {
+        body: { 
           productName: productName.trim(),
-          category: category || undefined
+          category: category?.trim() || 'produto'
         }
       });
 
-      console.log('Resposta da função:', { data, error });
+      console.log('🤖 Resposta da função:', { data, error });
 
       if (error) {
-        console.error('Erro da função:', error);
-        throw error;
+        console.error('❌ Erro na função:', error);
+        throw new Error(error.message || 'Erro ao chamar função IA');
       }
 
-      if (data?.description && onDescriptionGenerated) {
+      if (data?.description) {
+        console.log('✅ Descrição gerada com sucesso:', data.description.length, 'caracteres');
         onDescriptionGenerated(data.description);
         toast({
-          title: "Descrição gerada",
-          description: "A descrição foi gerada com sucesso pela IA"
+          title: "Descrição gerada!",
+          description: "A IA criou uma descrição otimizada para seu produto.",
         });
       } else {
-        throw new Error('Descrição não retornada pela IA');
+        console.error('❌ Descrição não retornada:', data);
+        throw new Error('Descrição não foi gerada pela IA');
       }
     } catch (error) {
-      console.error('Erro ao gerar descrição:', error);
+      console.error('💥 Erro ao gerar descrição:', error);
       toast({
         title: "Erro ao gerar descrição",
-        description: error.message || "Verifique se a OpenAI API está configurada corretamente",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Tente novamente",
+        variant: "destructive",
       });
     } finally {
-      setLoadingDescription(false);
+      setIsGenerating(false);
     }
   };
 
   const generateSEO = async () => {
-    if (!productName.trim()) {
+    if (!productName?.trim()) {
       toast({
-        title: "Nome do produto obrigatório",
-        description: "Por favor, insira o nome do produto antes de gerar o SEO",
-        variant: "destructive"
+        title: "Nome obrigatório",
+        description: "Digite o nome do produto para gerar SEO",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!validateAIAccess()) return;
-
-    setLoadingSEO(true);
-
+    setIsGenerating(true);
+    
     try {
-      console.log('Chamando função ai-seo-generator...');
+      console.log('🔍 Gerando SEO para:', productName, 'categoria:', category);
+      
       const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
-        body: {
+        body: { 
           productName: productName.trim(),
-          category: category || undefined,
-          description: description || undefined
+          category: category?.trim() || 'produto'
         }
       });
 
-      console.log('Resposta da função SEO:', { data, error });
+      console.log('🔍 Resposta da função SEO:', { data, error });
 
       if (error) {
-        console.error('Erro da função SEO:', error);
-        throw error;
+        console.error('❌ Erro na função SEO:', error);
+        throw new Error(error.message || 'Erro ao chamar função SEO');
       }
 
-      if (data && onSEOGenerated) {
-        onSEOGenerated(data);
+      if (data) {
+        console.log('✅ SEO gerado com sucesso:', data);
+        
+        // Aplicar dados SEO usando os callbacks fornecidos
+        if (data.metaTitle && onTitleGenerated) {
+          onTitleGenerated(data.metaTitle);
+        }
+        
+        if (data.metaDescription) {
+          onDescriptionGenerated(data.metaDescription);
+        }
+        
+        if (data.keywords && onKeywordsGenerated) {
+          onKeywordsGenerated(data.keywords);
+        }
+        
         toast({
-          title: "SEO gerado",
-          description: "Meta dados SEO foram gerados com sucesso pela IA"
+          title: "SEO gerado!",
+          description: "A IA criou conteúdo SEO otimizado para seu produto.",
         });
       } else {
+        console.error('❌ Dados SEO não retornados pela IA');
         throw new Error('Dados SEO não retornados pela IA');
       }
     } catch (error) {
-      console.error('Erro ao gerar SEO:', error);
+      console.error('💥 Erro ao gerar SEO:', error);
       toast({
         title: "Erro ao gerar SEO",
-        description: error.message || "Verifique se a OpenAI API está configurada corretamente",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Tente novamente",
+        variant: "destructive",
       });
     } finally {
-      setLoadingSEO(false);
+      setIsGenerating(false);
     }
   };
 
-  const generateBoth = async () => {
-    if (!validateAIAccess()) return;
-    await generateDescription();
-    await generateSEO();
+  const handleGenerate = () => {
+    if (variant === 'seo') {
+      generateSEO();
+    } else {
+      generateDescription();
+    }
+  };
+
+  const getButtonText = () => {
+    if (isGenerating) return 'Gerando...';
+    
+    switch (variant) {
+      case 'seo':
+        return 'Gerar SEO';
+      case 'title':
+        return 'Gerar Título';
+      case 'keywords':
+        return 'Gerar Palavras-chave';
+      case 'ad-copy':
+        return 'Gerar Anúncio';
+      default:
+        return 'Gerar com IA';
+    }
   };
 
   return (
-    <>
-      {variant === 'description' && (
-        <Button 
-          type="button"
-          variant="outline" 
-          size={size}
-          onClick={generateDescription}
-          disabled={disabled || loadingDescription || !productName.trim()}
-          className="flex items-center gap-2"
-        >
-          {loadingDescription ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          {loadingDescription ? 'Gerando...' : 'Gerar com IA'}
-        </Button>
+    <Button
+      onClick={handleGenerate}
+      disabled={disabled || isGenerating || !productName?.trim()}
+      variant="outline"
+      size={size}
+      className="gap-2"
+    >
+      {isGenerating ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Sparkles className="h-4 w-4" />
       )}
-
-      {variant === 'seo' && (
-        <Button 
-          type="button"
-          variant="outline" 
-          size={size}
-          onClick={generateSEO}
-          disabled={disabled || loadingSEO || !productName.trim()}
-          className="flex items-center gap-2"
-        >
-          {loadingSEO ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          {loadingSEO ? 'Gerando...' : 'Gerar SEO'}
-        </Button>
-      )}
-
-      {variant === 'both' && (
-        <div className="flex gap-2">
-          <Button 
-            type="button"
-            variant="outline" 
-            size={size}
-            onClick={generateDescription}
-            disabled={disabled || loadingDescription || !productName.trim()}
-            className="flex items-center gap-2"
-          >
-            {loadingDescription ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {loadingDescription ? 'Gerando...' : 'Descrição'}
-          </Button>
-
-          <Button 
-            type="button"
-            variant="outline" 
-            size={size}
-            onClick={generateSEO}
-            disabled={disabled || loadingSEO || !productName.trim()}
-            className="flex items-center gap-2"
-          >
-            {loadingSEO ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {loadingSEO ? 'Gerando...' : 'SEO'}
-          </Button>
-
-          <Button 
-            type="button"
-            variant="default" 
-            size={size}
-            onClick={generateBoth}
-            disabled={disabled || loadingDescription || loadingSEO || !productName.trim()}
-            className="flex items-center gap-2"
-          >
-            {(loadingDescription || loadingSEO) ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {(loadingDescription || loadingSEO) ? 'Gerando...' : 'Gerar Tudo'}
-          </Button>
-        </div>
-      )}
-
-      <PlanUpgradeModal 
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-      />
-    </>
+      {getButtonText()}
+    </Button>
   );
 };
 
