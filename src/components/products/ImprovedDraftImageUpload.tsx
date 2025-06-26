@@ -188,6 +188,7 @@ const ImprovedDraftImageUpload = ({
                         src={image.preview || image.url || ''}
                         alt={`Preview ${index + 1}`}
                         className="w-full h-full object-cover"
+                        style={{ aspectRatio: '1/1' }}
                         onError={(e) => {
                           console.error('❌ IMPROVED DRAFT IMAGE UPLOAD - Erro ao carregar:', image.id);
                           const target = e.currentTarget;
@@ -265,7 +266,7 @@ const ImprovedDraftImageUpload = ({
           <h5 className="font-medium text-blue-900 mb-2">💡 Dicas importantes:</h5>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• A primeira imagem será definida como principal</li>
-            <li>• Use imagens de alta qualidade (mínimo 800x800px)</li>
+            <li>• Use imagens quadradas (1:1) para melhor visualização</li>
             <li>• Máximo de {maxImages} imagens por produto</li>
             <li>• Formatos aceitos: PNG, JPG, JPEG, GIF, WEBP</li>
             <li>• As imagens serão salvas automaticamente ao concluir o cadastro</li>

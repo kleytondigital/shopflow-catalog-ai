@@ -23,6 +23,7 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
           <CurrencyInput
             value={formData.retail_price}
             onChange={(value) => updateFormData({ retail_price: value })}
+            placeholder="R$ 0,00"
           />
         </div>
 
@@ -31,6 +32,7 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
           <CurrencyInput
             value={formData.wholesale_price || 0}
             onChange={(value) => updateFormData({ wholesale_price: value || undefined })}
+            placeholder="R$ 0,00"
           />
         </div>
       </div>

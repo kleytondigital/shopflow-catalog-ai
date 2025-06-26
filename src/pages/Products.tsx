@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,17 @@ const Products = () => {
     { label: 'Produtos', current: true },
   ];
 
+  // Auto-refresh da lista quando necessário
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!showProductForm && !loading) {
+        fetchProducts();
+      }
+    }, 30000); // Refresh a cada 30 segundos quando não estiver editando
+
+    return () => clearInterval(interval);
+  }, [showProductForm, loading, fetchProducts]);
+
   const handleEdit = (product) => {
     setEditingProduct(product);
     setShowProductForm(true);
@@ -42,6 +53,8 @@ const Products = () => {
         toast({
           title: "Produto excluído com sucesso",
         });
+        // Refresh imediato após exclusão
+        fetchProducts();
       }
     }
   };
@@ -59,6 +72,7 @@ const Products = () => {
       title: "Conteúdo aplicado com sucesso",
       description: "O conteúdo gerado pela IA foi aplicado ao produto.",
     });
+    // Refresh após aplicar IA
     fetchProducts();
   };
 
@@ -86,6 +100,8 @@ const Products = () => {
       
       setShowProductForm(false);
       setEditingProduct(null);
+      
+      // Refresh imediato após salvar
       fetchProducts();
     } catch (error) {
       console.error('Erro ao salvar produto:', error);

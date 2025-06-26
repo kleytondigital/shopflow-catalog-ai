@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Settings, Eye } from 'lucide-react';
+import { Plus, Settings, Eye, AlertCircle } from 'lucide-react';
 import { VariationGroup, HierarchicalVariation, VARIATION_TEMPLATES } from '@/types/variation';
 import { useVariationGroups } from '@/hooks/useVariationGroups';
 import HierarchicalVariationSetup from './HierarchicalVariationSetup';
 import HierarchicalVariationPreview from './HierarchicalVariationPreview';
 import VariationMigrationHelper from './VariationMigrationHelper';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface HierarchicalVariationsManagerProps {
   productId?: string;
@@ -38,6 +39,12 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
     isConfiguring
   });
 
+  // Verificar se já existe um sistema hierárquico configurado
+  const hasHierarchicalSystem = groups.length > 0 || isConfiguring;
+  
+  // Verificar se é um produto em edição com variações simples
+  const isEditingWithLegacyVariations = productId && variations.length > 0 && !hasHierarchicalSystem;
+
   useEffect(() => {
     if (groups.length > 0) {
       const group = groups[0];
@@ -46,13 +53,14 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
         : group.primary_attribute;
       setCurrentTemplate(templateKey);
       setLocalVariations(hierarchicalVariations);
+      setIsConfiguring(true);
       setShowMigration(false);
-    } else if (variations.length > 0) {
-      // Detectar variações legadas
-      console.log('🔄 HIERARCHICAL MANAGER - Detectadas variações legadas:', variations.length);
+    } else if (isEditingWithLegacyVariations) {
+      // Mostrar migração apenas para produtos em edição com variações simples
+      console.log('🔄 HIERARCHICAL MANAGER - Detectadas variações legadas no produto em edição:', variations.length);
       setShowMigration(true);
       
-      // Converter variações legadas para o novo formato temporariamente
+      // Converter variações legadas para preview
       const convertedVariations = variations.map((v, index) => ({
         id: v.id,
         variation_type: 'simple' as const,
@@ -70,8 +78,9 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
       setLocalVariations(convertedVariations);
     } else {
       setShowMigration(false);
+      setIsConfiguring(false);
     }
-  }, [groups, hierarchicalVariations, variations]);
+  }, [groups, hierarchicalVariations, variations, productId]);
 
   const handleTemplateSelect = (templateKey: string) => {
     setCurrentTemplate(templateKey);
@@ -79,15 +88,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
     setShowMigration(false);
     
     // Inicializar com estrutura vazia baseada no template
-    const template = VARIATION_TEMPLATES.find(t => 
-      t.secondary 
-        ? `${t.primary}+${t.secondary}` === templateKey
-        : t.primary === templateKey
-    );
-
-    if (template) {
-      setLocalVariations([]);
-    }
+    setLocalVariations([]);
   };
 
   const handleMigration = (hierarchicalVariations: HierarchicalVariation[], templateKey: string) => {
@@ -170,7 +171,6 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
     }
   };
 
-  const hasVariations = groups.length > 0 || localVariations.length > 0;
   const selectedTemplate = VARIATION_TEMPLATES.find(t => 
     t.secondary 
       ? `${t.primary}+${t.secondary}` === currentTemplate
@@ -196,8 +196,8 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
         </p>
       </div>
 
-      {/* Mostrar helper de migração se houver variações legadas */}
-      {showMigration && variations.length > 0 && (
+      {/* Mostrar helper de migração apenas para produtos em edição com variações legadas */}
+      {showMigration && isEditingWithLegacyVariations && (
         <VariationMigrationHelper
           simpleVariations={variations}
           onMigrate={handleMigration}
@@ -205,7 +205,8 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
         />
       )}
 
-      {!hasVariations && !isConfiguring && !showMigration ? (
+      {/* Para produtos novos ou sem sistema configurado, mostrar seletor de template */}
+      {!hasHierarchicalSystem && !showMigration ? (
         <Card>
           <CardContent className="py-8">
             <div className="text-center space-y-4">
@@ -270,7 +271,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
                       </Badge>
                     )}
                   </CardTitle>
-                  {isConfiguring && (
+                  {isConfiguring && productId && (
                     <Button onClick={handleSave} size="sm">
                       Salvar Configuração
                     </Button>
@@ -278,12 +279,19 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
                 </div>
               </CardHeader>
               <CardContent>
-                {selectedTemplate && (
+                {selectedTemplate ? (
                   <HierarchicalVariationSetup
                     template={selectedTemplate}
                     variations={localVariations}
                     onChange={handleVariationsChange}
                   />
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Selecione um tipo de variação para começar a configurar.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </CardContent>
             </Card>
