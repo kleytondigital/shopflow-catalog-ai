@@ -1,320 +1,283 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Trash2, Package, AlertCircle } from 'lucide-react';
+import { Plus, Palette, Shirt, Package, Sparkles } from 'lucide-react';
 import { useVariationMasterGroups } from '@/hooks/useVariationMasterGroups';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface ProductVariationCombination {
-  id: string;
-  combination: Record<string, string>; // { color: 'Preto', size: '36' }
-  sku?: string;
-  stock: number;
-  price_adjustment: number;
-  is_active: boolean;
-}
+import QuickValueAdd from '@/components/variations/QuickValueAdd';
+import { ProductVariation } from '@/types/variation';
 
 interface MasterVariationSelectorProps {
-  selectedCombinations: ProductVariationCombination[];
-  onChange: (combinations: ProductVariationCombination[]) => void;
+  variations: ProductVariation[];
+  onVariationsChange: (variations: ProductVariation[]) => void;
 }
 
 const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
-  selectedCombinations,
-  onChange
+  variations,
+  onVariationsChange
 }) => {
-  const { groups, getValuesByGroup, loading } = useVariationMasterGroups();
+  const { groups, values, loading, refetch } = useVariationMasterGroups();
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [selectedValues, setSelectedValues] = useState<Record<string, string[]>>({});
+  const [selectedValues, setSelectedValues] = useState<{[groupId: string]: string[]}>({});
+  const [stockValues, setStockValues] = useState<{[key: string]: number}>({});
 
-  console.log('🔧 MASTER VARIATION SELECTOR - Renderizando:', {
-    groupsCount: groups.length,
-    selectedGroupsCount: selectedGroups.length,
-    combinationsCount: selectedCombinations.length
-  });
-
-  // Gerar todas as combinações possíveis
-  const generateCombinations = () => {
-    if (selectedGroups.length === 0) return [];
-
-    const groupsWithValues = selectedGroups.map(groupId => {
-      const group = groups.find(g => g.id === groupId);
-      const values = selectedValues[groupId] || [];
-      return {
-        groupId,
-        attributeKey: group?.attribute_key || '',
-        values: values.map(valueId => {
-          const valueObj = getValuesByGroup(groupId).find(v => v.id === valueId);
-          return { id: valueId, value: valueObj?.value || '' };
-        })
-      };
-    });
-
-    // Função recursiva para gerar combinações
-    const generateRecursive = (index: number, currentCombination: Record<string, string>): Record<string, string>[] => {
-      if (index >= groupsWithValues.length) {
-        return [{ ...currentCombination }];
-      }
-
-      const group = groupsWithValues[index];
-      const results: Record<string, string>[] = [];
-
-      for (const value of group.values) {
-        const newCombination = {
-          ...currentCombination,
-          [group.attributeKey]: value.value
-        };
-        results.push(...generateRecursive(index + 1, newCombination));
-      }
-
-      return results;
-    };
-
-    return generateRecursive(0, {});
+  const getGroupIcon = (attributeKey: string) => {
+    switch (attributeKey) {
+      case 'color': return <Palette className="w-4 h-4" />;
+      case 'size': return <Shirt className="w-4 h-4" />;
+      case 'material': return <Package className="w-4 h-4" />;
+      default: return <Sparkles className="w-4 h-4" />;
+    }
   };
 
   const handleGroupToggle = (groupId: string) => {
     setSelectedGroups(prev => {
-      const newGroups = prev.includes(groupId)
-        ? prev.filter(id => id !== groupId)
-        : [...prev, groupId];
-      
-      // Limpar valores selecionados do grupo removido
-      if (!newGroups.includes(groupId)) {
-        setSelectedValues(prevValues => {
-          const newValues = { ...prevValues };
-          delete newValues[groupId];
-          return newValues;
-        });
+      if (prev.includes(groupId)) {
+        // Remover grupo e seus valores selecionados
+        const newSelected = prev.filter(id => id !== groupId);
+        const newSelectedValues = { ...selectedValues };
+        delete newSelectedValues[groupId];
+        setSelectedValues(newSelectedValues);
+        return newSelected;
+      } else {
+        return [...prev, groupId];
       }
-      
-      return newGroups;
     });
   };
 
   const handleValueToggle = (groupId: string, valueId: string) => {
-    setSelectedValues(prev => {
-      const groupValues = prev[groupId] || [];
-      const newGroupValues = groupValues.includes(valueId)
-        ? groupValues.filter(id => id !== valueId)
-        : [...groupValues, valueId];
-      
-      return {
-        ...prev,
-        [groupId]: newGroupValues
-      };
-    });
+    setSelectedValues(prev => ({
+      ...prev,
+      [groupId]: prev[groupId]?.includes(valueId)
+        ? prev[groupId].filter(id => id !== valueId)
+        : [...(prev[groupId] || []), valueId]
+    }));
   };
 
-  const handleGenerateCombinations = () => {
-    const combinations = generateCombinations();
+  const generateVariations = () => {
+    if (selectedGroups.length === 0) {
+      onVariationsChange([]);
+      return;
+    }
+
+    const groupCombinations: string[][] = [];
     
-    const newCombinations: ProductVariationCombination[] = combinations.map((combination, index) => {
-      // Verificar se já existe uma combinação igual
-      const existing = selectedCombinations.find(c => 
-        JSON.stringify(c.combination) === JSON.stringify(combination)
-      );
+    if (selectedGroups.length === 1) {
+      // Um grupo apenas - cada valor é uma variação
+      const groupId = selectedGroups[0];
+      const groupValues = selectedValues[groupId] || [];
+      groupValues.forEach(valueId => {
+        const value = values.find(v => v.id === valueId);
+        if (value) {
+          groupCombinations.push([value.value]);
+        }
+      });
+    } else {
+      // Múltiplos grupos - combinações cartesianas
+      const valuesByGroup = selectedGroups.map(groupId => {
+        const groupValues = selectedValues[groupId] || [];
+        return groupValues.map(valueId => {
+          const value = values.find(v => v.id === valueId);
+          return value?.value || '';
+        }).filter(Boolean);
+      });
 
-      return existing || {
-        id: `combination-${Date.now()}-${index}`,
-        combination,
-        sku: '',
-        stock: 0,
+      const cartesianProduct = (arr: string[][]): string[][] => {
+        return arr.reduce((acc, curr) => {
+          const result: string[][] = [];
+          acc.forEach(a => {
+            curr.forEach(c => {
+              result.push([...a, c]);
+            });
+          });
+          return result;
+        }, [[]] as string[][]);
+      };
+
+      if (valuesByGroup.every(group => group.length > 0)) {
+        groupCombinations.push(...cartesianProduct(valuesByGroup));
+      }
+    }
+
+    const newVariations: ProductVariation[] = groupCombinations.map((combination, index) => {
+      const variationKey = combination.join(' - ');
+      const stock = stockValues[variationKey] || 0;
+
+      return {
+        id: `variation-${index}`,
+        variation_type: 'master',
+        variation_value: variationKey,
+        stock,
         price_adjustment: 0,
-        is_active: true
+        is_active: true,
+        sku: '',
+        image_url: null,
+        image_file: null
       };
     });
 
-    onChange(newCombinations);
+    onVariationsChange(newVariations);
   };
 
-  const updateCombination = (combinationId: string, updates: Partial<ProductVariationCombination>) => {
-    const updated = selectedCombinations.map(c => 
-      c.id === combinationId ? { ...c, ...updates } : c
-    );
-    onChange(updated);
+  const handleStockChange = (variationKey: string, stock: number) => {
+    setStockValues(prev => ({
+      ...prev,
+      [variationKey]: stock
+    }));
   };
 
-  const removeCombination = (combinationId: string) => {
-    const filtered = selectedCombinations.filter(c => c.id !== combinationId);
-    onChange(filtered);
-  };
+  useEffect(() => {
+    generateVariations();
+  }, [selectedGroups, selectedValues]);
 
-  const getCombinationDisplay = (combination: Record<string, string>) => {
-    return Object.entries(combination)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join(' • ');
+  const handleValueAdded = () => {
+    refetch();
   };
-
-  const possibleCombinations = generateCombinations();
-  const totalStock = selectedCombinations.reduce((sum, c) => sum + c.stock, 0);
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Selecionar Grupos de Variações</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {groups.length === 0 ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Nenhum grupo de variação cadastrado. Acesse "Grupos de Variações" na sidebar para criar grupos.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {groups.map((group) => (
-                <div key={group.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`group-${group.id}`}
-                      checked={selectedGroups.includes(group.id)}
-                      onCheckedChange={() => handleGroupToggle(group.id)}
-                    />
-                    <Label htmlFor={`group-${group.id}`} className="font-medium">
+      {/* Seleção de Grupos */}
+      <div className="space-y-4">
+        <h4 className="font-medium">1. Selecione os tipos de variação</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {groups.map((group) => (
+            <Card key={group.id} className={`cursor-pointer transition-colors ${
+              selectedGroups.includes(group.id) ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-gray-50'
+            }`}>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    checked={selectedGroups.includes(group.id)}
+                    onCheckedChange={() => handleGroupToggle(group.id)}
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    {getGroupIcon(group.attribute_key)}
+                    <div>
+                      <p className="font-medium">{group.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {values.filter(v => v.group_id === group.id && v.is_active).length} valores
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Seleção de Valores */}
+      {selectedGroups.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-medium">2. Selecione os valores para cada tipo</h4>
+          {selectedGroups.map((groupId) => {
+            const group = groups.find(g => g.id === groupId);
+            const groupValues = values.filter(v => v.group_id === groupId && v.is_active);
+            
+            if (!group) return null;
+
+            return (
+              <Card key={groupId}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getGroupIcon(group.attribute_key)}
                       {group.name}
-                    </Label>
-                    <Badge variant="secondary">
-                      {getValuesByGroup(group.id).length} valores
-                    </Badge>
-                  </div>
-
-                  {selectedGroups.includes(group.id) && (
-                    <div className="space-y-2 pl-6">
-                      <Label className="text-sm text-muted-foreground">
-                        Selecione os valores:
-                      </Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {getValuesByGroup(group.id).map((value) => (
-                          <div key={value.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`value-${value.id}`}
-                              checked={(selectedValues[group.id] || []).includes(value.id)}
-                              onCheckedChange={() => handleValueToggle(group.id, value.id)}
+                    </div>
+                    <QuickValueAdd group={group} onValueAdded={handleValueAdded} />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {groupValues.map((value) => (
+                      <div
+                        key={value.id}
+                        className={`flex items-center space-x-2 p-2 rounded border cursor-pointer transition-colors ${
+                          selectedValues[groupId]?.includes(value.id)
+                            ? 'bg-primary/10 border-primary'
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleValueToggle(groupId, value.id)}
+                      >
+                        <Checkbox
+                          checked={selectedValues[groupId]?.includes(value.id) || false}
+                          onCheckedChange={() => handleValueToggle(groupId, value.id)}
+                        />
+                        <div className="flex items-center gap-2 flex-1">
+                          {value.hex_color && (
+                            <div
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: value.hex_color }}
                             />
-                            <Label htmlFor={`value-${value.id}`} className="text-sm flex items-center gap-1">
-                              {value.hex_color && (
-                                <div 
-                                  className="w-3 h-3 rounded-full border"
-                                  style={{ backgroundColor: value.hex_color }}
-                                />
-                              )}
-                              {value.value}
-                            </Label>
-                          </div>
-                        ))}
+                          )}
+                          <span className="text-sm">{value.value}</span>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Variações Geradas */}
+      {variations.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-medium">3. Configure o estoque para cada variação</h4>
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {variations.map((variation, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{variation.variation_value}</Badge>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {selectedGroups.length > 0 && (
-            <div className="pt-4">
-              <Button onClick={handleGenerateCombinations}>
-                Gerar Combinações ({possibleCombinations.length})
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedCombinations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Configurar Variações ({selectedCombinations.length})
-            </CardTitle>
-            <div className="text-sm text-muted-foreground">
-              Estoque total: {totalStock} unidades
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedCombinations.map((combination) => (
-              <div key={combination.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-medium">
-                      {getCombinationDisplay(combination.combination)}
-                    </span>
-                    {!combination.is_active && (
-                      <Badge variant="secondary" className="ml-2">Inativa</Badge>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCombination(combination.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <Label className="text-sm">SKU</Label>
-                    <Input
-                      value={combination.sku || ''}
-                      onChange={(e) => updateCombination(combination.id, { sku: e.target.value })}
-                      placeholder="SKU"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm">Estoque</Label>
-                    <Input
-                      type="number"
-                      value={combination.stock}
-                      onChange={(e) => updateCombination(combination.id, { stock: parseInt(e.target.value) || 0 })}
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm">Ajuste de Preço (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={combination.price_adjustment}
-                      onChange={(e) => updateCombination(combination.id, { price_adjustment: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`active-${combination.id}`}
-                        checked={combination.is_active}
-                        onCheckedChange={(checked) => updateCombination(combination.id, { is_active: checked === true })}
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`stock-${index}`} className="text-sm">Estoque:</Label>
+                      <Input
+                        id={`stock-${index}`}
+                        type="number"
+                        min="0"
+                        value={stockValues[variation.variation_value || ''] || 0}
+                        onChange={(e) => {
+                          const stock = parseInt(e.target.value) || 0;
+                          handleStockChange(variation.variation_value || '', stock);
+                          // Atualizar a variação no array
+                          const updatedVariations = [...variations];
+                          updatedVariations[index] = { ...variation, stock };
+                          onVariationsChange(updatedVariations);
+                        }}
+                        className="w-20"
                       />
-                      <Label htmlFor={`active-${combination.id}`} className="text-sm">
-                        Ativa
-                      </Label>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {selectedGroups.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Selecione pelo menos um tipo de variação para começar
+          </p>
+        </div>
       )}
     </div>
   );

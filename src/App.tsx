@@ -1,10 +1,10 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { navItems } from "./nav-items";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import Auth from './pages/Auth';
 import Index from './pages/Index';
 import Products from './pages/Products';
@@ -45,9 +45,15 @@ function App() {
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/failure" element={<PaymentFailure />} />
             <Route path="/payment/pending" element={<PaymentPending />} />
-            <Route path="/catalog/:storeSlug" element={<PublicCatalog />} />
+            <Route path="/catalog/:storeSlug" element={<PublicCatalog storeIdentifier="" />} />
           
-            <Route element={<ProtectedRoute><ResponsiveAppLayout /></ProtectedRoute>}>
+            <Route element={
+              <ProtectedRoute>
+                <ResponsiveAppLayout title="" subtitle="">
+                  <Outlet />
+                </ResponsiveAppLayout>
+              </ProtectedRoute>
+            }>
               <Route path="/" element={<Index />} />
               <Route path="/products" element={<Products />} />
               <Route path="/variation-groups" element={<VariationGroups />} />
@@ -60,14 +66,19 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/shipping" element={<Shipping />} />
+            </Route>
             
-              {/* Rotas protegidas por papel */}
-              <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
-                <Route path="/stores" element={<Stores />} />
-                <Route path="/user-management" element={<UserManagement />} />
-                <Route path="/plan-management" element={<PlanManagement />} />
-                <Route path="/global-integrations" element={<GlobalIntegrations />} />
-              </Route>
+            <Route element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <ResponsiveAppLayout title="" subtitle="">
+                  <Outlet />
+                </ResponsiveAppLayout>
+              </ProtectedRoute>
+            }>
+              <Route path="/stores" element={<Stores />} />
+              <Route path="/user-management" element={<UserManagement />} />
+              <Route path="/plan-management" element={<PlanManagement />} />
+              <Route path="/global-integrations" element={<GlobalIntegrations />} />
             </Route>
           
             <Route path="*" element={<NotFound />} />

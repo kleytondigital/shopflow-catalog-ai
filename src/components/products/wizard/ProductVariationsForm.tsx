@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { ProductVariation } from '@/types/variation';
 import ProductVariationsManager from '../ProductVariationsManager';
 import HierarchicalVariationsManager from '../HierarchicalVariationsManager';
-import { Settings, Layers } from 'lucide-react';
+import MasterVariationSelector from '../MasterVariationSelector';
+import { Settings, Layers, Palette } from 'lucide-react';
 
 interface ProductVariationsFormProps {
   variations: ProductVariation[];
@@ -19,7 +20,7 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
   onVariationsChange,
   productId
 }) => {
-  const [systemType, setSystemType] = useState<'simple' | 'hierarchical'>('simple');
+  const [systemType, setSystemType] = useState<'simple' | 'hierarchical' | 'master'>('master');
 
   console.log('🎯 PRODUCT VARIATIONS FORM - Renderizando:', {
     productId,
@@ -36,8 +37,13 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
         </p>
       </div>
 
-      <Tabs value={systemType} onValueChange={(value) => setSystemType(value as 'simple' | 'hierarchical')}>
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={systemType} onValueChange={(value) => setSystemType(value as 'simple' | 'hierarchical' | 'master')}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="master" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Sistema Inteligente
+            <Badge variant="default" className="ml-1">Recomendado</Badge>
+          </TabsTrigger>
           <TabsTrigger value="simple" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Sistema Simples
@@ -45,9 +51,32 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
           <TabsTrigger value="hierarchical" className="flex items-center gap-2">
             <Layers className="w-4 h-4" />
             Sistema Hierárquico
-            <Badge variant="secondary" className="ml-1">Novo</Badge>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="master" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Palette className="w-5 h-5 text-primary" />
+                Sistema Inteligente de Variações
+                <Badge variant="default">Novo</Badge>
+              </CardTitle>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>🎯 <strong>Sistema mais eficiente</strong> - Use grupos pré-cadastrados</p>
+                <p>⚡ <strong>Cadastro super rápido</strong> - Selecione e combine valores existentes</p>
+                <p>➕ <strong>Adicione novos valores</strong> durante o cadastro se necessário</p>
+                <p>🎨 <strong>Padronização automática</strong> - Mantém consistência entre produtos</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <MasterVariationSelector
+                variations={variations}
+                onVariationsChange={onVariationsChange}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="simple" className="space-y-4">
           <Card>

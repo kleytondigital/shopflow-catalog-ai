@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils"
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, profile, isLoading } = useAuth();
+  const { signOut, profile, loading } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -116,21 +117,21 @@ const Sidebar = () => {
             <button className="w-full text-left">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-8 w-8">
-                  {isLoading ? (
+                  {loading ? (
                     <Skeleton className="h-8 w-8 rounded-full" />
                   ) : (
                     <>
                       <AvatarImage src={profile?.avatar_url || ""} />
-                      <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{profile?.full_name?.charAt(0) || profile?.email?.charAt(0)}</AvatarFallback>
                     </>
                   )}
                 </Avatar>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {isLoading ? <Skeleton className="h-4 w-24" /> : profile?.name || "Carregando..."}
+                    {loading ? <Skeleton className="h-4 w-24" /> : profile?.full_name || "Carregando..."}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isLoading ? <Skeleton className="h-4 w-16" /> : profile?.email || "Carregando..."}
+                    {loading ? <Skeleton className="h-4 w-16" /> : profile?.email || "Carregando..."}
                   </p>
                 </div>
               </div>
