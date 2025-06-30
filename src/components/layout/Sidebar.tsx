@@ -1,111 +1,188 @@
-
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  BarChart3, 
-  Settings, 
+import {
+  Home,
+  Package,
+  Grid3X3,
+  ShoppingCart,
   Users,
-  Tag,
+  Settings,
+  Percent,
   Truck,
+  BarChart,
   Store,
-  Crown,
-  CreditCard,
-  Zap,
-  Globe
+  UserPlus,
+  Palette
 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { ProtectedMenuItem } from '@/components/billing/ProtectedMenuItem';
-import SidebarUserProfile from './SidebarUserProfile';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isSuperadmin } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, profile, isLoading } = useAuth();
 
-  const storeAdminNavigation = [
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const menuItems = [
     { 
-      name: 'Dashboard', 
+      icon: Home, 
+      label: 'Dashboard', 
       href: '/', 
-      icon: LayoutDashboard 
+      isActive: location.pathname === '/' 
     },
     { 
-      name: 'Produtos', 
+      icon: Package, 
+      label: 'Produtos', 
       href: '/products', 
-      icon: Package 
+      isActive: location.pathname === '/products' 
     },
     { 
-      name: 'Pedidos', 
+      icon: Palette, 
+      label: 'Grupos de Variações', 
+      href: '/variation-groups', 
+      isActive: location.pathname === '/variation-groups' 
+    },
+    { 
+      icon: Grid3X3, 
+      label: 'Categorias', 
+      href: '/categories', 
+      isActive: location.pathname === '/categories' 
+    },
+    { 
+      icon: ShoppingCart, 
+      label: 'Pedidos', 
       href: '/orders', 
-      icon: ShoppingCart 
+      isActive: location.pathname === '/orders' 
     },
     { 
-      name: 'Cupons', 
-      href: '/coupons', 
-      icon: Tag,
-      benefitKey: 'discount_coupons',
-      requiresPremium: true
+      icon: Percent, 
+      label: 'Cupons', 
+      href: '/protected-coupons', 
+      isActive: location.pathname === '/protected-coupons' 
     },
     { 
-      name: 'Entrega', 
-      href: '/deliveries', 
-      icon: Truck,
-      benefitKey: 'shipping_calculator',
-      requiresPremium: true
+      icon: Truck, 
+      label: 'Entregas', 
+      href: '/protected-deliveries', 
+      isActive: location.pathname === '/protected-deliveries' 
     },
     { 
-      name: 'Relatórios', 
-      href: '/reports', 
-      icon: BarChart3,
-      benefitKey: 'dedicated_support',
-      requiresPremium: true
+      icon: Users, 
+      label: 'Clientes', 
+      href: '/customers', 
+      isActive: location.pathname === '/customers' 
     },
     { 
-      name: 'Configurações', 
+      icon: BarChart, 
+      label: 'Relatórios', 
+      href: '/protected-reports', 
+      isActive: location.pathname === '/protected-reports' 
+    },
+    { 
+      icon: Settings, 
+      label: 'Configurações', 
       href: '/settings', 
-      icon: Settings 
+      isActive: location.pathname === '/settings' 
+    }
+  ];
+
+  const adminMenuItems = [
+    { 
+      icon: Store, 
+      label: 'Lojas', 
+      href: '/stores', 
+      isActive: location.pathname === '/stores' 
     },
+    { 
+      icon: UserPlus, 
+      label: 'Usuários', 
+      href: '/user-management', 
+      isActive: location.pathname === '/user-management' 
+    }
   ];
-
-  const superadminNavigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Lojas', href: '/stores', icon: Store },
-    { name: 'Usuários', href: '/users', icon: Users },
-    { name: 'Gestão de Planos', href: '/plan-management', icon: Crown },
-    { name: 'Financeiro', href: '/billing', icon: CreditCard },
-    { name: 'Integrações Globais', href: '/global-integrations', icon: Globe },
-    { name: 'Relatórios', href: '/reports', icon: BarChart3 },
-  ];
-
-  const navigation = isSuperadmin ? superadminNavigation : storeAdminNavigation;
 
   return (
-    <div className="fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 z-40 hidden lg:flex lg:flex-col">
-      <div className="flex flex-1 flex-col overflow-y-auto">
-        <div className="flex flex-shrink-0 items-center px-4 py-6">
-          <div className="flex items-center gap-2">
-            <Zap className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">CatalogoAI</span>
-          </div>
-        </div>
-        
-        <nav className="flex-1 space-y-1 px-2">
-          {navigation.map((item) => (
-            <ProtectedMenuItem
-              key={item.name}
-              name={item.name}
-              href={item.href}
-              icon={item.icon}
-              benefitKey={(item as any).benefitKey}
-              requiresPremium={(item as any).requiresPremium}
-            />
-          ))}
-        </nav>
-
-        {/* Perfil do usuário no footer da sidebar */}
-        <SidebarUserProfile />
+    <div className="flex flex-col h-full bg-gray-50 border-r py-4">
+      <div className="px-4 mb-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full text-left">
+              <div className="flex items-center space-x-3">
+                <Avatar className="h-8 w-8">
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                  ) : (
+                    <>
+                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {isLoading ? <Skeleton className="h-4 w-24" /> : profile?.name || "Carregando..."}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isLoading ? <Skeleton className="h-4 w-16" /> : profile?.email || "Carregando..."}
+                  </p>
+                </div>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-80 pt-1" align="start">
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
+              Configurações
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <div className="space-y-1">
+        {menuItems.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => navigate(item.href)}
+            className={cn(
+              "flex items-center space-x-2 px-4 py-2 hover:bg-gray-200 rounded-md w-full",
+              item.isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+            )}
+          >
+            <item.icon className="w-4 h-4" />
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {profile?.role === 'superadmin' && (
+        <>
+          <hr className="my-4 border-gray-200" />
+          <div className="space-y-1">
+            {adminMenuItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.href)}
+                className={cn(
+                  "flex items-center space-x-2 px-4 py-2 hover:bg-gray-200 rounded-md w-full",
+                  item.isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

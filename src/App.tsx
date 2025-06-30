@@ -1,62 +1,80 @@
-
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Auth from '@/pages/Auth';
-import Index from '@/pages/Index';
-import Products from '@/pages/Products';
-import OrdersImproved from '@/pages/OrdersImproved';
-import Coupons from '@/pages/Coupons';
-import Deliveries from '@/pages/Deliveries';
-import Shipping from '@/pages/Shipping';
-import Reports from '@/pages/Reports';
-import Settings from '@/pages/Settings';
-import Billing from '@/pages/Billing';
-import UserManagement from '@/pages/UserManagement';
-import Categories from '@/pages/Categories';
-import Customers from '@/pages/Customers';
-import Catalog from '@/pages/Catalog';
-import PaymentSuccess from '@/pages/PaymentSuccess';
-import PaymentFailure from '@/pages/PaymentFailure';
-import PaymentPending from '@/pages/PaymentPending';
-import NotFound from '@/pages/NotFound';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import ProtectedCoupons from '@/pages/ProtectedCoupons';
-import ProtectedReports from '@/pages/ProtectedReports';
-import ProtectedDeliveries from '@/pages/ProtectedDeliveries';
-import VisualEditor from '@/components/editor/VisualEditor';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { navItems } from "./nav-items";
+import Auth from './pages/Auth';
+import Index from './pages/Index';
+import Products from './pages/Products';
+import VariationGroups from './pages/VariationGroups';
+import Categories from './pages/Categories';
+import OrdersImproved from './pages/OrdersImproved';
+import ProtectedCoupons from './pages/ProtectedCoupons';
+import ProtectedDeliveries from './pages/ProtectedDeliveries';
+import Customers from './pages/Customers';
+import ProtectedReports from './pages/ProtectedReports';
+import Settings from './pages/Settings';
+import Billing from './pages/Billing';
+import Stores from './pages/Stores';
+import UserManagement from './pages/UserManagement';
+import PlanManagement from './pages/PlanManagement';
+import GlobalIntegrations from './pages/GlobalIntegrations';
+import Shipping from './pages/Shipping';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentFailure from './pages/PaymentFailure';
+import PaymentPending from './pages/PaymentPending';
+import NotFound from './pages/NotFound';
+import ResponsiveAppLayout from './components/layout/ResponsiveAppLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import PublicCatalog from './components/catalog/PublicCatalog';
 
-import Stores from '@/pages/Stores';
-import PlanManagement from '@/pages/PlanManagement';
-import GlobalIntegrations from '@/pages/GlobalIntegrations';
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-        <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><OrdersImproved /></ProtectedRoute>} />
-        <Route path="/coupons" element={<ProtectedCoupons />} />
-        <Route path="/deliveries" element={<ProtectedDeliveries />} />
-        <Route path="/shipping" element={<ProtectedRoute><Shipping /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedReports />} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/stores" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
-        <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-        <Route path="/plan-management" element={<ProtectedRoute><PlanManagement /></ProtectedRoute>} />
-        <Route path="/global-integrations" element={<ProtectedRoute><GlobalIntegrations /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-        <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-        <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-        <Route path="/visual-editor" element={<ProtectedRoute><VisualEditor /></ProtectedRoute>} />
-        <Route path="/catalog/:storeIdentifier" element={<Catalog />} />
-        <Route path="/payment/success" element={<PaymentSuccess />} />
-        <Route path="/payment/failure" element={<PaymentFailure />} />
-        <Route path="/payment/pending" element={<PaymentPending />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+    <TooltipProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Toaster />
+          <Sonner />
+
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failure" element={<PaymentFailure />} />
+            <Route path="/payment/pending" element={<PaymentPending />} />
+            <Route path="/catalog/:storeSlug" element={<PublicCatalog />} />
+          
+            <Route element={<ProtectedRoute><ResponsiveAppLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Index />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/variation-groups" element={<VariationGroups />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/orders" element={<OrdersImproved />} />
+              <Route path="/protected-coupons" element={<ProtectedCoupons />} />
+              <Route path="/protected-deliveries" element={<ProtectedDeliveries />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/protected-reports" element={<ProtectedReports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/shipping" element={<Shipping />} />
+            
+              {/* Rotas protegidas por papel */}
+              <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
+                <Route path="/stores" element={<Stores />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/plan-management" element={<PlanManagement />} />
+                <Route path="/global-integrations" element={<GlobalIntegrations />} />
+              </Route>
+            </Route>
+          
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </TooltipProvider>
   );
 }
 

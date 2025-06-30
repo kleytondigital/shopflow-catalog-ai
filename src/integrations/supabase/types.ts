@@ -1367,6 +1367,80 @@ export type Database = {
           },
         ]
       }
+      variation_master_groups: {
+        Row: {
+          attribute_key: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_key: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_key?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      variation_master_values: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          group_id: string
+          hex_color: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          group_id: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          group_id?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variation_master_values_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "variation_master_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_integrations: {
         Row: {
           connection_status: string | null
