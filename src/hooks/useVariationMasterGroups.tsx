@@ -1,7 +1,6 @@
-
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export interface VariationMasterGroup {
   id: string;
@@ -34,17 +33,18 @@ export const useVariationMasterGroups = () => {
   const fetchGroups = async () => {
     try {
       const { data, error } = await supabase
-        .from('variation_master_groups')
-        .select('*')
-        .order('display_order', { ascending: true });
+        .from("variation_master_groups")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) throw error;
       setGroups(data || []);
     } catch (error) {
-      console.error('Erro ao buscar grupos:', error);
+      console.error("Erro ao buscar grupos:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os grupos de variações",
+        description: "Não foi possível carregar os grupos de variação",
         variant: "destructive",
       });
     }
@@ -53,34 +53,57 @@ export const useVariationMasterGroups = () => {
   const fetchValues = async () => {
     try {
       const { data, error } = await supabase
-        .from('variation_master_values')
-        .select('*')
-        .order('display_order', { ascending: true });
+        .from("variation_master_values")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) throw error;
       setValues(data || []);
     } catch (error) {
-      console.error('Erro ao buscar valores:', error);
+      console.error("Erro ao buscar valores:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os valores de variações",
+        description: "Não foi possível carregar os valores de variação",
         variant: "destructive",
       });
     }
   };
 
-  const createGroup = async (groupData: Omit<VariationMasterGroup, 'id' | 'created_at' | 'updated_at'>) => {
+  const createGroup = async (
+    groupData: Omit<VariationMasterGroup, "id" | "created_at" | "updated_at">
+  ) => {
     try {
       const { data, error } = await supabase
-        .from('variation_master_groups')
+        .from("variation_master_groups")
         .insert(groupData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao criar grupo:", error);
 
-      setGroups(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
-      
+        // Tratar erro específico de permissão RLS
+        if (
+          error.code === "42501" &&
+          error.message.includes("row-level security policy")
+        ) {
+          toast({
+            title: "Recurso Indisponível",
+            description:
+              "A criação de novos grupos de variação estará disponível em breve. Use os grupos existentes por enquanto.",
+            variant: "destructive",
+          });
+          return { success: false, error: "feature_unavailable" };
+        }
+
+        throw error;
+      }
+
+      setGroups((prev) =>
+        [...prev, data].sort((a, b) => a.display_order - b.display_order)
+      );
+
       toast({
         title: "Sucesso",
         description: "Grupo criado com sucesso",
@@ -88,30 +111,98 @@ export const useVariationMasterGroups = () => {
 
       return { success: true, data };
     } catch (error) {
-      console.error('Erro ao criar grupo:', error);
+      console.error("Erro ao criar grupo:", error);
+
+      const errorMessage =
+        error instanceof Error && error.message.includes("row-level security")
+          ? "Recurso temporariamente indisponível"
+          : "Não foi possível criar o grupo";
+
       toast({
         title: "Erro",
-        description: "Não foi possível criar o grupo",
+        description: errorMessage,
         variant: "destructive",
       });
       return { success: false, error };
     }
   };
 
-  const updateGroup = async (id: string, groupData: Partial<VariationMasterGroup>) => {
+  const createValue = async (
+    valueData: Omit<VariationMasterValue, "id" | "created_at" | "updated_at">
+  ) => {
     try {
       const { data, error } = await supabase
-        .from('variation_master_groups')
+        .from("variation_master_values")
+        .insert(valueData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Erro ao criar valor:", error);
+
+        // Tratar erro específico de permissão RLS
+        if (
+          error.code === "42501" &&
+          error.message.includes("row-level security policy")
+        ) {
+          toast({
+            title: "Recurso Indisponível",
+            description:
+              "A criação de novos valores de variação estará disponível em breve. Use os valores existentes por enquanto.",
+            variant: "destructive",
+          });
+          return { success: false, error: "feature_unavailable" };
+        }
+
+        throw error;
+      }
+
+      setValues((prev) =>
+        [...prev, data].sort((a, b) => a.display_order - b.display_order)
+      );
+
+      toast({
+        title: "Sucesso",
+        description: "Valor criado com sucesso",
+      });
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Erro ao criar valor:", error);
+
+      const errorMessage =
+        error instanceof Error && error.message.includes("row-level security")
+          ? "Recurso temporariamente indisponível"
+          : "Não foi possível criar o valor";
+
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return { success: false, error };
+    }
+  };
+
+  const updateGroup = async (
+    id: string,
+    groupData: Partial<VariationMasterGroup>
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from("variation_master_groups")
         .update(groupData)
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setGroups(prev => prev.map(group => 
-        group.id === id ? data : group
-      ).sort((a, b) => a.display_order - b.display_order));
+      setGroups((prev) =>
+        prev
+          .map((group) => (group.id === id ? data : group))
+          .sort((a, b) => a.display_order - b.display_order)
+      );
 
       toast({
         title: "Sucesso",
@@ -120,7 +211,7 @@ export const useVariationMasterGroups = () => {
 
       return { success: true, data };
     } catch (error) {
-      console.error('Erro ao atualizar grupo:', error);
+      console.error("Erro ao atualizar grupo:", error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o grupo",
@@ -133,14 +224,14 @@ export const useVariationMasterGroups = () => {
   const deleteGroup = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('variation_master_groups')
+        .from("variation_master_groups")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
 
-      setGroups(prev => prev.filter(group => group.id !== id));
-      setValues(prev => prev.filter(value => value.group_id !== id));
+      setGroups((prev) => prev.filter((group) => group.id !== id));
+      setValues((prev) => prev.filter((value) => value.group_id !== id));
 
       toast({
         title: "Sucesso",
@@ -149,7 +240,7 @@ export const useVariationMasterGroups = () => {
 
       return { success: true };
     } catch (error) {
-      console.error('Erro ao deletar grupo:', error);
+      console.error("Erro ao deletar grupo:", error);
       toast({
         title: "Erro",
         description: "Não foi possível remover o grupo",
@@ -159,49 +250,25 @@ export const useVariationMasterGroups = () => {
     }
   };
 
-  const createValue = async (valueData: Omit<VariationMasterValue, 'id' | 'created_at' | 'updated_at'>) => {
+  const updateValue = async (
+    id: string,
+    valueData: Partial<VariationMasterValue>
+  ) => {
     try {
       const { data, error } = await supabase
-        .from('variation_master_values')
-        .insert(valueData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setValues(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
-      
-      toast({
-        title: "Sucesso",
-        description: "Valor criado com sucesso",
-      });
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Erro ao criar valor:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o valor",
-        variant: "destructive",
-      });
-      return { success: false, error };
-    }
-  };
-
-  const updateValue = async (id: string, valueData: Partial<VariationMasterValue>) => {
-    try {
-      const { data, error } = await supabase
-        .from('variation_master_values')
+        .from("variation_master_values")
         .update(valueData)
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setValues(prev => prev.map(value => 
-        value.id === id ? data : value
-      ).sort((a, b) => a.display_order - b.display_order));
+      setValues((prev) =>
+        prev
+          .map((value) => (value.id === id ? data : value))
+          .sort((a, b) => a.display_order - b.display_order)
+      );
 
       toast({
         title: "Sucesso",
@@ -210,7 +277,7 @@ export const useVariationMasterGroups = () => {
 
       return { success: true, data };
     } catch (error) {
-      console.error('Erro ao atualizar valor:', error);
+      console.error("Erro ao atualizar valor:", error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o valor",
@@ -223,13 +290,13 @@ export const useVariationMasterGroups = () => {
   const deleteValue = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('variation_master_values')
+        .from("variation_master_values")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
 
-      setValues(prev => prev.filter(value => value.id !== id));
+      setValues((prev) => prev.filter((value) => value.id !== id));
 
       toast({
         title: "Sucesso",
@@ -238,7 +305,7 @@ export const useVariationMasterGroups = () => {
 
       return { success: true };
     } catch (error) {
-      console.error('Erro ao deletar valor:', error);
+      console.error("Erro ao deletar valor:", error);
       toast({
         title: "Erro",
         description: "Não foi possível remover o valor",
@@ -249,7 +316,9 @@ export const useVariationMasterGroups = () => {
   };
 
   const getValuesByGroup = (groupId: string) => {
-    return values.filter(value => value.group_id === groupId && value.is_active);
+    return values.filter(
+      (value) => value.group_id === groupId && value.is_active
+    );
   };
 
   useEffect(() => {
@@ -263,7 +332,7 @@ export const useVariationMasterGroups = () => {
   }, []);
 
   return {
-    groups: groups.filter(g => g.is_active),
+    groups: groups.filter((g) => g.is_active),
     values,
     loading,
     createGroup,
@@ -273,6 +342,6 @@ export const useVariationMasterGroups = () => {
     updateValue,
     deleteValue,
     getValuesByGroup,
-    refetch: () => Promise.all([fetchGroups(), fetchValues()])
+    refetch: () => Promise.all([fetchGroups(), fetchValues()]),
   };
 };

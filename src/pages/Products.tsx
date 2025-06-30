@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import ProductList from "@/components/products/ProductList";
 import ProductFormModal from "@/components/products/ProductFormModal";
 import ImprovedAIToolsModal from "@/components/products/ImprovedAIToolsModal";
+import TestStoreVariations from "@/components/variations/TestStoreVariations";
 import { useProducts } from "@/hooks/useProducts";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types/product";
@@ -149,6 +150,9 @@ const Products = () => {
 
   return (
     <div className="space-y-6">
+      {/* Componente de teste do sistema de variações */}
+      <TestStoreVariations />
+
       {/* Header com ações */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -194,26 +198,6 @@ const Products = () => {
           onDescriptionGenerated={(description) => {
             console.log("Descrição gerada:", description);
             handleAIContentApply({ description });
-          }}
-          onTitleGenerated={(title) => {
-            console.log("Título gerado:", title);
-            handleAIContentApply({ title });
-          }}
-          onTagsGenerated={(tags) => {
-            console.log("Tags geradas:", tags);
-            handleAIContentApply({ tags });
-          }}
-          onAdCopyGenerated={(adCopy) => {
-            console.log("Texto publicitário gerado:", adCopy);
-            handleAIContentApply({ adCopy });
-          }}
-          onSocialMediaGenerated={(socialMedia) => {
-            console.log("Conteúdo redes sociais gerado:", socialMedia);
-            handleAIContentApply({ socialMedia });
-          }}
-          onSeoGenerated={(seo) => {
-            console.log("SEO gerado:", seo);
-            handleAIContentApply({ seo });
           }}
         />
       )}

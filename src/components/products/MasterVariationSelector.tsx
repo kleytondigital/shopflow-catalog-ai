@@ -15,8 +15,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useVariationMasterGroups } from "@/hooks/useVariationMasterGroups";
-import QuickValueAdd from "@/components/variations/QuickValueAdd";
+import { useStoreVariations } from "@/hooks/useStoreVariations";
+import StoreQuickValueAdd from "@/components/variations/StoreQuickValueAdd";
 import { ProductVariation } from "@/types/variation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -29,7 +29,7 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
   variations,
   onVariationsChange,
 }) => {
-  const { groups, values, loading, refetch } = useVariationMasterGroups();
+  const { groups, values, loading, refetch } = useStoreVariations();
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedValues, setSelectedValues] = useState<{
     [groupId: string]: string[];
@@ -150,7 +150,12 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
   };
 
   const generateAllCombinations = () => {
+    console.log("🚀 Iniciando geração de combinações");
+    console.log("📊 Grupos selecionados:", selectedGroups);
+    console.log("📊 Valores selecionados:", selectedValues);
+
     if (selectedGroups.length === 0) {
+      console.log("❌ Nenhum grupo selecionado");
       onVariationsChange([]);
       return;
     }
@@ -161,6 +166,8 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
       // Um grupo apenas - cada valor é uma variação
       const groupId = selectedGroups[0];
       const groupValues = selectedValues[groupId] || [];
+      console.log("📝 Modo um grupo:", groupId, "valores:", groupValues);
+
       groupValues.forEach((valueId) => {
         const value = values.find((v) => v.id === valueId);
         if (value) {
@@ -178,6 +185,8 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
           })
           .filter(Boolean);
       });
+
+      console.log("📝 Valores por grupo:", valuesByGroup);
 
       const cartesianProduct = (arr: string[][]): string[][] => {
         return arr.reduce(
@@ -199,6 +208,8 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
       }
     }
 
+    console.log("🎯 Combinações geradas:", groupCombinations);
+
     const newVariations: ProductVariation[] = groupCombinations.map(
       (combination, index) => {
         const variationKey = combination.join(" - ");
@@ -216,11 +227,10 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
             .toString(36)
             .substr(2, 9)}`;
 
-        return {
+        // Mapear corretamente os valores para os atributos baseado nos grupos selecionados
+        const newVariation: ProductVariation = {
           id: uniqueId,
           variation_type: "master",
-          color: combination.length > 0 ? combination[0] : undefined,
-          size: combination.length > 1 ? combination[1] : undefined,
           stock: existingVariation?.stock || 0,
           price_adjustment: existingVariation?.price_adjustment || 0,
           is_active: existingVariation?.is_active ?? true,
@@ -228,9 +238,45 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
           image_url: existingVariation?.image_url || null,
           image_file: existingVariation?.image_file || null,
         };
+
+        // Mapear cada valor da combinação para o atributo correto
+        selectedGroups.forEach((groupId, groupIndex) => {
+          const group = groups.find((g) => g.id === groupId);
+          const value = combination[groupIndex];
+
+          if (group && value) {
+            switch (group.attribute_key) {
+              case "color":
+                newVariation.color = value;
+                // Buscar hex_color se disponível
+                const colorValue = values.find(
+                  (v) => v.group_id === groupId && v.value === value
+                );
+                if (colorValue?.hex_color) {
+                  newVariation.hex_color = colorValue.hex_color;
+                }
+                break;
+              case "size":
+                newVariation.size = value;
+                break;
+              case "material":
+                newVariation.material = value;
+                break;
+              default:
+                // Para outros tipos de variação
+                if (!newVariation.variation_value) {
+                  newVariation.variation_value = value;
+                }
+                break;
+            }
+          }
+        });
+
+        return newVariation;
       }
     );
 
+    console.log("✅ Variações finais:", newVariations);
     onVariationsChange(newVariations);
   };
 
@@ -357,7 +403,7 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
                       {getGroupIcon(group.attribute_key)}
                       {group.name}
                     </div>
-                    <QuickValueAdd
+                    <StoreQuickValueAdd
                       group={group}
                       onValueAdded={handleValueAdded}
                     />
@@ -443,7 +489,7 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
             <h4 className="font-medium">
               {manualMode
                 ? "4. Gerencie suas variações"
-                : "4. Configure o estoque para cada variação"}
+                : "4. Gere as combinações automaticamente"}
             </h4>
             {manualMode && (
               <Button onClick={addSpecificCombination} size="sm">
@@ -453,13 +499,41 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
             )}
           </div>
 
+          {/* Botão para gerar combinações no modo automático */}
+          {!manualMode && selectedGroups.length > 0 && (
+            <div className="space-y-4">
+              <Button
+                onClick={generateAllCombinations}
+                className="w-full"
+                disabled={selectedGroups.some(
+                  (groupId) =>
+                    !selectedValues[groupId] ||
+                    selectedValues[groupId].length === 0
+                )}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Gerar Todas as Combinações (
+                {selectedGroups.reduce((total, groupId) => {
+                  const groupValueCount = selectedValues[groupId]?.length || 0;
+                  return total === 0
+                    ? groupValueCount
+                    : total * groupValueCount;
+                }, 0)}{" "}
+                variações)
+              </Button>
+              <p className="text-sm text-muted-foreground text-center">
+                Todas as combinações possíveis serão criadas automaticamente
+              </p>
+            </div>
+          )}
+
           {variations.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">
                   {manualMode
                     ? 'Clique em "Adicionar Variação" para criar suas combinações específicas'
-                    : "Selecione valores nos grupos acima para gerar as variações automaticamente"}
+                    : "Selecione valores nos grupos acima e clique em 'Gerar Todas as Combinações'"}
                 </p>
               </CardContent>
             </Card>

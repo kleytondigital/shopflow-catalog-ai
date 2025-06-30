@@ -81,3 +81,99 @@
         -webkit-line-clamp: 3;
     }
 }
+
+
+/* Estilos customizados para a página de login */
+
+.bg-grid-white {
+    background-image: url("data:image/svg+xml,%3csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cpattern id='grid' width='20' height='20' patternUnits='userSpaceOnUse'%3e%3cpath d='M 20 0 L 0 0 0 20' fill='none' stroke='white' stroke-width='0.5' opacity='0.1'/%3e%3c/pattern%3e%3c/defs%3e%3crect width='100%25' height='100%25' fill='url(%23grid)' /%3e%3c/svg%3e");
+}
+
+
+/* Animações suaves para os elementos de login */
+
+.auth-form-animate {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Hover effects para inputs */
+
+.auth-input:focus {
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+
+/* Efeito de gradient para botões */
+
+.auth-button {
+    background: linear-gradient(135deg, #000000 0%, #333333 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.auth-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Responsividade melhorada */
+
+@media (max-width: 640px) {
+    .auth-container {
+        padding: 1rem;
+    }
+}
+
+
+/* Estilos do dashboard existentes */
+
+.dashboard-card-isolated {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.dashboard-header-isolated {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.dashboard-stats-grid-isolated {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dashboard-chart-container-isolated {
+    height: 300px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .dashboard-stats-grid-isolated {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-card-isolated {
+        padding: 16px;
+    }
+}

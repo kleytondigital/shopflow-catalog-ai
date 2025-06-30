@@ -43,7 +43,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   const { variations, loading: variationsLoading } = useProductVariations(
     editingProduct?.id
   );
-  const { clearImages } = useSimpleDraftImages();
+  const { clearImages, uploadNewImages } = useSimpleDraftImages();
 
   // Ref para evitar múltiplas chamadas
   const loadedProductRef = useRef<string | null>(null);
@@ -121,6 +121,14 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
         if (imageUploadFunctionRef.current) {
           console.log("📤 Fazendo upload das imagens para produto:", productId);
           await imageUploadFunctionRef.current(productId);
+        }
+
+        // Para edição, usar uploadNewImages que preserva imagens existentes
+        if (editingProduct?.id) {
+          console.log(
+            "📤 Fazendo upload de novas imagens (preservando existentes)"
+          );
+          await uploadNewImages(productId);
         }
       };
 
