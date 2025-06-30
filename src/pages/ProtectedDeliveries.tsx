@@ -1,58 +1,93 @@
-
-import React from 'react';
-import { BenefitGate } from '@/components/billing/BenefitGate';
-import AppLayout from '@/components/layout/AppLayout';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Truck, Package, MapPin, Clock } from "lucide-react";
 
 const ProtectedDeliveries = () => {
-  const breadcrumbs = [
-    { href: '/', label: 'Dashboard' },
-    { label: 'Entrega', current: true }
-  ];
-
   return (
-    <AppLayout 
-      title="Gestão de Entregas"
-      subtitle="Configure opções de frete e entrega"
-      breadcrumbs={breadcrumbs}
-    >
-      <BenefitGate 
-        benefitKey="shipping_calculator"
-        customMessage="A calculadora de frete está disponível apenas no plano Premium. Automatize o cálculo de frete para seus clientes!"
-      >
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border p-6">
-            <h3 className="text-lg font-medium mb-4">Calculadora de Frete</h3>
-            <p className="text-gray-600 mb-4">
-              Configure as opções de entrega e cálculo automático de frete para seus clientes.
-            </p>
-            <div className="space-y-4">
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-2">Correios</h4>
-                <p className="text-sm text-gray-600">Integração com API dos Correios para cálculo automático</p>
-              </div>
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-2">Frete Fixo</h4>
-                <p className="text-sm text-gray-600">Configure um valor fixo para toda sua região</p>
-              </div>
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-2">Retirada na Loja</h4>
-                <p className="text-sm text-gray-600">Permita que clientes retirem pedidos na sua loja</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Gestão de Entregas</h1>
+        <p className="text-muted-foreground">
+          Gerencie suas entregas e logística
+        </p>
+      </div>
 
-          <div className="bg-white rounded-lg border p-6">
-            <h3 className="text-lg font-medium mb-4">Zonas de Entrega</h3>
-            <p className="text-gray-600 mb-4">
-              Defina diferentes regiões e valores de entrega para otimizar seus custos logísticos.
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Entregas Pendentes
+            </CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">+2 desde ontem</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Em Trânsito</CardTitle>
+            <Truck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">8</div>
+            <p className="text-xs text-muted-foreground">+1 desde ontem</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Entregues Hoje
+            </CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">15</div>
+            <p className="text-xs text-muted-foreground">+5 desde ontem</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">2.4h</div>
+            <p className="text-xs text-muted-foreground">-0.3h desde ontem</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Entregas</CardTitle>
+          <CardDescription>
+            Acompanhe o status de todas as entregas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">
+              Sistema de entregas em desenvolvimento
             </p>
-            <div className="border rounded-lg p-4 text-center">
-              <p className="text-gray-600">Configure suas zonas de entrega e valores específicos por região</p>
-            </div>
+            <Button className="mt-4" disabled>
+              Configurar Entregas
+            </Button>
           </div>
-        </div>
-      </BenefitGate>
-    </AppLayout>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

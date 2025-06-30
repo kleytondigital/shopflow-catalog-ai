@@ -1,12 +1,16 @@
-
-import React, { useEffect, useRef, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useSimpleProductWizard } from '@/hooks/useSimpleProductWizard';
-import { useProductVariations } from '@/hooks/useProductVariations';
-import { useSimpleDraftImages } from '@/hooks/useSimpleDraftImages';
-import ImprovedWizardStepNavigation from './wizard/ImprovedWizardStepNavigation';
-import WizardStepContent from './wizard/WizardStepContent';
-import ImprovedWizardActionButtons from './wizard/ImprovedWizardActionButtons';
+import React, { useEffect, useRef, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useSimpleProductWizard } from "@/hooks/useSimpleProductWizard";
+import { useProductVariations } from "@/hooks/useProductVariations";
+import { useSimpleDraftImages } from "@/hooks/useSimpleDraftImages";
+import ImprovedWizardStepNavigation from "./wizard/ImprovedWizardStepNavigation";
+import WizardStepContent from "./wizard/WizardStepContent";
+import ImprovedWizardActionButtons from "./wizard/ImprovedWizardActionButtons";
 
 interface SimpleProductWizardProps {
   isOpen: boolean;
@@ -19,7 +23,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   isOpen,
   onClose,
   editingProduct,
-  onSuccess
+  onSuccess,
 }) => {
   const {
     currentStep,
@@ -33,20 +37,28 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
     saveProduct,
     resetForm,
     loadProductData,
-    canProceed
+    canProceed,
   } = useSimpleProductWizard();
 
-  const { variations, loading: variationsLoading } = useProductVariations(editingProduct?.id);
+  const { variations, loading: variationsLoading } = useProductVariations(
+    editingProduct?.id
+  );
   const { clearImages } = useSimpleDraftImages();
-  
+
   // Ref para evitar múltiplas chamadas
   const loadedProductRef = useRef<string | null>(null);
-  const imageUploadFunctionRef = useRef<((productId: string) => Promise<string[]>) | null>(null);
+  const imageUploadFunctionRef = useRef<
+    ((productId: string) => Promise<string[]>) | null
+  >(null);
 
   // Carregar dados do produto para edição
   useEffect(() => {
-    if (editingProduct && isOpen && loadedProductRef.current !== editingProduct.id) {
-      console.log('📂 Carregando produto para edição:', editingProduct.name);
+    if (
+      editingProduct &&
+      isOpen &&
+      loadedProductRef.current !== editingProduct.id
+    ) {
+      console.log("📂 Carregando produto para edição:", editingProduct.name);
       loadProductData(editingProduct);
       loadedProductRef.current = editingProduct.id;
     }
@@ -55,25 +67,36 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   // Carregar variações existentes
   useEffect(() => {
     if (variations && variations.length > 0 && !variationsLoading) {
-      const formattedVariations = variations.map(variation => ({
+      console.log("🎨 Carregando variações existentes:", variations.length);
+
+      const formattedVariations = variations.map((variation) => ({
         id: variation.id,
-        color: variation.color || '',
-        size: variation.size || '',
-        sku: variation.sku || '',
+        color: variation.color || "",
+        size: variation.size || "",
+        sku: variation.sku || "",
         stock: variation.stock,
         price_adjustment: variation.price_adjustment,
         is_active: variation.is_active,
-        image_url: variation.image_url || ''
+        image_url: variation.image_url || "",
       }));
-      
+
+      console.log("🎨 Variações formatadas:", formattedVariations);
       updateFormData({ variations: formattedVariations });
+    } else if (
+      editingProduct &&
+      !variationsLoading &&
+      variations?.length === 0
+    ) {
+      // Se está editando um produto mas não há variações, limpar o array
+      console.log("🎨 Produto sem variações, limpando array");
+      updateFormData({ variations: [] });
     }
-  }, [variations, variationsLoading, updateFormData]);
+  }, [variations, variationsLoading, updateFormData, editingProduct?.id]);
 
   // Limpar form ao fechar
   useEffect(() => {
     if (!isOpen && loadedProductRef.current) {
-      console.log('🧹 Limpando dados do wizard');
+      console.log("🧹 Limpando dados do wizard");
       resetForm();
       clearImages();
       loadedProductRef.current = null;
@@ -82,33 +105,36 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   }, [isOpen, resetForm, clearImages]);
 
   // Callback para receber a função de upload do componente de imagens
-  const handleImageUploadReady = useCallback((uploadFn: (productId: string) => Promise<string[]>) => {
-    imageUploadFunctionRef.current = uploadFn;
-  }, []);
+  const handleImageUploadReady = useCallback(
+    (uploadFn: (productId: string) => Promise<string[]>) => {
+      imageUploadFunctionRef.current = uploadFn;
+    },
+    []
+  );
 
   const handleSave = async () => {
     try {
-      console.log('💾 Iniciando salvamento do produto');
-      
+      console.log("💾 Iniciando salvamento do produto");
+
       // Função para fazer upload das imagens após salvar o produto
       const imageUploadFn = async (productId: string) => {
         if (imageUploadFunctionRef.current) {
-          console.log('📤 Fazendo upload das imagens para produto:', productId);
+          console.log("📤 Fazendo upload das imagens para produto:", productId);
           await imageUploadFunctionRef.current(productId);
         }
       };
 
       const productId = await saveProduct(editingProduct?.id, imageUploadFn);
-      
+
       if (productId) {
-        console.log('✅ Produto salvo com sucesso:', productId);
+        console.log("✅ Produto salvo com sucesso:", productId);
         if (onSuccess) {
           onSuccess();
         }
         onClose();
       }
     } catch (error) {
-      console.error('💥 Erro durante salvamento:', error);
+      console.error("💥 Erro durante salvamento:", error);
     }
   };
 
@@ -118,20 +144,20 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   };
 
   const isLastStep = currentStep === steps.length - 1;
-  
+
   // Calcular steps completados
   const completedSteps: number[] = [];
-  
+
   // Step 0: Básico - precisa de nome
-  if ((formData.name || '').trim().length > 0) {
+  if ((formData.name || "").trim().length > 0) {
     completedSteps.push(0);
   }
-  
+
   // Step 1: Preços - precisa de preço válido e estoque >= 0
   if (formData.retail_price > 0 && formData.stock >= 0) {
     completedSteps.push(1);
   }
-  
+
   // Steps 2-5 sempre podem ser completados (opcionais)
   completedSteps.push(2, 3, 4, 5);
 
@@ -140,7 +166,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       <DialogContent className="max-w-5xl w-full max-h-[95vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-xl font-semibold">
-            {editingProduct ? `Editar: ${editingProduct.name}` : 'Novo Produto'}
+            {editingProduct ? `Editar: ${editingProduct.name}` : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
@@ -150,7 +176,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
             steps={steps}
             currentStep={currentStep}
             onStepClick={goToStep}
-            completedSteps={completedSteps.filter(step => step < currentStep)}
+            completedSteps={completedSteps.filter((step) => step < currentStep)}
           />
 
           {/* Conteúdo do Step */}

@@ -1,11 +1,10 @@
-
-import React from 'react';
-import ProductBasicInfoForm from './ProductBasicInfoForm';
-import ProductPricingForm from './ProductPricingForm';
-import ProductVariationsForm from './ProductVariationsForm';
-import SimpleImageUpload from '../SimpleImageUpload';
-import ProductSeoForm from './ProductSeoForm';
-import ProductAdvancedForm from './ProductAdvancedForm';
+import React from "react";
+import ProductBasicInfoForm from "./ProductBasicInfoForm";
+import ProductPricingForm from "./ProductPricingForm";
+import ProductVariationsForm from "./ProductVariationsForm";
+import SimpleImageUpload from "../SimpleImageUpload";
+import ProductSeoForm from "./ProductSeoForm";
+import ProductAdvancedForm from "./ProductAdvancedForm";
 
 // Interface genérica para compatibilidade com todos os wizards
 interface GenericProductFormData {
@@ -32,7 +31,9 @@ interface WizardStepContentProps {
   formData: GenericProductFormData;
   updateFormData: (updates: Partial<GenericProductFormData>) => void;
   productId?: string;
-  onImageUploadReady?: (uploadFn: (productId: string) => Promise<string[]>) => void;
+  onImageUploadReady?: (
+    uploadFn: (productId: string) => Promise<string[]>
+  ) => void;
 }
 
 const WizardStepContent: React.FC<WizardStepContentProps> = ({
@@ -40,28 +41,28 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   formData,
   updateFormData,
   productId,
-  onImageUploadReady
+  onImageUploadReady,
 }) => {
   // Garantir valores padrão para propriedades que podem estar ausentes
   const safeFormData = {
     ...formData,
     min_wholesale_qty: formData.min_wholesale_qty ?? 1,
-    category: formData.category || '',
-    keywords: formData.keywords || '',
-    meta_title: formData.meta_title || '',
-    meta_description: formData.meta_description || '',
-    seo_slug: formData.seo_slug || '',
+    category: formData.category || "",
+    keywords: formData.keywords || "",
+    meta_title: formData.meta_title || "",
+    meta_description: formData.meta_description || "",
+    seo_slug: formData.seo_slug || "",
     is_featured: formData.is_featured || false,
     allow_negative_stock: formData.allow_negative_stock || false,
     stock_alert_threshold: formData.stock_alert_threshold || 5,
-    store_id: formData.store_id || ''
+    store_id: formData.store_id || "",
   };
 
-  console.log('🧙‍♂️ WIZARD STEP CONTENT - Renderizando:', {
+  console.log("🧙‍♂️ WIZARD STEP CONTENT - Renderizando:", {
     currentStep,
     productId,
     formDataName: formData.name,
-    variationsCount: formData.variations?.length || 0
+    variationsCount: formData.variations?.length || 0,
   });
 
   switch (currentStep) {
@@ -72,7 +73,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           updateFormData={updateFormData}
         />
       );
-      
+
     case 1: // Preços e Estoque
       return (
         <ProductPricingForm
@@ -80,7 +81,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           updateFormData={updateFormData}
         />
       );
-      
+
     case 2: // Imagens
       return (
         <SimpleImageUpload
@@ -88,16 +89,16 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           onUploadReady={onImageUploadReady}
         />
       );
-      
-    case 3: // Variações - Corrigindo o passe do productId
+
+    case 3: // Variações
       return (
         <ProductVariationsForm
           variations={formData.variations || []}
           onVariationsChange={(variations) => updateFormData({ variations })}
-          productId={productId} // Passando productId corretamente
+          productId={productId}
         />
       );
-      
+
     case 4: // SEO
       return (
         <ProductSeoForm
@@ -105,7 +106,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           updateFormData={updateFormData}
         />
       );
-      
+
     case 5: // Avançado
       return (
         <ProductAdvancedForm
@@ -113,7 +114,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           updateFormData={updateFormData}
         />
       );
-      
+
     default:
       return (
         <div className="text-center p-8">

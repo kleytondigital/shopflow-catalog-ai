@@ -1,25 +1,45 @@
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useStores, CreateStoreData } from "@/hooks/useStores";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useStores, CreateStoreData } from '@/hooks/useStores';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import AppLayout from '@/components/layout/AppLayout';
-import StoreForm from '@/components/stores/StoreForm';
-import { Store, Plus, Search, Filter, MoreHorizontal, ExternalLink, Edit } from 'lucide-react';
+import StoreForm from "@/components/stores/StoreForm";
+import {
+  Store,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  ExternalLink,
+  Edit,
+} from "lucide-react";
 
 const Stores = () => {
-  const { stores, loading, createStore } = useStores();
+  const { stores, loading, createStore, updateStore, deleteStore } =
+    useStores();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [showStoreForm, setShowStoreForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [editingStore, setEditingStore] = useState(null);
 
   const handleCreateStore = async (storeData: CreateStoreData) => {
     if (!profile?.id) {
@@ -33,7 +53,7 @@ const Stores = () => {
 
     const dataWithOwner: CreateStoreData = {
       ...storeData,
-      owner_id: profile.id
+      owner_id: profile.id,
     };
 
     const { error } = await createStore(dataWithOwner);
@@ -52,30 +72,36 @@ const Stores = () => {
     }
   };
 
-  const filteredStores = stores.filter(store => {
-    const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         store.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         store.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && store.is_active) ||
-                         (statusFilter === 'inactive' && !store.is_active);
-    
+  const filteredStores = stores.filter((store) => {
+    const matchesSearch =
+      store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      store.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      store.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && store.is_active) ||
+      (statusFilter === "inactive" && !store.is_active);
+
     return matchesSearch && matchesStatus;
   });
 
   const breadcrumbs = [
-    { href: '/', label: 'Dashboard' },
-    { label: 'Gestão de Lojas', current: true }
+    { href: "/", label: "Dashboard" },
+    { label: "Gestão de Lojas", current: true },
   ];
 
-  if (profile?.role !== 'superadmin') {
+  if (profile?.role !== "superadmin") {
     return (
       <AppLayout title="Acesso Negado">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Acesso Negado</h2>
-            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Acesso Negado
+            </h2>
+            <p className="text-gray-600">
+              Você não tem permissão para acessar esta página.
+            </p>
           </div>
         </div>
       </AppLayout>
@@ -83,7 +109,7 @@ const Stores = () => {
   }
 
   return (
-    <AppLayout 
+    <AppLayout
       title="Gestão de Lojas"
       subtitle="Gerencie todas as lojas do sistema"
       breadcrumbs={breadcrumbs}
@@ -138,7 +164,9 @@ const Stores = () => {
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <div>
                   <p className="text-sm text-gray-600">Lojas Ativas</p>
-                  <p className="text-2xl font-bold">{stores.filter(s => s.is_active).length}</p>
+                  <p className="text-2xl font-bold">
+                    {stores.filter((s) => s.is_active).length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -149,7 +177,9 @@ const Stores = () => {
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                 <div>
                   <p className="text-sm text-gray-600">Lojas Inativas</p>
-                  <p className="text-2xl font-bold">{stores.filter(s => !s.is_active).length}</p>
+                  <p className="text-2xl font-bold">
+                    {stores.filter((s) => !s.is_active).length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -159,7 +189,10 @@ const Stores = () => {
               <div>
                 <p className="text-sm text-gray-600">Receita Mensal</p>
                 <p className="text-2xl font-bold">
-                  R$ {stores.reduce((sum, store) => sum + (store.monthly_fee || 0), 0).toFixed(2)}
+                  R${" "}
+                  {stores
+                    .reduce((sum, store) => sum + (store.monthly_fee || 0), 0)
+                    .toFixed(2)}
                 </p>
               </div>
             </CardContent>
@@ -180,27 +213,38 @@ const Stores = () => {
             ) : filteredStores.length > 0 ? (
               <div className="space-y-4">
                 {filteredStores.map((store) => (
-                  <div key={store.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={store.id}
+                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">{store.name}</h3>
-                          <Badge variant={store.is_active ? "default" : "secondary"}>
+                          <h3 className="font-semibold text-lg">
+                            {store.name}
+                          </h3>
+                          <Badge
+                            variant={store.is_active ? "default" : "secondary"}
+                          >
                             {store.is_active ? "Ativa" : "Inativa"}
                           </Badge>
                           <Badge variant="outline">{store.plan_type}</Badge>
                           {store.url_slug && (
-                            <Button variant="ghost" size="sm" className="gap-1 text-blue-600">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-blue-600"
+                            >
                               <ExternalLink className="h-3 w-3" />
                               {store.url_slug}
                             </Button>
                           )}
                         </div>
-                        
+
                         <p className="text-gray-600 mb-2">
                           {store.description || "Sem descrição"}
                         </p>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-gray-500">Email:</span>
@@ -215,17 +259,29 @@ const Stores = () => {
                             <p>{store.cnpj || "Não informado"}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
                           <span>ID: {store.id.slice(0, 8)}...</span>
-                          <span>Criada: {new Date(store.created_at).toLocaleDateString('pt-BR')}</span>
-                          <span>Atualizada: {new Date(store.updated_at).toLocaleDateString('pt-BR')}</span>
+                          <span>
+                            Criada:{" "}
+                            {new Date(store.created_at).toLocaleDateString(
+                              "pt-BR"
+                            )}
+                          </span>
+                          <span>
+                            Atualizada:{" "}
+                            {new Date(store.updated_at).toLocaleDateString(
+                              "pt-BR"
+                            )}
+                          </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 ml-4">
                         <div className="text-right">
-                          <p className="font-semibold">R$ {(store.monthly_fee || 0).toFixed(2)}</p>
+                          <p className="font-semibold">
+                            R$ {(store.monthly_fee || 0).toFixed(2)}
+                          </p>
                           <p className="text-sm text-gray-500">mensais</p>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -238,10 +294,9 @@ const Stores = () => {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm || statusFilter !== 'all' 
+                {searchTerm || statusFilter !== "all"
                   ? "Nenhuma loja encontrada com os filtros aplicados."
-                  : "Nenhuma loja cadastrada ainda."
-                }
+                  : "Nenhuma loja cadastrada ainda."}
               </div>
             )}
           </CardContent>
@@ -253,7 +308,10 @@ const Stores = () => {
             <DialogHeader>
               <DialogTitle>Nova Loja</DialogTitle>
             </DialogHeader>
-            <StoreForm onSubmit={handleCreateStore} onCancel={() => setShowStoreForm(false)} />
+            <StoreForm
+              onSubmit={handleCreateStore}
+              onCancel={() => setShowStoreForm(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>

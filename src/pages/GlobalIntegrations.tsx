@@ -1,78 +1,90 @@
-
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
-import AppLayout from '@/components/layout/AppLayout';
-import { N8NWebhooksManager } from '@/components/admin/N8NWebhooksManager';
-import { TenantMonitoringDashboard } from '@/components/admin/TenantMonitoringDashboard';
+import React from "react";
+import { Settings, Zap, Shield } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const GlobalIntegrations = () => {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState("webhooks");
 
-  if (profile?.role !== 'superadmin') {
+  if (profile?.role !== "superadmin") {
     return (
-      <AppLayout title="Acesso Negado">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Acesso Negado</h2>
-            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Acesso Negado
+          </h2>
+          <p className="text-gray-600">
+            Você não tem permissão para acessar esta página.
+          </p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
-  const breadcrumbs = [
-    { href: '/', label: 'Dashboard' },
-    { label: 'Integrações Globais', current: true }
-  ];
-
   return (
-    <AppLayout 
-      title="Integrações Globais"
-      subtitle="Configure integrações, webhooks e monitore o sistema multi-tenant"
-      breadcrumbs={breadcrumbs}
-    >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="webhooks">Webhooks N8N</TabsTrigger>
-          <TabsTrigger value="monitoring">Monitoramento</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="integrations">Outras Integrações</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="webhooks" className="mt-6">
-          <N8NWebhooksManager />
-        </TabsContent>
-        
-        <TabsContent value="monitoring" className="mt-6">
-          <TenantMonitoringDashboard />
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Analytics em Desenvolvimento
-            </h3>
-            <p className="text-gray-600">
-              Dashboard de analytics e métricas detalhadas será implementado em breve.
-            </p>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="integrations" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Outras Integrações
-            </h3>
-            <p className="text-gray-600">
-              Configurações para Zapier, APIs externas e outras integrações serão adicionadas aqui.
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </AppLayout>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Integrações Globais</h1>
+        <p className="text-muted-foreground">
+          Configure integrações que serão aplicadas a todas as lojas do sistema
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Webhooks Globais
+            </CardTitle>
+            <CardDescription>
+              Configure webhooks que serão acionados para eventos de todas as
+              lojas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button disabled>Configurar Webhooks</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Segurança
+            </CardTitle>
+            <CardDescription>
+              Configurações de segurança aplicadas a todo o sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button disabled>Configurar Segurança</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              APIs Externas
+            </CardTitle>
+            <CardDescription>
+              Configure APIs externas para todas as lojas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button disabled>Configurar APIs</Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

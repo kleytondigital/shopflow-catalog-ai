@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -7,18 +6,24 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Customer } from '@/hooks/useCustomers';
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Customer } from "@/hooks/useCustomers";
 
 interface CustomersTableProps {
   customers: Customer[];
   loading: boolean;
 }
 
-const CustomersTable: React.FC<CustomersTableProps> = ({ customers, loading }) => {
+const CustomersTable: React.FC<CustomersTableProps> = ({
+  customers,
+  loading,
+}) => {
+  // Garantir que customers seja sempre um array válido
+  const safeCustomers = customers || [];
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -31,7 +36,7 @@ const CustomersTable: React.FC<CustomersTableProps> = ({ customers, loading }) =
     );
   }
 
-  if (customers.length === 0) {
+  if (safeCustomers.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -60,14 +65,12 @@ const CustomersTable: React.FC<CustomersTableProps> = ({ customers, loading }) =
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customers.map((customer) => (
+          {safeCustomers.map((customer) => (
             <TableRow key={customer.id}>
-              <TableCell className="font-medium">
-                {customer.name}
-              </TableCell>
+              <TableCell className="font-medium">{customer.name}</TableCell>
               <TableCell>
-                <a 
-                  href={`https://wa.me/55${customer.phone.replace(/\D/g, '')}`}
+                <a
+                  href={`https://wa.me/55${customer.phone.replace(/\D/g, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-green-600 hover:text-green-800 hover:underline"
@@ -77,7 +80,7 @@ const CustomersTable: React.FC<CustomersTableProps> = ({ customers, loading }) =
               </TableCell>
               <TableCell>
                 {customer.email ? (
-                  <a 
+                  <a
                     href={`mailto:${customer.email}`}
                     className="text-blue-600 hover:text-blue-800 hover:underline"
                   >
@@ -90,13 +93,11 @@ const CustomersTable: React.FC<CustomersTableProps> = ({ customers, loading }) =
               <TableCell>
                 {formatDistanceToNow(new Date(customer.created_at), {
                   addSuffix: true,
-                  locale: ptBR
+                  locale: ptBR,
                 })}
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">
-                  Ativo
-                </Badge>
+                <Badge variant="secondary">Ativo</Badge>
               </TableCell>
             </TableRow>
           ))}

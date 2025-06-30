@@ -1,62 +1,108 @@
-
 /* Estilos isolados do Dashboard - Namespace .dashboard-container */
+
 .dashboard-container {
-  font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    width: 100%;
+    max-width: 100%;
 }
+
 
 /* Layout específico do Dashboard */
+
 .dashboard-container .dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    width: 100%;
 }
 
-@media (max-width: 768px) {
-  .dashboard-container .dashboard-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
+@media (min-width: 640px) {
+    .dashboard-container .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
 }
+
+@media (min-width: 1024px) {
+    .dashboard-container .dashboard-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-container .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
 
 /* Botões do Dashboard - Isolados */
+
 .dashboard-container .dashboard-btn-primary {
-  background: linear-gradient(135deg, #0057FF 0%, #8E2DE2 100%) !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 8px !important;
-  padding: 12px 24px !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
-  cursor: pointer !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 0.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    font-size: 0.875rem !important;
 }
 
 .dashboard-container .dashboard-btn-primary:hover {
-  background: linear-gradient(135deg, #8E2DE2 0%, #FF6F00 100%) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 10px 25px rgba(0, 87, 255, 0.3) !important;
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25) !important;
 }
 
 .dashboard-container .dashboard-btn-secondary {
-  background: transparent !important;
-  color: #0057FF !important;
-  border: 2px solid #0057FF !important;
-  border-radius: 8px !important;
-  padding: 10px 22px !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
-  cursor: pointer !important;
+    background: transparent !important;
+    color: #3b82f6 !important;
+    border: 2px solid #3b82f6 !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 1.375rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    font-size: 0.875rem !important;
 }
 
 .dashboard-container .dashboard-btn-secondary:hover {
-  background: #0057FF !important;
-  color: white !important;
+    background: #3b82f6 !important;
+    color: white !important;
 }
 
+
 /* Responsividade específica do Dashboard */
-@media (max-width: 768px) {
-  .dashboard-container .dashboard-btn-primary,
-  .dashboard-container .dashboard-btn-secondary {
-    padding: 10px 16px !important;
-    font-size: 14px !important;
-  }
+
+@media (max-width: 640px) {
+    .dashboard-container .dashboard-btn-primary,
+    .dashboard-container .dashboard-btn-secondary {
+        padding: 0.625rem 1rem !important;
+        font-size: 0.75rem !important;
+        width: 100% !important;
+    }
+}
+
+
+/* Utilitários para evitar overflow */
+
+.dashboard-container * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.dashboard-container .card-container {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 768px) {
+    .dashboard-container .card-container {
+        min-height: 160px;
+    }
 }
