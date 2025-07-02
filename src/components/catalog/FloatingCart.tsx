@@ -1,11 +1,26 @@
-
-import React, { useEffect } from 'react';
-import { ShoppingCart, Trash2, Plus, Minus, X, TrendingUp, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useCart } from '@/hooks/useCart';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import CartItemThumbnail from './checkout/CartItemThumbnail';
+import React, { useEffect } from "react";
+import {
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Minus,
+  X,
+  TrendingUp,
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useCart } from "@/hooks/useCart";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import CartItemThumbnail from "./checkout/CartItemThumbnail";
+import CartItemPriceDisplay from "./CartItemPriceDisplay";
 
 interface FloatingCartProps {
   onCheckout?: () => void;
@@ -14,16 +29,19 @@ interface FloatingCartProps {
 
 // Função utilitária para formatar valores monetários com segurança
 const formatCurrency = (value: number | undefined | null): string => {
-  if (typeof value !== 'number' || isNaN(value)) {
-    return 'R$ 0,00';
+  if (typeof value !== "number" || isNaN(value)) {
+    return "R$ 0,00";
   }
-  return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  return `R$ ${value.toFixed(2).replace(".", ",")}`;
 };
 
 // Função utilitária para calcular valores com segurança
-const safeCalculate = (a: number | undefined | null, b: number | undefined | null): number => {
-  const numA = typeof a === 'number' && !isNaN(a) ? a : 0;
-  const numB = typeof b === 'number' && !isNaN(b) ? b : 0;
+const safeCalculate = (
+  a: number | undefined | null,
+  b: number | undefined | null
+): number => {
+  const numA = typeof a === "number" && !isNaN(a) ? a : 0;
+  const numB = typeof b === "number" && !isNaN(b) ? b : 0;
   return numA * numB;
 };
 
@@ -39,13 +57,13 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
     closeCart,
     potentialSavings,
     canGetWholesalePrice,
-    itemsToWholesale
+    itemsToWholesale,
   } = useCart();
 
   useEffect(() => {
     // Aplicar cores do template
-    if (typeof document !== 'undefined') {
-      const style = document.createElement('style');
+    if (typeof document !== "undefined") {
+      const style = document.createElement("style");
       style.textContent = `
         .floating-cart-button {
           background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
@@ -84,7 +102,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
         }
       `;
       document.head.appendChild(style);
-      
+
       return () => {
         document.head.removeChild(style);
       };
@@ -116,7 +134,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                 variant="destructive"
                 className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 flex items-center justify-center bg-red-500 text-white font-bold text-sm animate-pulse"
               >
-                {totalItems > 99 ? '99+' : totalItems}
+                {totalItems > 99 ? "99+" : totalItems}
               </Badge>
             )}
           </Button>
@@ -135,10 +153,13 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
               <div className="px-6 py-3 bg-gradient-to-r from-orange-50 to-yellow-50 border-b">
                 <div className="flex items-center gap-2 text-orange-700">
                   <TrendingUp size={16} />
-                  <span className="font-semibold text-sm">Oportunidade de Economia!</span>
+                  <span className="font-semibold text-sm">
+                    Oportunidade de Economia!
+                  </span>
                 </div>
                 <p className="text-xs text-orange-600 mt-1">
-                  Adicione +{itemsToWholesale} itens e economize {formatCurrency(potentialSavings)}
+                  Adicione +{itemsToWholesale} itens e economize{" "}
+                  {formatCurrency(potentialSavings)}
                 </p>
               </div>
             )}
@@ -158,23 +179,36 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                 <div className="space-y-4">
                   {items.map((item) => {
                     // Validações de segurança para cada item
-                    const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
-                    const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
-                    const itemOriginalPrice = typeof item.originalPrice === 'number' && !isNaN(item.originalPrice) ? item.originalPrice : itemPrice;
+                    const itemPrice =
+                      typeof item.price === "number" && !isNaN(item.price)
+                        ? item.price
+                        : 0;
+                    const itemQuantity =
+                      typeof item.quantity === "number" && !isNaN(item.quantity)
+                        ? item.quantity
+                        : 1;
+                    const itemOriginalPrice =
+                      typeof item.originalPrice === "number" &&
+                      !isNaN(item.originalPrice)
+                        ? item.originalPrice
+                        : itemPrice;
                     const itemTotal = safeCalculate(itemPrice, itemQuantity);
-                    
+
                     return (
-                      <div key={item.id} className="cart-item-card rounded-xl shadow-sm p-4 hover:shadow-md transition-all">
+                      <div
+                        key={item.id}
+                        className="cart-item-card rounded-xl shadow-sm p-4 hover:shadow-md transition-all"
+                      >
                         <div className="flex items-start gap-4">
-                          <CartItemThumbnail 
+                          <CartItemThumbnail
                             imageUrl={item.product?.image_url}
-                            productName={item.product?.name || 'Produto'}
+                            productName={item.product?.name || "Produto"}
                             size="md"
                           />
-                          
+
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 truncate">
-                              {item.product?.name || 'Produto sem nome'}
+                              {item.product?.name || "Produto sem nome"}
                             </h4>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               {/* Lógica de badge melhorada - se é atacado, não mostra varejo */}
@@ -195,43 +229,69 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                             </div>
 
                             {/* Indicador de Economia Individual */}
-                            {item.product?.wholesale_price && item.product?.min_wholesale_qty && itemQuantity < item.product.min_wholesale_qty && (
-                              <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
-                                <div className="flex items-center gap-1 text-xs text-orange-700">
-                                  <AlertCircle size={12} />
-                                  <span>Faltam {item.product.min_wholesale_qty - itemQuantity} para atacado</span>
+                            {item.product?.wholesale_price &&
+                              item.product?.min_wholesale_qty &&
+                              itemQuantity < item.product.min_wholesale_qty && (
+                                <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
+                                  <div className="flex items-center gap-1 text-xs text-orange-700">
+                                    <AlertCircle size={12} />
+                                    <span>
+                                      Faltam{" "}
+                                      {item.product.min_wholesale_qty -
+                                        itemQuantity}{" "}
+                                      para atacado
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-orange-600">
+                                    Economize{" "}
+                                    {formatCurrency(
+                                      safeCalculate(
+                                        itemOriginalPrice -
+                                          (item.product.wholesale_price || 0),
+                                        item.product.min_wholesale_qty
+                                      )
+                                    )}
+                                  </p>
                                 </div>
-                                <p className="text-xs text-orange-600">
-                                  Economize {formatCurrency(safeCalculate(itemOriginalPrice - (item.product.wholesale_price || 0), item.product.min_wholesale_qty))}
-                                </p>
-                              </div>
-                            )}
-                            
+                              )}
+
                             <div className="flex items-center justify-between mt-3">
                               <div className="flex items-center gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => updateQuantity(item.id, itemQuantity - 1)}
+                                  onClick={() =>
+                                    updateQuantity(item.id, itemQuantity - 1)
+                                  }
                                   className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:border-red-300"
                                 >
                                   <Minus size={12} />
                                 </Button>
-                                
-                                <span className="font-semibold min-w-[2rem] text-center bg-gray-50 px-2 py-1 rounded">
-                                  {itemQuantity}
-                                </span>
-                                
+
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={itemQuantity}
+                                  onChange={(e) => {
+                                    const newQuantity =
+                                      parseInt(e.target.value) || 1;
+                                    updateQuantity(item.id, newQuantity);
+                                  }}
+                                  className="w-16 h-8 text-center text-sm font-semibold"
+                                />
+
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => updateQuantity(item.id, itemQuantity + 1)}
+                                  onClick={() =>
+                                    updateQuantity(item.id, itemQuantity + 1)
+                                  }
                                   className="h-8 w-8 p-0 rounded-full hover:bg-green-50 hover:border-green-300"
                                 >
                                   <Plus size={12} />
                                 </Button>
                               </div>
-                              
+
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -242,19 +302,9 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="text-right">
-                            <p className="cart-price-text font-bold text-lg">
-                              {formatCurrency(itemTotal)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatCurrency(itemPrice)} cada
-                            </p>
-                            {item.isWholesalePrice && itemOriginalPrice && itemOriginalPrice > itemPrice && (
-                              <p className="text-xs text-green-600 font-medium">
-                                Economia: {formatCurrency(safeCalculate(itemOriginalPrice - itemPrice, itemQuantity))}
-                              </p>
-                            )}
+                            <CartItemPriceDisplay item={item} />
                           </div>
                         </div>
                       </div>
@@ -278,7 +328,8 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                       </span>
                     </div>
                     <p className="text-xs text-orange-700 mt-1">
-                      Adicione mais {itemsToWholesale} itens para ativar preços de atacado
+                      Adicione mais {itemsToWholesale} itens para ativar preços
+                      de atacado
                     </p>
                   </div>
                 )}
@@ -289,7 +340,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                     {formatCurrency(totalAmount)}
                   </span>
                 </div>
-                
+
                 <Button
                   onClick={handleCheckout}
                   className="cart-checkout-button w-full text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"

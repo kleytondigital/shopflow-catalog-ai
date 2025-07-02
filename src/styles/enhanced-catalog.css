@@ -1,0 +1,816 @@
+/* Enhanced Catalog Styles - Otimizado para Desktop */
+
+
+/* Variáveis CSS para tema */
+
+:root {
+    --catalog-primary: #0066ff;
+    --catalog-secondary: #f8fafc;
+    --catalog-accent: #8b5cf6;
+    --catalog-success: #10b981;
+    --catalog-warning: #f59e0b;
+    --catalog-error: #ef4444;
+    --catalog-border: #e2e8f0;
+    --catalog-surface: #ffffff;
+    --catalog-text: #1e293b;
+    --catalog-text-muted: #64748b;
+    --catalog-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --catalog-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --catalog-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --catalog-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+
+/* Layout principal do catálogo */
+
+.enhanced-catalog {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    min-height: 100vh;
+}
+
+
+/* Header aprimorado */
+
+.enhanced-catalog-header {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--catalog-border);
+    box-shadow: var(--catalog-shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.enhanced-catalog-header.scrolled {
+    box-shadow: var(--catalog-shadow-lg);
+}
+
+
+/* Cards de produto aprimorados */
+
+.enhanced-product-card {
+    background: var(--catalog-surface);
+    border: 1px solid var(--catalog-border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.enhanced-product-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--catalog-shadow-xl);
+    border-color: var(--catalog-primary);
+}
+
+.enhanced-product-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--catalog-primary), var(--catalog-accent));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.enhanced-product-card:hover::before {
+    transform: scaleX(1);
+}
+
+
+/* Imagens de produto */
+
+.enhanced-product-image {
+    aspect-ratio: 1;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+}
+
+.enhanced-product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enhanced-product-card:hover .enhanced-product-image img {
+    transform: scale(1.1);
+}
+
+
+/* Overlay de ações */
+
+.product-actions-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.enhanced-product-card:hover .product-actions-overlay {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* Badges e indicadores */
+
+.product-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    box-shadow: var(--catalog-shadow-sm);
+}
+
+.product-badge.stock-low {
+    background: rgba(251, 146, 60, 0.9);
+    color: white;
+}
+
+.product-badge.stock-out {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+}
+
+.product-badge.stock-available {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+}
+
+.product-badge.featured {
+    background: rgba(139, 92, 246, 0.9);
+    color: white;
+}
+
+.product-badge.discount {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+}
+
+
+/* Sistema de avaliações */
+
+.product-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 1px;
+}
+
+.rating-star {
+    width: 12px;
+    height: 12px;
+    color: #fbbf24;
+    fill: currentColor;
+}
+
+.rating-star.empty {
+    color: #e5e7eb;
+}
+
+
+/* Preços */
+
+.product-pricing {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.price-current {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--catalog-text);
+}
+
+.price-original {
+    font-size: 14px;
+    color: var(--catalog-text-muted);
+    text-decoration: line-through;
+}
+
+.price-wholesale {
+    font-size: 14px;
+    color: var(--catalog-success);
+    font-weight: 600;
+}
+
+
+/* Botões aprimorados */
+
+.enhanced-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.enhanced-button.primary {
+    background: linear-gradient(135deg, var(--catalog-primary), var(--catalog-accent));
+    color: white;
+    box-shadow: var(--catalog-shadow-md);
+}
+
+.enhanced-button.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--catalog-shadow-lg);
+}
+
+.enhanced-button.secondary {
+    background: var(--catalog-surface);
+    color: var(--catalog-text);
+    border: 1px solid var(--catalog-border);
+}
+
+.enhanced-button.secondary:hover {
+    background: var(--catalog-secondary);
+    border-color: var(--catalog-primary);
+}
+
+.enhanced-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+
+/* Filtros sidebar */
+
+.enhanced-filters-sidebar {
+    background: var(--catalog-surface);
+    border: 1px solid var(--catalog-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--catalog-shadow-md);
+}
+
+.filter-section {
+    border-bottom: 1px solid var(--catalog-border);
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-header {
+    padding: 16px;
+    background: var(--catalog-secondary);
+    font-weight: 600;
+    color: var(--catalog-text);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.filter-header:hover {
+    background: #e2e8f0;
+}
+
+.filter-content {
+    padding: 16px;
+}
+
+
+/* Barra de busca aprimorada */
+
+.enhanced-search {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+}
+
+.enhanced-search input {
+    width: 100%;
+    padding: 12px 16px 12px 48px;
+    border: 2px solid var(--catalog-border);
+    border-radius: 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: var(--catalog-surface);
+}
+
+.enhanced-search input:focus {
+    border-color: var(--catalog-primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    outline: none;
+}
+
+.enhanced-search .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--catalog-text-muted);
+    width: 16px;
+    height: 16px;
+}
+
+
+/* Grid responsivo */
+
+.enhanced-product-grid {
+    display: grid;
+    gap: 24px;
+}
+
+
+/* Grid compacto */
+
+.grid-compact {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+
+/* Grid médio */
+
+.grid-medium {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+
+/* Grid grande */
+
+.grid-large {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+
+/* Lista */
+
+.grid-list {
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+
+/* Animações de loading */
+
+.loading-skeleton {
+    background: linear-gradient( 90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+
+/* Estados vazios */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 32px;
+    text-align: center;
+    color: var(--catalog-text-muted);
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--catalog-text);
+}
+
+.empty-state-description {
+    max-width: 400px;
+    margin-bottom: 24px;
+}
+
+
+/* Responsividade para desktop */
+
+@media (min-width: 1024px) {
+    .enhanced-catalog {
+        font-size: 16px;
+    }
+    .enhanced-product-card {
+        border-radius: 20px;
+    }
+    .enhanced-product-card:hover {
+        transform: translateY(-6px) scale(1.03);
+    }
+    .product-actions-overlay {
+        top: 12px;
+        right: 12px;
+    }
+    .grid-compact {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    .grid-medium {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    .grid-large {
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    }
+}
+
+
+/* Responsividade para telas muito grandes */
+
+@media (min-width: 1536px) {
+    .grid-compact {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+    .grid-medium {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+    .grid-large {
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+}
+
+
+/* Modo escuro (opcional) */
+
+@media (prefers-color-scheme: dark) {
+     :root {
+        --catalog-primary: #3b82f6;
+        --catalog-secondary: #1e293b;
+        --catalog-accent: #8b5cf6;
+        --catalog-border: #334155;
+        --catalog-surface: #0f172a;
+        --catalog-text: #f8fafc;
+        --catalog-text-muted: #94a3b8;
+    }
+    .enhanced-catalog {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+}
+
+
+/* Enhanced Catalog - Estilo Mercado Livre */
+
+.enhanced-catalog {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+
+/* Layout principal estilo Mercado Livre */
+
+.catalog-mercadolivre {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #f5f5f5;
+}
+
+
+/* Grid de produtos - 2 colunas mobile, 3 colunas desktop */
+
+.product-grid-mercadolivre {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 0;
+}
+
+@media (min-width: 1024px) {
+    .product-grid-mercadolivre {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+}
+
+
+/* Cards estilo Mercado Livre */
+
+.product-card-mercadolivre {
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    transition: box-shadow 0.2s ease;
+    height: fit-content;
+}
+
+.product-card-mercadolivre:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: none;
+    /* Remove o scale que pode quebrar o layout */
+}
+
+
+/* Imagens dos produtos */
+
+.product-image-mercadolivre {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #f8f8f8;
+}
+
+
+/* Container de informações */
+
+.product-info-mercadolivre {
+    padding: 12px;
+}
+
+.product-title-mercadolivre {
+    font-size: 14px;
+    line-height: 1.3;
+    color: #333;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-price-mercadolivre {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.product-installments-mercadolivre {
+    font-size: 12px;
+    color: #00a650;
+    margin-bottom: 8px;
+}
+
+.product-shipping-mercadolivre {
+    font-size: 12px;
+    color: #00a650;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+
+/* Filtros sidebar estilo Mercado Livre */
+
+.filter-sidebar-mercadolivre {
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 16px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.filter-section-mercadolivre {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-section-mercadolivre:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-title-mercadolivre {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+
+/* Banner topo estilo Mercado Livre */
+
+.banner-topo-mercadolivre {
+    background: linear-gradient(135deg, #fff159 0%, #ffca28 100%);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #f0c531;
+}
+
+.banner-topo-mercadolivre h2 {
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+
+/* Barra de controles estilo Mercado Livre */
+
+.controls-bar-mercadolivre {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+
+/* Badges e tags */
+
+.filter-badge-mercadolivre {
+    background: #f5f5f5;
+    color: #666;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.filter-badge-mercadolivre button {
+    color: #999;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.filter-badge-mercadolivre button:hover {
+    color: #333;
+}
+
+
+/* Responsividade mobile */
+
+@media (max-width: 768px) {
+    .catalog-mercadolivre {
+        padding: 8px;
+    }
+    .product-grid-mercadolivre {
+        gap: 12px;
+    }
+    .controls-bar-mercadolivre {
+        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-sidebar-mercadolivre {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        border-radius: 0;
+        padding: 20px;
+        overflow-y: auto;
+    }
+}
+
+
+/* Loading skeleton */
+
+.skeleton-mercadolivre {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading-mercadolivre 1.5s infinite;
+}
+
+@keyframes loading-mercadolivre {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+
+/* Estados de hover suaves */
+
+.hover-card-mercadolivre {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.hover-card-mercadolivre:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Garantir que o layout não quebre */
+
+.catalog-container-mercadolivre {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content-mercadolivre {
+    flex: 1;
+    display: flex;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+}
+
+.sidebar-mercadolivre {
+    width: 240px;
+    flex-shrink: 0;
+}
+
+.products-area-mercadolivre {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 1023px) {
+    .main-content-mercadolivre {
+        flex-direction: column;
+        padding: 12px;
+    }
+    .sidebar-mercadolivre {
+        width: 100%;
+    }
+}
+
+
+/* Otimizações de performance */
+
+.enhanced-catalog * {
+    box-sizing: border-box;
+}
+
+.enhanced-catalog img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+
+/* Estados de hover mais suaves */
+
+.enhanced-catalog .hover-lift {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.enhanced-catalog .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+
+/* Indicadores visuais */
+
+.enhanced-catalog .stock-low {
+    color: #f59e0b;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.enhanced-catalog .stock-out {
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.enhanced-catalog .free-shipping {
+    color: #10b981;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}

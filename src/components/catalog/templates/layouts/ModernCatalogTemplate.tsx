@@ -1,11 +1,10 @@
-
-import React from 'react';
-import { Store, CatalogType } from '@/hooks/useCatalog';
-import CatalogHeader from '@/components/catalog/CatalogHeader';
-import CatalogFooter from '@/components/catalog/CatalogFooter';
-import HeroBanner from '@/components/catalog/banners/HeroBanner';
-import PromotionalBanner from '@/components/catalog/banners/PromotionalBanner';
-import SidebarBanner from '@/components/catalog/banners/SidebarBanner';
+import React from "react";
+import { Store, CatalogType } from "@/hooks/useCatalog";
+import CatalogHeader from "@/components/catalog/CatalogHeader";
+import CatalogFooter from "@/components/catalog/CatalogFooter";
+import HeroBanner from "@/components/catalog/banners/HeroBanner";
+import PromotionalBanner from "@/components/catalog/banners/PromotionalBanner";
+import SidebarBanner from "@/components/catalog/banners/SidebarBanner";
 
 interface ModernCatalogTemplateProps {
   store: Store;
@@ -30,7 +29,7 @@ const ModernCatalogTemplate: React.FC<ModernCatalogTemplateProps> = ({
   onToggleFilters,
   onCartClick,
   children,
-  editorSettings
+  editorSettings,
 }) => {
   const storeId = store.url_slug || store.id;
 
@@ -55,14 +54,12 @@ const ModernCatalogTemplate: React.FC<ModernCatalogTemplateProps> = ({
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar with Banners */}
-          <aside className="lg:w-64 flex-shrink-0">
+          {/* <aside className="lg:w-64 flex-shrink-0">
             <SidebarBanner storeId={storeId} />
-          </aside>
+          </aside> */}
 
           {/* Main Content */}
-          <main className="flex-1">
-            {children}
-          </main>
+          <main className="flex-1">{children}</main>
         </div>
       </div>
 

@@ -25,7 +25,6 @@ export const useSimpleDraftImages = () => {
       try {
         URL.revokeObjectURL(url);
         blobUrlsRef.current.delete(url);
-        console.log("🗑️ Blob URL revogada:", url.substring(0, 50) + "...");
       } catch (error) {
         console.warn("Erro ao revogar blob URL:", error);
       }
@@ -35,11 +34,6 @@ export const useSimpleDraftImages = () => {
   // Cleanup automático apenas no unmount
   useEffect(() => {
     return () => {
-      console.log(
-        "🧹 Limpeza final - revogando",
-        blobUrlsRef.current.size,
-        "blob URLs"
-      );
       blobUrlsRef.current.forEach((url) => {
         try {
           URL.revokeObjectURL(url);
@@ -54,14 +48,11 @@ export const useSimpleDraftImages = () => {
   const createBlobUrl = useCallback((file: File): string => {
     const url = URL.createObjectURL(file);
     blobUrlsRef.current.add(url);
-    console.log("🔗 Nova blob URL criada:", url.substring(0, 50) + "...");
     return url;
   }, []);
 
   const addImages = useCallback(
     (files: File[]) => {
-      console.log("📷 Adicionando", files.length, "imagens");
-
       const newImages: SimpleDraftImage[] = files.map((file) => {
         const preview = createBlobUrl(file);
         return {
@@ -75,7 +66,6 @@ export const useSimpleDraftImages = () => {
 
       setImages((prev) => {
         const updated = [...prev, ...newImages];
-        console.log("📊 Total de imagens após adição:", updated.length);
         return updated;
       });
 
@@ -86,8 +76,6 @@ export const useSimpleDraftImages = () => {
 
   const removeImage = useCallback(
     (id: string) => {
-      console.log("🗑️ Removendo imagem:", id);
-
       setImages((prev) => {
         const imageToRemove = prev.find((img) => img.id === id);
 
@@ -99,7 +87,6 @@ export const useSimpleDraftImages = () => {
         }
 
         const filtered = prev.filter((img) => img.id !== id);
-        console.log("📊 Imagens restantes:", filtered.length);
         return filtered;
       });
     },
@@ -109,11 +96,6 @@ export const useSimpleDraftImages = () => {
   const uploadImages = useCallback(
     async (productId: string): Promise<string[]> => {
       if (!productId || images.length === 0 || isUploading) {
-        console.log("⏭️ Upload pulado:", {
-          productId,
-          imagesCount: images.length,
-          isUploading,
-        });
         return [];
       }
 
@@ -121,13 +103,6 @@ export const useSimpleDraftImages = () => {
       const uploadedUrls: string[] = [];
 
       try {
-        console.log(
-          "📤 Iniciando upload de",
-          images.length,
-          "imagens para produto:",
-          productId
-        );
-
         // Remover imagens existentes
         await supabase
           .from("product_images")
@@ -147,11 +122,6 @@ export const useSimpleDraftImages = () => {
 
         // Upload novas imagens (apenas as que têm arquivo)
         const imagesToUpload = images.filter((img) => img.file);
-        console.log(
-          "📤 Fazendo upload de",
-          imagesToUpload.length,
-          "imagens novas"
-        );
 
         for (let i = 0; i < imagesToUpload.length; i++) {
           const image = imagesToUpload[i];
@@ -182,13 +152,6 @@ export const useSimpleDraftImages = () => {
             is_primary: i === 0,
             alt_text: `Imagem ${i + 1} do produto`,
           });
-
-          console.log(
-            "✅ Imagem",
-            i + 1,
-            "enviada:",
-            imageUrl.substring(0, 50) + "..."
-          );
         }
 
         // Atualizar imagem principal do produto
@@ -204,7 +167,6 @@ export const useSimpleDraftImages = () => {
           description: `${uploadedUrls.length} imagem(ns) enviada(s) com sucesso`,
         });
 
-        console.log("🎉 Upload concluído:", uploadedUrls.length, "imagens");
         return uploadedUrls;
       } catch (error) {
         console.error("💥 Erro no upload:", error);
@@ -225,17 +187,11 @@ export const useSimpleDraftImages = () => {
     async (productId: string) => {
       // Evitar chamadas duplicadas para o mesmo produto
       if (!productId || isLoading || loadedProductIdRef.current === productId) {
-        console.log("🚫 Carregamento de imagens ignorado:", {
-          productId,
-          isLoading,
-          alreadyLoaded: loadedProductIdRef.current === productId,
-        });
         return;
       }
 
       setIsLoading(true);
       loadedProductIdRef.current = productId;
-      console.log("📥 Carregando imagens existentes para produto:", productId);
 
       try {
         const { data: productImages, error } = await supabase
@@ -264,21 +220,8 @@ export const useSimpleDraftImages = () => {
           setImages((prev) => {
             // Filtrar imagens existentes antigas e manter apenas as novas (não enviadas)
             const newImages = prev.filter((img) => !img.isExisting);
-            console.log("📊 Mesclando imagens:", {
-              existing: existingImages.length,
-              new: newImages.length,
-              total: existingImages.length + newImages.length,
-            });
             return [...existingImages, ...newImages];
           });
-
-          console.log(
-            "✅ Carregadas",
-            existingImages.length,
-            "imagens existentes"
-          );
-        } else {
-          console.log("📭 Nenhuma imagem existente encontrada");
         }
       } catch (error) {
         console.error("💥 Erro no carregamento de imagens:", error);
@@ -290,8 +233,6 @@ export const useSimpleDraftImages = () => {
   );
 
   const clearImages = useCallback(() => {
-    console.log("🧹 Limpando imagens. Total atual:", images.length);
-
     // Revogar apenas blob URLs de imagens não enviadas
     images.forEach((img) => {
       if (img.preview?.startsWith("blob:") && !img.uploaded) {
@@ -301,7 +242,6 @@ export const useSimpleDraftImages = () => {
 
     setImages([]);
     loadedProductIdRef.current = null;
-    console.log("✅ Imagens limpa");
   }, [images, revokeBlobUrl]);
 
   // Função para fazer upload apenas das imagens novas (preservando existentes)

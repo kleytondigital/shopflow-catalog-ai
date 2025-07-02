@@ -1,10 +1,15 @@
-
-import React from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useSimpleDraftImages } from '@/hooks/useSimpleDraftImages';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect } from "react";
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSimpleDraftImages } from "@/hooks/useSimpleDraftImages";
+import { useToast } from "@/hooks/use-toast";
 
 interface SimpleImageUploadProps {
   productId?: string;
@@ -13,11 +18,11 @@ interface SimpleImageUploadProps {
   onUploadReady?: (uploadFn: (productId: string) => Promise<string[]>) => void;
 }
 
-const SimpleImageUpload = ({ 
+const SimpleImageUpload = ({
   productId,
   maxImages = 5,
   onImagesChange,
-  onUploadReady
+  onUploadReady,
 }: SimpleImageUploadProps) => {
   const {
     images,
@@ -26,27 +31,25 @@ const SimpleImageUpload = ({
     addImages,
     removeImage,
     loadExistingImages,
-    uploadImages
+    uploadImages,
   } = useSimpleDraftImages();
   const { toast } = useToast();
 
-  // Carregar imagens existentes apenas uma vez quando productId mudar
-  React.useEffect(() => {
+  useEffect(() => {
     if (productId) {
-      console.log('🔄 SimpleImageUpload - Carregando imagens para:', productId);
       loadExistingImages(productId);
     }
   }, [productId, loadExistingImages]);
 
   // Notificar mudanças nas imagens para o componente pai
-  React.useEffect(() => {
+  useEffect(() => {
     if (onImagesChange) {
       onImagesChange(images);
     }
   }, [images, onImagesChange]);
 
   // Expor função de upload para o componente pai
-  React.useEffect(() => {
+  useEffect(() => {
     if (onUploadReady) {
       onUploadReady(uploadImages);
     }
@@ -60,7 +63,7 @@ const SimpleImageUpload = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const files = Array.from(e.dataTransfer.files);
     handleFiles(files);
   };
@@ -69,7 +72,7 @@ const SimpleImageUpload = ({
     const files = Array.from(e.target.files || []);
     handleFiles(files);
     // Limpar o input para permitir selecionar os mesmos arquivos novamente
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleFiles = (files: File[]) => {
@@ -86,8 +89,8 @@ const SimpleImageUpload = ({
     const filesToProcess = files.slice(0, remainingSlots);
     const validFiles: File[] = [];
 
-    filesToProcess.forEach(file => {
-      if (!file.type.startsWith('image/')) {
+    filesToProcess.forEach((file) => {
+      if (!file.type.startsWith("image/")) {
         toast({
           title: "Arquivo inválido",
           description: `${file.name} não é uma imagem válida`,
@@ -109,16 +112,14 @@ const SimpleImageUpload = ({
     });
 
     if (validFiles.length > 0) {
-      console.log('📤 Adicionando', validFiles.length, 'arquivos válidos');
       addImages(validFiles);
     }
   };
 
   const handleUploadClick = () => {
-    const input = document.getElementById('simple-image-upload');
+    const input = document.getElementById("simple-image-upload");
     if (input && !isUploading) {
-      console.log('🖱️ Clique no upload - abrindo seletor de arquivos');
-      input.click();
+      (input as HTMLInputElement).click();
     }
   };
 
@@ -163,7 +164,8 @@ const SimpleImageUpload = ({
                 Arraste e solte imagens aqui, ou clique para selecionar
               </p>
               <p className="text-sm text-gray-500">
-                PNG, JPG, JPEG, GIF, WEBP • Máximo {maxImages} imagens • 5MB por arquivo
+                PNG, JPG, JPEG, GIF, WEBP • Máximo {maxImages} imagens • 5MB por
+                arquivo
               </p>
             </div>
           </div>
@@ -183,32 +185,38 @@ const SimpleImageUpload = ({
         {images.length > 0 && (
           <div className="space-y-4">
             <h4 className="font-medium">Imagens Selecionadas</h4>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {images.map((image, index) => (
                 <div key={image.id} className="relative group">
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-primary transition-colors">
                     <img
-                      src={image.preview || image.url || ''}
+                      src={image.preview || image.url || ""}
                       alt={`Preview ${index + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        console.error('❌ Erro ao carregar imagem:', image.preview || image.url);
+                        console.error(
+                          "❌ Erro ao carregar imagem:",
+                          image.preview || image.url
+                        );
                         const target = e.currentTarget;
-                        target.style.display = 'none';
-                        const errorDiv = target.parentElement?.querySelector('.error-placeholder');
+                        target.style.display = "none";
+                        const errorDiv =
+                          target.parentElement?.querySelector(
+                            ".error-placeholder"
+                          );
                         if (errorDiv) {
-                          (errorDiv as HTMLElement).style.display = 'flex';
+                          (errorDiv as HTMLElement).style.display = "flex";
                         }
                       }}
                     />
-                    
+
                     {/* Placeholder de erro */}
                     <div className="error-placeholder w-full h-full items-center justify-center bg-gray-100 hidden">
                       <AlertCircle className="h-8 w-8 text-red-400" />
                     </div>
                   </div>
-                  
+
                   {/* Status Badge */}
                   <div className="absolute top-2 left-2">
                     {image.uploaded || image.isExisting ? (
@@ -230,7 +238,7 @@ const SimpleImageUpload = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Remove Button */}
                   <Button
                     variant="destructive"
@@ -254,12 +262,16 @@ const SimpleImageUpload = ({
 
         {/* Dicas */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h5 className="font-medium text-blue-900 mb-2">💡 Dicas importantes:</h5>
+          <h5 className="font-medium text-blue-900 mb-2">
+            💡 Dicas importantes:
+          </h5>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• A primeira imagem será definida como principal</li>
             <li>• Use imagens de alta qualidade (mínimo 800x800px)</li>
             <li>• Máximo de {maxImages} imagens por produto</li>
-            <li>• As imagens serão salvas automaticamente ao concluir o cadastro</li>
+            <li>
+              • As imagens serão salvas automaticamente ao concluir o cadastro
+            </li>
           </ul>
         </div>
       </CardContent>

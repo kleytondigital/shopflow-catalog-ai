@@ -1,23 +1,26 @@
-
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useCategories, CreateCategoryData } from '@/hooks/useCategories';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Loader2 } from 'lucide-react';
-import AIContentGenerator from '@/components/ai/AIContentGenerator';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useCategories, CreateCategoryData } from "@/hooks/useCategories";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Loader2 } from "lucide-react";
+import AIContentGenerator from "@/components/ai/AIContentGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SimpleCategoryFormProps {
   onCategoryCreated: (category: any) => void;
   onCancel: () => void;
 }
 
-const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormProps) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+const SimpleCategoryForm = ({
+  onCategoryCreated,
+  onCancel,
+}: SimpleCategoryFormProps) => {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const { createCategory } = useCategories();
   const { profile } = useAuth();
@@ -29,79 +32,56 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('SimpleCategoryForm: Iniciando submissão da categoria', { name, description, profile });
-    
+
     if (!name.trim()) {
       toast({
-        title: "Nome obrigatório",
-        description: "Por favor, insira o nome da categoria",
-        variant: "destructive"
+        title: "Erro",
+        description: "Nome da categoria é obrigatório",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!profile?.store_id) {
-      console.error('SimpleCategoryForm: Profile ou store_id não encontrado', { profile });
-      toast({
-        title: "Erro",
-        description: "Loja não identificada",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (loading) return;
 
     setLoading(true);
 
     try {
-      const categoryData: CreateCategoryData = {
-        store_id: profile.store_id,
+      const categoryData = {
         name: name.trim(),
-        description: description.trim() || undefined,
-        is_active: true
+        description: description.trim() || null,
+        store_id: profile?.store_id,
+        is_active: true,
       };
 
-      console.log('SimpleCategoryForm: Dados da categoria a serem criados', categoryData);
-      
-      const { data, error } = await createCategory(categoryData);
-
-      console.log('SimpleCategoryForm: Resultado da criação', { data, error });
+      const { data, error } = await supabase
+        .from("categories")
+        .insert([categoryData])
+        .select()
+        .single();
 
       if (error) {
-        console.error('SimpleCategoryForm: Erro ao criar categoria:', error);
-        toast({
-          title: "Erro ao criar categoria",
-          description: "Verifique se o nome não está duplicado",
-          variant: "destructive"
-        });
-      } else if (data) {
-        console.log('SimpleCategoryForm: Categoria criada com sucesso:', data);
-        toast({
-          title: "Categoria criada",
-          description: `A categoria "${name}" foi criada com sucesso`
-        });
-        
-        // Limpar formulário
-        setName('');
-        setDescription('');
-        
-        // Chamar callback
-        onCategoryCreated(data);
-      } else {
-        console.error('SimpleCategoryForm: Nenhum dado retornado');
-        toast({
-          title: "Erro",
-          description: "Nenhum dado foi retornado",
-          variant: "destructive"
-        });
+        throw error;
       }
-    } catch (error) {
-      console.error('SimpleCategoryForm: Erro inesperado:', error);
+
       toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro ao criar a categoria",
-        variant: "destructive"
+        title: "Sucesso!",
+        description: `Categoria "${name}" criada com sucesso`,
+      });
+
+      if (onCategoryCreated) {
+        onCategoryCreated(data);
+      }
+
+      // Limpar form
+      setName("");
+      setDescription("");
+    } catch (error: any) {
+      console.error("Erro ao criar categoria:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar categoria",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -114,7 +94,7 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
         <Plus className="h-4 w-4" />
         <h3 className="font-medium">Nova Categoria</h3>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="categoryName">Nome da Categoria *</Label>
@@ -151,8 +131,8 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
         </div>
 
         <div className="flex gap-2">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading || !name.trim()}
             className="flex-1"
           >
@@ -162,13 +142,13 @@ const SimpleCategoryForm = ({ onCategoryCreated, onCancel }: SimpleCategoryFormP
                 Criando...
               </>
             ) : (
-              'Criar Categoria'
+              "Criar Categoria"
             )}
           </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
             disabled={loading}
           >
             Cancelar

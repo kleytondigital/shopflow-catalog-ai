@@ -58,7 +58,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       isOpen &&
       loadedProductRef.current !== editingProduct.id
     ) {
-      console.log("📂 Carregando produto para edição:", editingProduct.name);
       loadProductData(editingProduct);
       loadedProductRef.current = editingProduct.id;
     }
@@ -67,8 +66,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   // Carregar variações existentes
   useEffect(() => {
     if (variations && variations.length > 0 && !variationsLoading) {
-      console.log("🎨 Carregando variações existentes:", variations.length);
-
       const formattedVariations = variations.map((variation) => ({
         id: variation.id,
         color: variation.color || "",
@@ -80,7 +77,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
         image_url: variation.image_url || "",
       }));
 
-      console.log("🎨 Variações formatadas:", formattedVariations);
       updateFormData({ variations: formattedVariations });
     } else if (
       editingProduct &&
@@ -88,7 +84,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       variations?.length === 0
     ) {
       // Se está editando um produto mas não há variações, limpar o array
-      console.log("🎨 Produto sem variações, limpando array");
       updateFormData({ variations: [] });
     }
   }, [variations, variationsLoading, updateFormData, editingProduct?.id]);
@@ -96,7 +91,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   // Limpar form ao fechar
   useEffect(() => {
     if (!isOpen && loadedProductRef.current) {
-      console.log("🧹 Limpando dados do wizard");
       resetForm();
       clearImages();
       loadedProductRef.current = null;
@@ -114,20 +108,14 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   const handleSave = async () => {
     try {
-      console.log("💾 Iniciando salvamento do produto");
-
       // Função para fazer upload das imagens após salvar o produto
       const imageUploadFn = async (productId: string) => {
         if (imageUploadFunctionRef.current) {
-          console.log("📤 Fazendo upload das imagens para produto:", productId);
           await imageUploadFunctionRef.current(productId);
         }
 
         // Para edição, usar uploadNewImages que preserva imagens existentes
         if (editingProduct?.id) {
-          console.log(
-            "📤 Fazendo upload de novas imagens (preservando existentes)"
-          );
           await uploadNewImages(productId);
         }
       };
@@ -135,9 +123,8 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       const productId = await saveProduct(editingProduct?.id, imageUploadFn);
 
       if (productId) {
-        console.log("✅ Produto salvo com sucesso:", productId);
         if (onSuccess) {
-          onSuccess();
+          onSuccess(formData);
         }
         onClose();
       }
@@ -171,14 +158,14 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl w-full max-h-[95vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="text-xl font-semibold">
+      <DialogContent className="max-w-5xl w-[95vw] sm:w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0 mx-2 sm:mx-auto">
+        <DialogHeader className="p-3 sm:p-6 pb-0">
+          <DialogTitle className="text-lg sm:text-xl font-semibold truncate">
             {editingProduct ? `Editar: ${editingProduct.name}` : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Navegação dos Steps */}
           <ImprovedWizardStepNavigation
             steps={steps}
@@ -188,8 +175,8 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
           />
 
           {/* Conteúdo do Step */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="p-3 sm:p-6">
               <WizardStepContent
                 currentStep={currentStep}
                 formData={formData}

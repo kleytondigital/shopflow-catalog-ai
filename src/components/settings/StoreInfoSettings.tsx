@@ -1,28 +1,50 @@
-
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Building, Clock, Phone, Loader2, AlertCircle, Facebook, Instagram, Twitter } from 'lucide-react';
-import { useStores } from '@/hooks/useStores';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import LogoUpload from './LogoUpload';
-import * as yup from 'yup';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { cn } from '@/lib/utils';
+import React, { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Building, Clock, Phone, Loader2, AlertCircle } from "lucide-react";
+import { useStores } from "@/hooks/useStores";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import LogoUpload from "./LogoUpload";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { cn } from "@/lib/utils";
 
 // Dias da semana para tipagem e renderização
-type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+type WeekDay =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
 
 type BusinessHourValue = {
   open: string;
   close: string;
   closed: boolean;
+  hasLunchBreak?: boolean;
+  lunchStart?: string;
+  lunchEnd?: string;
 };
 
 interface StoreInfoFormData {
@@ -32,9 +54,6 @@ interface StoreInfoFormData {
   phone: string;
   email: string;
   cnpj: string;
-  facebookUrl: string;
-  instagramUrl: string;
-  twitterUrl: string;
   businessHours: Record<WeekDay, BusinessHourValue>;
 }
 
@@ -43,87 +62,128 @@ const BR_PHONE_REGEX = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
 const BR_CNPJ_REGEX = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 
 const businessHourSchema = yup.object().shape({
-  open: yup.string().required('Horário obrigatório'),
-  close: yup.string().required('Horário obrigatório'),
+  open: yup.string().required("Horário obrigatório"),
+  close: yup.string().required("Horário obrigatório"),
   closed: yup.boolean().required(),
 });
 
 const storeInfoSchema = yup.object().shape({
-  storeName: yup.string().required('Nome é obrigatório'),
-  description: yup.string().required('Descrição é obrigatória'),
-  address: yup.string().required('Endereço é obrigatório'),
+  storeName: yup.string().required("Nome é obrigatório"),
+  description: yup.string().required("Descrição é obrigatória"),
+  address: yup.string().required("Endereço é obrigatório"),
   phone: yup
     .string()
-    .required('Telefone é obrigatório')
-    .matches(BR_PHONE_REGEX, 'Formato inválido. Ex: (11) 91234-5678'),
-  email: yup
-    .string()
-    .email('E-mail inválido')
-    .required('E-mail é obrigatório'),
+    .required("Telefone é obrigatório")
+    .matches(BR_PHONE_REGEX, "Formato inválido. Ex: (11) 91234-5678"),
+  email: yup.string().email("E-mail inválido").required("E-mail é obrigatório"),
   cnpj: yup
     .string()
-    .test('is-cnpj', 'Formato inválido (00.000.000/0000-00)', v => !v || BR_CNPJ_REGEX.test(v || ''))
-    .required('CNPJ é obrigatório'),
-  facebookUrl: yup.string().required('URL do Facebook é obrigatória'),
-  instagramUrl: yup.string().required('URL do Instagram é obrigatória'),
-  twitterUrl: yup.string().required('URL do Twitter é obrigatória'),
-  businessHours: yup.object().shape({
-    monday: businessHourSchema.required(),
-    tuesday: businessHourSchema.required(),
-    wednesday: businessHourSchema.required(),
-    thursday: businessHourSchema.required(),
-    friday: businessHourSchema.required(),
-    saturday: businessHourSchema.required(),
-    sunday: businessHourSchema.required(),
-  }).required(),
+    .test(
+      "is-cnpj",
+      "Formato inválido (00.000.000/0000-00)",
+      (v) => !v || BR_CNPJ_REGEX.test(v || "")
+    )
+    .required("CNPJ é obrigatório"),
+  businessHours: yup
+    .object()
+    .shape({
+      monday: businessHourSchema.required(),
+      tuesday: businessHourSchema.required(),
+      wednesday: businessHourSchema.required(),
+      thursday: businessHourSchema.required(),
+      friday: businessHourSchema.required(),
+      saturday: businessHourSchema.required(),
+      sunday: businessHourSchema.required(),
+    })
+    .required("Horários de funcionamento são obrigatórios"),
 });
 
 const StoreInfoSettings: React.FC = () => {
   const { toast } = useToast();
   const { currentStore, updateCurrentStore, loading, error } = useStores();
-  const { settings: catalogSettings, updateSettings: updateCatalogSettings } = useCatalogSettings();
+  const { settings: catalogSettings, updateSettings: updateCatalogSettings } =
+    useCatalogSettings();
   const [saving, setSaving] = React.useState(false);
 
   const defaultBusinessHours: Record<WeekDay, BusinessHourValue> = {
-    monday: { open: '09:00', close: '18:00', closed: false },
-    tuesday: { open: '09:00', close: '18:00', closed: false },
-    wednesday: { open: '09:00', close: '18:00', closed: false },
-    thursday: { open: '09:00', close: '18:00', closed: false },
-    friday: { open: '09:00', close: '18:00', closed: false },
-    saturday: { open: '09:00', close: '14:00', closed: false },
-    sunday: { open: '09:00', close: '14:00', closed: true }
+    monday: {
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+      hasLunchBreak: true,
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    tuesday: {
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+      hasLunchBreak: true,
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    wednesday: {
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+      hasLunchBreak: true,
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    thursday: {
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+      hasLunchBreak: true,
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    friday: {
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+      hasLunchBreak: true,
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    saturday: {
+      open: "09:00",
+      close: "14:00",
+      closed: false,
+      hasLunchBreak: false,
+    },
+    sunday: {
+      open: "09:00",
+      close: "14:00",
+      closed: true,
+      hasLunchBreak: false,
+    },
   };
 
   const form = useForm<StoreInfoFormData>({
     resolver: yupResolver(storeInfoSchema) as any,
     defaultValues: {
-      storeName: '',
-      description: '',
-      address: '',
-      phone: '',
-      email: '',
-      cnpj: '',
-      facebookUrl: '',
-      instagramUrl: '',
-      twitterUrl: '',
-      businessHours: defaultBusinessHours
+      storeName: "",
+      description: "",
+      address: "",
+      phone: "",
+      email: "",
+      cnpj: "",
+      businessHours: defaultBusinessHours,
     },
-    mode: 'onChange'
+    mode: "onChange",
   });
 
   useEffect(() => {
     if (currentStore && catalogSettings) {
       form.reset({
-        storeName: currentStore.name || '',
-        description: currentStore.description || '',
-        address: currentStore.address || '',
-        phone: currentStore.phone || '',
-        email: currentStore.email || '',
-        cnpj: currentStore.cnpj || '',
-        facebookUrl: catalogSettings.facebook_url || '',
-        instagramUrl: catalogSettings.instagram_url || '',
-        twitterUrl: catalogSettings.twitter_url || '',
-        businessHours: defaultBusinessHours
+        storeName: currentStore.name || "",
+        description: currentStore.description || "",
+        address: currentStore.address || "",
+        phone: currentStore.phone || "",
+        email: currentStore.email || "",
+        cnpj: currentStore.cnpj || "",
+        businessHours: defaultBusinessHours,
       });
     }
   }, [currentStore, catalogSettings, form]);
@@ -138,7 +198,7 @@ const StoreInfoSettings: React.FC = () => {
         address: data.address,
         phone: data.phone,
         email: data.email,
-        cnpj: data.cnpj
+        cnpj: data.cnpj,
       };
       const { error: updateError } = await updateCurrentStore(storeUpdates);
       if (updateError) throw new Error(updateError);
@@ -146,12 +206,14 @@ const StoreInfoSettings: React.FC = () => {
       // Atualização das redes sociais
       if (catalogSettings) {
         const catalogUpdates = {
-          facebook_url: data.facebookUrl || null,
-          instagram_url: data.instagramUrl || null,
-          twitter_url: data.twitterUrl || null
+          facebook_url: null,
+          instagram_url: null,
+          twitter_url: null,
         };
-        const { error: catalogError } = await updateCatalogSettings(catalogUpdates);
-        if (catalogError) throw new Error('Erro ao atualizar redes sociais');
+        const { error: catalogError } = await updateCatalogSettings(
+          catalogUpdates
+        );
+        if (catalogError) throw new Error("Erro ao atualizar redes sociais");
       }
 
       toast({
@@ -161,7 +223,8 @@ const StoreInfoSettings: React.FC = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
-        description: error?.message || "Não foi possível salvar as configurações.",
+        description:
+          error?.message || "Não foi possível salvar as configurações.",
         variant: "destructive",
       });
     } finally {
@@ -170,13 +233,13 @@ const StoreInfoSettings: React.FC = () => {
   };
 
   const days: { key: WeekDay; label: string }[] = [
-    { key: 'monday', label: 'Segunda-feira' },
-    { key: 'tuesday', label: 'Terça-feira' },
-    { key: 'wednesday', label: 'Quarta-feira' },
-    { key: 'thursday', label: 'Quinta-feira' },
-    { key: 'friday', label: 'Sexta-feira' },
-    { key: 'saturday', label: 'Sábado' },
-    { key: 'sunday', label: 'Domingo' }
+    { key: "monday", label: "Segunda-feira" },
+    { key: "tuesday", label: "Terça-feira" },
+    { key: "wednesday", label: "Quarta-feira" },
+    { key: "thursday", label: "Quinta-feira" },
+    { key: "friday", label: "Sexta-feira" },
+    { key: "saturday", label: "Sábado" },
+    { key: "sunday", label: "Domingo" },
   ];
 
   if (loading) {
@@ -230,9 +293,15 @@ const StoreInfoSettings: React.FC = () => {
                 name="storeName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Loja <span className="text-red-500">*</span></FormLabel>
+                    <FormLabel>
+                      Nome da Loja <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Minha Loja Incrível" {...field} className="border-blue-300 focus:ring-2 focus:ring-blue-400"/>
+                      <Input
+                        placeholder="Minha Loja Incrível"
+                        {...field}
+                        className="border-blue-300 focus:ring-2 focus:ring-blue-400"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -245,7 +314,11 @@ const StoreInfoSettings: React.FC = () => {
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-20 border-blue-200" placeholder="Descreva sua loja e produtos..." />
+                      <Textarea
+                        {...field}
+                        className="min-h-20 border-blue-200"
+                        placeholder="Descreva sua loja e produtos..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -258,19 +331,31 @@ const StoreInfoSettings: React.FC = () => {
                   <FormItem>
                     <FormLabel>CNPJ</FormLabel>
                     <FormControl>
-                      <Input {...field}
+                      <Input
+                        {...field}
                         className="border-blue-200"
                         placeholder="00.000.000/0000-00"
                         maxLength={18}
-                        onChange={e => {
+                        onChange={(e) => {
                           // auto-máscara
-                          let v = e.target.value.replace(/\D/g, '').slice(0,14);
+                          let v = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 14);
                           if (v.length > 12) {
-                            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, "$1.$2.$3/$4-$5");
+                            v = v.replace(
+                              /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/,
+                              "$1.$2.$3/$4-$5"
+                            );
                           } else if (v.length > 8) {
-                            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, "$1.$2.$3/$4");
+                            v = v.replace(
+                              /^(\d{2})(\d{3})(\d{3})(\d{0,4})/,
+                              "$1.$2.$3/$4"
+                            );
                           } else if (v.length > 5) {
-                            v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, "$1.$2.$3");
+                            v = v.replace(
+                              /^(\d{2})(\d{3})(\d{0,3})/,
+                              "$1.$2.$3"
+                            );
                           } else if (v.length > 2) {
                             v = v.replace(/^(\d{2})(\d{0,3})/, "$1.$2");
                           }
@@ -290,7 +375,10 @@ const StoreInfoSettings: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-700">
                 <Phone className="h-5 w-5" />
-                Telefone de contato <span className="text-xs font-normal text-gray-500">(usado para WhatsApp no plano básico)</span>
+                Telefone de contato{" "}
+                <span className="text-xs font-normal text-gray-500">
+                  (usado para WhatsApp no plano básico)
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -302,7 +390,9 @@ const StoreInfoSettings: React.FC = () => {
                     <FormLabel>
                       Telefone / WhatsApp&nbsp;
                       <span className="text-red-500">*</span>
-                      <span className="ml-2 text-xs text-gray-600">(ex: (11) 91234-5678)</span>
+                      <span className="ml-2 text-xs text-gray-600">
+                        (ex: (11) 91234-5678)
+                      </span>
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -310,12 +400,20 @@ const StoreInfoSettings: React.FC = () => {
                         className="border-green-300"
                         placeholder="(11) 91234-5678"
                         maxLength={15}
-                        onChange={e => {
-                          let v = e.target.value.replace(/\D/g, '').slice(0,11);
+                        onChange={(e) => {
+                          let v = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 11);
                           if (v.length > 10) {
-                            v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+                            v = v.replace(
+                              /^(\d{2})(\d{5})(\d{4}).*/,
+                              "($1) $2-$3"
+                            );
                           } else if (v.length > 6) {
-                            v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+                            v = v.replace(
+                              /^(\d{2})(\d{4})(\d{0,4})/,
+                              "($1) $2-$3"
+                            );
                           } else if (v.length > 2) {
                             v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
                           }
@@ -334,7 +432,12 @@ const StoreInfoSettings: React.FC = () => {
                   <FormItem>
                     <FormLabel>E-mail</FormLabel>
                     <FormControl>
-                      <Input placeholder="contato@minhaloja.com" type="email" {...field} className="border-green-200"/>
+                      <Input
+                        placeholder="contato@minhaloja.com"
+                        type="email"
+                        {...field}
+                        className="border-green-200"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,7 +450,11 @@ const StoreInfoSettings: React.FC = () => {
                   <FormItem>
                     <FormLabel>Endereço</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Rua, número, bairro, cidade - UF" className="min-h-20 border-green-200" {...field} />
+                      <Textarea
+                        placeholder="Rua, número, bairro, cidade - UF"
+                        className="min-h-20 border-green-200"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -357,152 +464,174 @@ const StoreInfoSettings: React.FC = () => {
           </Card>
         </div>
 
-        {/* Redes Sociais */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Facebook className="h-5 w-5" />
-              Redes Sociais
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="facebookUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Facebook className="h-4 w-4" />
-                      Facebook
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://facebook.com/minhaloja" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="instagramUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Instagram className="h-4 w-4" />
-                      Instagram
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://instagram.com/minhaloja" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="twitterUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Twitter className="h-4 w-4" />
-                      Twitter
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://twitter.com/minhaloja" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Horário de Funcionamento - Layout Responsivo */}
+        {/* Horário de Funcionamento - Layout Melhorado */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Horário de Funcionamento
             </CardTitle>
+            <CardDescription>
+              Configure os horários de funcionamento para cada dia da semana
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {days.map((day) => (
                 <FormField
                   key={day.key}
                   control={form.control}
                   name={`businessHours.${day.key}` as const}
                   render={({ field }) => (
-                    <div className="p-4 border rounded-lg">
-                      {/* Layout Desktop */}
-                      <div className="hidden sm:flex items-center gap-4">
-                        <div className="w-32">
-                          <span className="font-medium">{day.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="time"
-                            className="w-24"
-                            value={field.value.open}
-                            onChange={e => field.onChange({ ...field.value, open: e.target.value })}
-                            disabled={field.value.closed}
+                    <div className="p-6 border-2 border-gray-100 rounded-xl bg-gradient-to-r from-gray-50 to-white">
+                      {/* Header do Dia */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {day.label}
+                        </h4>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={field.value.closed}
+                            onChange={(e) =>
+                              field.onChange({
+                                ...field.value,
+                                closed: e.target.checked,
+                              })
+                            }
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                           />
-                          <span>às</span>
-                          <Input
-                            type="time"
-                            className="w-24"
-                            value={field.value.close}
-                            onChange={e => field.onChange({ ...field.value, close: e.target.value })}
-                            disabled={field.value.closed}
-                          />
-                          <label className="flex items-center gap-2 ml-4">
-                            <input
-                              type="checkbox"
-                              checked={field.value.closed}
-                              onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
-                            />
-                            <span className="text-sm">Fechado</span>
-                          </label>
-                        </div>
+                          <span className="text-sm font-medium text-gray-600">
+                            Fechado
+                          </span>
+                        </label>
                       </div>
 
-                      {/* Layout Mobile */}
-                      <div className="sm:hidden space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{day.label}</span>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={field.value.closed}
-                              onChange={e => field.onChange({ ...field.value, closed: e.target.checked })}
-                            />
-                            <span className="text-sm">Fechado</span>
-                          </label>
-                        </div>
-                        
-                        {!field.value.closed && (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <label className="block text-xs text-gray-500 mb-1">Abertura</label>
-                              <Input
-                                type="time"
-                                value={field.value.open}
-                                onChange={e => field.onChange({ ...field.value, open: e.target.value })}
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <label className="block text-xs text-gray-500 mb-1">Fechamento</label>
-                              <Input
-                                type="time"
-                                value={field.value.close}
-                                onChange={e => field.onChange({ ...field.value, close: e.target.value })}
-                              />
+                      {!field.value.closed && (
+                        <div className="space-y-4">
+                          {/* Horário Principal */}
+                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            <h5 className="text-sm font-medium text-gray-700 mb-3">
+                              Horário de Funcionamento
+                            </h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">
+                                  Abertura
+                                </label>
+                                <Input
+                                  type="time"
+                                  value={field.value.open}
+                                  onChange={(e) =>
+                                    field.onChange({
+                                      ...field.value,
+                                      open: e.target.value,
+                                    })
+                                  }
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">
+                                  Fechamento
+                                </label>
+                                <Input
+                                  type="time"
+                                  value={field.value.close}
+                                  onChange={(e) =>
+                                    field.onChange({
+                                      ...field.value,
+                                      close: e.target.value,
+                                    })
+                                  }
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
                           </div>
-                        )}
-                      </div>
+
+                          {/* Horário de Almoço */}
+                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="text-sm font-medium text-gray-700">
+                                Horário de Almoço
+                              </h5>
+                              <label className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={field.value.hasLunchBreak}
+                                  onChange={(e) =>
+                                    field.onChange({
+                                      ...field.value,
+                                      hasLunchBreak: e.target.checked,
+                                    })
+                                  }
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-xs text-gray-600">
+                                  Tem horário de almoço
+                                </span>
+                              </label>
+                            </div>
+
+                            {field.value.hasLunchBreak && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">
+                                    Início do Almoço
+                                  </label>
+                                  <Input
+                                    type="time"
+                                    value={field.value.lunchStart || "12:00"}
+                                    onChange={(e) =>
+                                      field.onChange({
+                                        ...field.value,
+                                        lunchStart: e.target.value,
+                                      })
+                                    }
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">
+                                    Fim do Almoço
+                                  </label>
+                                  <Input
+                                    type="time"
+                                    value={field.value.lunchEnd || "13:00"}
+                                    onChange={(e) =>
+                                      field.onChange({
+                                        ...field.value,
+                                        lunchEnd: e.target.value,
+                                      })
+                                    }
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Preview do Horário */}
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <p className="text-xs text-blue-800 font-medium mb-1">
+                              Como aparecerá no catálogo:
+                            </p>
+                            <p className="text-sm text-blue-700">
+                              {field.value.open} - {field.value.close}
+                              {field.value.hasLunchBreak &&
+                                field.value.lunchStart &&
+                                field.value.lunchEnd && (
+                                  <span className="text-blue-600">
+                                    {" "}
+                                    (Almoço: {field.value.lunchStart} -{" "}
+                                    {field.value.lunchEnd})
+                                  </span>
+                                )}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 />
@@ -515,7 +644,9 @@ const StoreInfoSettings: React.FC = () => {
           type="submit"
           className={cn(
             "w-full py-3 text-sm font-semibold rounded-xl shadow-lg transition-all",
-            saving ? "opacity-70 pointer-events-none" : "bg-primary text-white hover:bg-primary/90"
+            saving
+              ? "opacity-70 pointer-events-none"
+              : "bg-primary text-white hover:bg-primary/90"
           )}
           disabled={saving}
         >

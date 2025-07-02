@@ -1,18 +1,28 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Settings, Eye, AlertCircle, Info } from 'lucide-react';
-import { VariationGroup, HierarchicalVariation, VARIATION_TEMPLATES } from '@/types/variation';
-import { useVariationGroups } from '@/hooks/useVariationGroups';
-import HierarchicalVariationSetup from './HierarchicalVariationSetup';
-import HierarchicalVariationPreview from './HierarchicalVariationPreview';
-import VariationMigrationHelper from './VariationMigrationHelper';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Settings, Eye, AlertCircle, Info } from "lucide-react";
+import {
+  VariationGroup,
+  HierarchicalVariation,
+  VARIATION_TEMPLATES,
+} from "@/types/variation";
+import { useVariationGroups } from "@/hooks/useVariationGroups";
+import HierarchicalVariationSetup from "./HierarchicalVariationSetup";
+import HierarchicalVariationPreview from "./HierarchicalVariationPreview";
+import VariationMigrationHelper from "./VariationMigrationHelper";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "@/components/ui/use-toast";
 
 interface HierarchicalVariationsManagerProps {
   productId?: string;
@@ -20,32 +30,30 @@ interface HierarchicalVariationsManagerProps {
   onChange: (variations: any[]) => void;
 }
 
-const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps> = ({
-  productId,
-  variations = [],
-  onChange
-}) => {
-  const { groups, variations: hierarchicalVariations, loading, saveVariationGroup } = useVariationGroups(productId);
-  const [currentTemplate, setCurrentTemplate] = useState<string>('');
+const HierarchicalVariationsManager: React.FC<
+  HierarchicalVariationsManagerProps
+> = ({ productId, variations = [], onChange }) => {
+  const {
+    groups,
+    variations: hierarchicalVariations,
+    loading,
+    saveVariationGroup,
+  } = useVariationGroups(productId);
+
+  const [currentTemplate, setCurrentTemplate] = useState<string>("");
   const [isConfiguring, setIsConfiguring] = useState(false);
-  const [localVariations, setLocalVariations] = useState<HierarchicalVariation[]>([]);
+  const [localVariations, setLocalVariations] = useState<
+    HierarchicalVariation[]
+  >([]);
   const [showMigration, setShowMigration] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  console.log('🎯 HIERARCHICAL MANAGER - Renderizando:', {
-    productId,
-    groupsCount: groups?.length || 0,
-    hierarchicalVariationsCount: hierarchicalVariations?.length || 0,
-    legacyVariationsCount: variations?.length || 0,
-    isConfiguring,
-    currentTemplate
-  });
-
   // Verificar se já existe um sistema hierárquico configurado
   const hasHierarchicalSystem = groups && groups.length > 0;
-  
+
   // Verificar se é um produto em edição com variações simples
-  const isEditingWithLegacyVariations = productId && variations && variations.length > 0 && !hasHierarchicalSystem;
+  const isEditingWithLegacyVariations =
+    productId && variations && variations.length > 0 && !hasHierarchicalSystem;
 
   // Evitar loops de renderização
   useEffect(() => {
@@ -53,25 +61,23 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
 
     if (hasHierarchicalSystem && groups && groups.length > 0) {
       const group = groups[0];
-      const templateKey = group.secondary_attribute 
+      const templateKey = group.secondary_attribute
         ? `${group.primary_attribute}+${group.secondary_attribute}`
         : group.primary_attribute;
-      
-      console.log('🔧 HIERARCHICAL MANAGER - Configurando sistema existente:', templateKey);
+
       setCurrentTemplate(templateKey);
       setLocalVariations(hierarchicalVariations || []);
       setIsConfiguring(true);
       setShowMigration(false);
       setIsInitialized(true);
     } else if (isEditingWithLegacyVariations) {
-      console.log('🔄 HIERARCHICAL MANAGER - Detectadas variações legadas:', variations.length);
       setShowMigration(true);
       setIsConfiguring(false);
-      
+
       // Converter variações legadas para preview
       const convertedVariations = variations.map((v, index) => ({
         id: v.id || `legacy-${index}`,
-        variation_type: 'simple' as const,
+        variation_type: "simple" as const,
         variation_value: v.color || v.size || `Variação ${index + 1}`,
         color: v.color,
         size: v.size,
@@ -81,58 +87,60 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
         is_active: v.is_active !== false,
         image_url: v.image_url,
         display_order: index,
-        children: []
+        children: [],
       }));
       setLocalVariations(convertedVariations);
       setIsInitialized(true);
     } else {
       // Produto novo ou sem variações
-      console.log('🆕 HIERARCHICAL MANAGER - Produto novo ou sem configuração');
       setShowMigration(false);
       setIsConfiguring(false);
       setLocalVariations([]);
       setIsInitialized(true);
     }
-  }, [groups, hierarchicalVariations, variations, productId, hasHierarchicalSystem, isEditingWithLegacyVariations, isInitialized]);
+  }, [
+    groups,
+    hierarchicalVariations,
+    variations,
+    productId,
+    hasHierarchicalSystem,
+    isEditingWithLegacyVariations,
+    isInitialized,
+  ]);
 
   const handleTemplateSelect = (templateKey: string) => {
-    console.log('📋 HIERARCHICAL MANAGER - Selecionando template:', templateKey);
     setCurrentTemplate(templateKey);
     setIsConfiguring(true);
     setShowMigration(false);
     setLocalVariations([]);
   };
 
-  const handleMigration = (hierarchicalVariations: HierarchicalVariation[], templateKey: string) => {
-    console.log('🔄 HIERARCHICAL MANAGER - Iniciando migração:', {
-      templateKey,
-      hierarchicalCount: hierarchicalVariations.length
-    });
-    
+  const handleMigration = (
+    hierarchicalVariations: HierarchicalVariation[],
+    templateKey: string
+  ) => {
     setCurrentTemplate(templateKey);
     setLocalVariations(hierarchicalVariations);
     setIsConfiguring(true);
     setShowMigration(false);
-    
+
     // Limpar variações legadas
     onChange([]);
   };
 
   const handleDeleteLegacyVariations = () => {
-    console.log('🗑 HIERARCHICAL MANAGER - Removendo variações legadas');
     onChange([]);
     setShowMigration(false);
     setLocalVariations([]);
   };
 
   const handleVariationsChange = (newVariations: HierarchicalVariation[]) => {
-    console.log('🔄 HIERARCHICAL MANAGER - Atualizando variações:', newVariations.length);
     setLocalVariations(newVariations);
-    
+
     // Converter para o formato esperado pelo componente pai (compatibilidade)
-    const legacyFormat = newVariations.flatMap(main => {
+    const legacyFormat = newVariations.flatMap((main) => {
       if (main.children && main.children.length > 0) {
-        return main.children.map(child => ({
+        return main.children.map((child) => ({
           id: child.id,
           color: child.color,
           size: child.size,
@@ -141,65 +149,96 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
           price_adjustment: child.price_adjustment,
           is_active: child.is_active,
           image_url: child.image_url,
-          image_file: child.image_file
+          image_file: child.image_file,
         }));
       } else {
-        return [{
-          id: main.id,
-          color: main.color,
-          size: main.size,
-          sku: main.sku,
-          stock: main.stock,
-          price_adjustment: main.price_adjustment,
-          is_active: main.is_active,
-          image_url: main.image_url,
-          image_file: main.image_file
-        }];
+        return [
+          {
+            id: main.id,
+            color: main.color,
+            size: main.size,
+            sku: main.sku,
+            stock: main.stock,
+            price_adjustment: main.price_adjustment,
+            is_active: main.is_active,
+            image_url: main.image_url,
+            image_file: main.image_file,
+          },
+        ];
       }
     });
-    
+
     onChange(legacyFormat);
   };
 
   const handleSave = async () => {
     if (!productId || !currentTemplate) {
-      console.warn('⚠️ HIERARCHICAL MANAGER - Não é possível salvar sem productId ou template');
+      console.warn(
+        "⚠️ HIERARCHICAL MANAGER - Não é possível salvar sem productId ou template"
+      );
       return;
     }
 
-    const template = VARIATION_TEMPLATES.find(t => 
-      t.secondary 
+    const template = VARIATION_TEMPLATES.find((t) =>
+      t.secondary
         ? `${t.primary}+${t.secondary}` === currentTemplate
         : t.primary === currentTemplate
     );
 
     if (!template) {
-      console.error('❌ HIERARCHICAL MANAGER - Template não encontrado:', currentTemplate);
+      console.error(
+        "❌ HIERARCHICAL MANAGER - Template não encontrado:",
+        currentTemplate
+      );
       return;
     }
 
-    console.log('💾 HIERARCHICAL MANAGER - Salvando configuração:', {
+    console.log("💾 HIERARCHICAL MANAGER - Salvando configuração:", {
       productId,
       template: template.label,
-      variationsCount: localVariations.length
+      variationsCount: localVariations.length,
     });
 
-    const groupData: Omit<VariationGroup, 'id' | 'created_at' | 'updated_at'> = {
-      product_id: productId,
-      primary_attribute: template.primary,
-      secondary_attribute: template.secondary
-    };
+    try {
+      const groupData: Omit<
+        VariationGroup,
+        "id" | "created_at" | "updated_at"
+      > = {
+        product_id: productId,
+        primary_attribute: template.primary,
+        secondary_attribute: template.secondary,
+      };
 
-    const result = await saveVariationGroup(productId, groupData, localVariations);
-    
-    if (result.success) {
-      console.log('✅ HIERARCHICAL MANAGER - Salvamento concluído com sucesso');
-      setIsConfiguring(false);
+      const result = await saveVariationGroup(
+        productId,
+        groupData,
+        localVariations
+      );
+
+      if (result.success) {
+        console.log(
+          "✅ HIERARCHICAL MANAGER - Salvamento concluído com sucesso"
+        );
+        setIsConfiguring(false);
+        if (result.savedCount > 0) {
+          toast({
+            title: "Variações salvas",
+            description: `${result.savedCount} variação(ões) salva(s) com sucesso`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar variações:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar variações",
+        variant: "destructive",
+      });
     }
   };
 
-  const selectedTemplate = VARIATION_TEMPLATES.find(t => 
-    t.secondary 
+  const selectedTemplateConfig = VARIATION_TEMPLATES.find((t) =>
+    t.secondary
       ? `${t.primary}+${t.secondary}` === currentTemplate
       : t.primary === currentTemplate
   );
@@ -217,9 +256,12 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Sistema de Variações Hierárquicas</h3>
+        <h3 className="text-lg font-semibold">
+          Sistema de Variações Hierárquicas
+        </h3>
         <p className="text-sm text-muted-foreground">
-          Configure variações organizadas em grupos (ex: Cor → Tamanhos) para facilitar o cadastro e melhorar a experiência do cliente.
+          Configure variações organizadas em grupos (ex: Cor → Tamanhos) para
+          facilitar o cadastro e melhorar a experiência do cliente.
         </p>
       </div>
 
@@ -228,7 +270,8 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Você pode configurar o sistema de variações hierárquicas agora. As configurações serão salvas quando o produto for criado.
+            Você pode configurar o sistema de variações hierárquicas agora. As
+            configurações serão salvas quando o produto for criado.
           </AlertDescription>
         </Alert>
       )}
@@ -251,27 +294,36 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
                 <Settings className="w-8 h-8 text-gray-400" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900 mb-1">Configure o Sistema de Variações</h3>
+                <h3 className="font-medium text-gray-900 mb-1">
+                  Configure o Sistema de Variações
+                </h3>
                 <p className="text-sm text-gray-500 mb-4">
                   Escolha como organizar as variações deste produto
                 </p>
-                
+
                 <div className="space-y-3 max-w-md mx-auto">
                   <Label>Tipo de Variação</Label>
-                  <Select value={currentTemplate} onValueChange={handleTemplateSelect}>
+                  <Select
+                    value={currentTemplate}
+                    onValueChange={handleTemplateSelect}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo de variação" />
                     </SelectTrigger>
                     <SelectContent>
                       {VARIATION_TEMPLATES.map((template) => {
-                        const key = template.secondary 
+                        const key = template.secondary
                           ? `${template.primary}+${template.secondary}`
                           : template.primary;
                         return (
                           <SelectItem key={key} value={key}>
                             <div>
-                              <div className="font-medium">{template.label}</div>
-                              <div className="text-xs text-muted-foreground">{template.description}</div>
+                              <div className="font-medium">
+                                {template.label}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {template.description}
+                              </div>
                             </div>
                           </SelectItem>
                         );
@@ -302,9 +354,9 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">
                     Configuração de Variações
-                    {selectedTemplate && (
+                    {selectedTemplateConfig && (
                       <Badge variant="secondary" className="ml-2">
-                        {selectedTemplate.label}
+                        {selectedTemplateConfig.label}
                       </Badge>
                     )}
                   </CardTitle>
@@ -316,9 +368,9 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
                 </div>
               </CardHeader>
               <CardContent>
-                {selectedTemplate ? (
+                {selectedTemplateConfig ? (
                   <HierarchicalVariationSetup
-                    template={selectedTemplate}
+                    template={selectedTemplateConfig}
                     variations={localVariations}
                     onChange={handleVariationsChange}
                   />
@@ -336,7 +388,7 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
 
           <TabsContent value="preview" className="space-y-4">
             <HierarchicalVariationPreview
-              template={selectedTemplate}
+              template={selectedTemplateConfig}
               variations={localVariations}
             />
           </TabsContent>
@@ -345,11 +397,35 @@ const HierarchicalVariationsManager: React.FC<HierarchicalVariationsManagerProps
 
       {localVariations.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">💡 Resumo das Variações:</h4>
+          <h4 className="font-medium text-blue-900 mb-2">
+            💡 Resumo das Variações:
+          </h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <p>• {localVariations.length} variação(ões) principal(is) configurada(s)</p>
-            <p>• {localVariations.reduce((sum, v) => sum + (v.children?.length || 0), 0)} subvariação(ões) total</p>
-            <p>• Estoque total: {localVariations.reduce((sum, v) => sum + (v.children?.reduce((subSum, child) => subSum + child.stock, 0) || v.stock), 0)} unidades</p>
+            <p>
+              • {localVariations.length} variação(ões) principal(is)
+              configurada(s)
+            </p>
+            <p>
+              •{" "}
+              {localVariations.reduce(
+                (sum, v) => sum + (v.children?.length || 0),
+                0
+              )}{" "}
+              subvariação(ões) total
+            </p>
+            <p>
+              • Estoque total:{" "}
+              {localVariations.reduce(
+                (sum, v) =>
+                  sum +
+                  (v.children?.reduce(
+                    (subSum, child) => subSum + child.stock,
+                    0
+                  ) || v.stock),
+                0
+              )}{" "}
+              unidades
+            </p>
           </div>
         </div>
       )}

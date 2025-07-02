@@ -9,14 +9,19 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+  plugins: [react(), mode === "development" && componentTagger()].filter(
+    Boolean
+  ),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  define: {
+    __DEV__: mode === "development",
+  },
+  esbuild: {
+    // Remove console.log, console.warn, console.error em produção
+    drop: mode === "production" ? ["console", "debugger"] : [],
   },
 }));

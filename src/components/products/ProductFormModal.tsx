@@ -16,14 +16,10 @@ const ProductFormModal = ({
   initialData,
   mode,
 }: ProductFormModalProps) => {
-  const handleSuccess = async () => {
-    console.log("🎉 ProductFormModal - Produto salvo com sucesso");
-
-    // Sempre chamar onSubmit para refresh da lista
+  const handleSuccess = (productData?: any) => {
     if (onSubmit) {
       try {
-        await onSubmit({});
-        console.log("✅ Lista de produtos atualizada com sucesso");
+        onSubmit(productData || {});
       } catch (error) {
         console.error("❌ Erro ao atualizar lista:", error);
       }

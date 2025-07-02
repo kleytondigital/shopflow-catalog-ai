@@ -24,6 +24,13 @@ interface GenericProductFormData {
   stock_alert_threshold?: number;
   variations?: any[];
   store_id?: string;
+  price_tiers?: Array<{
+    id: string;
+    name: string;
+    minQuantity: number;
+    price: number;
+    enabled: boolean;
+  }>;
 }
 
 interface WizardStepContentProps {
@@ -56,14 +63,8 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
     allow_negative_stock: formData.allow_negative_stock || false,
     stock_alert_threshold: formData.stock_alert_threshold || 5,
     store_id: formData.store_id || "",
+    price_tiers: formData.price_tiers || [],
   };
-
-  console.log("🧙‍♂️ WIZARD STEP CONTENT - Renderizando:", {
-    currentStep,
-    productId,
-    formDataName: formData.name,
-    variationsCount: formData.variations?.length || 0,
-  });
 
   switch (currentStep) {
     case 0: // Informações Básicas

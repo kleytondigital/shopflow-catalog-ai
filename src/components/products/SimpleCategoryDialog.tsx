@@ -1,15 +1,20 @@
-
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useCategories, CreateCategoryData } from '@/hooks/useCategories';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus } from 'lucide-react';
-import AIContentGenerator from '@/components/ai/AIContentGenerator';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useCategories, CreateCategoryData } from "@/hooks/useCategories";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Plus } from "lucide-react";
+import AIContentGenerator from "@/components/ai/AIContentGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SimpleCategoryDialogProps {
   open: boolean;
@@ -17,9 +22,13 @@ interface SimpleCategoryDialogProps {
   onCategoryCreated: (category: any) => void;
 }
 
-const SimpleCategoryDialog = ({ open, onOpenChange, onCategoryCreated }: SimpleCategoryDialogProps) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+const SimpleCategoryDialog = ({
+  open,
+  onOpenChange,
+  onCategoryCreated,
+}: SimpleCategoryDialogProps) => {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const { createCategory } = useCategories();
   const { profile } = useAuth();
@@ -30,71 +39,60 @@ const SimpleCategoryDialog = ({ open, onOpenChange, onCategoryCreated }: SimpleC
   };
 
   const resetForm = () => {
-    setName('');
-    setDescription('');
+    setName("");
+    setDescription("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!name.trim()) {
       toast({
-        title: "Nome obrigatório",
-        description: "Por favor, insira o nome da categoria",
-        variant: "destructive"
+        title: "Erro",
+        description: "Nome da categoria é obrigatório",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!profile?.store_id) {
-      toast({
-        title: "Erro",
-        description: "Loja não identificada",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (loading) return;
 
     setLoading(true);
 
     try {
-      const categoryData: CreateCategoryData = {
-        store_id: profile.store_id,
+      const categoryData = {
         name: name.trim(),
-        description: description.trim() || undefined,
-        is_active: true
+        description: description.trim() || null,
+        store_id: profile?.store_id,
+        is_active: true,
       };
 
-      console.log('Criando categoria:', categoryData);
-      const { data, error } = await createCategory(categoryData);
+      const { data, error } = await supabase
+        .from("categories")
+        .insert([categoryData])
+        .select()
+        .single();
 
       if (error) {
-        console.error('Erro ao criar categoria:', error);
-        toast({
-          title: "Erro ao criar categoria",
-          description: "Verifique se o nome não está duplicado",
-          variant: "destructive"
-        });
-      } else if (data) {
-        console.log('Categoria criada com sucesso:', data);
-        toast({
-          title: "Categoria criada",
-          description: `A categoria "${name}" foi criada com sucesso`
-        });
-        
-        // Notificar categoria criada
-        onCategoryCreated(data);
-        
-        // Resetar formulário e fechar modal
-        resetForm();
-        onOpenChange(false);
+        throw error;
       }
-    } catch (error) {
-      console.error('Erro inesperado:', error);
+
       toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro ao criar a categoria",
-        variant: "destructive"
+        title: "Sucesso!",
+        description: `Categoria "${name}" criada com sucesso`,
+      });
+
+      if (onCategoryCreated) {
+        onCategoryCreated(data);
+      }
+
+      // Fechar dialog e limpar form
+      resetForm();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Erro ao criar categoria:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar categoria",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -118,7 +116,7 @@ const SimpleCategoryDialog = ({ open, onOpenChange, onCategoryCreated }: SimpleC
             Nova Categoria
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="categoryName">Nome da Categoria *</Label>
@@ -155,8 +153,8 @@ const SimpleCategoryDialog = ({ open, onOpenChange, onCategoryCreated }: SimpleC
           </div>
 
           <div className="flex gap-2">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading || !name.trim()}
               className="flex-1"
             >
@@ -166,13 +164,13 @@ const SimpleCategoryDialog = ({ open, onOpenChange, onCategoryCreated }: SimpleC
                   Criando...
                 </>
               ) : (
-                'Criar Categoria'
+                "Criar Categoria"
               )}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => handleOpenChange(false)} 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
               disabled={loading}
             >
               Cancelar

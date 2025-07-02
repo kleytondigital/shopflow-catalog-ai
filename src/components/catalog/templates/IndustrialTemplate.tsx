@@ -1,16 +1,27 @@
-import React, { useState, memo, useCallback, useMemo } from 'react';
-import { Heart, ShoppingCart, Eye, TrendingUp, AlertTriangle, Share2, Star, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Product } from '@/hooks/useProducts';
-import { CatalogType } from '@/hooks/useCatalog';
-import { useProductVariations } from '@/hooks/useProductVariations';
-import { useCart } from '@/hooks/useCart';
-import { useCatalogMode } from '@/hooks/useCatalogMode';
-import { useToast } from '@/hooks/use-toast';
-import { createCartItem } from '@/utils/cartHelpers';
-import ProductDetailsModal from '../ProductDetailsModal';
+import React, { useState, memo, useCallback, useMemo } from "react";
+import {
+  Heart,
+  ShoppingCart,
+  Eye,
+  TrendingUp,
+  AlertTriangle,
+  Share2,
+  Star,
+  AlertCircle,
+  Wrench,
+  TrendingDown,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Product } from "@/hooks/useProducts";
+import { CatalogType } from "@/hooks/useCatalog";
+import { useProductVariations } from "@/hooks/useProductVariations";
+import { useCart } from "@/hooks/useCart";
+import { useCatalogMode } from "@/hooks/useCatalogMode";
+import { useToast } from "@/hooks/use-toast";
+import { createCartItem } from "@/utils/cartHelpers";
+import ProductDetailsModal from "../ProductDetailsModal";
 
 interface IndustrialTemplateProps {
   product: Product;
@@ -23,331 +34,389 @@ interface IndustrialTemplateProps {
   showStock: boolean;
 }
 
-const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(({
-  product,
-  catalogType,
-  onAddToCart,
-  onAddToWishlist,
-  onQuickView,
-  isInWishlist,
-  showPrices,
-  showStock
-}) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const { variations } = useProductVariations(product.id);
-  const { addItem, items } = useCart();
-  const { toast } = useToast();
-  
-  const {
-    catalogMode,
-    currentCatalogType,
-    calculatePrice,
-    shouldShowSavingsIndicator,
-    calculatePotentialSavings
-  } = useCatalogMode();
+const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(
+  ({
+    product,
+    catalogType,
+    onAddToCart,
+    onAddToWishlist,
+    onQuickView,
+    isInWishlist,
+    showPrices,
+    showStock,
+  }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const { variations } = useProductVariations(product.id);
+    const { addItem, items } = useCart();
+    const { toast } = useToast();
 
-  // Usar variações do produto se disponíveis, senão usar do hook
-  const productVariations = product.variations || variations || [];
+    const {
+      catalogMode,
+      currentCatalogType,
+      calculatePrice,
+      shouldShowSavingsIndicator,
+      calculatePotentialSavings,
+    } = useCatalogMode();
 
-  // Calcular quantidade atual no carrinho para este produto
-  const cartQuantity = useMemo(() => {
-    return items
-      .filter(item => item.product.id === product.id)
-      .reduce((total, item) => total + item.quantity, 0);
-  }, [items, product.id]);
+    // Usar variações do produto se disponíveis, senão usar do hook
+    const productVariations = product.variations || variations || [];
 
-  // Calcular preço baseado no modo e quantidade do carrinho
-  const effectivePrice = useMemo(() => {
-    return calculatePrice(product, cartQuantity + 1);
-  }, [calculatePrice, product, cartQuantity]);
+    // Calcular quantidade atual no carrinho para este produto
+    const cartQuantity = useMemo(() => {
+      return items
+        .filter((item) => item.product.id === product.id)
+        .reduce((total, item) => total + item.quantity, 0);
+    }, [items, product.id]);
 
-  // Calcular economia potencial
-  const potentialSavings = useMemo(() => {
-    return calculatePotentialSavings(product, cartQuantity + 1);
-  }, [calculatePotentialSavings, product, cartQuantity]);
+    // Calcular preço baseado no modo e quantidade do carrinho
+    const effectivePrice = useMemo(() => {
+      return calculatePrice(product, cartQuantity + 1);
+    }, [calculatePrice, product, cartQuantity]);
 
-  // Verificar se deve mostrar indicador de economia
-  const showSavings = useMemo(() => {
-    return shouldShowSavingsIndicator(product, cartQuantity + 1);
-  }, [shouldShowSavingsIndicator, product, cartQuantity]);
+    // Calcular economia potencial
+    const potentialSavings = useMemo(() => {
+      if (!product.wholesale_price || !product.retail_price) return null;
 
-  const price = catalogType === 'wholesale' ? product.wholesale_price : product.retail_price;
-  const isWholesale = catalogType === 'wholesale';
-  const canShowWholesale = product.wholesale_price && product.min_wholesale_qty;
-  const isLowStock = product.stock <= 5;
+      const maxSavings = product.retail_price - product.wholesale_price;
+      const maxPercent = (maxSavings / product.retail_price) * 100;
 
-  const discountPercentage = catalogType === 'wholesale' && product.wholesale_price
-    ? Math.round(((product.retail_price - product.wholesale_price) / product.retail_price) * 100)
-    : 0;
+      return {
+        savings: maxSavings,
+        savingsPercentage: maxPercent,
+        maxDiscountPercent: Math.round(maxPercent),
+      };
+    }, [product.wholesale_price, product.retail_price]);
 
-  const handleShare = useCallback(async () => {
-    const shareData = {
-      title: product.name,
-      text: product.description || 'Confira este produto incrível!',
-      url: window.location.href + `/produto/${product.id}`
+    // Verificar se deve mostrar indicador de economia
+    const showSavings = useMemo(() => {
+      return shouldShowSavingsIndicator(product, cartQuantity + 1);
+    }, [shouldShowSavingsIndicator, product, cartQuantity]);
+
+    const price =
+      catalogType === "wholesale"
+        ? product.wholesale_price
+        : product.retail_price;
+    const isWholesale = catalogType === "wholesale";
+    const canShowWholesale =
+      product.wholesale_price && product.min_wholesale_qty;
+    const isLowStock = product.stock <= 5;
+
+    const discountPercentage =
+      catalogType === "wholesale" && product.wholesale_price
+        ? Math.round(
+            ((product.retail_price - product.wholesale_price) /
+              product.retail_price) *
+              100
+          )
+        : 0;
+
+    const handleShare = useCallback(async () => {
+      const shareData = {
+        title: product.name,
+        text: product.description || "Confira este produto incrível!",
+        url: window.location.href + `/produto/${product.id}`,
+      };
+
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        navigator.clipboard.writeText(shareData.url);
+        toast({
+          title: "Link copiado!",
+          description:
+            "O link do produto foi copiado para a área de transferência.",
+        });
+      }
+    }, [product.name, product.description, product.id, toast]);
+
+    const handleAddToCart = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onAddToCart(product);
+      },
+      [onAddToCart, product]
+    );
+
+    const handleAddToWishlist = useCallback(() => {
+      onAddToWishlist(product);
+    }, [onAddToWishlist, product]);
+
+    const handleQuickView = useCallback(() => {
+      onQuickView(product);
+    }, [onQuickView, product]);
+
+    const handleImageLoad = useCallback(() => {
+      setImageLoaded(true);
+    }, []);
+
+    const handleImageError = useCallback(() => {
+      setImageError(true);
+    }, []);
+
+    const getStockStatus = () => {
+      if (product.stock === 0) return { text: "Esgotado", color: "bg-red-500" };
+      if (product.stock <= 5)
+        return { text: "Últimas unidades", color: "bg-orange-500" };
+      if (product.stock > 50)
+        return { text: "Disponível", color: "bg-green-500" };
+      return { text: `${product.stock} disponíveis`, color: "bg-blue-500" };
     };
 
-    if (navigator.share) {
-      await navigator.share(shareData);
-    } else {
-      navigator.clipboard.writeText(shareData.url);
-      toast({
-        title: "Link copiado!",
-        description: "O link do produto foi copiado para a área de transferência.",
-      });
-    }
-  }, [product.name, product.description, product.id, toast]);
+    const stockStatus = getStockStatus();
 
-  const handleAddToCart = useCallback(() => {
-    // Se o produto tem variações, abrir modal de detalhes
-    if (productVariations.length > 0) {
-      setShowDetailsModal(true);
-    } else {
-      // Usar a lógica original de adicionar ao carrinho
-      const cartItem = createCartItem(product, catalogType, 1);
-      addItem(cartItem);
-    }
-  }, [productVariations.length, product, catalogType, addItem]);
+    // Gerar avaliação fictícia baseada no ID do produto
+    const rating = useMemo(() => {
+      const hash = product.id.split("").reduce((a, b) => {
+        a = (a << 5) - a + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      return 3.5 + (Math.abs(hash) % 15) / 10; // Entre 3.5 e 5.0
+    }, [product.id]);
 
-  const handleAddToWishlist = useCallback(() => {
-    onAddToWishlist(product);
-  }, [onAddToWishlist, product]);
+    const reviewCount = useMemo(() => {
+      const hash = product.name.length + (product.retail_price || 0);
+      return Math.floor(5 + (hash % 45)); // Entre 5 e 50 avaliações
+    }, [product.name, product.retail_price]);
 
-  const handleQuickView = useCallback(() => {
-    setShowDetailsModal(true);
-  }, []);
+    // Função para renderizar as estrelas
+    const renderStars = (rating: number) => {
+      const fullStars = Math.floor(rating);
+      const hasHalfStar = rating % 1 >= 0.5;
+      const stars = [];
 
-  const handleImageLoad = useCallback(() => {
-    setImageLoaded(true);
-  }, []);
-
-  const handleImageError = useCallback(() => {
-    setImageError(true);
-  }, []);
-
-  return (
-    <>
-      <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-300 hover:border-blue-900 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
-        {/* Chanfro superior direito */}
-        <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-br from-blue-900 to-slate-700 clip-path-triangle"></div>
-        
-        {/* Container da imagem com efeito industrial */}
-        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300">
-          {!imageError ? (
-            <img
-              src={product.image_url || '/placeholder.svg'}
-              alt={product.name}
-              className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-              <span className="text-slate-500 text-sm font-medium">Sem imagem</span>
-            </div>
-          )}
-          
-          {/* Overlay metálico */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          {/* Badges metálicos */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            {catalogMode === 'hybrid' && discountPercentage > 0 && (
-              <Badge className="bg-gradient-to-r from-green-600 to-green-700 text-white font-bold px-3 py-1 clip-path-badge shadow-lg animate-pulse">
-                <TrendingUp size={12} className="mr-1" />
-                -{discountPercentage}% ATACADO
-              </Badge>
-            )}
-            {isWholesale && (
-              <Badge className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold px-3 py-1 clip-path-badge shadow-lg">
-                <TrendingUp size={12} className="mr-1" />
-                ATACADO
-              </Badge>
-            )}
-            {isLowStock && showStock && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold px-3 py-1 clip-path-badge shadow-lg">
-                <AlertTriangle size={12} className="mr-1" />
-                ESTOQUE BAIXO
-              </Badge>
-            )}
-            {product.is_featured && (
-              <Badge className="bg-gradient-to-r from-blue-900 to-slate-700 text-white font-bold px-3 py-1 clip-path-badge shadow-lg">
-                ⭐ DESTAQUE
-              </Badge>
-            )}
-            {productVariations.length > 0 && (
-              <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold px-3 py-1 clip-path-badge shadow-lg">
-                {productVariations.length} VARIAÇÕES
-              </Badge>
-            )}
-          </div>
-
-          {/* Indicador de Economia - Modo Híbrido */}
-          {catalogMode === 'hybrid' && showSavings && potentialSavings && (
-            <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-red-500 text-white p-2 rounded-lg shadow-lg animate-bounce border-2 border-orange-300">
-              <div className="flex items-center gap-1 text-xs font-bold">
-                <TrendingUp size={12} />
-                <span>FALTAM {potentialSavings.qtyRemaining}</span>
-              </div>
-              <div className="text-xs">
-                ECONOMIZE {potentialSavings.savingsPercentage.toFixed(0)}%
+      for (let i = 0; i < 5; i++) {
+        if (i < fullStars) {
+          stars.push(
+            <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+          );
+        } else if (i === fullStars && hasHalfStar) {
+          stars.push(
+            <div key={i} className="relative h-3 w-3">
+              <Star className="h-3 w-3 text-gray-300 absolute" />
+              <div className="overflow-hidden w-1/2">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
               </div>
             </div>
-          )}
+          );
+        } else {
+          stars.push(<Star key={i} className="h-3 w-3 text-gray-300" />);
+        }
+      }
+      return stars;
+    };
 
-          {/* Botões de ação flutuantes */}
-          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="w-10 h-10 p-0 bg-slate-800/80 hover:bg-slate-700 text-white border-2 border-slate-600 rounded-none clip-path-button"
-              onClick={handleAddToWishlist}
-            >
-              <Heart size={16} className={isInWishlist ? 'fill-red-500 text-red-500' : ''} />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="w-10 h-10 p-0 bg-slate-800/80 hover:bg-slate-700 text-white border-2 border-slate-600 rounded-none clip-path-button"
-              onClick={handleQuickView}
-            >
-              <Eye size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="w-10 h-10 p-0 bg-slate-800/80 hover:bg-slate-700 text-white border-2 border-slate-600 rounded-none clip-path-button"
-              onClick={handleShare}
-            >
-              <Share2 size={16} />
-            </Button>
-          </div>
-        </div>
+    return (
+      <>
+        <Card
+          className="group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-300 hover:border-slate-900 cursor-pointer"
+          onClick={handleQuickView}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <CardContent className="p-0">
+            {/* Chanfro superior direito */}
+            <div className="absolute top-0 right-0 w-6 h-6 bg-gradient-to-br from-slate-900 to-slate-700 transform rotate-45 translate-x-3 -translate-y-3 z-10"></div>
 
-        <CardContent className="p-4 bg-gradient-to-b from-white to-slate-50">
-          {/* Título do produto */}
-          <h3 className="font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-900 transition-colors duration-300">
-            {product.name}
-          </h3>
-
-          {/* Categoria */}
-          {product.category && (
-            <p className="text-sm text-slate-600 mb-2 font-medium uppercase tracking-wide">
-              {product.category}
-            </p>
-          )}
-
-          {/* Rating Industrial */}
-          <div className="flex items-center gap-1 mb-3">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={12} className="text-yellow-500" fill="currentColor" />
-            ))}
-            <span className="text-xs text-slate-600 ml-1 font-bold">(24 AVALIAÇÕES)</span>
-          </div>
-
-          {/* Informações no Carrinho - Modo Híbrido */}
-          {catalogMode === 'hybrid' && cartQuantity > 0 && (
-            <div className="mb-4 p-3 bg-blue-900/10 rounded-lg border-2 border-blue-900/20">
-              <div className="flex items-center gap-1 text-sm text-blue-900 font-bold">
-                <ShoppingCart size={14} />
-                <span>{cartQuantity} NO CARRINHO</span>
-              </div>
-              {potentialSavings && (
-                <div className="text-sm text-blue-800 mt-1 font-medium">
-                  ADICIONE +{potentialSavings.qtyRemaining} PARA ECONOMIZAR {potentialSavings.savingsPercentage.toFixed(0)}%
+            {/* Image Container */}
+            <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300">
+              {!imageError ? (
+                <img
+                  src={product.image_url || "/placeholder.svg"}
+                  alt={product.name}
+                  className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+                    imageLoaded ? "opacity-100" : "opacity-0"
+                  } ${isHovered ? "scale-110" : "scale-100"}`}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-500">
+                  <AlertCircle className="h-12 w-12" />
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Preços com design industrial */}
-          {showPrices && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl font-bold text-blue-900 bg-gradient-to-r from-blue-900 to-slate-700 bg-clip-text text-transparent">
-                  R$ {effectivePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-                {catalogMode === 'hybrid' && product.wholesale_price && product.wholesale_price < product.retail_price && (
-                  <span className="text-sm text-slate-500 line-through font-bold">
-                    R$ {product.retail_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                )}
-                {isWholesale && product.min_wholesale_qty && (
-                  <Badge className="bg-gradient-to-r from-green-600 to-green-700 text-white text-xs font-bold px-2 py-1 clip-path-badge">
-                    MIN. {product.min_wholesale_qty}
-                  </Badge>
-                )}
+              {/* Overlay metálico */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              {/* Ações rápidas */}
+              <div
+                className={`absolute top-2 right-2 flex flex-col gap-2 transition-opacity duration-300 ${
+                  isHovered ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetailsModal(true);
+                  }}
+                  className="w-9 h-9 p-0 bg-slate-100/95 hover:bg-slate-100 shadow-lg backdrop-blur-sm border border-slate-400 transition-all duration-200"
+                >
+                  <Eye className="h-4 w-4 text-slate-700 hover:text-blue-600 transition-colors duration-200" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToWishlist(product);
+                  }}
+                  className="w-9 h-9 p-0 bg-slate-100/95 hover:bg-slate-100 shadow-lg backdrop-blur-sm border border-slate-400 transition-all duration-200"
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      isInWishlist
+                        ? "fill-red-500 text-red-500"
+                        : "text-slate-700 hover:text-red-500 transition-colors duration-200"
+                    }`}
+                  />
+                </Button>
               </div>
-              
-              {/* Indicador de Preço Híbrido */}
-              {catalogMode === 'hybrid' && product.wholesale_price && (
-                <div className="flex items-center gap-1 text-sm text-green-700 font-bold">
-                  <AlertCircle size={14} />
-                  <span>PREÇO DE ATACADO DISPONÍVEL</span>
-                </div>
+
+              {/* Discount Badge - Top Left */}
+              {product.wholesale_price && product.retail_price && (
+                <Badge className="absolute top-2 left-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-2 py-1 font-bold shadow-lg">
+                  <Wrench className="h-3 w-3 mr-1" />-
+                  {Math.round(
+                    ((product.retail_price - product.wholesale_price) /
+                      product.retail_price) *
+                      100
+                  )}
+                  %
+                </Badge>
+              )}
+
+              {/* Desconto potencial */}
+              {potentialSavings && potentialSavings.savingsPercentage > 0 && (
+                <Badge className="absolute top-2 left-20 bg-gradient-to-r from-orange-600 to-orange-700 text-white text-xs px-2 py-1 font-bold shadow-lg">
+                  <TrendingDown className="h-3 w-3 mr-1" />
+                  Até -{potentialSavings.maxDiscountPercent}%
+                </Badge>
+              )}
+
+              {/* Stock Badge - Bottom Right */}
+              {showStock && (
+                <Badge
+                  className={`absolute bottom-2 right-2 ${stockStatus.color} text-white text-xs px-2 py-1 font-bold shadow-lg`}
+                >
+                  {stockStatus.text}
+                </Badge>
               )}
             </div>
-          )}
 
-          {/* Stock info */}
-          {showStock && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600 font-medium">ESTOQUE:</span>
-                <span className={`font-bold ${isLowStock ? 'text-orange-600' : 'text-green-600'}`}>
-                  {product.stock} UNIDADES
-                </span>
+            {/* Product Info */}
+            <div className="p-3 space-y-2 bg-gradient-to-br from-slate-50 to-white">
+              {/* Category */}
+              {product.category && (
+                <p className="text-xs text-slate-600 uppercase tracking-wider font-bold">
+                  {product.category}
+                </p>
+              )}
+
+              {/* Product Name */}
+              <h3 className="font-bold text-slate-900 line-clamp-2 text-sm leading-5 min-h-[40px]">
+                {product.name}
+              </h3>
+
+              {/* Rating */}
+              <div className="flex items-center gap-1">
+                <div className="flex gap-0.5">{renderStars(rating)}</div>
+                <span className="text-xs text-slate-500">({reviewCount})</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    isLowStock ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-green-500 to-green-600'
-                  }`}
-                  style={{ width: `${Math.min((product.stock / 50) * 100, 100)}%` }}
-                ></div>
-              </div>
+
+              {/* Prices */}
+              {showPrices && (
+                <div className="space-y-1">
+                  {/* Retail Price */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600 font-semibold">
+                      Varejo:
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      R$ {product.retail_price?.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Wholesale Price */}
+                  {product.wholesale_price && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-red-600 font-semibold">
+                        Atacado:
+                      </span>
+                      <span className="font-bold text-red-600">
+                        R$ {product.wholesale_price.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Indicador de economia potencial */}
+              {potentialSavings && potentialSavings.savingsPercentage > 0 && (
+                <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-orange-700">
+                    <TrendingDown className="h-3 w-3" />
+                    <span className="text-xs font-medium">
+                      Economize até R$ {potentialSavings.savings.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Add to Cart Button */}
+              <Button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className="w-full mt-3 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-sm py-2 font-bold shadow-lg border border-slate-700"
+                size="sm"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                {product.stock === 0
+                  ? "Esgotado"
+                  : productVariations.length > 0
+                  ? "Ver Opções"
+                  : "Comprar"}
+              </Button>
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {/* Botão de adicionar ao carrinho industrial */}
-          <Button
-            onClick={handleAddToCart}
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 px-4 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl clip-path-button-large"
-            disabled={product.stock <= 0}
-          >
-            <ShoppingCart size={18} className="mr-2" />
-            {product.stock <= 0 ? 'INDISPONÍVEL' : productVariations.length > 0 ? 'VER OPÇÕES' : 'ADICIONAR AO CARRINHO'}
-          </Button>
+        {/* Product Details Modal */}
+        {showDetailsModal && (
+          <ProductDetailsModal
+            product={product}
+            isOpen={showDetailsModal}
+            onClose={() => setShowDetailsModal(false)}
+            onAddToCart={(
+              product: Product,
+              quantity: number,
+              variation?: any
+            ) => {
+              const cartItem = createCartItem(
+                product,
+                catalogType,
+                quantity,
+                variation
+              );
+              addItem(cartItem);
 
-          {/* Incentivo para Atacado - Modo Híbrido */}
-          {catalogMode === 'hybrid' && potentialSavings && (
-            <div className="mt-3 text-center">
-              <p className="text-sm text-orange-700 font-bold bg-orange-100 p-2 rounded border-2 border-orange-300">
-                💰 COMPRE {potentialSavings.minQtyNeeded} E ECONOMIZE R$ {potentialSavings.savings.toFixed(2)}
-              </p>
-            </div>
-          )}
-        </CardContent>
+              toast({
+                title: "Produto adicionado!",
+                description: `${product.name} foi adicionado ao carrinho.`,
+              });
+            }}
+            catalogType={catalogType}
+          />
+        )}
+      </>
+    );
+  }
+);
 
-        {/* Efeito de borda metálica */}
-        <div className="absolute inset-0 border-2 border-transparent group-hover:border-gradient-to-r group-hover:from-blue-900 group-hover:to-slate-700 pointer-events-none rounded-lg"></div>
-      </Card>
-
-      {/* Product Details Modal */}
-      <ProductDetailsModal
-        product={product}
-        catalogType={catalogType}
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-      />
-    </>
-  );
-});
-
-IndustrialTemplate.displayName = 'IndustrialTemplate';
+IndustrialTemplate.displayName = "IndustrialTemplate";
 
 export default IndustrialTemplate;

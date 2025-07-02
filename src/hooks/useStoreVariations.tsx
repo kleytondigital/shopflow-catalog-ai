@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -433,53 +433,66 @@ export const useStoreVariations = () => {
     loadData();
   }, [profile?.store_id]);
 
-  // Inicializar variações automaticamente se a loja não tiver nenhum grupo
+  // Auto-initialization effect
   useEffect(() => {
-    const autoInitialize = async () => {
-      if (!loading && profile?.store_id && groups.length === 0) {
-        console.log(
-          "🔄 Nenhum grupo de variação encontrado para a loja. Inicializando automaticamente..."
-        );
+    if (
+      profile?.role === "store_admin" &&
+      profile?.store_id &&
+      loading &&
+      !loading &&
+      (groups.length === 0 || values.length === 0)
+    ) {
+      initializeFromGlobalVariations();
+    }
+  }, [
+    profile?.role,
+    profile?.store_id,
+    loading,
+    groups.length,
+    values.length,
+    initializeFromGlobalVariations,
+  ]);
 
-        // Verificar se há grupos globais antes de inicializar
-        const { data: globalGroups } = await supabase
-          .from("variation_master_groups")
-          .select("id")
-          .eq("is_active", true)
-          .limit(1);
-
-        if (globalGroups && globalGroups.length > 0) {
-          await initializeFromGlobalVariations();
-        }
+  const addStoreBenefit = useCallback(
+    async (benefitData: any) => {
+      if (!benefitData.message || !benefitData.type || !profile?.store_id) {
+        toast({
+          title: "Erro de validação",
+          description: "Dados inválidos para criação do benefício",
+          variant: "destructive",
+        });
+        return;
       }
-    };
 
-    autoInitialize();
-  }, [loading, profile?.store_id, groups.length]);
+      const { error } = await supabase.from("store_benefits").insert({
+        store_id: profile.store_id,
+        benefit_id: benefitData.id,
+        message: benefitData.message,
+        is_active: true,
+        type: benefitData.type,
+        icon: benefitData.icon,
+        order_index: benefitData.order_index || 0,
+      });
 
-  // Inicializar variações automaticamente se a loja não tiver nenhum grupo
-  useEffect(() => {
-    const autoInitialize = async () => {
-      if (!loading && profile?.store_id && groups.length === 0) {
-        console.log(
-          "🔄 Nenhum grupo de variação encontrado para a loja. Inicializando automaticamente..."
-        );
-
-        // Verificar se há grupos globais antes de inicializar
-        const { data: globalGroups } = await supabase
-          .from("variation_master_groups")
-          .select("id")
-          .eq("is_active", true)
-          .limit(1);
-
-        if (globalGroups && globalGroups.length > 0) {
-          await initializeFromGlobalVariations();
-        }
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao adicionar benefício",
+          variant: "destructive",
+        });
+        return;
       }
-    };
 
-    autoInitialize();
-  }, [loading, profile?.store_id, groups.length]);
+      toast({
+        title: "Sucesso!",
+        description: "Benefício adicionado com sucesso",
+      });
+
+      // Recarregar benefits se houver hook para isso
+      // refetchBenefits?.();
+    },
+    [profile?.store_id, toast]
+  );
 
   return {
     groups: groups.filter((g) => g.is_active),
@@ -494,5 +507,6 @@ export const useStoreVariations = () => {
     getValuesByGroup,
     initializeFromGlobalVariations,
     refetch: () => Promise.all([fetchGroups(), fetchValues()]),
+    addStoreBenefit,
   };
 };

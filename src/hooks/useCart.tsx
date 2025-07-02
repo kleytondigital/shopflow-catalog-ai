@@ -1,6 +1,7 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { ProductVariation } from '@/types/variation';
+import { useState, useEffect, createContext, useContext } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { ProductVariation } from "@/types/variation";
+import { usePriceCalculation } from "./usePriceCalculation";
 
 export interface CartItem {
   id: string;
@@ -11,12 +12,13 @@ export interface CartItem {
     wholesale_price?: number;
     min_wholesale_qty?: number;
     image_url?: string;
+    store_id?: string;
   };
   quantity: number;
   price: number;
   originalPrice: number;
   variation?: ProductVariation;
-  catalogType: 'retail' | 'wholesale';
+  catalogType: "retail" | "wholesale";
   isWholesalePrice?: boolean;
 }
 
@@ -41,18 +43,24 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 // Função para validar estrutura de item do carrinho
 const validateCartItem = (item: any): CartItem | null => {
   try {
-    if (!item || typeof item !== 'object') return null;
-    
+    if (!item || typeof item !== "object") return null;
+
     // Verificar propriedades obrigatórias
-    if (!item.id || !item.product || typeof item.quantity !== 'number') return null;
-    if (typeof item.price !== 'number' || isNaN(item.price)) return null;
+    if (!item.id || !item.product || typeof item.quantity !== "number")
+      return null;
+    if (typeof item.price !== "number" || isNaN(item.price)) return null;
     if (!item.product.id || !item.product.name) return null;
-    if (typeof item.product.retail_price !== 'number' || isNaN(item.product.retail_price)) return null;
-    
+    if (
+      typeof item.product.retail_price !== "number" ||
+      isNaN(item.product.retail_price)
+    )
+      return null;
+
     // Garantir que originalPrice existe e é válido
-    const originalPrice = item.originalPrice || item.product.retail_price || item.price;
-    if (typeof originalPrice !== 'number' || isNaN(originalPrice)) return null;
-    
+    const originalPrice =
+      item.originalPrice || item.product.retail_price || item.price;
+    if (typeof originalPrice !== "number" || isNaN(originalPrice)) return null;
+
     return {
       id: item.id,
       product: {
@@ -61,51 +69,86 @@ const validateCartItem = (item: any): CartItem | null => {
         retail_price: item.product.retail_price,
         wholesale_price: item.product.wholesale_price,
         min_wholesale_qty: item.product.min_wholesale_qty,
-        image_url: item.product.image_url
+        image_url: item.product.image_url,
       },
       quantity: Math.max(1, Math.floor(item.quantity)),
       price: item.price,
       originalPrice,
       variation: item.variation,
-      catalogType: item.catalogType || 'retail',
-      isWholesalePrice: item.isWholesalePrice || false
+      catalogType: item.catalogType || "retail",
+      isWholesalePrice: item.isWholesalePrice || false,
     };
   } catch (error) {
-    console.error('❌ Erro ao validar item do carrinho:', error, item);
+    console.error("❌ Erro ao validar item do carrinho:", error, item);
     return null;
   }
 };
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
+  // Cache para níveis de preço
+  const [priceTiersCache, setPriceTiersCache] = useState<Record<string, any[]>>(
+    {}
+  );
+
+  // Função para buscar níveis de preço de um produto
+  const fetchProductTiers = async (productId: string) => {
+    if (priceTiersCache[productId]) {
+      return priceTiersCache[productId];
+    }
+
+    try {
+      const { supabase } = await import("../integrations/supabase/client");
+      const { data: tiers } = await supabase
+        .from("product_price_tiers")
+        .select("*")
+        .eq("product_id", productId)
+        .eq("is_active", true)
+        .order("tier_order", { ascending: false });
+
+      if (tiers) {
+        setPriceTiersCache((prev) => ({ ...prev, [productId]: tiers }));
+        return tiers;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar níveis de preço:", error);
+    }
+    return [];
+  };
+
   // Função para recalcular preços baseado na quantidade (lógica híbrida)
   const recalculateItemPrices = (cartItems: CartItem[]): CartItem[] => {
-    return cartItems.map(item => {
+    return cartItems.map((item) => {
       const product = item.product;
       const quantity = item.quantity;
-      
-      // Se produto tem preço de atacado e quantidade mínima
-      if (product.wholesale_price && product.min_wholesale_qty) {
-        const minWholesaleQty = product.min_wholesale_qty;
-        
-        // Se atingiu quantidade mínima para atacado
-        if (quantity >= minWholesaleQty) {
+
+      // Verificar se temos níveis em cache
+      const tiers = priceTiersCache[product.id];
+
+      if (tiers && tiers.length > 1) {
+        // Encontrar o melhor nível baseado na quantidade
+        const bestTier = tiers.find((tier) => quantity >= tier.min_quantity);
+
+        if (bestTier && bestTier.tier_order > 1) {
+          // Aplicar preço do nível encontrado
           return {
             ...item,
-            price: product.wholesale_price,
-            isWholesalePrice: true
+            price: bestTier.price,
+            isWholesalePrice: true,
           };
         }
       }
-      
-      // Usar preço original (varejo)
+
+      // Usar preço original (varejo) se não encontrou nível ou é varejo
       return {
         ...item,
         price: item.originalPrice,
-        isWholesalePrice: false
+        isWholesalePrice: false,
       };
     });
   };
@@ -114,43 +157,49 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadCartFromStorage = () => {
       try {
-        const savedItems = localStorage.getItem('cart-items');
+        const savedItems = localStorage.getItem("cart-items");
         if (savedItems) {
           const parsedItems = JSON.parse(savedItems);
-          
+
           if (Array.isArray(parsedItems)) {
-            console.log('🛒 Carregando itens do carrinho:', parsedItems.length);
-            
+            console.log("🛒 Carregando itens do carrinho:", parsedItems.length);
+
             // Validar e filtrar itens válidos
             const validItems = parsedItems
               .map(validateCartItem)
               .filter((item): item is CartItem => item !== null);
-            
-            console.log('✅ Itens válidos encontrados:', validItems.length);
-            
+
+            console.log("✅ Itens válidos encontrados:", validItems.length);
+
             if (validItems.length !== parsedItems.length) {
-              console.warn('⚠️ Alguns itens do carrinho foram removidos por dados inválidos');
+              console.warn(
+                "⚠️ Alguns itens do carrinho foram removidos por dados inválidos"
+              );
               toast({
                 title: "Carrinho atualizado",
-                description: "Alguns itens foram removidos devido a dados inconsistentes.",
+                description:
+                  "Alguns itens foram removidos devido a dados inconsistentes.",
                 duration: 3000,
               });
             }
-            
+
             // Recalcular preços ao carregar
             const recalculatedItems = recalculateItemPrices(validItems);
             setItems(recalculatedItems);
           } else {
-            console.warn('⚠️ Dados do carrinho em formato inválido, limpando localStorage');
-            localStorage.removeItem('cart-items');
+            console.warn(
+              "⚠️ Dados do carrinho em formato inválido, limpando localStorage"
+            );
+            localStorage.removeItem("cart-items");
           }
         }
       } catch (error) {
-        console.error('❌ Erro ao carregar carrinho do localStorage:', error);
-        localStorage.removeItem('cart-items');
+        console.error("❌ Erro ao carregar carrinho do localStorage:", error);
+        localStorage.removeItem("cart-items");
         toast({
           title: "Erro no carrinho",
-          description: "Houve um problema ao carregar seu carrinho. Ele foi resetado.",
+          description:
+            "Houve um problema ao carregar seu carrinho. Ele foi resetado.",
           variant: "destructive",
           duration: 4000,
         });
@@ -163,9 +212,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Salvar no localStorage sempre que items mudarem
   useEffect(() => {
     try {
-      localStorage.setItem('cart-items', JSON.stringify(items));
+      localStorage.setItem("cart-items", JSON.stringify(items));
     } catch (error) {
-      console.error('❌ Erro ao salvar carrinho:', error);
+      console.error("❌ Erro ao salvar carrinho:", error);
     }
   }, [items]);
 
@@ -173,7 +222,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Validar item antes de adicionar
     const validatedItem = validateCartItem(item);
     if (!validatedItem) {
-      console.error('❌ Tentativa de adicionar item inválido ao carrinho:', item);
+      console.error(
+        "❌ Tentativa de adicionar item inválido ao carrinho:",
+        item
+      );
       toast({
         title: "Erro",
         description: "Não foi possível adicionar este item ao carrinho.",
@@ -183,17 +235,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    setItems(current => {
+    // Buscar níveis de preço se não estiverem em cache
+    if (!priceTiersCache[validatedItem.product.id]) {
+      fetchProductTiers(validatedItem.product.id);
+    }
+
+    setItems((current) => {
       const existingIndex = current.findIndex(
-        cartItem => 
-          cartItem.product.id === validatedItem.product.id && 
+        (cartItem) =>
+          cartItem.product.id === validatedItem.product.id &&
           cartItem.catalogType === validatedItem.catalogType &&
           // Comparar variações incluindo IDs se disponíveis
           ((!cartItem.variation && !validatedItem.variation) ||
-           (cartItem.variation && validatedItem.variation && 
-            cartItem.variation.id === validatedItem.variation.id &&
-            cartItem.variation.color === validatedItem.variation.color &&
-            cartItem.variation.size === validatedItem.variation.size))
+            (cartItem.variation &&
+              validatedItem.variation &&
+              cartItem.variation.id === validatedItem.variation.id &&
+              cartItem.variation.color === validatedItem.variation.color &&
+              cartItem.variation.size === validatedItem.variation.size))
       );
 
       let newItems;
@@ -201,7 +259,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         newItems = [...current];
         newItems[existingIndex] = {
           ...newItems[existingIndex],
-          quantity: newItems[existingIndex].quantity + validatedItem.quantity
+          quantity: newItems[existingIndex].quantity + validatedItem.quantity,
         };
       } else {
         newItems = [...current, validatedItem];
@@ -212,23 +270,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Verificar se algum item mudou para preço de atacado
       const itemWithWholesalePrice = recalculatedItems.find(
-        (recalcItem, index) => 
-          recalcItem.product.id === item.product.id && 
-          recalcItem.isWholesalePrice && 
+        (recalcItem, index) =>
+          recalcItem.product.id === item.product.id &&
+          recalcItem.isWholesalePrice &&
           !newItems[index]?.isWholesalePrice
       );
 
       // Mostrar notificação adequada
       if (itemWithWholesalePrice) {
-        const savings = (itemWithWholesalePrice.originalPrice - itemWithWholesalePrice.price) * itemWithWholesalePrice.quantity;
+        const savings =
+          (itemWithWholesalePrice.originalPrice -
+            itemWithWholesalePrice.price) *
+          itemWithWholesalePrice.quantity;
         toast({
           title: "🎉 Preço de atacado ativado!",
-          description: `Você economizou R$ ${savings.toFixed(2)} com ${itemWithWholesalePrice.product.name}`,
+          description: `Você economizou R$ ${savings.toFixed(2)} com ${
+            itemWithWholesalePrice.product.name
+          }`,
           duration: 4000,
         });
       } else {
-        const variationText = item.variation ? 
-          ` (${[item.variation.color, item.variation.size].filter(Boolean).join(', ')})` : '';
+        const variationText = item.variation
+          ? ` (${[item.variation.color, item.variation.size]
+              .filter(Boolean)
+              .join(", ")})`
+          : "";
         toast({
           title: "Produto adicionado!",
           description: `${item.product.name}${variationText} foi adicionado ao carrinho.`,
@@ -241,8 +307,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeItem = (itemId: string) => {
-    setItems(current => {
-      const newItems = current.filter(item => item.id !== itemId);
+    setItems((current) => {
+      const newItems = current.filter((item) => item.id !== itemId);
       return recalculateItemPrices(newItems);
     });
   };
@@ -253,23 +319,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    setItems(current => {
-      const newItems = current.map(item =>
-        item.id === itemId ? { ...item, quantity: Math.max(1, Math.floor(quantity)) } : item
+    setItems((current) => {
+      const item = current.find((i) => i.id === itemId);
+
+      // Buscar níveis de preço se não estiverem em cache
+      if (item && !priceTiersCache[item.product.id]) {
+        fetchProductTiers(item.product.id);
+      }
+
+      const newItems = current.map((item) =>
+        item.id === itemId
+          ? { ...item, quantity: Math.max(1, Math.floor(quantity)) }
+          : item
       );
-      
+
       const recalculatedItems = recalculateItemPrices(newItems);
-      
+
       // Verificar mudanças de preço para notificar
-      const changedItem = recalculatedItems.find(item => item.id === itemId);
-      const oldItem = current.find(item => item.id === itemId);
-      
-      if (changedItem && oldItem && changedItem.isWholesalePrice !== oldItem.isWholesalePrice) {
+      const changedItem = recalculatedItems.find((item) => item.id === itemId);
+      const oldItem = current.find((item) => item.id === itemId);
+
+      if (
+        changedItem &&
+        oldItem &&
+        changedItem.isWholesalePrice !== oldItem.isWholesalePrice
+      ) {
         if (changedItem.isWholesalePrice) {
-          const savings = (changedItem.originalPrice - changedItem.price) * changedItem.quantity;
+          const savings =
+            (changedItem.originalPrice - changedItem.price) *
+            changedItem.quantity;
           toast({
             title: "🎉 Preço de atacado ativado!",
-            description: `Você economizou R$ ${savings.toFixed(2)} com ${changedItem.product.name}`,
+            description: `Você economizou R$ ${savings.toFixed(2)} com ${
+              changedItem.product.name
+            }`,
             duration: 4000,
           });
         } else {
@@ -280,14 +363,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       }
-      
+
       return recalculatedItems;
     });
   };
 
   const clearCart = () => {
     setItems([]);
-    localStorage.removeItem('cart-items');
+    localStorage.removeItem("cart-items");
   };
 
   const toggleCart = () => {
@@ -300,22 +383,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Calcular valores com validação de segurança
   const totalAmount = items.reduce((total, item) => {
-    const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
-    const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
-    return total + (itemPrice * itemQuantity);
+    const itemPrice =
+      typeof item.price === "number" && !isNaN(item.price) ? item.price : 0;
+    const itemQuantity =
+      typeof item.quantity === "number" && !isNaN(item.quantity)
+        ? item.quantity
+        : 0;
+    return total + itemPrice * itemQuantity;
   }, 0);
 
   const totalItems = items.reduce((total, item) => {
-    const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
+    const itemQuantity =
+      typeof item.quantity === "number" && !isNaN(item.quantity)
+        ? item.quantity
+        : 0;
     return total + itemQuantity;
   }, 0);
 
   // Calcular economia potencial se todos os itens fossem comprados no atacado
   const potentialSavings = items.reduce((total, item) => {
     if (item.product.wholesale_price && !item.isWholesalePrice) {
-      const originalPrice = typeof item.originalPrice === 'number' ? item.originalPrice : 0;
-      const wholesalePrice = typeof item.product.wholesale_price === 'number' ? item.product.wholesale_price : 0;
-      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      const originalPrice =
+        typeof item.originalPrice === "number" ? item.originalPrice : 0;
+      const wholesalePrice =
+        typeof item.product.wholesale_price === "number"
+          ? item.product.wholesale_price
+          : 0;
+      const quantity = typeof item.quantity === "number" ? item.quantity : 0;
       const possibleSavings = (originalPrice - wholesalePrice) * quantity;
       return total + Math.max(0, possibleSavings);
     }
@@ -323,15 +417,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, 0);
 
   // Verificar se há itens que podem obter preço de atacado
-  const canGetWholesalePrice = items.some(item => 
-    item.product.wholesale_price && 
-    item.product.min_wholesale_qty && 
-    item.quantity < item.product.min_wholesale_qty
+  const canGetWholesalePrice = items.some(
+    (item) =>
+      item.product.wholesale_price &&
+      item.product.min_wholesale_qty &&
+      item.quantity < item.product.min_wholesale_qty
   );
 
   // Calcular quantos itens faltam para atingir preço de atacado
   const itemsToWholesale = items.reduce((total, item) => {
-    if (item.product.min_wholesale_qty && item.quantity < item.product.min_wholesale_qty) {
+    if (
+      item.product.min_wholesale_qty &&
+      item.quantity < item.product.min_wholesale_qty
+    ) {
       return total + (item.product.min_wholesale_qty - item.quantity);
     }
     return total;
@@ -350,20 +448,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     closeCart,
     potentialSavings,
     canGetWholesalePrice,
-    itemsToWholesale
+    itemsToWholesale,
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
 };

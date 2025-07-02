@@ -1,14 +1,13 @@
+import React, { useEffect } from "react";
+import { ShoppingCart, Search, Menu, Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { StoreData } from "@/hooks/useStoreData";
+import { useCart } from "@/hooks/useCart";
+import { useTemplateColors } from "@/hooks/useTemplateColors";
 
-import React, { useEffect } from 'react';
-import { ShoppingCart, Search, Menu, Heart } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { StoreData } from '@/hooks/useStoreData';
-import { useCart } from '@/hooks/useCart';
-import { useTemplateColors } from '@/hooks/useTemplateColors';
-
-export type CatalogType = 'retail' | 'wholesale';
+export type CatalogType = "retail" | "wholesale";
 
 interface CatalogHeaderProps {
   store: StoreData;
@@ -31,11 +30,13 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   whatsappNumber,
   onSearch,
   onToggleFilters,
-  onCartClick
+  onCartClick,
 }) => {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState("");
   const { toggleCart } = useCart();
-  const { applyColorsToDocument } = useTemplateColors(store.url_slug || store.id);
+  const { applyColorsToDocument } = useTemplateColors(
+    store.url_slug || store.id
+  );
 
   useEffect(() => {
     applyColorsToDocument();
@@ -48,7 +49,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   };
 
   const handleCartClick = () => {
-    console.log('🛒 HEADER - Clique no carrinho, abrindo FloatingCart');  
+    console.log("🛒 HEADER - Clique no carrinho, abrindo FloatingCart");
     toggleCart();
   };
 
@@ -108,7 +109,7 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
           opacity: 0.2;
         }
       `}</style>
-      
+
       <header className="catalog-header sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
@@ -122,12 +123,12 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              
+
               <div className="flex items-center gap-3">
                 {store.logo_url ? (
                   <div className="relative">
-                    <img 
-                      src={store.logo_url} 
+                    <img
+                      src={store.logo_url}
                       alt={`Logo ${store.name}`}
                       className="w-10 h-10 rounded-xl object-cover shadow-sm"
                     />
@@ -140,9 +141,6 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                 )}
                 <div>
                   <h1 className="store-name text-xl font-bold">{store.name}</h1>
-                  {store.description && (
-                    <p className="store-description text-sm hidden sm:block">{store.description}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -172,8 +170,8 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
                 >
                   <Heart className="h-5 w-5" />
                   {wishlistCount > 0 && (
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     >
                       {wishlistCount}
@@ -190,8 +188,8 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
               >
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemsCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
                   >
                     {cartItemsCount}

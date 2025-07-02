@@ -1,20 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useTemplateColors } from '@/hooks/useTemplateColors';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import AdvancedColorSettings from './AdvancedColorSettings';
-import ShareableLinks from './ShareableLinks';
-import CatalogModeSettings from './CatalogModeSettings';
-import MobileLayoutSettings from './MobileLayoutSettings';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { useTemplateColors } from "@/hooks/useTemplateColors";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import AdvancedColorSettings from "./AdvancedColorSettings";
+import ShareableLinks from "./ShareableLinks";
+import CatalogModeSettings from "./CatalogModeSettings";
+import MobileLayoutSettings from "./MobileLayoutSettings";
+import FooterSettings from "./FooterSettings";
 import {
   Palette,
   Eye,
@@ -29,56 +42,56 @@ import {
   Share2,
   ArrowLeftRight,
   Search,
-  Globe
-} from 'lucide-react';
+  Globe,
+} from "lucide-react";
 
 const CatalogSettings = () => {
   const { profile } = useAuth();
   const { settings, loading, updateSettings } = useCatalogSettings();
   const { resetToTemplateDefaults } = useTemplateColors();
-  
+
   const [localSettings, setLocalSettings] = useState({
-    template_name: 'modern',
+    template_name: "modern",
     show_prices: true,
     show_stock: true,
     show_categories: true,
     show_search: true,
     show_filters: true,
     items_per_page: 12,
-    catalog_title: '',
-    catalog_description: '',
-    primary_color: '#0057FF',
-    secondary_color: '#FF6F00',
-    accent_color: '#8E2DE2',
-    background_color: '#F8FAFC',
-    text_color: '#1E293B',
-    border_color: '#E2E8F0',
-    font_family: 'Inter',
-    custom_css: '',
-    seo_keywords: ''
+    catalog_title: "",
+    catalog_description: "",
+    primary_color: "#0057FF",
+    secondary_color: "#FF6F00",
+    accent_color: "#8E2DE2",
+    background_color: "#F8FAFC",
+    text_color: "#1E293B",
+    border_color: "#E2E8F0",
+    font_family: "Inter",
+    custom_css: "",
+    seo_keywords: "",
   });
 
   useEffect(() => {
     if (settings) {
       setLocalSettings({
-        template_name: settings.template_name || 'modern',
+        template_name: settings.template_name || "modern",
         show_prices: settings.show_prices !== false,
         show_stock: settings.show_stock !== false,
         show_categories: settings.allow_categories_filter !== false,
         show_search: true,
         show_filters: settings.allow_price_filter !== false,
         items_per_page: 12,
-        catalog_title: settings.seo_title || '',
-        catalog_description: settings.seo_description || '',
-        primary_color: settings.primary_color || '#0057FF',
-        secondary_color: settings.secondary_color || '#FF6F00',
-        accent_color: settings.accent_color || '#8E2DE2',
-        background_color: settings.background_color || '#F8FAFC',
-        text_color: settings.text_color || '#1E293B',
-        border_color: settings.border_color || '#E2E8F0',
-        font_family: 'Inter',
-        custom_css: '',
-        seo_keywords: settings.seo_keywords || ''
+        catalog_title: settings.seo_title || "",
+        catalog_description: settings.seo_description || "",
+        primary_color: settings.primary_color || "#0057FF",
+        secondary_color: settings.secondary_color || "#FF6F00",
+        accent_color: settings.accent_color || "#8E2DE2",
+        background_color: settings.background_color || "#F8FAFC",
+        text_color: settings.text_color || "#1E293B",
+        border_color: settings.border_color || "#E2E8F0",
+        font_family: "Inter",
+        custom_css: "",
+        seo_keywords: settings.seo_keywords || "",
       });
     }
   }, [settings]);
@@ -103,24 +116,27 @@ const CatalogSettings = () => {
 
     const result = await updateSettings(updates);
     if (result.data && !result.error) {
-      toast.success('Configurações do catálogo salvas com sucesso!');
+      toast.success("Configurações do catálogo salvas com sucesso!");
     } else {
-      toast.error('Erro ao salvar configurações: ' + (result.error?.message || 'Erro desconhecido'));
+      toast.error(
+        "Erro ao salvar configurações: " +
+          (result.error?.message || "Erro desconhecido")
+      );
     }
   };
 
   const handleTemplateChange = async (templateName: string) => {
     const defaultColors = resetToTemplateDefaults(templateName);
-    
-    setLocalSettings(prev => ({
+
+    setLocalSettings((prev) => ({
       ...prev,
       template_name: templateName,
-      ...defaultColors
+      ...defaultColors,
     }));
 
     const updates = {
       template_name: templateName,
-      ...defaultColors
+      ...defaultColors,
     };
 
     const result = await updateSettings(updates);
@@ -131,7 +147,7 @@ const CatalogSettings = () => {
 
   const handleReset = () => {
     const defaultColors = resetToTemplateDefaults(localSettings.template_name);
-    setLocalSettings(prev => ({
+    setLocalSettings((prev) => ({
       ...prev,
       ...defaultColors,
       show_prices: true,
@@ -140,62 +156,62 @@ const CatalogSettings = () => {
       show_search: true,
       show_filters: true,
       items_per_page: 12,
-      catalog_title: '',
-      catalog_description: '',
-      seo_keywords: ''
+      catalog_title: "",
+      catalog_description: "",
+      seo_keywords: "",
     }));
-    toast.info('Configurações resetadas para o padrão!');
+    toast.info("Configurações resetadas para o padrão!");
   };
 
   const handleColorChange = (colors: any) => {
-    setLocalSettings(prev => ({
+    setLocalSettings((prev) => ({
       ...prev,
-      ...colors
+      ...colors,
     }));
   };
 
   const handleColorReset = () => {
     const defaultColors = resetToTemplateDefaults(localSettings.template_name);
-    setLocalSettings(prev => ({
+    setLocalSettings((prev) => ({
       ...prev,
-      ...defaultColors
+      ...defaultColors,
     }));
-    toast.success('Cores resetadas para o padrão do template!');
+    toast.success("Cores resetadas para o padrão do template!");
   };
 
   const templates = [
-    { 
-      value: 'modern', 
-      label: 'Moderno', 
-      description: 'Design limpo e contemporâneo',
+    {
+      value: "modern",
+      label: "Moderno",
+      description: "Design limpo e contemporâneo",
       icon: Monitor,
-      colors: ['#0057FF', '#FF6F00', '#8E2DE2'],
-      features: ['Gradientes suaves', 'Animações fluidas', 'Layout responsivo']
+      colors: ["#0057FF", "#FF6F00", "#8E2DE2"],
+      features: ["Gradientes suaves", "Animações fluidas", "Layout responsivo"],
     },
-    { 
-      value: 'minimal', 
-      label: 'Minimalista', 
-      description: 'Focado no essencial',
+    {
+      value: "minimal",
+      label: "Minimalista",
+      description: "Focado no essencial",
       icon: Zap,
-      colors: ['#1F2937', '#059669', '#DC2626'],
-      features: ['Design limpo', 'Tipografia clara', 'Navegação simples']
+      colors: ["#1F2937", "#059669", "#DC2626"],
+      features: ["Design limpo", "Tipografia clara", "Navegação simples"],
     },
-    { 
-      value: 'elegant', 
-      label: 'Elegante', 
-      description: 'Sofisticado e refinado',
+    {
+      value: "elegant",
+      label: "Elegante",
+      description: "Sofisticado e refinado",
       icon: Crown,
-      colors: ['#D97706', '#92400E', '#7C2D12'],
-      features: ['Tons dourados', 'Elementos premium', 'Detalhes refinados']
+      colors: ["#D97706", "#92400E", "#7C2D12"],
+      features: ["Tons dourados", "Elementos premium", "Detalhes refinados"],
     },
-    { 
-      value: 'industrial', 
-      label: 'Industrial', 
-      description: 'Robusto e profissional',
+    {
+      value: "industrial",
+      label: "Industrial",
+      description: "Robusto e profissional",
       icon: Settings,
-      colors: ['#475569', '#F59E0B', '#DC2626'],
-      features: ['Visual metálico', 'Bordas definidas', 'Estilo corporativo']
-    }
+      colors: ["#475569", "#F59E0B", "#DC2626"],
+      features: ["Visual metálico", "Bordas definidas", "Estilo corporativo"],
+    },
   ];
 
   if (loading) {
@@ -209,7 +225,7 @@ const CatalogSettings = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="template" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="template" className="flex items-center gap-1">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Template</span>
@@ -230,6 +246,10 @@ const CatalogSettings = () => {
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline">Cores</span>
           </TabsTrigger>
+          <TabsTrigger value="footer" className="flex items-center gap-1">
+            <Globe className="h-4 w-4" />
+            <span className="hidden sm:inline">Footer</span>
+          </TabsTrigger>
           <TabsTrigger value="sharing" className="flex items-center gap-1">
             <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Links</span>
@@ -249,7 +269,8 @@ const CatalogSettings = () => {
                 Template do Catálogo
               </CardTitle>
               <CardDescription>
-                Escolha o template visual que melhor representa sua marca. O template será aplicado a todo o catálogo.
+                Escolha o template visual que melhor representa sua marca. O
+                template será aplicado a todo o catálogo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -257,12 +278,12 @@ const CatalogSettings = () => {
                 {templates.map((template) => {
                   const IconComponent = template.icon;
                   return (
-                    <Card 
+                    <Card
                       key={template.value}
                       className={`cursor-pointer transition-all border-2 hover:shadow-lg ${
-                        localSettings.template_name === template.value 
-                          ? 'border-blue-500 bg-blue-50 shadow-md' 
-                          : 'border-gray-200 hover:border-gray-300'
+                        localSettings.template_name === template.value
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
                       onClick={() => handleTemplateChange(template.value)}
                     >
@@ -270,12 +291,22 @@ const CatalogSettings = () => {
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${localSettings.template_name === template.value ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                              <div
+                                className={`p-2 rounded-lg ${
+                                  localSettings.template_name === template.value
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-100"
+                                }`}
+                              >
                                 <IconComponent size={20} />
                               </div>
                               <div>
-                                <h4 className="font-semibold text-lg">{template.label}</h4>
-                                <p className="text-sm text-gray-600">{template.description}</p>
+                                <h4 className="font-semibold text-lg">
+                                  {template.label}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  {template.description}
+                                </p>
                               </div>
                             </div>
                             {localSettings.template_name === template.value && (
@@ -285,25 +316,33 @@ const CatalogSettings = () => {
                               </Badge>
                             )}
                           </div>
-                          
+
                           {/* Color Preview */}
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Paleta:</span>
+                            <span className="text-xs text-gray-500">
+                              Paleta:
+                            </span>
                             {template.colors.map((color, index) => (
-                              <div 
+                              <div
                                 key={index}
                                 className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
                                 style={{ backgroundColor: color }}
                               />
                             ))}
                           </div>
-                          
+
                           {/* Features */}
                           <div className="space-y-2">
-                            <span className="text-xs text-gray-500 font-medium">Características:</span>
+                            <span className="text-xs text-gray-500 font-medium">
+                              Características:
+                            </span>
                             <div className="flex flex-wrap gap-1">
                               {template.features.map((feature, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
+                                <Badge
+                                  key={index}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
                                   {feature}
                                 </Badge>
                               ))}
@@ -339,14 +378,17 @@ const CatalogSettings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h4 className="font-medium">Elementos Visuais</h4>
-                  
+
                   <div className="flex items-center justify-between">
                     <Label htmlFor="show-prices">Exibir Preços</Label>
                     <Switch
                       id="show-prices"
                       checked={localSettings.show_prices}
-                      onCheckedChange={(checked) => 
-                        setLocalSettings({...localSettings, show_prices: checked})
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          show_prices: checked,
+                        })
                       }
                     />
                   </div>
@@ -356,8 +398,11 @@ const CatalogSettings = () => {
                     <Switch
                       id="show-stock"
                       checked={localSettings.show_stock}
-                      onCheckedChange={(checked) => 
-                        setLocalSettings({...localSettings, show_stock: checked})
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          show_stock: checked,
+                        })
                       }
                     />
                   </div>
@@ -367,8 +412,11 @@ const CatalogSettings = () => {
                     <Switch
                       id="show-categories"
                       checked={localSettings.show_categories}
-                      onCheckedChange={(checked) => 
-                        setLocalSettings({...localSettings, show_categories: checked})
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          show_categories: checked,
+                        })
                       }
                     />
                   </div>
@@ -376,14 +424,17 @@ const CatalogSettings = () => {
 
                 <div className="space-y-4">
                   <h4 className="font-medium">Funcionalidades</h4>
-                  
+
                   <div className="flex items-center justify-between">
                     <Label htmlFor="show-search">Barra de Pesquisa</Label>
                     <Switch
                       id="show-search"
                       checked={localSettings.show_search}
-                      onCheckedChange={(checked) => 
-                        setLocalSettings({...localSettings, show_search: checked})
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          show_search: checked,
+                        })
                       }
                     />
                   </div>
@@ -393,8 +444,11 @@ const CatalogSettings = () => {
                     <Switch
                       id="show-filters"
                       checked={localSettings.show_filters}
-                      onCheckedChange={(checked) => 
-                        setLocalSettings({...localSettings, show_filters: checked})
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          show_filters: checked,
+                        })
                       }
                     />
                   </div>
@@ -403,8 +457,11 @@ const CatalogSettings = () => {
                     <Label htmlFor="items-per-page">Itens por Página</Label>
                     <Select
                       value={localSettings.items_per_page.toString()}
-                      onValueChange={(value) => 
-                        setLocalSettings({...localSettings, items_per_page: parseInt(value)})
+                      onValueChange={(value) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          items_per_page: parseInt(value),
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -443,6 +500,10 @@ const CatalogSettings = () => {
           />
         </TabsContent>
 
+        <TabsContent value="footer" className="space-y-6">
+          <FooterSettings />
+        </TabsContent>
+
         <TabsContent value="sharing" className="space-y-6">
           <ShareableLinks />
         </TabsContent>
@@ -465,7 +526,12 @@ const CatalogSettings = () => {
                 <Input
                   id="catalog-title"
                   value={localSettings.catalog_title}
-                  onChange={(e) => setLocalSettings({...localSettings, catalog_title: e.target.value})}
+                  onChange={(e) =>
+                    setLocalSettings({
+                      ...localSettings,
+                      catalog_title: e.target.value,
+                    })
+                  }
                   placeholder="Ex: Catálogo de Produtos - Minha Loja"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -474,11 +540,18 @@ const CatalogSettings = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="catalog-description">Descrição do Catálogo (SEO)</Label>
+                <Label htmlFor="catalog-description">
+                  Descrição do Catálogo (SEO)
+                </Label>
                 <Input
                   id="catalog-description"
                   value={localSettings.catalog_description}
-                  onChange={(e) => setLocalSettings({...localSettings, catalog_description: e.target.value})}
+                  onChange={(e) =>
+                    setLocalSettings({
+                      ...localSettings,
+                      catalog_description: e.target.value,
+                    })
+                  }
                   placeholder="Ex: Encontre os melhores produtos com os melhores preços"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -491,7 +564,12 @@ const CatalogSettings = () => {
                 <Input
                   id="seo-keywords"
                   value={localSettings.seo_keywords}
-                  onChange={(e) => setLocalSettings({...localSettings, seo_keywords: e.target.value})}
+                  onChange={(e) =>
+                    setLocalSettings({
+                      ...localSettings,
+                      seo_keywords: e.target.value,
+                    })
+                  }
                   placeholder="Ex: produtos, loja online, varejo, atacado"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -513,10 +591,7 @@ const CatalogSettings = () => {
           <RotateCw className="h-4 w-4" />
           Resetar
         </Button>
-        <Button
-          onClick={handleSave}
-          className="flex items-center gap-2"
-        >
+        <Button onClick={handleSave} className="flex items-center gap-2">
           <Save className="h-4 w-4" />
           Salvar Configurações
         </Button>

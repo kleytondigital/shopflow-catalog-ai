@@ -24,12 +24,6 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
     "simple" | "hierarchical" | "master"
   >("master");
 
-  console.log("🎯 PRODUCT VARIATIONS FORM - Renderizando:", {
-    productId,
-    variationsCount: variations.length,
-    systemType,
-  });
-
   // Verificar se há variações com cor para mostrar o upload de imagens
   const hasColorVariations = variations.some((v) => v.color && v.color.trim());
 
@@ -190,7 +184,6 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
           variations={variations}
           onImagesUpdated={() => {
             // Recarregar variações ou atualizar estado se necessário
-            console.log("🖼️ Imagens das variações atualizadas");
           }}
         />
       )}

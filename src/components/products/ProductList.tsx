@@ -1,10 +1,11 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Wand2 } from 'lucide-react';
-import { Product } from '@/types/product';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Wand2, TrendingDown } from "lucide-react";
+import { Product } from "@/types/product";
+import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProductListProps {
   products: Product[];
@@ -19,11 +20,92 @@ const ProductList: React.FC<ProductListProps> = ({
   onDelete,
   onGenerateDescription,
 }) => {
+  const { profile } = useAuth();
+
+  // Componente para exibir níveis de preço de um produto
+  const ProductPriceTiers = ({ product }: { product: Product }) => {
+    const { tiers, loading } = useProductPriceTiers(
+      product.id,
+      profile?.store_id
+    );
+
+    if (loading || !tiers || tiers.length <= 1) {
+      return null;
+    }
+
+    // Filtrar apenas níveis ativos (exceto varejo)
+    const activeTiers = tiers.filter(
+      (tier) => tier.tier_order > 1 && tier.is_active
+    );
+
+    if (activeTiers.length === 0) {
+      return null;
+    }
+
+    // Calcular desconto máximo
+    const maxDiscountTier = activeTiers.reduce(
+      (max, tier) => {
+        const savingsAmount = product.retail_price - tier.price;
+        const savingsPercentage = (savingsAmount / product.retail_price) * 100;
+        return savingsPercentage > max.percentage
+          ? { tier, percentage: savingsPercentage }
+          : max;
+      },
+      { tier: activeTiers[0], percentage: 0 }
+    );
+
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <TrendingDown className="h-3 w-3" />
+          <span className="font-medium">Níveis Progressivos:</span>
+          <Badge
+            variant="outline"
+            className="text-xs bg-orange-100 text-orange-700"
+          >
+            Descontos até {maxDiscountTier.percentage.toFixed(0)}%
+          </Badge>
+        </div>
+        {activeTiers.map((tier) => {
+          const savingsAmount = product.retail_price - tier.price;
+          const savingsPercentage =
+            (savingsAmount / product.retail_price) * 100;
+
+          return (
+            <div
+              key={tier.id}
+              className="flex items-center justify-between text-xs"
+            >
+              <div className="flex items-center gap-1">
+                <span className="text-gray-700">{tier.tier_name}:</span>
+                <Badge variant="outline" className="text-xs">
+                  {tier.min_quantity}+ un
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-green-700">
+                  R$ {tier.price.toFixed(2).replace(".", ",")}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-green-100 text-green-700"
+                >
+                  -{savingsPercentage.toFixed(0)}%
+                </Badge>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
   if (!products || products.length === 0) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">Nenhum produto cadastrado ainda.</p>
+          <p className="text-muted-foreground">
+            Nenhum produto cadastrado ainda.
+          </p>
           <p className="text-sm text-muted-foreground mt-2">
             Clique em "Novo Produto" para começar.
           </p>
@@ -39,15 +121,17 @@ const ProductList: React.FC<ProductListProps> = ({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
+                <CardTitle className="text-lg line-clamp-2">
+                  {product.name}
+                </CardTitle>
                 {product.category && (
                   <Badge variant="outline" className="mt-2">
                     {product.category}
                   </Badge>
                 )}
               </div>
-              <Badge variant={product.is_active ? 'default' : 'secondary'}>
-                {product.is_active ? 'Ativo' : 'Inativo'}
+              <Badge variant={product.is_active ? "default" : "secondary"}>
+                {product.is_active ? "Ativo" : "Inativo"}
               </Badge>
             </div>
           </CardHeader>
@@ -61,7 +145,7 @@ const ProductList: React.FC<ProductListProps> = ({
                 />
               </div>
             )}
-            
+
             {product.description && (
               <p className="text-sm text-muted-foreground line-clamp-3">
                 {product.description}
@@ -72,22 +156,19 @@ const ProductList: React.FC<ProductListProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Varejo:</span>
                 <span className="font-semibold">
-                  R$ {product.retail_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R${" "}
+                  {product.retail_price.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}
                 </span>
               </div>
-              
-              {product.wholesale_price && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Atacado:</span>
-                  <span className="font-semibold text-green-600">
-                    R$ {product.wholesale_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              )}
+
+              {/* Níveis de preço progressivos */}
+              <ProductPriceTiers product={product} />
 
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Estoque:</span>
-                <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
+                <Badge variant={product.stock > 0 ? "default" : "destructive"}>
                   {product.stock} unidades
                 </Badge>
               </div>

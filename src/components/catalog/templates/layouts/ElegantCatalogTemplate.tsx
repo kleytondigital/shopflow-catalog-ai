@@ -1,11 +1,10 @@
-
-import React from 'react';
-import { Store, CatalogType } from '@/hooks/useCatalog';
-import CatalogHeader from '@/components/catalog/CatalogHeader';
-import CatalogFooter from '@/components/catalog/CatalogFooter';
-import HeroBanner from '@/components/catalog/banners/HeroBanner';
-import PromotionalBanner from '@/components/catalog/banners/PromotionalBanner';
-import SidebarBanner from '@/components/catalog/banners/SidebarBanner';
+import React from "react";
+import { Store, CatalogType } from "@/hooks/useCatalog";
+import CatalogHeader from "@/components/catalog/CatalogHeader";
+import CatalogFooter from "@/components/catalog/CatalogFooter";
+import HeroBanner from "@/components/catalog/banners/HeroBanner";
+import PromotionalBanner from "@/components/catalog/banners/PromotionalBanner";
+import SidebarBanner from "@/components/catalog/banners/SidebarBanner";
 
 interface ElegantCatalogTemplateProps {
   store: Store;
@@ -30,7 +29,7 @@ const ElegantCatalogTemplate: React.FC<ElegantCatalogTemplateProps> = ({
   onToggleFilters,
   onCartClick,
   children,
-  editorSettings
+  editorSettings,
 }) => {
   const storeId = store.url_slug || store.id;
 
@@ -55,16 +54,14 @@ const ElegantCatalogTemplate: React.FC<ElegantCatalogTemplateProps> = ({
 
         <div className="flex flex-col xl:flex-row gap-10">
           {/* Sidebar with Banners */}
-          <aside className="xl:w-80 flex-shrink-0">
+          {/* <aside className="xl:w-80 flex-shrink-0">
             <div className="sticky top-6">
               <SidebarBanner storeId={storeId} />
             </div>
-          </aside>
+          </aside> */}
 
           {/* Main Content */}
-          <main className="flex-1">
-            {children}
-          </main>
+          <main className="flex-1">{children}</main>
         </div>
       </div>
 

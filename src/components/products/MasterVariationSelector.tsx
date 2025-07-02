@@ -7,6 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Plus,
   Palette,
   Shirt,
@@ -14,6 +23,7 @@ import {
   Sparkles,
   Trash2,
   X,
+  PackageCheck,
 } from "lucide-react";
 import { useStoreVariations } from "@/hooks/useStoreVariations";
 import StoreQuickValueAdd from "@/components/variations/StoreQuickValueAdd";
@@ -35,82 +45,74 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
     [groupId: string]: string[];
   }>({});
   const [manualMode, setManualMode] = useState(false);
+  const [bulkStockOpen, setBulkStockOpen] = useState(false);
+  const [bulkStockValue, setBulkStockValue] = useState("");
+
+  // Aplicar estoque em massa
+  const applyBulkStock = () => {
+    const stockValue = parseInt(bulkStockValue) || 0;
+    if (stockValue < 0) return;
+
+    const updatedVariations = variations.map((variation) => ({
+      ...variation,
+      stock: stockValue,
+    }));
+
+    onVariationsChange(updatedVariations);
+    setBulkStockOpen(false);
+    setBulkStockValue("");
+  };
+
+  // Função para formatar valor monetário
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   // Detectar e carregar variações existentes
   useEffect(() => {
-    if (variations.length > 0 && groups.length > 0 && values.length > 0) {
-      console.log(
-        "🔄 Inicializando MasterVariationSelector com variações existentes:",
-        variations.length
-      );
-
-      // Detectar grupos usados nas variações existentes
-      const usedGroups: string[] = [];
-      const usedValues: { [groupId: string]: string[] } = {};
+    if (variations.length > 0) {
+      // Detectar grupos e valores já utilizados
+      const usedGroups = new Set<string>();
+      const usedValues = new Set<string>();
 
       variations.forEach((variation) => {
-        // Detectar cor (se houver)
         if (variation.color) {
-          const colorGroup = groups.find((g) => g.attribute_key === "color");
-          if (colorGroup && !usedGroups.includes(colorGroup.id)) {
-            usedGroups.push(colorGroup.id);
-            usedValues[colorGroup.id] = [];
-          }
-
-          // Encontrar o valor da cor
-          const colorValue = values.find(
-            (v) => v.group_id === colorGroup?.id && v.value === variation.color
-          );
-          if (
-            colorValue &&
-            colorGroup &&
-            !usedValues[colorGroup.id].includes(colorValue.id)
-          ) {
-            usedValues[colorGroup.id].push(colorValue.id);
-          }
+          usedGroups.add("color");
+          usedValues.add(variation.color);
         }
-
-        // Detectar tamanho (se houver)
         if (variation.size) {
-          const sizeGroup = groups.find((g) => g.attribute_key === "size");
-          if (sizeGroup && !usedGroups.includes(sizeGroup.id)) {
-            usedGroups.push(sizeGroup.id);
-            usedValues[sizeGroup.id] = [];
-          }
-
-          // Encontrar o valor do tamanho
-          const sizeValue = values.find(
-            (v) => v.group_id === sizeGroup?.id && v.value === variation.size
-          );
-          if (
-            sizeValue &&
-            sizeGroup &&
-            !usedValues[sizeGroup.id].includes(sizeValue.id)
-          ) {
-            usedValues[sizeGroup.id].push(sizeValue.id);
-          }
+          usedGroups.add("size");
+          usedValues.add(variation.size);
+        }
+        if (variation.material) {
+          usedGroups.add("material");
+          usedValues.add(variation.material);
         }
       });
 
-      console.log("🎯 Grupos detectados:", usedGroups);
-      console.log("🎯 Valores detectados:", usedValues);
+      // Encontrar IDs dos grupos e valores nos dados carregados
+      const groupIds: string[] = [];
+      const valueIds: string[] = [];
 
-      // Atualizar estado apenas se for diferente do atual
-      if (
-        JSON.stringify(usedGroups.sort()) !==
-        JSON.stringify(selectedGroups.sort())
-      ) {
-        setSelectedGroups(usedGroups);
-      }
+      groups.forEach((group) => {
+        if (usedGroups.has(group.attribute_key)) {
+          groupIds.push(group.id);
 
-      if (JSON.stringify(usedValues) !== JSON.stringify(selectedValues)) {
-        setSelectedValues(usedValues);
-      }
+          group.values?.forEach((value) => {
+            if (usedValues.has(value.value)) {
+              valueIds.push(value.id);
+            }
+          });
+        }
+      });
 
-      // Ativar modo manual se houver variações específicas
-      setManualMode(true);
+      setSelectedGroups(groupIds);
+      setSelectedValues(valueIds);
     }
-  }, [variations, groups, values]);
+  }, [variations, groups]);
 
   const getGroupIcon = (attributeKey: string) => {
     switch (attributeKey) {
@@ -150,12 +152,7 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
   };
 
   const generateAllCombinations = () => {
-    console.log("🚀 Iniciando geração de combinações");
-    console.log("📊 Grupos selecionados:", selectedGroups);
-    console.log("📊 Valores selecionados:", selectedValues);
-
     if (selectedGroups.length === 0) {
-      console.log("❌ Nenhum grupo selecionado");
       onVariationsChange([]);
       return;
     }
@@ -166,7 +163,6 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
       // Um grupo apenas - cada valor é uma variação
       const groupId = selectedGroups[0];
       const groupValues = selectedValues[groupId] || [];
-      console.log("📝 Modo um grupo:", groupId, "valores:", groupValues);
 
       groupValues.forEach((valueId) => {
         const value = values.find((v) => v.id === valueId);
@@ -185,8 +181,6 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
           })
           .filter(Boolean);
       });
-
-      console.log("📝 Valores por grupo:", valuesByGroup);
 
       const cartesianProduct = (arr: string[][]): string[][] => {
         return arr.reduce(
@@ -207,8 +201,6 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
         groupCombinations.push(...cartesianProduct(valuesByGroup));
       }
     }
-
-    console.log("🎯 Combinações geradas:", groupCombinations);
 
     const newVariations: ProductVariation[] = groupCombinations.map(
       (combination, index) => {
@@ -276,7 +268,6 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
       }
     );
 
-    console.log("✅ Variações finais:", newVariations);
     onVariationsChange(newVariations);
   };
 
@@ -491,12 +482,36 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
                 ? "4. Gerencie suas variações"
                 : "4. Gere as combinações automaticamente"}
             </h4>
-            {manualMode && (
-              <Button onClick={addSpecificCombination} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Variação
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {variations.length > 1 && (
+                <Button
+                  onClick={() => {
+                    const stock = prompt(
+                      "Digite a quantidade de estoque para todas as variações:"
+                    );
+                    if (stock !== null && !isNaN(Number(stock))) {
+                      const stockValue = Math.max(0, parseInt(stock) || 0);
+                      const updatedVariations = variations.map((v) => ({
+                        ...v,
+                        stock: stockValue,
+                      }));
+                      onVariationsChange(updatedVariations);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Estoque Automático
+                </Button>
+              )}
+              {manualMode && (
+                <Button onClick={addSpecificCombination} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Variação
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Botão para gerar combinações no modo automático */}
@@ -571,60 +586,6 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
                           )}
                         </div>
 
-                        {manualMode && (
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {selectedGroups.includes(
-                              groups.find((g) => g.attribute_key === "color")
-                                ?.id || ""
-                            ) && (
-                              <div>
-                                <Label htmlFor={`color-${index}`}>Cor</Label>
-                                <Input
-                                  id={`color-${index}`}
-                                  value={variation.color || ""}
-                                  onChange={(e) =>
-                                    updateVariation(index, {
-                                      color: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Digite a cor"
-                                />
-                              </div>
-                            )}
-                            {selectedGroups.includes(
-                              groups.find((g) => g.attribute_key === "size")
-                                ?.id || ""
-                            ) && (
-                              <div>
-                                <Label htmlFor={`size-${index}`}>Tamanho</Label>
-                                <Input
-                                  id={`size-${index}`}
-                                  value={variation.size || ""}
-                                  onChange={(e) =>
-                                    updateVariation(index, {
-                                      size: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Digite o tamanho"
-                                />
-                              </div>
-                            )}
-                            <div>
-                              <Label htmlFor={`sku-${index}`}>SKU</Label>
-                              <Input
-                                id={`sku-${index}`}
-                                value={variation.sku || ""}
-                                onChange={(e) =>
-                                  updateVariation(index, {
-                                    sku: e.target.value,
-                                  })
-                                }
-                                placeholder="Código único"
-                              />
-                            </div>
-                          </div>
-                        )}
-
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor={`stock-${index}`}>Estoque</Label>
@@ -632,30 +593,44 @@ const MasterVariationSelector: React.FC<MasterVariationSelectorProps> = ({
                               id={`stock-${index}`}
                               type="number"
                               min="0"
-                              value={variation.stock}
-                              onChange={(e) =>
+                              value={variation.stock || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
                                 updateVariation(index, {
-                                  stock: parseInt(e.target.value) || 0,
-                                })
-                              }
+                                  stock:
+                                    value === "" ? 0 : parseInt(value) || 0,
+                                });
+                              }}
+                              placeholder="0"
                             />
                           </div>
                           <div>
                             <Label htmlFor={`price-${index}`}>
-                              Ajuste de Preço
+                              Ajuste de Preço{" "}
+                              {variation.price_adjustment !== 0 && (
+                                <span className="text-sm text-muted-foreground">
+                                  ({variation.price_adjustment > 0 ? "+" : ""}
+                                  {new Intl.NumberFormat("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  }).format(variation.price_adjustment)}
+                                  )
+                                </span>
+                              )}
                             </Label>
                             <Input
                               id={`price-${index}`}
                               type="number"
                               step="0.01"
-                              value={variation.price_adjustment}
-                              onChange={(e) =>
+                              value={variation.price_adjustment || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
                                 updateVariation(index, {
                                   price_adjustment:
-                                    parseFloat(e.target.value) || 0,
-                                })
-                              }
-                              placeholder="0.00"
+                                    value === "" ? 0 : parseFloat(value) || 0,
+                                });
+                              }}
+                              placeholder="R$ 0,00"
                             />
                           </div>
                           <div className="flex items-center space-x-2 pt-6">

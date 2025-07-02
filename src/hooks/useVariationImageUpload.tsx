@@ -27,12 +27,6 @@ export const useVariationImageUpload = () => {
 
       setIsUploading(true);
       try {
-        console.log("📷 Fazendo upload de imagem da variação:", {
-          productId,
-          variationId,
-          color,
-        });
-
         // Gerar nome do arquivo baseado na cor e timestamp
         const fileExt = file.name.split(".").pop();
         const colorSlug = color
@@ -69,8 +63,6 @@ export const useVariationImageUpload = () => {
           );
         }
 
-        console.log("✅ Imagem da variação salva:", imageUrl);
-
         toast({
           title: "Sucesso!",
           description: `Imagem da cor ${color} enviada com sucesso`,
@@ -97,11 +89,6 @@ export const useVariationImageUpload = () => {
 
   const loadVariationImages = useCallback(async (productId: string) => {
     try {
-      console.log(
-        "📥 Carregando imagens das variações para produto:",
-        productId
-      );
-
       // Buscar URLs diretamente nas variações
       const { data: variations, error: variationsError } = await supabase
         .from("product_variations")
@@ -125,10 +112,6 @@ export const useVariationImageUpload = () => {
         }
       });
 
-      console.log(
-        "📊 Imagens de variações carregadas:",
-        Object.keys(imageMap).length
-      );
       return imageMap;
     } catch (error) {
       console.error("💥 Erro ao carregar imagens das variações:", error);
@@ -139,8 +122,6 @@ export const useVariationImageUpload = () => {
   const removeVariationImage = useCallback(
     async (variationId: string, imageUrl: string): Promise<boolean> => {
       try {
-        console.log("🗑️ Removendo imagem da variação:", variationId);
-
         // Remover da variação
         const { error: updateError } = await supabase
           .from("product_variations")

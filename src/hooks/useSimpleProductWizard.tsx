@@ -9,6 +9,13 @@ import { ProductVariation } from "@/types/variation";
 export interface SimpleProductFormData extends CreateProductData {
   variations?: ProductVariation[];
   description?: string; // Tornando opcional para compatibilidade
+  price_tiers?: Array<{
+    id: string;
+    name: string;
+    minQuantity: number;
+    price: number;
+    enabled: boolean;
+  }>;
 }
 
 export interface SimpleWizardStep {
@@ -19,7 +26,7 @@ export interface SimpleWizardStep {
 }
 
 export const useSimpleProductWizard = () => {
-  const { createProduct, updateProduct } = useProducts();
+  const { createProduct, updateProduct, fetchProducts } = useProducts();
   const { saveVariations } = useProductVariations();
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -89,8 +96,6 @@ export const useSimpleProductWizard = () => {
 
   const updateFormData = useCallback(
     (updates: Partial<SimpleProductFormData>) => {
-      console.log("🔧 updateFormData - Atualizando:", Object.keys(updates));
-
       setFormData((prev) => {
         const newData = { ...prev, ...updates };
 
@@ -98,15 +103,6 @@ export const useSimpleProductWizard = () => {
         if (!newData.store_id && profile?.store_id) {
           newData.store_id = profile.store_id;
         }
-
-        console.log("📊 Dados atualizados:", {
-          name: newData.name,
-          nameLength: newData.name?.length || 0,
-          description: newData.description,
-          retail_price: newData.retail_price,
-          stock: newData.stock,
-          variationsCount: newData.variations?.length || 0,
-        });
 
         return newData;
       });
@@ -123,20 +119,10 @@ export const useSimpleProductWizard = () => {
     switch (currentStep) {
       case 0: // Informações Básicas
         const isValid = trimmedName.length > 0;
-        console.log("✅ Validação Step 0:", {
-          name: `"${trimmedName}"`,
-          length: trimmedName.length,
-          valid: isValid,
-        });
         return isValid;
 
       case 1: // Preços e Estoque
         const priceValid = formData.retail_price > 0 && formData.stock >= 0;
-        console.log("✅ Validação Step 1:", {
-          price: formData.retail_price,
-          stock: formData.stock,
-          valid: priceValid,
-        });
         return priceValid;
 
       default:
@@ -193,16 +179,6 @@ export const useSimpleProductWizard = () => {
       const storeId = formData.store_id || profile?.store_id;
       const trimmedName = (formData.name || "").trim();
 
-      console.log("💾 SALVANDO PRODUTO - Dados finais:", {
-        name: `"${trimmedName}"`,
-        nameLength: trimmedName.length,
-        description: formData.description,
-        retail_price: formData.retail_price,
-        stock: formData.stock,
-        store_id: storeId,
-        variationsCount: formData.variations?.length || 0,
-      });
-
       if (!storeId) {
         toast({
           title: "Erro",
@@ -234,7 +210,8 @@ export const useSimpleProductWizard = () => {
 
       try {
         // Preparar dados do produto
-        const { variations, ...productDataWithoutVariations } = formData;
+        const { variations, price_tiers, ...productDataWithoutVariations } =
+          formData;
         const productData: CreateProductData = {
           ...productDataWithoutVariations,
           store_id: storeId,
@@ -242,7 +219,19 @@ export const useSimpleProductWizard = () => {
           description: (formData.description || "").trim(),
           category: (formData.category || "").trim() || "Geral",
           retail_price: Number(formData.retail_price),
+          wholesale_price: formData.wholesale_price
+            ? Number(formData.wholesale_price)
+            : undefined,
+          min_wholesale_qty: Number(formData.min_wholesale_qty || 1),
           stock: Number(formData.stock || 0),
+          meta_title: (formData.meta_title || "").trim(),
+          meta_description: (formData.meta_description || "").trim(),
+          keywords: (formData.keywords || "").trim(),
+          seo_slug: (formData.seo_slug || "").trim(),
+          is_featured: Boolean(formData.is_featured),
+          allow_negative_stock: Boolean(formData.allow_negative_stock),
+          stock_alert_threshold: Number(formData.stock_alert_threshold || 5),
+          is_active: true,
         };
 
         // Salvar produto
@@ -274,12 +263,77 @@ export const useSimpleProductWizard = () => {
         // Salvar variações com upload de imagens
         if (formData.variations && formData.variations.length > 0) {
           try {
-            console.log("💾 Salvando variações:", formData.variations.length);
             await saveVariations(savedProductId, formData.variations);
           } catch (variationError) {
             console.error("Erro nas variações:", variationError);
           }
         }
+
+        // Salvar níveis de preço se houver dados de níveis
+        if (formData.price_tiers && formData.price_tiers.length > 0) {
+          try {
+            // Importar supabase para operações diretas
+            const { supabase } = await import(
+              "../integrations/supabase/client"
+            );
+
+            // Primeiro, desativar níveis existentes
+            await supabase
+              .from("product_price_tiers")
+              .update({ is_active: false })
+              .eq("product_id", savedProductId);
+
+            // Primeiro, criar o nível de varejo (tier_order = 1)
+            const retailTier = {
+              product_id: savedProductId,
+              tier_name: "Varejo",
+              tier_order: 1,
+              tier_type: "retail",
+              price: formData.retail_price,
+              min_quantity: 1,
+              is_active: true,
+            };
+
+            // Depois, criar os níveis de atacado baseados nos dados do formulário
+            const wholesaleTiers = formData.price_tiers
+              .filter(
+                (tier) => tier.enabled && tier.price > 0 && tier.id !== "retail"
+              )
+              .map((tier, index) => ({
+                product_id: savedProductId,
+                tier_name: tier.name,
+                tier_order: index + 2, // Começar do 2 (1 é varejo)
+                tier_type: "gradual_wholesale",
+                price: tier.price,
+                min_quantity: tier.minQuantity,
+                is_active: true,
+              }));
+
+            const tiersToInsert = [retailTier, ...wholesaleTiers];
+
+            if (tiersToInsert.length > 0) {
+              const { error: insertError } = await supabase
+                .from("product_price_tiers")
+                .insert(tiersToInsert);
+
+              if (insertError) {
+                console.error(
+                  "❌ SIMPLE WIZARD - Erro ao inserir níveis:",
+                  insertError
+                );
+              }
+            }
+          } catch (tierError) {
+            console.error(
+              "❌ SIMPLE WIZARD - Erro ao salvar níveis de preço:",
+              tierError
+            );
+            // Não falhar o produto por causa dos níveis
+          }
+        }
+
+        // Atualizar lista de produtos
+        await fetchProducts();
 
         toast({
           title: productId ? "Produto atualizado!" : "Produto criado!",
@@ -308,6 +362,7 @@ export const useSimpleProductWizard = () => {
       createProduct,
       updateProduct,
       saveVariations,
+      fetchProducts,
       toast,
       isSaving,
     ]
@@ -337,10 +392,8 @@ export const useSimpleProductWizard = () => {
   }, [profile?.store_id]);
 
   const loadProductData = useCallback(
-    (product: any) => {
+    async (product: any) => {
       if (!product) return;
-
-      console.log("📥 Carregando dados do produto:", product);
 
       const productData = {
         name: product.name || "",
@@ -360,9 +413,32 @@ export const useSimpleProductWizard = () => {
         store_id: product.store_id || profile?.store_id || "",
         is_active: true,
         variations: [],
+        price_tiers: [],
       };
 
-      console.log("📊 Dados processados:", productData);
+      // Carregar níveis de preço se existirem
+      try {
+        const { supabase } = await import("../integrations/supabase/client");
+        const { data: tiers } = await supabase
+          .from("product_price_tiers")
+          .select("*")
+          .eq("product_id", product.id)
+          .eq("is_active", true)
+          .order("tier_order");
+
+        if (tiers && tiers.length > 0) {
+          const formattedTiers = tiers.map((tier) => ({
+            id: tier.id,
+            name: tier.tier_name,
+            minQuantity: tier.min_quantity,
+            price: tier.price,
+            enabled: tier.is_active,
+          }));
+          productData.price_tiers = formattedTiers;
+        }
+      } catch (error) {
+        console.error("Erro ao carregar níveis de preço:", error);
+      }
 
       // Atualizar formData de uma vez
       setFormData(productData);
