@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 import { useAuth } from "@/hooks/useAuth";
-import { ProductFormData } from "@/hooks/useProductFormWizard";
 import {
   DollarSign,
   TrendingDown,
@@ -18,9 +17,36 @@ import {
   Minus,
 } from "lucide-react";
 
+interface GenericProductFormData {
+  name: string;
+  description?: string;
+  retail_price: number;
+  wholesale_price?: number;
+  min_wholesale_qty?: number;
+  stock: number;
+  category?: string;
+  keywords?: string;
+  meta_title?: string;
+  meta_description?: string;
+  seo_slug?: string;
+  is_featured?: boolean;
+  allow_negative_stock?: boolean;
+  stock_alert_threshold?: number;
+  variations?: any[];
+  store_id?: string;
+  price_tiers?: Array<{
+    id: string;
+    name: string;
+    minQuantity: number;
+    price: number;
+    enabled: boolean;
+  }>;
+}
+
 interface ProductPricingFormProps {
-  formData: ProductFormData;
-  updateFormData: (updates: Partial<ProductFormData>) => void;
+  formData: GenericProductFormData;
+  updateFormData: (updates: Partial<GenericProductFormData>) => void;
+  productId?: string;
 }
 
 interface PriceTier {
@@ -34,6 +60,7 @@ interface PriceTier {
 const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
   formData,
   updateFormData,
+  productId,
 }) => {
   const { profile } = useAuth();
   const { settings: catalogSettings } = useCatalogSettings();
@@ -140,32 +167,205 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
 
   // Sincronizar price_tiers do formData com o estado local
   useEffect(() => {
+    console.log(
+      "🔄 PRODUCT PRICING FORM - Sincronizando price_tiers do formData:",
+      formData.price_tiers
+    );
     if (formData.price_tiers && formData.price_tiers.length > 0) {
       setPriceTiers(formData.price_tiers);
     }
   }, [formData.price_tiers]);
+
+  // Carregar níveis de preço existentes quando estiver editando um produto
+  useEffect(() => {
+    const loadExistingPriceTiers = async () => {
+      console.log(
+        "🔍 PRODUCT PRICING FORM - Carregando níveis de preço existentes"
+      );
+      console.log("🔍 PRODUCT PRICING FORM - productId:", productId);
+      console.log(
+        "🔍 PRODUCT PRICING FORM - formData.price_tiers:",
+        formData.price_tiers
+      );
+
+      // Se já temos price_tiers no formData, usar eles
+      if (formData.price_tiers && formData.price_tiers.length > 0) {
+        console.log(
+          "🔍 PRODUCT PRICING FORM - Usando price_tiers existentes do formData"
+        );
+        setPriceTiers(formData.price_tiers);
+        return;
+      }
+
+      // Se não temos productId, não podemos carregar
+      if (!productId) {
+        console.log(
+          "🔍 PRODUCT PRICING FORM - Sem productId, não é possível carregar"
+        );
+        return;
+      }
+
+      try {
+        console.log("🔍 PRODUCT PRICING FORM - Buscando níveis no banco...");
+        const { supabase } = await import(
+          "../../../integrations/supabase/client"
+        );
+
+        // Buscar níveis de preço existentes do produto
+        const { data: tiers, error } = await supabase
+          .from("product_price_tiers")
+          .select("*")
+          .eq("product_id", productId)
+          .eq("is_active", true)
+          .order("tier_order");
+
+        if (error) {
+          console.error(
+            "❌ PRODUCT PRICING FORM - Erro ao buscar níveis:",
+            error
+          );
+          return;
+        }
+
+        console.log("🔍 PRODUCT PRICING FORM - Níveis encontrados:", tiers);
+
+        if (tiers && tiers.length > 0) {
+          const formattedTiers = tiers.map((tier) => ({
+            id: tier.tier_order === 1 ? "retail" : `tier${tier.tier_order}`,
+            name: tier.tier_name,
+            minQuantity: tier.min_quantity,
+            price: tier.price,
+            enabled: tier.is_active,
+          }));
+
+          console.log(
+            "🔍 PRODUCT PRICING FORM - Níveis formatados:",
+            formattedTiers
+          );
+          setPriceTiers(formattedTiers);
+
+          // Atualizar formData com os níveis carregados
+          updateFormData({
+            price_tiers: formattedTiers,
+          });
+
+          // Atualizar também os preços básicos do formData
+          const retailTier = formattedTiers.find(
+            (tier) => tier.id === "retail"
+          );
+          const wholesaleTier = formattedTiers.find(
+            (tier) => tier.id === "wholesale" || tier.id === "tier2"
+          );
+
+          if (retailTier) {
+            updateFormData({ retail_price: retailTier.price });
+          }
+
+          if (wholesaleTier) {
+            updateFormData({
+              wholesale_price: wholesaleTier.price,
+              min_wholesale_qty: wholesaleTier.minQuantity,
+            });
+          }
+
+          console.log(
+            "✅ PRODUCT PRICING FORM - Níveis carregados com sucesso"
+          );
+        } else {
+          console.log("⚠️ PRODUCT PRICING FORM - Nenhum nível encontrado");
+        }
+      } catch (error) {
+        console.error(
+          "💥 PRODUCT PRICING FORM - Erro ao carregar níveis de preço existentes:",
+          error
+        );
+      }
+    };
+
+    loadExistingPriceTiers();
+  }, [productId, updateFormData]);
+
+  // Garantir que os preços sejam sempre sincronizados com o formData
+  useEffect(() => {
+    console.log("🔄 PRODUCT PRICING FORM - Sincronizando preços com formData");
+    console.log(
+      "🔄 PRODUCT PRICING FORM - retail_price:",
+      formData.retail_price
+    );
+    console.log(
+      "🔄 PRODUCT PRICING FORM - wholesale_price:",
+      formData.wholesale_price
+    );
+
+    // Atualizar preço de varejo se mudou no formData
+    if (formData.retail_price !== undefined && formData.retail_price !== null) {
+      setPriceTiers((prev) =>
+        prev.map((tier) =>
+          tier.id === "retail"
+            ? { ...tier, price: formData.retail_price || 0 }
+            : tier
+        )
+      );
+    }
+
+    // Atualizar preço de atacado se mudou no formData
+    if (
+      formData.wholesale_price !== undefined &&
+      formData.wholesale_price !== null
+    ) {
+      setPriceTiers((prev) =>
+        prev.map((tier) =>
+          tier.id === "wholesale"
+            ? { ...tier, price: formData.wholesale_price || 0 }
+            : tier
+        )
+      );
+    }
+  }, [formData.retail_price, formData.wholesale_price]);
 
   const handleTierChange = (
     tierId: string,
     field: keyof PriceTier,
     value: any
   ) => {
+    console.log("🔧 PRODUCT PRICING FORM - handleTierChange chamado:", {
+      tierId,
+      field,
+      value,
+    });
+
     // Atualizar priceTiers local
     const updatedTiers = priceTiers.map((tier) =>
       tier.id === tierId ? { ...tier, [field]: value } : tier
     );
 
+    console.log(
+      "🔧 PRODUCT PRICING FORM - priceTiers atualizados:",
+      updatedTiers
+    );
     setPriceTiers(updatedTiers);
 
     // Atualizar formData baseado no tipo de tier
     if (field === "price") {
       if (tierId === "retail") {
+        console.log(
+          "🔧 PRODUCT PRICING FORM - Atualizando retail_price:",
+          value
+        );
         updateFormData({ retail_price: value });
       } else if (tierId === "wholesale") {
+        console.log(
+          "🔧 PRODUCT PRICING FORM - Atualizando wholesale_price:",
+          value
+        );
         updateFormData({ wholesale_price: value });
       }
     } else if (field === "minQuantity") {
       if (tierId === "wholesale") {
+        console.log(
+          "🔧 PRODUCT PRICING FORM - Atualizando min_wholesale_qty:",
+          value
+        );
         updateFormData({ min_wholesale_qty: value });
       }
     }
@@ -179,9 +379,31 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
       enabled: tier.enabled,
     }));
 
+    console.log(
+      "🔧 PRODUCT PRICING FORM - Atualizando price_tiers no formData:",
+      tiersForFormData
+    );
+
+    // Forçar atualização completa do formData
     updateFormData({
       price_tiers: tiersForFormData,
     });
+
+    // Garantir que os preços básicos também sejam atualizados
+    const retailTier = updatedTiers.find((tier) => tier.id === "retail");
+    const wholesaleTier = updatedTiers.find((tier) => tier.id === "wholesale");
+
+    if (retailTier && field === "price") {
+      updateFormData({ retail_price: retailTier.price });
+    }
+
+    if (wholesaleTier && field === "price") {
+      updateFormData({ wholesale_price: wholesaleTier.price });
+    }
+
+    if (wholesaleTier && field === "minQuantity") {
+      updateFormData({ min_wholesale_qty: wholesaleTier.minQuantity });
+    }
   };
 
   const getCatalogModeInfo = () => {

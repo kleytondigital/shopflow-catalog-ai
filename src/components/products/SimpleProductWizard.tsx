@@ -8,6 +8,7 @@ import {
 import { useSimpleProductWizard } from "@/hooks/useSimpleProductWizard";
 import { useProductVariations } from "@/hooks/useProductVariations";
 import { useSimpleDraftImages } from "@/hooks/useSimpleDraftImages";
+import { useVariationDraftImages } from "@/hooks/useVariationDraftImages";
 import ImprovedWizardStepNavigation from "./wizard/ImprovedWizardStepNavigation";
 import WizardStepContent from "./wizard/WizardStepContent";
 import ImprovedWizardActionButtons from "./wizard/ImprovedWizardActionButtons";
@@ -44,6 +45,8 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
     editingProduct?.id
   );
   const { clearImages, uploadNewImages } = useSimpleDraftImages();
+  const { uploadVariationImages, clearVariationImages } =
+    useVariationDraftImages();
 
   // Ref para evitar múltiplas chamadas
   const loadedProductRef = useRef<string | null>(null);
@@ -93,10 +96,11 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
     if (!isOpen && loadedProductRef.current) {
       resetForm();
       clearImages();
+      clearVariationImages();
       loadedProductRef.current = null;
       imageUploadFunctionRef.current = null;
     }
-  }, [isOpen, resetForm, clearImages]);
+  }, [isOpen, resetForm, clearImages, clearVariationImages]);
 
   // Callback para receber a função de upload do componente de imagens
   const handleImageUploadReady = useCallback(
@@ -108,21 +112,47 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   const handleSave = async () => {
     try {
+      console.log("💾 SIMPLE WIZARD - Iniciando salvamento");
+      console.log("💾 SIMPLE WIZARD - formData atual:", formData);
+
       // Função para fazer upload das imagens após salvar o produto
       const imageUploadFn = async (productId: string) => {
+        console.log(
+          "💾 SIMPLE WIZARD - Executando upload de imagens para:",
+          productId
+        );
+
         if (imageUploadFunctionRef.current) {
+          console.log("💾 SIMPLE WIZARD - Upload de imagens principais");
           await imageUploadFunctionRef.current(productId);
         }
 
         // Para edição, usar uploadNewImages que preserva imagens existentes
         if (editingProduct?.id) {
+          console.log("💾 SIMPLE WIZARD - Upload de novas imagens");
           await uploadNewImages(productId);
         }
+
+        // Upload das imagens das variações
+        try {
+          console.log("💾 SIMPLE WIZARD - Upload de imagens das variações");
+          await uploadVariationImages(productId);
+        } catch (variationImageError) {
+          console.error(
+            "Erro no upload das imagens das variações:",
+            variationImageError
+          );
+          // Não falhar por causa das imagens das variações
+        }
       };
+
+      // Garantir que os dados estejam sincronizados antes de salvar
+      console.log("💾 SIMPLE WIZARD - Dados finais para salvamento:", formData);
 
       const productId = await saveProduct(editingProduct?.id, imageUploadFn);
 
       if (productId) {
+        console.log("💾 SIMPLE WIZARD - Produto salvo com sucesso:", productId);
         if (onSuccess) {
           onSuccess(formData);
         }
@@ -135,6 +165,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   const handleClose = () => {
     clearImages();
+    clearVariationImages();
     onClose();
   };
 
@@ -184,6 +215,17 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
                 productId={editingProduct?.id}
                 onImageUploadReady={handleImageUploadReady}
               />
+              {/* Debug info */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+                  <div>Debug: productId = {editingProduct?.id || "null"}</div>
+                  <div>Debug: currentStep = {currentStep}</div>
+                  <div>Debug: retail_price = {formData.retail_price}</div>
+                  <div>
+                    Debug: price_tiers = {formData.price_tiers?.length || 0}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

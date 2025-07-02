@@ -116,6 +116,12 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     product?.id
   );
 
+  // Obter imagem da variação selecionada
+  const selectedVariationImage = useMemo(() => {
+    if (!selectedVariation || !selectedVariation.image_url) return null;
+    return selectedVariation.image_url;
+  }, [selectedVariation]);
+
   // Reset quando produto muda
   useEffect(() => {
     if (product && isOpen) {
@@ -397,7 +403,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             <ProductImageGallery
               productId={product.id}
               productName={product.name}
-              selectedVariationImage={selectedVariation?.image_url ?? null}
+              selectedVariationImage={selectedVariationImage}
             />
           </div>
 

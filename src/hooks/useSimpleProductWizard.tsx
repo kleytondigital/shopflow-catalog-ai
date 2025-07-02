@@ -169,6 +169,27 @@ export const useSimpleProductWizard = () => {
     [steps.length]
   );
 
+  // Função para forçar sincronização dos dados antes do salvamento
+  const syncFormData = useCallback(() => {
+    console.log("🔄 SIMPLE WIZARD - Forçando sincronização dos dados");
+    console.log("🔄 SIMPLE WIZARD - formData atual:", formData);
+
+    // Garantir que os dados básicos estejam presentes
+    const syncedData = {
+      ...formData,
+      retail_price: Number(formData.retail_price || 0),
+      wholesale_price: formData.wholesale_price
+        ? Number(formData.wholesale_price)
+        : undefined,
+      min_wholesale_qty: Number(formData.min_wholesale_qty || 1),
+      stock: Number(formData.stock || 0),
+      price_tiers: formData.price_tiers || [],
+    };
+
+    console.log("🔄 SIMPLE WIZARD - Dados sincronizados:", syncedData);
+    return syncedData;
+  }, [formData]);
+
   const saveProduct = useCallback(
     async (
       productId?: string,
@@ -176,8 +197,11 @@ export const useSimpleProductWizard = () => {
     ): Promise<string | null> => {
       if (isSaving) return null;
 
-      const storeId = formData.store_id || profile?.store_id;
-      const trimmedName = (formData.name || "").trim();
+      // Forçar sincronização dos dados antes do salvamento
+      const syncedFormData = syncFormData();
+
+      const storeId = syncedFormData.store_id || profile?.store_id;
+      const trimmedName = (syncedFormData.name || "").trim();
 
       if (!storeId) {
         toast({
@@ -197,7 +221,7 @@ export const useSimpleProductWizard = () => {
         return null;
       }
 
-      if (formData.retail_price <= 0) {
+      if (syncedFormData.retail_price <= 0) {
         toast({
           title: "Erro de validação",
           description: "Preço de varejo deve ser maior que zero.",
@@ -209,39 +233,57 @@ export const useSimpleProductWizard = () => {
       setIsSaving(true);
 
       try {
+        console.log("💾 SIMPLE WIZARD - Iniciando salvamento do produto");
+        console.log(
+          "💾 SIMPLE WIZARD - formData sincronizado:",
+          syncedFormData
+        );
+
         // Preparar dados do produto
         const { variations, price_tiers, ...productDataWithoutVariations } =
-          formData;
+          syncedFormData;
         const productData: CreateProductData = {
           ...productDataWithoutVariations,
           store_id: storeId,
           name: trimmedName,
-          description: (formData.description || "").trim(),
-          category: (formData.category || "").trim() || "Geral",
-          retail_price: Number(formData.retail_price),
-          wholesale_price: formData.wholesale_price
-            ? Number(formData.wholesale_price)
+          description: (syncedFormData.description || "").trim(),
+          category: (syncedFormData.category || "").trim() || "Geral",
+          retail_price: Number(syncedFormData.retail_price),
+          wholesale_price: syncedFormData.wholesale_price
+            ? Number(syncedFormData.wholesale_price)
             : undefined,
-          min_wholesale_qty: Number(formData.min_wholesale_qty || 1),
-          stock: Number(formData.stock || 0),
-          meta_title: (formData.meta_title || "").trim(),
-          meta_description: (formData.meta_description || "").trim(),
-          keywords: (formData.keywords || "").trim(),
-          seo_slug: (formData.seo_slug || "").trim(),
-          is_featured: Boolean(formData.is_featured),
-          allow_negative_stock: Boolean(formData.allow_negative_stock),
-          stock_alert_threshold: Number(formData.stock_alert_threshold || 5),
+          min_wholesale_qty: Number(syncedFormData.min_wholesale_qty || 1),
+          stock: Number(syncedFormData.stock || 0),
+          meta_title: (syncedFormData.meta_title || "").trim(),
+          meta_description: (syncedFormData.meta_description || "").trim(),
+          keywords: (syncedFormData.keywords || "").trim(),
+          seo_slug: (syncedFormData.seo_slug || "").trim(),
+          is_featured: Boolean(syncedFormData.is_featured),
+          allow_negative_stock: Boolean(syncedFormData.allow_negative_stock),
+          stock_alert_threshold: Number(
+            syncedFormData.stock_alert_threshold || 5
+          ),
           is_active: true,
         };
+
+        console.log(
+          "💾 SIMPLE WIZARD - Dados do produto preparados:",
+          productData
+        );
 
         // Salvar produto
         let result;
         let savedProductId: string;
 
         if (productId) {
+          console.log(
+            "💾 SIMPLE WIZARD - Atualizando produto existente:",
+            productId
+          );
           result = await updateProduct({ ...productData, id: productId });
           savedProductId = productId;
         } else {
+          console.log("💾 SIMPLE WIZARD - Criando novo produto");
           result = await createProduct(productData);
           savedProductId = result.data?.id;
         }
@@ -250,27 +292,20 @@ export const useSimpleProductWizard = () => {
           throw new Error(result.error || "Erro ao salvar produto");
         }
 
-        // Upload de imagens APÓS salvar produto
-        if (imageUploadFn) {
-          try {
-            await imageUploadFn(savedProductId);
-          } catch (uploadError) {
-            console.error("Erro no upload:", uploadError);
-            // Não falhar por causa das imagens
-          }
-        }
+        console.log(
+          "💾 SIMPLE WIZARD - Produto salvo com sucesso:",
+          savedProductId
+        );
 
-        // Salvar variações com upload de imagens
-        if (formData.variations && formData.variations.length > 0) {
-          try {
-            await saveVariations(savedProductId, formData.variations);
-          } catch (variationError) {
-            console.error("Erro nas variações:", variationError);
-          }
-        }
-
-        // Salvar níveis de preço se houver dados de níveis
-        if (formData.price_tiers && formData.price_tiers.length > 0) {
+        // Salvar níveis de preço ANTES do upload de imagens
+        if (
+          syncedFormData.price_tiers &&
+          syncedFormData.price_tiers.length > 0
+        ) {
+          console.log(
+            "💰 SIMPLE WIZARD - Salvando níveis de preço:",
+            syncedFormData.price_tiers
+          );
           try {
             // Importar supabase para operações diretas
             const { supabase } = await import(
@@ -289,13 +324,13 @@ export const useSimpleProductWizard = () => {
               tier_name: "Varejo",
               tier_order: 1,
               tier_type: "retail",
-              price: formData.retail_price,
+              price: syncedFormData.retail_price,
               min_quantity: 1,
               is_active: true,
             };
 
             // Depois, criar os níveis de atacado baseados nos dados do formulário
-            const wholesaleTiers = formData.price_tiers
+            const wholesaleTiers = syncedFormData.price_tiers
               .filter(
                 (tier) => tier.enabled && tier.price > 0 && tier.id !== "retail"
               )
@@ -309,6 +344,10 @@ export const useSimpleProductWizard = () => {
                 is_active: true,
               }));
 
+            console.log("💰 SIMPLE WIZARD - Níveis para inserir:", {
+              retailTier,
+              wholesaleTiers,
+            });
             const tiersToInsert = [retailTier, ...wholesaleTiers];
 
             if (tiersToInsert.length > 0) {
@@ -321,6 +360,10 @@ export const useSimpleProductWizard = () => {
                   "❌ SIMPLE WIZARD - Erro ao inserir níveis:",
                   insertError
                 );
+              } else {
+                console.log(
+                  "✅ SIMPLE WIZARD - Níveis de preço salvos com sucesso"
+                );
               }
             }
           } catch (tierError) {
@@ -329,6 +372,30 @@ export const useSimpleProductWizard = () => {
               tierError
             );
             // Não falhar o produto por causa dos níveis
+          }
+        } else {
+          console.log("⚠️ SIMPLE WIZARD - Nenhum nível de preço para salvar");
+        }
+
+        // Salvar variações com upload de imagens
+        if (syncedFormData.variations && syncedFormData.variations.length > 0) {
+          try {
+            console.log("💾 SIMPLE WIZARD - Salvando variações");
+            await saveVariations(savedProductId, syncedFormData.variations);
+          } catch (variationError) {
+            console.error("Erro nas variações:", variationError);
+          }
+        }
+
+        // Upload de imagens APÓS salvar produto e níveis de preço
+        if (imageUploadFn) {
+          try {
+            console.log("💾 SIMPLE WIZARD - Iniciando upload de imagens");
+            await imageUploadFn(savedProductId);
+            console.log("💾 SIMPLE WIZARD - Upload de imagens concluído");
+          } catch (uploadError) {
+            console.error("Erro no upload:", uploadError);
+            // Não falhar por causa das imagens
           }
         }
 
@@ -357,7 +424,7 @@ export const useSimpleProductWizard = () => {
       }
     },
     [
-      formData,
+      syncFormData,
       profile?.store_id,
       createProduct,
       updateProduct,
@@ -387,6 +454,7 @@ export const useSimpleProductWizard = () => {
       stock_alert_threshold: 5,
       is_active: true,
       variations: [],
+      price_tiers: [],
     });
     setCurrentStep(0);
   }, [profile?.store_id]);
@@ -394,6 +462,11 @@ export const useSimpleProductWizard = () => {
   const loadProductData = useCallback(
     async (product: any) => {
       if (!product) return;
+
+      console.log(
+        "📥 SIMPLE WIZARD - Carregando dados do produto:",
+        product.id
+      );
 
       const productData = {
         name: product.name || "",
@@ -418,28 +491,51 @@ export const useSimpleProductWizard = () => {
 
       // Carregar níveis de preço se existirem
       try {
+        console.log(
+          "📥 SIMPLE WIZARD - Buscando níveis de preço para produto:",
+          product.id
+        );
         const { supabase } = await import("../integrations/supabase/client");
-        const { data: tiers } = await supabase
+        const { data: tiers, error } = await supabase
           .from("product_price_tiers")
           .select("*")
           .eq("product_id", product.id)
           .eq("is_active", true)
           .order("tier_order");
 
-        if (tiers && tiers.length > 0) {
-          const formattedTiers = tiers.map((tier) => ({
-            id: tier.id,
-            name: tier.tier_name,
-            minQuantity: tier.min_quantity,
-            price: tier.price,
-            enabled: tier.is_active,
-          }));
-          productData.price_tiers = formattedTiers;
+        if (error) {
+          console.error(
+            "❌ SIMPLE WIZARD - Erro ao buscar níveis de preço:",
+            error
+          );
+        } else {
+          console.log("📥 SIMPLE WIZARD - Níveis encontrados:", tiers);
+
+          if (tiers && tiers.length > 0) {
+            const formattedTiers = tiers.map((tier) => ({
+              id: tier.id,
+              name: tier.tier_name,
+              minQuantity: tier.min_quantity,
+              price: tier.price,
+              enabled: tier.is_active,
+            }));
+            productData.price_tiers = formattedTiers;
+            console.log(
+              "📥 SIMPLE WIZARD - Níveis formatados:",
+              formattedTiers
+            );
+          } else {
+            console.log("⚠️ SIMPLE WIZARD - Nenhum nível de preço encontrado");
+          }
         }
       } catch (error) {
-        console.error("Erro ao carregar níveis de preço:", error);
+        console.error(
+          "💥 SIMPLE WIZARD - Erro ao carregar níveis de preço:",
+          error
+        );
       }
 
+      console.log("📥 SIMPLE WIZARD - Dados finais do produto:", productData);
       // Atualizar formData de uma vez
       setFormData(productData);
     },

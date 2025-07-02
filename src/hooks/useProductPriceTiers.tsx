@@ -18,6 +18,10 @@ export const useProductPriceTiers = (productId: string, storeId?: string) => {
       setLoading(true);
       setError(null);
 
+      console.log(
+        "🔍 USE PRODUCT PRICE TIERS - Buscando níveis para produto:",
+        productId
+      );
       const { data, error: fetchError } = await supabase
         .from("product_price_tiers")
         .select("*")
@@ -25,11 +29,21 @@ export const useProductPriceTiers = (productId: string, storeId?: string) => {
         .eq("is_active", true)
         .order("tier_order");
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error(
+          "❌ USE PRODUCT PRICE TIERS - Erro ao buscar:",
+          fetchError
+        );
+        throw fetchError;
+      }
 
+      console.log("🔍 USE PRODUCT PRICE TIERS - Níveis encontrados:", data);
       setTiers(data || []);
     } catch (err) {
-      console.error("Erro ao buscar níveis de preço:", err);
+      console.error(
+        "💥 USE PRODUCT PRICE TIERS - Erro ao buscar níveis de preço:",
+        err
+      );
       setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
       setLoading(false);

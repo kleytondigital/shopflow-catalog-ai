@@ -80,6 +80,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
         <ProductPricingForm
           formData={safeFormData}
           updateFormData={updateFormData}
+          productId={productId}
         />
       );
 

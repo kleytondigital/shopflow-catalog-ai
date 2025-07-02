@@ -51,6 +51,15 @@ export const useVariationImageUpload = () => {
 
         const imageUrl = urlData.publicUrl;
 
+        // Verificar se o variationId é um UUID válido
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(variationId)) {
+          throw new Error(
+            `ID de variação inválido: ${variationId}. O ID deve ser um UUID válido.`
+          );
+        }
+
         // Atualizar a variação com a URL da imagem
         const { error: updateVariationError } = await supabase
           .from("product_variations")

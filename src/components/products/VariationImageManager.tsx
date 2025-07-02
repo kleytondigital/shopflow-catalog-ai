@@ -1,195 +1,130 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Upload, X, Camera } from "lucide-react";
+import { Upload, X, Camera, ImageIcon, Palette, Shirt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useVariationImageUpload } from "@/hooks/useVariationImageUpload";
+import { useVariationDraftImages } from "@/hooks/useVariationDraftImages";
+import { useSimpleDraftImages } from "@/hooks/useSimpleDraftImages";
+import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@/types/variation";
 
 interface VariationImageManagerProps {
-  productId?: string;
   variations: ProductVariation[];
-  onImagesUpdated?: () => void;
-}
-
-interface ImagePreview {
-  color: string;
-  variationId: string;
-  file?: File;
-  imageUrl?: string;
-  preview?: string;
-  isUploading?: boolean;
+  onImagesUpdated: (variationId: string, imageUrl: string) => void;
 }
 
 const VariationImageManager: React.FC<VariationImageManagerProps> = ({
-  productId,
   variations,
   onImagesUpdated,
 }) => {
-  const [imagePreviews, setImagePreviews] = useState<ImagePreview[]>([]);
+  const { toast } = useToast();
   const {
-    isUploading,
+    draftImages,
     uploadVariationImage,
-    loadVariationImages,
     removeVariationImage,
-  } = useVariationImageUpload();
+    getImageForColor,
+  } = useVariationDraftImages();
+  const { images: productImages } = useSimpleDraftImages();
 
   // Filtrar apenas variações com cor
-  const colorVariations = variations.filter((v) => v.color && v.color.trim());
+  const colorVariations = variations.filter((v) => v.color);
 
-  // Carregar imagens existentes quando o componente é montado
-  useEffect(() => {
-    if (productId && colorVariations.length > 0) {
-      loadExistingImages();
-    }
-  }, [productId, colorVariations.length]);
-
-  const loadExistingImages = async () => {
-    if (!productId) return;
-
-    const imageMap = await loadVariationImages(productId);
-
-    // Criar previews para todas as cores, com ou sem imagem
-    const previews: ImagePreview[] = colorVariations.map((variation) => ({
-      color: variation.color!,
-      variationId: variation.id!,
-      imageUrl: imageMap[variation.color!],
-    }));
-
-    setImagePreviews(previews);
+  // Mapeamento de cores para palavras-chave nas imagens
+  const colorKeywords: Record<string, string[]> = {
+    azul: ["azul", "blue", "azul"],
+    preto: ["preto", "black", "negro", "preta"],
+    branco: ["branco", "white", "blanco", "branca"],
+    rosa: ["rosa", "pink", "rosa"],
+    verde: ["verde", "green", "verde"],
+    vermelho: ["vermelho", "red", "rojo", "vermelha"],
+    amarelo: ["amarelo", "yellow", "amarillo", "amarela"],
+    laranja: ["laranja", "orange", "naranja"],
+    roxo: ["roxo", "purple", "morado", "roxa"],
+    cinza: ["cinza", "gray", "gris", "cinza"],
   };
 
-  const handleImageSelect = useCallback(
-    (
-      event: React.ChangeEvent<HTMLInputElement>,
-      color: string,
-      variationId: string
-    ) => {
+  // Encontrar imagem principal que corresponde à cor da variação
+  const findMatchingProductImage = (color: string): string | null => {
+    if (!color || !productImages.length) return null;
+
+    const colorLower = color.toLowerCase();
+    const keywords = colorKeywords[colorLower] || [colorLower];
+
+    // Procurar por imagem que contenha a palavra-chave da cor
+    const matchingImage = productImages.find((image) => {
+      const imageName = image.name?.toLowerCase() || "";
+      return keywords.some((keyword) => imageName.includes(keyword));
+    });
+
+    return matchingImage?.url || null;
+  };
+
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>, variationId: string) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // Validar tipo de arquivo
-      if (!file.type.startsWith("image/")) {
-        return;
+      try {
+        const imageUrl = await uploadVariationImage(file, variationId);
+        onImagesUpdated(variationId, imageUrl);
+
+        toast({
+          title: "Imagem enviada",
+          description: "Imagem da variação enviada com sucesso.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro no upload",
+          description: "Erro ao enviar imagem da variação.",
+          variant: "destructive",
+        });
       }
-
-      // Criar preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const preview = e.target?.result as string;
-
-        setImagePreviews((prev) =>
-          prev.map((img) =>
-            img.color === color
-              ? { ...img, file, preview, imageUrl: undefined }
-              : img
-          )
-        );
-      };
-      reader.readAsDataURL(file);
-
-      // Reset do input
-      event.target.value = "";
     },
-    []
+    [uploadVariationImage, onImagesUpdated, toast]
   );
 
-  const handleUploadImage = async (color: string, variationId: string) => {
-    const imagePreview = imagePreviews.find((img) => img.color === color);
-    if (!imagePreview?.file || !productId) return;
-
-    // Marcar como fazendo upload
-    setImagePreviews((prev) =>
-      prev.map((img) =>
-        img.color === color ? { ...img, isUploading: true } : img
-      )
-    );
-
-    try {
-      const uploadedUrl = await uploadVariationImage(
-        productId,
-        variationId,
-        imagePreview.file,
-        color
-      );
-
-      if (uploadedUrl) {
-        // Atualizar com a URL definitiva
-        setImagePreviews((prev) =>
-          prev.map((img) =>
-            img.color === color
-              ? {
-                  ...img,
-                  file: undefined,
-                  preview: undefined,
-                  imageUrl: uploadedUrl,
-                  isUploading: false,
-                }
-              : img
-          )
-        );
-
-        onImagesUpdated?.();
+  const handleImageSelect = useCallback(
+    (imageUrl: string | null, color: string, variationId: string) => {
+      if (imageUrl) {
+        onImagesUpdated(variationId, imageUrl);
+        toast({
+          title: "Imagem selecionada",
+          description: `Imagem ${color} selecionada para a variação.`,
+        });
+      } else {
+        // Tentar encontrar imagem automática baseada na cor
+        const matchingImage = findMatchingProductImage(color);
+        if (matchingImage) {
+          onImagesUpdated(variationId, matchingImage);
+          toast({
+            title: "Imagem automática",
+            description: `Imagem ${color} aplicada automaticamente.`,
+          });
+        }
       }
-    } catch (error) {
-      console.error("Erro no upload:", error);
-    } finally {
-      // Remover estado de upload
-      setImagePreviews((prev) =>
-        prev.map((img) =>
-          img.color === color ? { ...img, isUploading: false } : img
-        )
-      );
-    }
-  };
+    },
+    [onImagesUpdated, toast, findMatchingProductImage]
+  );
 
-  const handleRemoveImage = async (color: string, variationId: string) => {
-    const imagePreview = imagePreviews.find((img) => img.color === color);
-    if (!imagePreview) return;
+  const handleRemoveImage = useCallback(
+    (variationId: string) => {
+      removeVariationImage(variationId);
+      onImagesUpdated(variationId, "");
 
-    // Se tem arquivo local (não enviado), apenas remover preview
-    if (imagePreview.file) {
-      setImagePreviews((prev) =>
-        prev.map((img) =>
-          img.color === color
-            ? { ...img, file: undefined, preview: undefined }
-            : img
-        )
-      );
-      return;
-    }
-
-    // Se tem URL (já enviada), remover do servidor
-    if (imagePreview.imageUrl) {
-      const success = await removeVariationImage(
-        variationId,
-        imagePreview.imageUrl
-      );
-      if (success) {
-        setImagePreviews((prev) =>
-          prev.map((img) =>
-            img.color === color ? { ...img, imageUrl: undefined } : img
-          )
-        );
-        onImagesUpdated?.();
-      }
-    }
-  };
+      toast({
+        title: "Imagem removida",
+        description: "Imagem da variação removida.",
+      });
+    },
+    [removeVariationImage, onImagesUpdated, toast]
+  );
 
   if (colorVariations.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
-            Imagens das Variações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Nenhuma variação de cor encontrada. Adicione variações de cor para
-            fazer upload de imagens específicas.
-          </p>
+        <CardContent className="p-4 text-center text-gray-500">
+          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Nenhuma variação com cor encontrada</p>
         </CardContent>
       </Card>
     );
@@ -199,116 +134,111 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Camera className="h-5 w-5" />
-          Imagens das Variações ({colorVariations.length} cores)
+          <ImageIcon className="h-5 w-5" />
+          Gerenciar Imagens das Variações
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Faça upload de imagens específicas para cada cor do produto
-        </p>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {imagePreviews.map((imagePreview) => (
-            <div key={imagePreview.color} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-xs">
-                  {imagePreview.color}
-                </Badge>
-                {(imagePreview.file || imagePreview.imageUrl) && (
+      <CardContent className="space-y-4">
+        {colorVariations.map((variation) => {
+          const currentImage = getImageForColor(variation.color!);
+          const suggestedImage = findMatchingProductImage(variation.color!);
+
+          return (
+            <div key={variation.id} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{variation.color}</Badge>
+                  {variation.size && (
+                    <Badge variant="secondary">{variation.size}</Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Imagem Atual */}
+              {currentImage && (
+                <div className="relative mb-3">
+                  <img
+                    src={currentImage}
+                    alt={`Variação ${variation.color}`}
+                    className="w-full h-24 object-cover rounded border"
+                  />
                   <Button
-                    variant="ghost"
                     size="sm"
+                    variant="destructive"
+                    className="absolute top-2 right-2 h-6 w-6 p-0"
+                    onClick={() => handleRemoveImage(variation.id!)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Botões de Ação */}
+              <div className="flex flex-wrap gap-2">
+                {/* Upload de Nova Imagem */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, variation.id!)}
+                    className="hidden"
+                    id={`variation-upload-${variation.id}`}
+                  />
+                  <label
+                    htmlFor={`variation-upload-${variation.id}`}
+                    className="cursor-pointer"
+                  >
+                    <Button size="sm" variant="outline" className="h-8">
+                      <Upload className="h-3 w-3 mr-1" />
+                      Upload
+                    </Button>
+                  </label>
+                </div>
+
+                {/* Selecionar das Imagens Principais */}
+                {productImages.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
                     onClick={() =>
-                      handleRemoveImage(
-                        imagePreview.color,
-                        imagePreview.variationId
+                      handleImageSelect(null, variation.color!, variation.id!)
+                    }
+                  >
+                    <Palette className="h-3 w-3 mr-1" />
+                    Reaproveitar
+                  </Button>
+                )}
+
+                {/* Sugestão Automática */}
+                {suggestedImage && !currentImage && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8"
+                    onClick={() =>
+                      handleImageSelect(
+                        suggestedImage,
+                        variation.color!,
+                        variation.id!
                       )
                     }
-                    disabled={imagePreview.isUploading}
                   >
-                    <X className="h-4 w-4" />
+                    <Shirt className="h-3 w-3 mr-1" />
+                    Usar {variation.color}
                   </Button>
                 )}
               </div>
-
-              <div className="relative">
-                {/* Preview da imagem */}
-                {imagePreview.preview || imagePreview.imageUrl ? (
-                  <div className="relative aspect-square rounded-lg overflow-hidden border">
-                    <img
-                      src={imagePreview.preview || imagePreview.imageUrl}
-                      alt={`Cor ${imagePreview.color}`}
-                      className="w-full h-full object-cover"
-                    />
-                    {imagePreview.isUploading && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <div className="text-white text-sm">Enviando...</div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Área de upload */
-                  <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400 transition-colors">
-                    <div className="text-center">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">
-                        Clique para adicionar
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Input de arquivo */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    handleImageSelect(
-                      e,
-                      imagePreview.color,
-                      imagePreview.variationId
-                    )
-                  }
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={imagePreview.isUploading}
-                />
-              </div>
-
-              {/* Botão de upload para arquivo selecionado */}
-              {imagePreview.file && productId && (
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    handleUploadImage(
-                      imagePreview.color,
-                      imagePreview.variationId
-                    )
-                  }
-                  disabled={imagePreview.isUploading || isUploading}
-                  className="w-full"
-                >
-                  {imagePreview.isUploading ? "Enviando..." : "Enviar Imagem"}
-                </Button>
-              )}
-
-              {/* Indicador de imagem salva */}
-              {imagePreview.imageUrl && !imagePreview.file && (
-                <div className="text-center">
-                  <Badge variant="secondary" className="text-xs">
-                    ✓ Salva
-                  </Badge>
-                </div>
-              )}
             </div>
-          ))}
-        </div>
+          );
+        })}
 
-        {!productId && (
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-800">
-              💡 Salve o produto primeiro para fazer upload de imagens das
-              variações
-            </p>
+        {/* Dica de Reaproveitamento */}
+        {productImages.length > 0 && (
+          <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded">
+            💡 <strong>Dica:</strong> Você pode reaproveitar as imagens
+            principais do produto para as variações. O sistema tentará encontrar
+            automaticamente a imagem que corresponde à cor da variação.
           </div>
         )}
       </CardContent>
