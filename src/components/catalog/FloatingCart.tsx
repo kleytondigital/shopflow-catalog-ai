@@ -1,51 +1,165 @@
+// FloatingCart.tsx
 import React, { useEffect } from "react";
-import {
-  ShoppingCart,
-  Trash2,
-  Plus,
-  Minus,
-  X,
-  TrendingUp,
-  AlertCircle,
-} from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/useCart";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { useCartPriceCalculation } from "@/hooks/useCartPriceCalculation";
 import CartItemThumbnail from "./checkout/CartItemThumbnail";
 import CartItemPriceDisplay from "./CartItemPriceDisplay";
 
-interface FloatingCartProps {
-  onCheckout?: () => void;
-  storeId?: string;
-}
-
-// Função utilitária para formatar valores monetários com segurança
 const formatCurrency = (value: number | undefined | null): string => {
-  if (typeof value !== "number" || isNaN(value)) {
-    return "R$ 0,00";
-  }
+  if (typeof value !== "number" || isNaN(value)) return "R$ 0,00";
   return `R$ ${value.toFixed(2).replace(".", ",")}`;
 };
 
-// Função utilitária para calcular valores com segurança
-const safeCalculate = (
-  a: number | undefined | null,
-  b: number | undefined | null
-): number => {
-  const numA = typeof a === "number" && !isNaN(a) ? a : 0;
-  const numB = typeof b === "number" && !isNaN(b) ? b : 0;
-  return numA * numB;
+// Componente separado para cada item do carrinho
+const CartItem: React.FC<{
+  item: any;
+  onUpdateQuantity: (id: string, quantity: number) => void;
+  onRemoveItem: (id: string) => void;
+}> = ({ item, onUpdateQuantity, onRemoveItem }) => {
+  const calculation = useCartPriceCalculation(item);
+  const quantity = item.quantity || 1;
+  const stock =
+    item.variation && typeof item.variation.stock === "number"
+      ? item.variation.stock
+      : item.product?.stock ?? 0;
+  const allowNegative = item.product?.allow_negative_stock ?? false;
+
+  // Validação de estoque
+  const estoqueDisponivel = allowNegative ? Infinity : stock;
+  const podeAdicionar = allowNegative || quantity < stock;
+  const podeRemover = quantity > 1;
+  const erroEstoque = !allowNegative && quantity >= stock;
+
+  // Badge baseado no cálculo centralizado
+  const getBadgeStyle = (tierName: string) => {
+    switch (tierName) {
+      case "Varejo":
+        return "bg-blue-100 text-blue-800 border-blue-300";
+      case "Atacarejo":
+        return "bg-orange-100 text-orange-800 border-orange-300";
+      case "Atacado Pequeno":
+        return "bg-green-100 text-green-800 border-green-300";
+      case "Atacado Grande":
+        return "bg-yellow-100 text-yellow-800 border-yellow-400";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
+  return (
+    <div
+      className={`cart-item-card rounded-xl p-4 border-2 ${
+        calculation.currentTier.tier_name === "Atacado Grande"
+          ? "border-yellow-400"
+          : "border-gray-200"
+      } bg-white flex flex-col gap-2`}
+    >
+      <div className="flex flex-row gap-4 items-start">
+        {/* Imagem */}
+        <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
+          <CartItemThumbnail
+            imageUrl={item.product?.image_url}
+            productName={item.product?.name || "Produto"}
+            size="lg"
+          />
+        </div>
+        {/* Infos principais */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="flex flex-row gap-4 items-start flex-wrap">
+            <div className="flex flex-col min-w-0">
+              <h4 className="text-base font-semibold text-gray-900 truncate">
+                {item.product?.name || "Produto sem nome"}
+              </h4>
+              {item.variation && (
+                <p className="text-xs text-gray-500 truncate">
+                  {item.variation.size} {item.variation.color}
+                </p>
+              )}
+            </div>
+            {/* Bloco de preço/desconto/economia */}
+            <div className="flex flex-col gap-1 min-w-[120px] items-end text-right">
+              <CartItemPriceDisplay item={item} />
+              {/* Incentivo para próximo nível */}
+              {calculation.nextTierHint && (
+                <span className="text-xs text-blue-700 flex items-center gap-1">
+                  <TrendingUp size={12} /> Faltam{" "}
+                  <b>{calculation.nextTierHint.quantityNeeded}</b> un. para
+                  próximo nível
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Rodapé: botões e badge */}
+      <div className="flex flex-row items-center justify-between mt-3 gap-2 flex-wrap border-t pt-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onUpdateQuantity(item.id, quantity - 1)}
+            className="h-8 w-8 p-0 rounded-full"
+            disabled={!podeRemover}
+          >
+            <Minus size={12} />
+          </Button>
+          <Input
+            type="number"
+            min="1"
+            max={estoqueDisponivel}
+            value={quantity}
+            onChange={(e) => {
+              let val = parseInt(e.target.value) || 1;
+              if (!allowNegative && val > stock) val = stock;
+              onUpdateQuantity(item.id, val);
+            }}
+            className="w-16 h-8 text-center text-sm font-semibold"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onUpdateQuantity(item.id, quantity + 1)}
+            className="h-8 w-8 p-0 rounded-full"
+            disabled={!podeAdicionar}
+          >
+            <Plus size={12} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemoveItem(item.id)}
+            className="text-red-500 hover:text-red-700 h-8 w-8 p-0 rounded-full"
+            title="Remover"
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
+        {/* Badge no rodapé usando o cálculo centralizado */}
+        <span
+          className={`px-3 py-1 rounded-lg text-xs font-bold border ${getBadgeStyle(
+            calculation.currentTier.tier_name
+          )}`}
+        >
+          {calculation.currentTier.tier_name}
+        </span>
+      </div>
+      {/* Mensagem de erro de estoque */}
+      {erroEstoque && (
+        <div className="text-xs text-red-600 mt-1">
+          Estoque insuficiente para essa quantidade.
+        </div>
+      )}
+    </div>
+  );
 };
 
-const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
+const FloatingCart: React.FC<{ onCheckout?: () => void; storeId?: string }> = ({
+  onCheckout,
+}) => {
   const {
     items,
     totalItems,
@@ -60,301 +174,200 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
     itemsToWholesale,
   } = useCart();
 
+  // Debug dos valores do carrinho
   useEffect(() => {
-    // Aplicar cores do template
-    if (typeof document !== "undefined") {
-      const style = document.createElement("style");
-      style.textContent = `
-        .floating-cart-button {
-          background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
-          transition: all 0.3s ease;
-        }
-        
-        .floating-cart-button:hover {
-          background: linear-gradient(135deg, var(--template-secondary, #FF6F00), var(--template-accent, #8E2DE2));
-          transform: scale(1.05);
-        }
-        
-        .cart-header-gradient {
-          background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
-        }
-        
-        .cart-checkout-button {
-          background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
-        }
-        
-        .cart-checkout-button:hover {
-          background: linear-gradient(135deg, var(--template-secondary, #FF6F00), var(--template-accent, #8E2DE2));
-          transform: scale(1.05);
-        }
-        
-        .cart-item-card {
-          background: var(--template-surface, #FFFFFF);
-          border: 1px solid var(--template-border, #E2E8F0);
-        }
-        
-        .cart-item-card:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .cart-price-text {
-          color: var(--template-primary, #0057FF);
-        }
-      `;
-      document.head.appendChild(style);
+    console.log("🛒 Debug FloatingCart:", {
+      itemsCount: items.length,
+      totalItems,
+      totalAmount,
+      isOpen,
+      items: items.map((item) => ({
+        id: item.id,
+        name: item.product?.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
+  }, [items, totalItems, totalAmount, isOpen]);
 
-      return () => {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .floating-cart-button {
+        background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2)) !important;
+        transition: all 0.3s ease;
+        color: white !important;
+      }
+      .floating-cart-button:hover {
+        background: linear-gradient(135deg, var(--template-secondary, #FF6F00), var(--template-accent, #8E2DE2)) !important;
+        transform: scale(1.05);
+      }
+      .cart-header-gradient {
+        background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
+      }
+      .cart-checkout-button {
+        background: linear-gradient(135deg, var(--template-primary, #0057FF), var(--template-accent, #8E2DE2));
+      }
+      .cart-checkout-button:hover {
+        background: linear-gradient(135deg, var(--template-secondary, #FF6F00), var(--template-accent, #8E2DE2));
+        transform: scale(1.05);
+      }
+      .cart-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .cart-modal-content {
+        background: white;
+        width: 100%;
+        max-width: 480px;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
         document.head.removeChild(style);
-      };
-    }
+      }
+    };
   }, []);
 
-  const handleCheckout = () => {
-    closeCart();
-    if (onCheckout) {
-      onCheckout();
-    }
-  };
+  console.log("🛒 FloatingCart: Renderizando - totalItems:", totalItems);
 
-  if (totalItems === 0) {
-    return null;
-  }
+  // Só renderiza se houver itens no carrinho
+  if (totalItems === 0) return null;
 
   return (
-    <div className="fixed bottom-20 right-6 z-50">
-      <Sheet open={isOpen} onOpenChange={toggleCart}>
-        <SheetTrigger asChild>
-          <Button
-            size="lg"
-            className="floating-cart-button relative h-16 w-16 rounded-full shadow-2xl hover:shadow-xl flex items-center justify-center p-0"
+    <>
+      <div className="fixed bottom-20 right-6 z-50">
+        <Button
+          size="lg"
+          className="floating-cart-button relative h-16 w-16 rounded-full shadow-2xl flex items-center justify-center bg-blue-600 hover:bg-blue-700"
+          onClick={toggleCart}
+        >
+          <p className=" text-white text-2xl">🛒</p>
+          {totalItems > 0 && (
+            <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center p-0 min-w-6">
+              {totalItems > 99 ? "99+" : totalItems}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {isOpen && (
+        <div className="cart-modal-overlay" onClick={closeCart}>
+          <div
+            className="cart-modal-content"
+            onClick={(e) => e.stopPropagation()}
           >
-            <ShoppingCart className="h-6 w-6 text-white" />
-            {totalItems > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 flex items-center justify-center bg-red-500 text-white font-bold text-sm animate-pulse"
-              >
-                {totalItems > 99 ? "99+" : totalItems}
-              </Badge>
-            )}
-          </Button>
-        </SheetTrigger>
+            <Button
+              className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 z-10"
+              onClick={closeCart}
+            >
+              <X className="w-5 h-5" />
+            </Button>
 
-        <SheetContent className="w-full sm:max-w-lg overflow-hidden p-0">
-          <div className="flex flex-col h-full">
-            <SheetHeader className="cart-header-gradient px-6 py-4">
-              <SheetTitle className="text-xl font-bold text-white text-center">
-                🛒 Carrinho de Compras
-              </SheetTitle>
-            </SheetHeader>
+            <div className="flex flex-col h-full">
+              <div className="cart-header-gradient px-6 py-4">
+                <h2 className="text-xl font-bold text-white text-center">
+                  🛒 Carrinho de Compras ({totalItems}{" "}
+                  {totalItems === 1 ? "item" : "itens"})
+                </h2>
+              </div>
 
-            {/* Indicadores de Economia */}
-            {canGetWholesalePrice && potentialSavings > 0 && (
-              <div className="px-6 py-3 bg-gradient-to-r from-orange-50 to-yellow-50 border-b">
-                <div className="flex items-center gap-2 text-orange-700">
-                  <TrendingUp size={16} />
-                  <span className="font-semibold text-sm">
-                    Oportunidade de Economia!
-                  </span>
-                </div>
-                <p className="text-xs text-orange-600 mt-1">
+              {canGetWholesalePrice && potentialSavings > 0 && (
+                <div className="px-6 py-3 bg-yellow-50 border-b text-yellow-800 text-sm">
+                  <TrendingUp size={16} className="inline mr-1" />
                   Adicione +{itemsToWholesale} itens e economize{" "}
                   {formatCurrency(potentialSavings)}
-                </p>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <ShoppingCart size={64} className="text-gray-300 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                    Carrinho vazio
-                  </h3>
-                  <p className="text-gray-500">
-                    Adicione produtos ao seu carrinho para continuar
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {items.map((item) => {
-                    // Validações de segurança para cada item
-                    const itemPrice =
-                      typeof item.price === "number" && !isNaN(item.price)
-                        ? item.price
-                        : 0;
-                    const itemQuantity =
-                      typeof item.quantity === "number" && !isNaN(item.quantity)
-                        ? item.quantity
-                        : 1;
-                    const itemOriginalPrice =
-                      typeof item.originalPrice === "number" &&
-                      !isNaN(item.originalPrice)
-                        ? item.originalPrice
-                        : itemPrice;
-                    const itemTotal = safeCalculate(itemPrice, itemQuantity);
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="cart-item-card rounded-xl shadow-sm p-4 hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start gap-4">
-                          <CartItemThumbnail
-                            imageUrl={item.product?.image_url}
-                            productName={item.product?.name || "Produto"}
-                            size="md"
-                          />
-
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 truncate">
-                              {item.product?.name || "Produto sem nome"}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              {/* Lógica de badge melhorada - se é atacado, não mostra varejo */}
-                              {item.isWholesalePrice ? (
-                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
-                                  💰 Atacado
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">
-                                  Varejo
-                                </Badge>
-                              )}
-                              {item.variation && (
-                                <span className="text-xs text-gray-500">
-                                  {item.variation.size} {item.variation.color}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Indicador de Economia Individual */}
-                            {item.product?.wholesale_price &&
-                              item.product?.min_wholesale_qty &&
-                              itemQuantity < item.product.min_wholesale_qty && (
-                                <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
-                                  <div className="flex items-center gap-1 text-xs text-orange-700">
-                                    <AlertCircle size={12} />
-                                    <span>
-                                      Faltam{" "}
-                                      {item.product.min_wholesale_qty -
-                                        itemQuantity}{" "}
-                                      para atacado
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-orange-600">
-                                    Economize{" "}
-                                    {formatCurrency(
-                                      safeCalculate(
-                                        itemOriginalPrice -
-                                          (item.product.wholesale_price || 0),
-                                        item.product.min_wholesale_qty
-                                      )
-                                    )}
-                                  </p>
-                                </div>
-                              )}
-
-                            <div className="flex items-center justify-between mt-3">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    updateQuantity(item.id, itemQuantity - 1)
-                                  }
-                                  className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:border-red-300"
-                                >
-                                  <Minus size={12} />
-                                </Button>
-
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={itemQuantity}
-                                  onChange={(e) => {
-                                    const newQuantity =
-                                      parseInt(e.target.value) || 1;
-                                    updateQuantity(item.id, newQuantity);
-                                  }}
-                                  className="w-16 h-8 text-center text-sm font-semibold"
-                                />
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    updateQuantity(item.id, itemQuantity + 1)
-                                  }
-                                  className="h-8 w-8 p-0 rounded-full hover:bg-green-50 hover:border-green-300"
-                                >
-                                  <Plus size={12} />
-                                </Button>
-                              </div>
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeItem(item.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="text-right">
-                            <CartItemPriceDisplay item={item} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               )}
-            </div>
 
-            {items.length > 0 && (
-              <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-6 space-y-4">
-                {/* Resumo de Economia */}
-                {potentialSavings > 0 && (
-                  <div className="p-3 bg-orange-100 rounded-lg border border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-orange-800">
-                        💡 Economia potencial:
-                      </span>
-                      <span className="font-bold text-orange-800">
-                        {formatCurrency(potentialSavings)}
+              {/* Mensagem quando carrinho está vazio */}
+              {items.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center p-8">
+                  <div className="text-center">
+                    <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                      Seu carrinho está vazio
+                    </h3>
+                    <p className="text-gray-500 mb-6">
+                      Adicione produtos para começar suas compras!
+                    </p>
+                    <Button
+                      onClick={closeCart}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+                    >
+                      Continuar Comprando
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {items.map((item) => (
+                      <CartItem
+                        key={item.id}
+                        item={item}
+                        onUpdateQuantity={updateQuantity}
+                        onRemoveItem={removeItem}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="border-t bg-gray-50 p-6 space-y-4">
+                    {potentialSavings > 0 && (
+                      <div className="p-3 bg-orange-100 rounded-lg border border-orange-200">
+                        <div className="flex justify-between items-center text-sm font-medium text-orange-800">
+                          <span>💡 Economia potencial:</span>
+                          <span className="font-bold">
+                            {formatCurrency(potentialSavings)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatCurrency(totalAmount)}
                       </span>
                     </div>
-                    <p className="text-xs text-orange-700 mt-1">
-                      Adicione mais {itemsToWholesale} itens para ativar preços
-                      de atacado
-                    </p>
+                    <Button
+                      onClick={() => {
+                        closeCart();
+                        onCheckout?.();
+                      }}
+                      className="cart-checkout-button w-full text-white font-bold py-4 text-lg rounded-xl shadow-lg"
+                    >
+                      <ShoppingCart className="h-5 w-5 mr-2" /> Finalizar Pedido
+                    </Button>
+                    <Button
+                      onClick={closeCart}
+                      className="w-full bg-white border border-gray-300 text-gray-800 font-semibold py-4 text-lg rounded-xl hover:bg-gray-100"
+                    >
+                      Continuar Comprando
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold">Total:</span>
-                  <span className="cart-price-text text-2xl font-bold">
-                    {formatCurrency(totalAmount)}
-                  </span>
-                </div>
-
-                <Button
-                  onClick={handleCheckout}
-                  className="cart-checkout-button w-full text-white font-bold py-4 text-lg rounded-xl shadow-lg transition-all"
-                  size="lg"
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Finalizar Pedido
-                </Button>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

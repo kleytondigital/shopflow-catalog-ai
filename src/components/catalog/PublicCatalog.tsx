@@ -9,6 +9,7 @@ import AdvancedFilterSidebar, {
 import TemplateWrapper from "./TemplateWrapper";
 import CheckoutModal from "./CheckoutModal";
 import FloatingCart from "./FloatingCart";
+import CartTest from "./CartTest";
 import CatalogBannerSection from "./banners/CatalogBannerSection";
 import { Product } from "@/types/product";
 import { useCart } from "@/hooks/useCart";
@@ -278,6 +279,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
       {/* Floating Cart */}
       <FloatingCart onCheckout={handleCheckoutFromCart} storeId={store?.id} />
+
+      {/* BOTÃO DE TESTE TEMPORÁRIO */}
 
       {/* Checkout Modal */}
       <CheckoutModal

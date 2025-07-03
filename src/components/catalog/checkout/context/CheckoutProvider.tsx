@@ -1,11 +1,10 @@
-
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useCart } from '@/hooks/useCart';
-import { useOrders } from '@/hooks/useOrders';
-import { useToast } from '@/hooks/use-toast';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useStores } from '@/hooks/useStores';
-import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import { useCart } from "@/hooks/useCart";
+import { useOrders } from "@/hooks/useOrders";
+import { useToast } from "@/hooks/use-toast";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { useStores } from "@/hooks/useStores";
+import { useCheckoutOptions } from "@/hooks/useCheckoutOptions";
 
 interface CustomerData {
   name: string;
@@ -27,8 +26,8 @@ interface CheckoutContextType {
   // Estado
   customerData: CustomerData;
   setCustomerData: (data: CustomerData) => void;
-  checkoutType: 'whatsapp_only' | 'online_payment';
-  setCheckoutType: (type: 'whatsapp_only' | 'online_payment') => void;
+  checkoutType: "whatsapp_only" | "online_payment";
+  setCheckoutType: (type: "whatsapp_only" | "online_payment") => void;
   shippingMethod: string;
   setShippingMethod: (method: string) => void;
   paymentMethod: string;
@@ -39,8 +38,8 @@ interface CheckoutContextType {
   setShippingCost: (cost: number) => void;
   notes: string;
   setNotes: (notes: string) => void;
-  currentStep: 'checkout' | 'payment';
-  setCurrentStep: (step: 'checkout' | 'payment') => void;
+  currentStep: "checkout" | "payment";
+  setCurrentStep: (step: "checkout" | "payment") => void;
   createdOrder: any;
   setCreatedOrder: (order: any) => void;
   shippingOptions: any[];
@@ -52,7 +51,7 @@ interface CheckoutContextType {
   availablePaymentMethods: any[];
   availableShippingMethods: any[];
   isTestEnvironment: boolean;
-  
+
   // Hooks integrados
   cartItems: any[];
   totalAmount: number;
@@ -67,17 +66,21 @@ interface CheckoutContextType {
   defaultOption: string;
   canUseOnlinePayment: boolean;
   hasWhatsAppConfigured: boolean;
-  
+
   // Store data (público ou autenticado)
   currentStore: any;
 }
 
-const CheckoutContext = createContext<CheckoutContextType | undefined>(undefined);
+const CheckoutContext = createContext<CheckoutContextType | undefined>(
+  undefined
+);
 
 export const useCheckoutContext = () => {
   const context = useContext(CheckoutContext);
   if (!context) {
-    throw new Error('useCheckoutContext deve ser usado dentro de CheckoutProvider');
+    throw new Error(
+      "useCheckoutContext deve ser usado dentro de CheckoutProvider"
+    );
   }
   return context;
 };
@@ -93,7 +96,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   children,
   storeId,
   storeSettings,
-  storeData
+  storeData,
 }) => {
   const { items: cartItems, totalAmount, clearCart } = useCart();
   const { createOrderAsync, isCreatingOrder } = useOrders();
@@ -110,41 +113,45 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     availableOptions,
     defaultOption,
     canUseOnlinePayment,
-    hasWhatsAppConfigured
+    hasWhatsAppConfigured,
   } = useCheckoutOptions(storeId);
 
   // Estado local
   const [customerData, setCustomerData] = useState<CustomerData>({
-    name: '',
-    email: '',
-    phone: ''
+    name: "",
+    email: "",
+    phone: "",
   });
 
   // Determinar tipo de checkout baseado nas configurações da loja
   const effectiveSettings = settings || storeSettings || {};
-  const storeCheckoutType = effectiveSettings.checkout_type || 'both';
-  
+  const storeCheckoutType = effectiveSettings.checkout_type || "both";
+
   // Lógica para determinar se é apenas WhatsApp
-  const isWhatsappOnly = storeCheckoutType === 'whatsapp' || (!canUseOnlinePayment && hasWhatsAppConfigured);
-  
-  const [checkoutType, setCheckoutType] = useState<'whatsapp_only' | 'online_payment'>(
-    isWhatsappOnly ? 'whatsapp_only' : 'online_payment'
-  );
-  const [shippingMethod, setShippingMethod] = useState('pickup');
-  const [paymentMethod, setPaymentMethod] = useState('whatsapp');
+  const isWhatsappOnly =
+    storeCheckoutType === "whatsapp" ||
+    (!canUseOnlinePayment && hasWhatsAppConfigured);
+
+  const [checkoutType, setCheckoutType] = useState<
+    "whatsapp_only" | "online_payment"
+  >(isWhatsappOnly ? "whatsapp_only" : "online_payment");
+  const [shippingMethod, setShippingMethod] = useState("pickup");
+  const [paymentMethod, setPaymentMethod] = useState("whatsapp");
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    zipCode: '',
-    street: '',
-    number: '',
-    complement: '',
-    neighborhood: '',
-    city: '',
-    state: ''
+    zipCode: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
   });
 
   const [shippingCost, setShippingCost] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [currentStep, setCurrentStep] = useState<'checkout' | 'payment'>('checkout');
+  const [notes, setNotes] = useState("");
+  const [currentStep, setCurrentStep] = useState<"checkout" | "payment">(
+    "checkout"
+  );
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
 
@@ -153,45 +160,48 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   // Métodos de pagamento baseados nas configurações da loja
   const availablePaymentMethods = React.useMemo(() => {
     const methods = [];
-    
+
     if (hasWhatsAppConfigured) {
       methods.push({
-        id: 'whatsapp',
-        name: 'WhatsApp',
-        icon: 'MessageCircle'
+        id: "whatsapp",
+        name: "WhatsApp",
+        icon: "MessageCircle",
       });
     }
-    
+
     if (canUseOnlinePayment && effectiveSettings.payment_methods) {
       if (effectiveSettings.payment_methods.pix) {
         methods.push({
-          id: 'pix',
-          name: 'PIX',
-          icon: 'QrCode'
+          id: "pix",
+          name: "PIX",
+          icon: "QrCode",
         });
       }
-      
+
       if (effectiveSettings.payment_methods.credit_card) {
         methods.push({
-          id: 'credit_card',
-          name: 'Cartão de Crédito',
-          icon: 'CreditCard'
+          id: "credit_card",
+          name: "Cartão de Crédito",
+          icon: "CreditCard",
         });
       }
-      
+
       if (effectiveSettings.payment_methods.bank_slip) {
         methods.push({
-          id: 'bank_slip',
-          name: 'Boleto',
-          icon: 'FileText'
+          id: "bank_slip",
+          name: "Boleto",
+          icon: "FileText",
         });
       }
     }
-    
+
     return methods;
   }, [effectiveSettings, canUseOnlinePayment, hasWhatsAppConfigured]);
 
-  const availableShippingMethods = [{ id: 'pickup', label: 'Retirar na loja' }];
+  const availableShippingMethods = [
+    { id: "pickup", label: "Retirar na loja" },
+    { id: "combine", label: "A combinar" },
+  ];
 
   const value: CheckoutContextType = {
     // Estado
@@ -222,7 +232,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     availablePaymentMethods,
     availableShippingMethods,
     isTestEnvironment,
-    
+
     // Hooks integrados
     cartItems,
     totalAmount,
@@ -237,7 +247,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     defaultOption,
     canUseOnlinePayment,
     hasWhatsAppConfigured,
-    
+
     // Store data
     currentStore,
   };

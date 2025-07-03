@@ -1,15 +1,21 @@
-
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { Truck, MapPin, Package, Loader2, Info } from 'lucide-react';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { Badge } from '@/components/ui/badge';
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { Truck, MapPin, Package, Loader2, Info } from "lucide-react";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { Badge } from "@/components/ui/badge";
 
 interface ShippingFormData {
   pickup: boolean;
@@ -33,13 +39,13 @@ const ShippingSettings = () => {
       pickup: true,
       delivery: false,
       shipping: false,
-      delivery_fee: '0',
-      delivery_radius: '10',
-      free_delivery_amount: '0',
-      pickup_address: '',
-      origin_zipcode: '',
-      default_weight: '0.5'
-    }
+      delivery_fee: "0",
+      delivery_radius: "10",
+      free_delivery_amount: "0",
+      pickup_address: "",
+      origin_zipcode: "",
+      default_weight: "0.5",
+    },
   });
 
   // Carregar configurações existentes
@@ -53,7 +59,7 @@ const ShippingSettings = () => {
         delivery_fee: String(shippingOptions.delivery_fee || 0),
         delivery_radius: String(shippingOptions.delivery_radius || 10),
         free_delivery_amount: String(shippingOptions.free_delivery_amount || 0),
-        pickup_address: shippingOptions.pickup_address || ''
+        pickup_address: shippingOptions.pickup_address || "",
       });
     }
   }, [settings, form]);
@@ -71,11 +77,11 @@ const ShippingSettings = () => {
         free_delivery_amount: parseFloat(data.free_delivery_amount),
         pickup_address: data.pickup_address,
         origin_zipcode: data.origin_zipcode,
-        default_weight: parseFloat(data.default_weight)
+        default_weight: parseFloat(data.default_weight),
       };
 
       const { error } = await updateSettings({
-        shipping_options: shippingOptions
+        shipping_options: shippingOptions,
       });
 
       if (error) {
@@ -87,10 +93,11 @@ const ShippingSettings = () => {
         description: "As configurações de envio foram atualizadas com sucesso",
       });
     } catch (error) {
-      console.error('Erro ao salvar configurações:', error);
+      console.error("Erro ao salvar configurações:", error);
       toast({
         title: "❌ Erro ao salvar",
-        description: "Não foi possível salvar as configurações. Tente novamente.",
+        description:
+          "Não foi possível salvar as configurações. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -127,7 +134,9 @@ const ShippingSettings = () => {
                   <FormItem className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FormLabel>Retirada no Local</FormLabel>
-                      <Badge variant="secondary" className="text-xs">Grátis</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Grátis
+                      </Badge>
                     </div>
                     <FormControl>
                       <Switch
@@ -146,7 +155,9 @@ const ShippingSettings = () => {
                   <FormItem className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FormLabel>Entrega Local</FormLabel>
-                      <Badge variant="outline" className="text-xs">Configurável</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Configurável
+                      </Badge>
                     </div>
                     <FormControl>
                       <Switch
@@ -165,7 +176,9 @@ const ShippingSettings = () => {
                   <FormItem className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FormLabel>Envio pelos Correios</FormLabel>
-                      <Badge variant="outline" className="text-xs">PAC/SEDEX</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        PAC/SEDEX
+                      </Badge>
                     </div>
                     <FormControl>
                       <Switch
@@ -214,11 +227,7 @@ const ShippingSettings = () => {
                   <FormItem>
                     <FormLabel>Raio de Entrega (km)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="10"
-                        {...field}
-                      />
+                      <Input type="number" placeholder="10" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -263,10 +272,7 @@ const ShippingSettings = () => {
                 <FormItem>
                   <FormLabel>CEP de Origem</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="00000-000"
-                      {...field}
-                    />
+                    <Input placeholder="00000-000" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -328,12 +334,22 @@ const ShippingSettings = () => {
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="space-y-2">
-                <h4 className="font-medium text-blue-800">Informações sobre o Frete</h4>
+                <h4 className="font-medium text-blue-800">
+                  Informações sobre o Frete
+                </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• O cálculo dos Correios é feito automaticamente via API</li>
+                  <li>
+                    • O cálculo dos Correios é feito automaticamente via API
+                  </li>
                   <li>• Configure o CEP de origem para cálculos precisos</li>
-                  <li>• O peso padrão é usado quando não especificado no produto</li>
+                  <li>
+                    • O peso padrão é usado quando não especificado no produto
+                  </li>
                   <li>• Frete grátis se aplica apenas à entrega local</li>
+                  <li>
+                    • A opção "A combinar" permite que o cliente finalize via
+                    WhatsApp
+                  </li>
                 </ul>
               </div>
             </div>

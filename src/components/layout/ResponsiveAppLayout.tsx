@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./Sidebar";
+import AppSidebar from "./AppSidebar";
 import MobileNavigation from "./MobileNavigation";
 import {
   Breadcrumb,
@@ -64,7 +64,7 @@ const ResponsiveAppLayout: React.FC<ResponsiveAppLayoutProps> = ({
 
       {/* Desktop Sidebar - Fixo na lateral esquerda */}
       <aside className="hidden md:block fixed left-0 top-16 bottom-0 w-64 z-40 bg-white border-r border-gray-200 overflow-y-auto">
-        <Sidebar />
+        <AppSidebar />
       </aside>
 
       {/* Mobile Sidebar */}
@@ -87,7 +87,7 @@ const ResponsiveAppLayout: React.FC<ResponsiveAppLayoutProps> = ({
                 </Button>
               </div>
             </div>
-            <Sidebar />
+            <AppSidebar />
           </aside>
         </div>
       )}

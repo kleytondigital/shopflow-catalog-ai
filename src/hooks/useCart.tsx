@@ -13,6 +13,8 @@ export interface CartItem {
     min_wholesale_qty?: number;
     image_url?: string;
     store_id?: string;
+    stock: number;
+    allow_negative_stock: boolean;
   };
   quantity: number;
   price: number;
@@ -70,6 +72,8 @@ const validateCartItem = (item: any): CartItem | null => {
         wholesale_price: item.product.wholesale_price,
         min_wholesale_qty: item.product.min_wholesale_qty,
         image_url: item.product.image_url,
+        stock: item.product.stock ?? 0,
+        allow_negative_stock: item.product.allow_negative_stock ?? false,
       },
       quantity: Math.max(1, Math.floor(item.quantity)),
       price: item.price,
@@ -127,15 +131,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       const product = item.product;
       const quantity = item.quantity;
 
+      console.log(`🔄 Recalculando preços para ${product.name}:`, {
+        quantity,
+        hasWholesalePrice: !!product.wholesale_price,
+        minWholesaleQty: product.min_wholesale_qty,
+        originalPrice: item.originalPrice,
+      });
+
       // Verificar se temos níveis em cache
       const tiers = priceTiersCache[product.id];
 
       if (tiers && tiers.length > 1) {
         // Encontrar o melhor nível baseado na quantidade
-        const bestTier = tiers.find((tier) => quantity >= tier.min_quantity);
+        const sortedTiers = [...tiers].sort(
+          (a, b) => b.min_quantity - a.min_quantity
+        );
+        const bestTier = sortedTiers.find(
+          (tier) => quantity >= tier.min_quantity
+        );
 
         if (bestTier && bestTier.tier_order > 1) {
-          // Aplicar preço do nível encontrado
+          console.log(
+            `✅ Aplicando tier ${bestTier.tier_name}: R$${bestTier.price}`
+          );
           return {
             ...item,
             price: bestTier.price,
@@ -144,7 +162,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      // Usar preço original (varejo) se não encontrou nível ou é varejo
+      // Verificar preço atacado simples do produto
+      if (
+        product.wholesale_price &&
+        product.min_wholesale_qty &&
+        quantity >= product.min_wholesale_qty
+      ) {
+        console.log(
+          `✅ Aplicando preço atacado simples: R$${product.wholesale_price}`
+        );
+        return {
+          ...item,
+          price: product.wholesale_price,
+          isWholesalePrice: true,
+        };
+      }
+
+      // Usar preço original (varejo)
+      console.log(`📋 Mantendo preço varejo: R$${item.originalPrice}`);
       return {
         ...item,
         price: item.originalPrice,
@@ -389,7 +424,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       typeof item.quantity === "number" && !isNaN(item.quantity)
         ? item.quantity
         : 0;
-    return total + itemPrice * itemQuantity;
+    const subtotal = itemPrice * itemQuantity;
+    console.log(
+      `💰 Item ${item.product?.name}: ${itemQuantity} x R$${itemPrice} = R$${subtotal}`
+    );
+    return total + subtotal;
   }, 0);
 
   const totalItems = items.reduce((total, item) => {
@@ -399,6 +438,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         : 0;
     return total + itemQuantity;
   }, 0);
+
+  console.log(`🛒 useCart totals: ${totalItems} items, R$${totalAmount}`);
 
   // Calcular economia potencial se todos os itens fossem comprados no atacado
   const potentialSavings = items.reduce((total, item) => {

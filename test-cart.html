@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste Carrinho Flutuante</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        min-height: 100vh;
+      }
+
+      .test-content {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      /* Estilo do botão flutuante de teste */
+
+      .floating-cart-test {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #0057ff, #8e2de2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        border: none;
+      }
+
+      .floating-cart-test:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      }
+
+      .cart-icon {
+        width: 24px;
+        height: 24px;
+        stroke: white;
+        stroke-width: 2;
+        fill: none;
+      }
+
+      .badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .status {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 4px;
+        padding: 12px;
+        margin: 10px 0;
+      }
+
+      .error {
+        background: #fef2f2;
+        border: 1px solid #ef4444;
+        color: #dc2626;
+      }
+
+      .success {
+        background: #f0fdf4;
+        border: 1px solid #22c55e;
+        color: #16a34a;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="test-content">
+      <h1>🛒 Teste do Carrinho Flutuante</h1>
+
+      <div class="status">
+        <h3>Status do Teste:</h3>
+        <p id="status-text">Verificando visibilidade do botão...</p>
+      </div>
+
+      <div class="status">
+        <h3>Informações do Teste:</h3>
+        <ul>
+          <li><strong>Posição:</strong> Fixed bottom-right</li>
+          <li><strong>Z-index:</strong> 1000</li>
+          <li><strong>Tamanho:</strong> 64x64px</li>
+          <li><strong>Background:</strong> Gradiente azul/roxo</li>
+        </ul>
+      </div>
+
+      <div class="status">
+        <h3>Ações de Teste:</h3>
+        <button onclick="testCartVisibility()">Verificar Visibilidade</button>
+        <button onclick="testCartClick()">Testar Clique</button>
+        <button onclick="toggleBadge()">Alternar Badge</button>
+      </div>
+
+      <div class="status">
+        <h3>Console de Logs:</h3>
+        <div
+          id="console-logs"
+          style="
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+          "
+        ></div>
+      </div>
+
+      <p style="margin-top: 40px; color: #666; font-size: 14px">
+        Se você conseguir ver e clicar no botão flutuante azul no canto inferior
+        direito, o problema pode estar na configuração do React ou nos hooks.
+      </p>
+    </div>
+
+    <!-- Botão flutuante de teste -->
+    <button class="floating-cart-test" onclick="testCartClick()">
+      <svg class="cart-icon" viewBox="0 0 24 24">
+        <path
+          d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M9 19.5C9.8 19.5 10.5 20.2 10.5 21S9.8 22.5 9 22.5 7.5 21.8 7.5 21 8.2 19.5 9 19.5ZM20 19.5C20.8 19.5 21.5 20.2 21.5 21S20.8 22.5 20 22.5 18.5 21.8 18.5 21 19.2 19.5 20 19.5Z"
+        />
+      </svg>
+      <span class="badge" id="cart-badge" style="display: none">0</span>
+    </button>
+
+    <script>
+      let itemCount = 0;
+
+      function log(message) {
+        const logContainer = document.getElementById("console-logs");
+        const timestamp = new Date().toLocaleTimeString();
+        logContainer.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        logContainer.scrollTop = logContainer.scrollHeight;
+        console.log(message);
+      }
+
+      function testCartVisibility() {
+        const cartButton = document.querySelector(".floating-cart-test");
+        const rect = cartButton.getBoundingClientRect();
+        const isVisible = rect.width > 0 && rect.height > 0;
+
+        const status = document.getElementById("status-text");
+        if (isVisible) {
+          status.innerHTML =
+            '<span style="color: #16a34a;">✅ Botão está visível!</span>';
+          log("✅ Botão do carrinho está visível e posicionado corretamente");
+        } else {
+          status.innerHTML =
+            '<span style="color: #dc2626;">❌ Botão não está visível!</span>';
+          log("❌ Botão do carrinho não está visível");
+        }
+
+        log(`Posição: ${rect.left}px, ${rect.top}px`);
+        log(`Tamanho: ${rect.width}px × ${rect.height}px`);
+      }
+
+      function testCartClick() {
+        itemCount++;
+        const badge = document.getElementById("cart-badge");
+        badge.textContent = itemCount;
+        badge.style.display = itemCount > 0 ? "flex" : "none";
+
+        log(`🛒 Carrinho clicado! Total de itens: ${itemCount}`);
+
+        if (itemCount === 1) {
+          log("✅ Primeira interação com o carrinho funcionou!");
+        }
+      }
+
+      function toggleBadge() {
+        const badge = document.getElementById("cart-badge");
+        if (badge.style.display === "none") {
+          badge.style.display = "flex";
+          badge.textContent = "3";
+          log("📍 Badge ativado com 3 itens");
+        } else {
+          badge.style.display = "none";
+          log("📍 Badge desativado");
+        }
+      }
+
+      // Teste automático quando a página carrega
+      window.onload = function () {
+        log("🔄 Página de teste carregada");
+        setTimeout(testCartVisibility, 500);
+      };
+
+      // Detectar cliques na tela
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".floating-cart-test")) {
+          log(`👆 Clique detectado em: ${e.target.tagName}`);
+        }
+      });
+    </script>
+  </body>
+</html>

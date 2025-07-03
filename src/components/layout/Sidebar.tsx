@@ -12,6 +12,17 @@ import {
   Store,
   UserPlus,
   Palette,
+  Shield,
+  CreditCard,
+  Globe,
+  Database,
+  FileText,
+  Zap,
+  Crown,
+  Building2,
+  TrendingUp,
+  Activity,
+  DollarSign,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,18 +34,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import SuperAdminSidebar from "./SuperAdminSidebar";
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, loading } = useAuth();
 
+  // Se for superadmin, usar sidebar específica do admin SaaS
+  if (profile?.role === "superadmin") {
+    return <SuperAdminSidebar />;
+  }
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
   };
 
+  // Menu items para lojistas (store_admin)
   const menuItems = [
     {
       icon: Home,
@@ -95,21 +114,6 @@ const Sidebar = () => {
       label: "Configurações",
       href: "/settings",
       isActive: location.pathname === "/settings",
-    },
-  ];
-
-  const adminMenuItems = [
-    {
-      icon: Store,
-      label: "Lojas",
-      href: "/stores",
-      isActive: location.pathname === "/stores",
-    },
-    {
-      icon: UserPlus,
-      label: "Usuários",
-      href: "/user-management",
-      isActive: location.pathname === "/user-management",
     },
   ];
 
@@ -182,37 +186,6 @@ const Sidebar = () => {
             </button>
           ))}
         </div>
-
-        {/* Admin Section */}
-        {profile?.role === "superadmin" && (
-          <>
-            <div className="my-4 px-3">
-              <div className="h-px bg-gray-200"></div>
-            </div>
-            <div className="space-y-1">
-              <div className="px-3 py-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Administração
-                </p>
-              </div>
-              {adminMenuItems.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.href)}
-                  className={cn(
-                    "flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg w-full text-left transition-colors",
-                    item.isActive
-                      ? "bg-blue-50 text-blue-700 font-medium"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </nav>
     </div>
   );

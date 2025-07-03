@@ -1,15 +1,21 @@
-
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import Header from './Header';
-import Sidebar from './Sidebar';
-import MobileNavigation from './MobileNavigation';
-import Footer from './Footer';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { useAuth } from '@/hooks/useAuth';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
-import { Loader2 } from 'lucide-react';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import Header from "./Header";
+import AppSidebar from "./AppSidebar";
+import MobileNavigation from "./MobileNavigation";
+import Footer from "./Footer";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import { Loader2 } from "lucide-react";
 
 interface BreadcrumbItem {
   href?: string;
@@ -24,14 +30,18 @@ interface AppLayoutProps {
   breadcrumbs?: BreadcrumbItem[];
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ 
-  children, 
-  title = 'Dashboard', 
-  subtitle, 
-  breadcrumbs = [] 
+const AppLayout: React.FC<AppLayoutProps> = ({
+  children,
+  title = "Dashboard",
+  subtitle,
+  breadcrumbs = [],
 }) => {
   const { user, profile, loading } = useAuth();
-  const { needsOnboarding, loading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const {
+    needsOnboarding,
+    loading: onboardingLoading,
+    completeOnboarding,
+  } = useOnboarding();
 
   // Mostrar loading se ainda estiver carregando auth ou onboarding
   if (loading || onboardingLoading) {
@@ -69,7 +79,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       <Header title={title} subtitle={subtitle} />
 
       {/* Sidebar fixa para desktop */}
-      <Sidebar />
+      <AppSidebar />
 
       {/* Conteúdo principal com margem para não sobrepor a sidebar */}
       <main className="pt-16 lg:pl-64 min-h-screen flex flex-col">
@@ -84,7 +94,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                       {item.current ? (
                         <BreadcrumbPage>{item.label}</BreadcrumbPage>
                       ) : (
-                        <BreadcrumbLink href={item.href || '#'}>
+                        <BreadcrumbLink href={item.href || "#"}>
                           {item.label}
                         </BreadcrumbLink>
                       )}

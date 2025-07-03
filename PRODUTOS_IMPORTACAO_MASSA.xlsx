@@ -1,0 +1,47 @@
+# Planilha de Importação em Massa - VendeMais
+
+## Aba: PRODUTOS
+| Nome* | Descrição | Categoria* | Preço Varejo* | Preço Atacarejo | Qtd Atacarejo | Preço Atacado Pequeno | Qtd Atacado Pequeno | Preço Atacado Grande | Qtd Atacado Grande | Estoque* | SKU | Código de Barras | Peso (kg) | Largura (cm) | Altura (cm) | Comprimento (cm) | Ativo | Destaque | Permite Estoque Negativo | Tags | Observações |
+|-------|-----------|------------|---------------|-----------------|---------------|----------------------|-------------------|---------------------|-------------------|----------|-----|-----------------|-----------|--------------|-------------|------------------|-------|----------|------------------------|------|-------------|
+| Camiseta Básica | Camiseta 100% algodão | Roupas | 29.90 | 25.90 | 5 | 22.90 | 10 | 19.90 | 20 | 100 | CAM001 | 7891234567890 | 0.2 | 20 | 30 | 2 | SIM | NÃO | NÃO | básica,algodão | Produto básico |
+| Calça Jeans | Calça jeans masculina | Roupas | 89.90 | 79.90 | 3 | 69.90 | 8 | 59.90 | 15 | 50 | CAL001 | 7891234567891 | 0.5 | 30 | 40 | 3 | SIM | SIM | NÃO | jeans,masculina | Produto premium |
+
+## Aba: CATEGORIAS
+| Nome* | Descrição | Ativo | Ordem |
+|-------|-----------|-------|-------|
+| Roupas | Vestuário em geral | SIM | 1 |
+| Eletrônicos | Produtos eletrônicos | SIM | 2 |
+| Casa | Produtos para casa | SIM | 3 |
+
+## Aba: VARIACOES
+| Produto SKU* | Tamanho | Cor | Estoque | Preço Adicional | Ativo |
+|--------------|---------|-----|---------|-----------------|-------|
+| CAM001 | P | Azul | 25 | 0.00 | SIM |
+| CAM001 | M | Azul | 30 | 0.00 | SIM |
+| CAM001 | G | Azul | 20 | 0.00 | SIM |
+| CAM001 | P | Branco | 15 | 0.00 | SIM |
+| CAM001 | M | Branco | 20 | 0.00 | SIM |
+| CAM001 | G | Branco | 10 | 0.00 | SIM |
+
+## Aba: INSTRUCOES
+| Campo | Obrigatório | Descrição | Exemplo |
+|-------|-------------|-----------|---------|
+| Nome* | SIM | Nome do produto | Camiseta Básica |
+| Categoria* | SIM | Nome da categoria (deve existir na aba CATEGORIAS) | Roupas |
+| Preço Varejo* | SIM | Preço para compra unitária | 29.90 |
+| Estoque* | SIM | Quantidade em estoque | 100 |
+| SKU | NÃO | Código único do produto | CAM001 |
+| Ativo | NÃO | SIM/NÃO - se o produto estará ativo | SIM |
+| Destaque | NÃO | SIM/NÃO - se o produto será destacado | NÃO |
+| Permite Estoque Negativo | NÃO | SIM/NÃO - permite venda sem estoque | NÃO |
+
+## Aba: VALIDACOES
+| Regra | Descrição |
+|-------|-----------|
+| Nome | Máximo 100 caracteres |
+| Descrição | Máximo 500 caracteres |
+| Preços | Deve ser número positivo |
+| Estoque | Deve ser número inteiro >= 0 |
+| SKU | Deve ser único |
+| Categoria | Deve existir na aba CATEGORIAS |
+| Variações | SKU deve existir na aba PRODUTOS | 

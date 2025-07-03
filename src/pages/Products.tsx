@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProductList from "@/components/products/ProductList";
 import ProductFormModal from "@/components/products/ProductFormModal";
 import ImprovedAIToolsModal from "@/components/products/ImprovedAIToolsModal";
 import TestStoreVariations from "@/components/variations/TestStoreVariations";
+import SimpleBulkImportModal from "@/components/products/SimpleBulkImportModal";
 import { useProducts } from "@/hooks/useProducts";
+import { useStores } from "@/hooks/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types/product";
 
 const Products = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const {
@@ -23,6 +26,7 @@ const Products = () => {
     createProduct,
     updateProduct,
   } = useProducts();
+  const { currentStore } = useStores();
   const { toast } = useToast();
 
   // Auto-refresh da lista quando necessário
@@ -165,10 +169,20 @@ const Products = () => {
             Filtros
           </Button>
         </div>
-        <Button onClick={() => setShowProductForm(true)} className="shrink-0">
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Produto
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowImportModal(true)}
+            className="shrink-0"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Importar em Massa
+          </Button>
+          <Button onClick={() => setShowProductForm(true)} className="shrink-0">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Produto
+          </Button>
+        </div>
       </div>
 
       {/* Lista de produtos */}
@@ -201,6 +215,13 @@ const Products = () => {
           }}
         />
       )}
+
+      {/* Modal de Importação em Massa */}
+      <SimpleBulkImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        storeId={currentStore?.id}
+      />
     </div>
   );
 };
