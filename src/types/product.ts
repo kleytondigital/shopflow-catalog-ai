@@ -47,7 +47,6 @@ export interface Product {
   created_at?: string;
   updated_at?: string;
   variations?: ProductVariation[];
-  // Propriedade adicional para WhatsApp
   whatsapp_number?: string;
 }
 
@@ -74,7 +73,7 @@ export interface UpdateProductData extends CreateProductData {
   id: string;
 }
 
-// Interface padronizada para tiers de preço
+// Interface unificada para price tiers
 export interface ProductPriceTier {
   id?: string;
   tier_name: string;
@@ -83,9 +82,13 @@ export interface ProductPriceTier {
   price: number;
   tier_order: number;
   is_active?: boolean;
+  // Propriedades de compatibilidade
+  name?: string;
+  minQuantity?: number;
+  enabled?: boolean;
 }
 
-// Interface unificada para form wizards
+// Interface alternativa para wizard forms
 export interface UnifiedPriceTier {
   id: string;
   name: string;

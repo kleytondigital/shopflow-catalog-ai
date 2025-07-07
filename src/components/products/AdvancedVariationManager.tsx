@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -101,22 +102,22 @@ const AdvancedVariationManager: React.FC<AdvancedVariationManagerProps> = ({
     );
 
     if (!existingVariation) {
-      // Gerar ID único para evitar duplicatas
       const uniqueId = `variation-${Date.now()}-${Math.random()
         .toString(36)
         .substr(2, 9)}`;
 
       const newVariation: ProductVariation = {
         id: uniqueId,
-        variation_type: "master",
+        product_id: '',
         color,
         size,
         stock: 0,
         price_adjustment: 0,
         is_active: true,
         sku: "",
-        image_url: null,
-        image_file: null,
+        image_url: "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       onVariationsChange([...variations, newVariation]);

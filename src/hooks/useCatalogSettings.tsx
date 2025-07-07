@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,7 +46,6 @@ export interface CatalogSettingsData {
   watermark_opacity?: number;
   watermark_size?: number;
   watermark_color?: string;
-  // Campos para páginas de informações do footer
   privacy_policy_content?: string;
   terms_of_use_content?: string;
   returns_policy_content?: string;
@@ -57,6 +57,26 @@ export interface CatalogSettingsData {
   footer_enabled?: boolean;
   footer_custom_text?: string;
   footer_copyright_text?: string;
+  // Propriedades adicionais para compatibilidade com templates
+  colors?: {
+    primary: string;
+    secondary: string;
+    surface: string;
+    text: string;
+  };
+  global?: {
+    borderRadius: number;
+    fontSize: {
+      small: string;
+      medium: string;
+      large: string;
+    };
+  };
+  productCard?: {
+    showQuickView: boolean;
+    showAddToCart: boolean;
+    productCardStyle: string;
+  };
 }
 
 export const useCatalogSettings = (storeIdentifier?: string) => {
