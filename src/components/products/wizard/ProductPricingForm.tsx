@@ -1,32 +1,35 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { DollarSign, Package, AlertTriangle } from "lucide-react";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DollarSign } from 'lucide-react';
+import ProductPriceTiersSection from '../ProductPriceTiersSection';
 
-export interface ProductPricingFormProps {
+interface PriceTier {
+  id: string;
+  name: string;
+  minQuantity: number;
+  price: number;
+  enabled: boolean;
+}
+
+interface ProductPricingFormProps {
   retailPrice: number;
   wholesalePrice?: number;
   minWholesaleQty?: number;
   stock: number;
   stockAlertThreshold?: number;
-  allowNegativeStock: boolean;
-  priceTiers: Array<{
-    id: string;
-    name: string;
-    minQuantity: number;
-    price: number;
-    enabled: boolean;
-  }>;
-  onRetailPriceChange: (value: number) => void;
-  onWholesalePriceChange: (value: number) => void;
-  onMinWholesaleQtyChange: (value: number) => void;
-  onStockChange: (value: number) => void;
-  onStockAlertThresholdChange: (value: number) => void;
-  onAllowNegativeStockChange: (value: boolean) => void;
-  onPriceTiersChange: (tiers: any[]) => void;
+  allowNegativeStock?: boolean;
+  priceTiers: PriceTier[];
+  onRetailPriceChange: (price: number) => void;
+  onWholesalePriceChange: (price: number) => void;
+  onMinWholesaleQtyChange: (qty: number) => void;
+  onStockChange: (stock: number) => void;
+  onStockAlertThresholdChange: (threshold: number) => void;
+  onAllowNegativeStockChange: (allow: boolean) => void;
+  onPriceTiersChange: (tiers: PriceTier[]) => void;
 }
 
 const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
@@ -51,109 +54,87 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Preços
+            Preços e Estoque
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="retail-price">
-                Preço Varejo <span className="text-red-500">*</span>
-              </Label>
+            <div>
+              <Label htmlFor="retail_price">Preço Varejo (R$) *</Label>
               <Input
-                id="retail-price"
+                id="retail_price"
                 type="number"
-                min="0"
                 step="0.01"
                 value={retailPrice}
                 onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
-                placeholder="0,00"
-                required
+                placeholder="0.00"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="wholesale-price">Preço Atacado</Label>
+            <div>
+              <Label htmlFor="wholesale_price">Preço Atacado (R$)</Label>
               <Input
-                id="wholesale-price"
+                id="wholesale_price"
                 type="number"
-                min="0"
                 step="0.01"
-                value={wholesalePrice || 0}
+                value={wholesalePrice || ''}
                 onChange={(e) => onWholesalePriceChange(parseFloat(e.target.value) || 0)}
-                placeholder="0,00"
+                placeholder="0.00"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="min-wholesale-qty">Quantidade Mínima Atacado</Label>
-            <Input
-              id="min-wholesale-qty"
-              type="number"
-              min="1"
-              value={minWholesaleQty || 1}
-              onChange={(e) => onMinWholesaleQtyChange(parseInt(e.target.value) || 1)}
-              placeholder="1"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Estoque
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="stock">
-                Quantidade em Estoque <span className="text-red-500">*</span>
-              </Label>
+            <div>
+              <Label htmlFor="stock">Estoque *</Label>
               <Input
                 id="stock"
                 type="number"
-                min="0"
                 value={stock}
                 onChange={(e) => onStockChange(parseInt(e.target.value) || 0)}
                 placeholder="0"
-                required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="stock-alert">Alerta de Estoque Baixo</Label>
+            <div>
+              <Label htmlFor="min_wholesale_qty">Qtd. Mínima Atacado</Label>
               <Input
-                id="stock-alert"
+                id="min_wholesale_qty"
                 type="number"
-                min="0"
-                value={stockAlertThreshold || 5}
-                onChange={(e) => onStockAlertThresholdChange(parseInt(e.target.value) || 5)}
-                placeholder="5"
+                value={minWholesaleQty || 1}
+                onChange={(e) => onMinWholesaleQtyChange(parseInt(e.target.value) || 1)}
+                placeholder="1"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Permitir Estoque Negativo
-              </Label>
-              <p className="text-sm text-gray-500">
-                Permite vendas mesmo com estoque zerado
-              </p>
-            </div>
-            <Switch
-              checked={allowNegativeStock}
-              onCheckedChange={onAllowNegativeStockChange}
+          <div>
+            <Label htmlFor="stock_alert_threshold">Alerta de Estoque Baixo</Label>
+            <Input
+              id="stock_alert_threshold"
+              type="number"
+              value={stockAlertThreshold || 5}
+              onChange={(e) => onStockAlertThresholdChange(parseInt(e.target.value) || 5)}
+              placeholder="5"
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="allow_negative_stock"
+              checked={allowNegativeStock || false}
+              onCheckedChange={(checked) => onAllowNegativeStockChange(!!checked)}
+            />
+            <Label htmlFor="allow_negative_stock">Permitir estoque negativo</Label>
           </div>
         </CardContent>
       </Card>
+
+      <ProductPriceTiersSection
+        priceTiers={priceTiers}
+        onPriceTiersChange={onPriceTiersChange}
+        retailPrice={retailPrice}
+      />
     </div>
   );
 };

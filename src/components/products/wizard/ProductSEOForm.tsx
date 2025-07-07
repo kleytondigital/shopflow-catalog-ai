@@ -1,20 +1,20 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Search, Tag, FileText } from "lucide-react";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Search } from 'lucide-react';
 
 interface ProductSEOFormProps {
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string;
   seoSlug?: string;
-  onMetaTitleChange: (value: string) => void;
-  onMetaDescriptionChange: (value: string) => void;
-  onKeywordsChange: (value: string) => void;
-  onSeoSlugChange: (value: string) => void;
+  onMetaTitleChange: (title: string) => void;
+  onMetaDescriptionChange: (description: string) => void;
+  onKeywordsChange: (keywords: string) => void;
+  onSeoSlugChange: (slug: string) => void;
 }
 
 const ProductSEOForm: React.FC<ProductSEOFormProps> = ({
@@ -36,65 +36,45 @@ const ProductSEOForm: React.FC<ProductSEOFormProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="meta-title">Título SEO</Label>
+        <div>
+          <Label htmlFor="meta_title">Título SEO</Label>
           <Input
-            id="meta-title"
-            value={metaTitle || ""}
+            id="meta_title"
+            value={metaTitle || ''}
             onChange={(e) => onMetaTitleChange(e.target.value)}
-            placeholder="Título otimizado para motores de busca"
-            maxLength={60}
+            placeholder="Título otimizado para mecanismos de busca"
           />
-          <p className="text-sm text-gray-500">
-            Máximo 60 caracteres. Aparece nos resultados de busca.
-          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="meta-description">Descrição SEO</Label>
+        <div>
+          <Label htmlFor="meta_description">Descrição SEO</Label>
           <Textarea
-            id="meta-description"
-            value={metaDescription || ""}
+            id="meta_description"
+            value={metaDescription || ''}
             onChange={(e) => onMetaDescriptionChange(e.target.value)}
-            placeholder="Descrição que aparece nos resultados de busca"
-            maxLength={160}
+            placeholder="Descrição otimizada para mecanismos de busca"
             rows={3}
           />
-          <p className="text-sm text-gray-500">
-            Máximo 160 caracteres. Descrição que aparece no Google.
-          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="keywords" className="flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Palavras-chave
-          </Label>
+        <div>
+          <Label htmlFor="keywords">Palavras-chave</Label>
           <Input
             id="keywords"
-            value={keywords || ""}
+            value={keywords || ''}
             onChange={(e) => onKeywordsChange(e.target.value)}
             placeholder="palavra1, palavra2, palavra3"
           />
-          <p className="text-sm text-gray-500">
-            Separe as palavras-chave com vírgulas.
-          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="seo-slug" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            URL Amigável (Slug)
-          </Label>
+        <div>
+          <Label htmlFor="seo_slug">URL Amigável</Label>
           <Input
-            id="seo-slug"
-            value={seoSlug || ""}
+            id="seo_slug"
+            value={seoSlug || ''}
             onChange={(e) => onSeoSlugChange(e.target.value)}
-            placeholder="produto-exemplo-url-amigavel"
+            placeholder="url-amigavel-do-produto"
           />
-          <p className="text-sm text-gray-500">
-            URL personalizada para o produto (opcional).
-          </p>
         </div>
       </CardContent>
     </Card>

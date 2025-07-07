@@ -29,7 +29,7 @@ export const useSimpleProductWizard = (options?: {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { createProduct } = useProducts();
-  const { draftImages, uploadAllImages } = useDraftImages();
+  const { draftImages } = useDraftImages();
   const [uploadImages, setUploadImages] = useState<((productId: string) => Promise<string[]>) | null>(null);
 
   const [formData, setFormData] = useState<ProductFormData>({
@@ -125,12 +125,10 @@ export const useSimpleProductWizard = (options?: {
       if (result.data && !result.error) {
         const productId = result.data.id;
 
-        // Salvar imagens se houver
         if (uploadImages && draftImages.length > 0) {
           await uploadImages(productId);
         }
 
-        // Salvar variações se houver
         if (formData.variations.length > 0) {
           const variationsWithProduct = formData.variations.map(v => ({
             ...v,
@@ -163,7 +161,6 @@ export const useSimpleProductWizard = (options?: {
   };
 
   return {
-    // Propriedades atuais
     step,
     formData,
     isSaving,
@@ -174,8 +171,6 @@ export const useSimpleProductWizard = (options?: {
     validateCurrentStep,
     resetWizard,
     setImagesUploadFn,
-    
-    // Aliases para compatibilidade
     currentStep: step,
     draftImages,
     canProceed,

@@ -1,18 +1,21 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Package, FileText, Tag } from "lucide-react";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCategories } from '@/hooks/useCategories';
+import CategoryFormDialog from '../CategoryFormDialog';
+import { Package } from 'lucide-react';
 
-export interface ProductBasicInfoFormProps {
+interface ProductBasicInfoFormProps {
   name: string;
-  description: string;
-  category: string;
-  onNameChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  onCategoryChange: (value: string) => void;
+  description?: string;
+  category?: string;
+  onNameChange: (name: string) => void;
+  onDescriptionChange: (description: string) => void;
+  onCategoryChange: (category: string) => void;
 }
 
 const ProductBasicInfoForm: React.FC<ProductBasicInfoFormProps> = ({
@@ -23,6 +26,13 @@ const ProductBasicInfoForm: React.FC<ProductBasicInfoFormProps> = ({
   onDescriptionChange,
   onCategoryChange,
 }) => {
+  const { categories, fetchCategories } = useCategories();
+
+  const handleCategoryCreated = async (newCategory: any) => {
+    await fetchCategories();
+    onCategoryChange(newCategory.name);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -32,44 +42,44 @@ const ProductBasicInfoForm: React.FC<ProductBasicInfoFormProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="product-name">
-            Nome do Produto <span className="text-red-500">*</span>
-          </Label>
+        <div>
+          <Label htmlFor="name">Nome do Produto *</Label>
           <Input
-            id="product-name"
+            id="name"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            placeholder="Digite o nome do produto"
-            required
+            placeholder="Nome do produto"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="product-description" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Descrição
-          </Label>
+        <div>
+          <Label htmlFor="description">Descrição</Label>
           <Textarea
-            id="product-description"
-            value={description}
+            id="description"
+            value={description || ''}
             onChange={(e) => onDescriptionChange(e.target.value)}
-            placeholder="Descreva o produto em detalhes"
+            placeholder="Descrição detalhada do produto"
             rows={4}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="product-category" className="flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Categoria
-          </Label>
-          <Input
-            id="product-category"
-            value={category}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            placeholder="Ex: Roupas, Eletrônicos, Casa"
-          />
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="category">Categoria</Label>
+            <CategoryFormDialog onCategoryCreated={handleCategoryCreated} />
+          </div>
+          <Select value={category || ''} onValueChange={onCategoryChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.name}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>
