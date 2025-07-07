@@ -100,7 +100,7 @@ export const useSimpleProductWizard = (options?: {
     });
   };
 
-  const saveProduct = async () => {
+  const saveProduct = async (): Promise<void> => {
     if (!validateCurrentStep()) return;
 
     setIsSaving(true);
@@ -122,7 +122,7 @@ export const useSimpleProductWizard = (options?: {
 
       const result = await createProduct(productData);
 
-      if (result.success && result.data) {
+      if (result.data && !result.error) {
         const productId = result.data.id;
 
         // Salvar imagens se houver
@@ -147,7 +147,6 @@ export const useSimpleProductWizard = (options?: {
         });
 
         options?.onComplete?.(result.data);
-        return true;
       } else {
         throw new Error(result.error || 'Erro ao criar produto');
       }
@@ -158,7 +157,6 @@ export const useSimpleProductWizard = (options?: {
         description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: 'destructive',
       });
-      return false;
     } finally {
       setIsSaving(false);
     }

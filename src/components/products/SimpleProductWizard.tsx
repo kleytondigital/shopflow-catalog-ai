@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSimpleProductWizard } from '@/hooks/useSimpleProductWizard';
-import ProductImagesForm from './ProductImagesForm';
+import ProductImagesForm from './wizard/ProductImagesForm';
 import ProductPriceTiersSection from './ProductPriceTiersSection';
 import WizardStepNavigation from './WizardStepNavigation';
 import WizardActionButtons from './WizardActionButtons';
@@ -21,17 +21,16 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   onCancel,
 }) => {
   const {
-    currentStep,
+    step: currentStep,
     formData,
-    draftImages,
     isSaving,
-    canProceed,
-    goToNextStep,
-    goToPreviousStep,
-    setFormData,
-    handleImageUploadReady,
+    nextStep: goToNextStep,
+    prevStep: goToPreviousStep,
+    updateFormData: setFormData,
     saveProduct,
     validateCurrentStep,
+    setImagesUploadFn: handleImageUploadReady,
+    canProceed,
   } = useSimpleProductWizard({ onComplete, onCancel });
 
   const steps = [
@@ -44,7 +43,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
     setFormData({
       [name]: type === 'checkbox' ? checked : value,
     });
@@ -55,6 +54,10 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
     setFormData({
       [name]: parseFloat(value) || 0,
     });
+  };
+
+  const handleSaveProduct = async () => {
+    await saveProduct();
   };
 
   return (
@@ -207,7 +210,6 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
 
         {currentStep === 2 && (
           <ProductImagesForm
-            productId={undefined}
             onImageUploadReady={handleImageUploadReady}
           />
         )}
@@ -220,7 +222,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
         isSaving={isSaving}
         onPrevious={goToPreviousStep}
         onNext={goToNextStep}
-        onSave={saveProduct}
+        onSave={handleSaveProduct}
         onCancel={onCancel}
         isLastStep={isLastStep}
       />
