@@ -19,6 +19,9 @@ export interface ProductVariation {
   name?: string;
   display_order?: number;
   parent_variation_id?: string;
+  stock_quantity?: number;
+  price?: number;
+  image_file?: File | null;
 }
 
 export interface Product {

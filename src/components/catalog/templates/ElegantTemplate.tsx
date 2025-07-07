@@ -11,23 +11,23 @@ import { Heart, ShoppingCart, Eye, Package } from "lucide-react";
 
 export interface CatalogSettingsData {
   colors?: {
-    primary: string;
-    secondary: string;
-    surface: string;
-    text: string;
+    primary?: string;
+    secondary?: string;
+    surface?: string;
+    text?: string;
   };
   global?: {
-    borderRadius: number;
-    fontSize: {
-      small: string;
-      medium: string;
-      large: string;
+    borderRadius?: number;
+    fontSize?: {
+      small?: string;
+      medium?: string;
+      large?: string;
     };
   };
   productCard?: {
-    showQuickView: boolean;
-    showAddToCart: boolean;
-    productCardStyle: string;
+    showQuickView?: boolean;
+    showAddToCart?: boolean;
+    productCardStyle?: string;
   };
 }
 
@@ -54,7 +54,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   isInWishlist = false,
   showPrices = true,
   showStock = true,
-  editorSettings
+  editorSettings = {}
 }) => {
   const displayPrice = catalogType === 'wholesale' && product.wholesale_price 
     ? product.wholesale_price 

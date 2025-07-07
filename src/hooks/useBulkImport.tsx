@@ -21,14 +21,43 @@ export interface ImportConfig {
   updateExisting: boolean;
   validateStock: boolean;
   defaultCategory?: string;
+  createCategories?: boolean;
+  strictValidation?: boolean;
+  uploadImages?: boolean;
+}
+
+export interface ImportProgress {
+  stage: string;
+  message: string;
+  percentage: number;
+  currentItem?: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  error?: string;
+  total: number;
+  successful: number;
+  failed: number;
+  logs: Array<{
+    rowNumber: number;
+    productName: string;
+    status: 'success' | 'error';
+    message: string;
+  }>;
+}
+
+export interface TemplateDownloadResult {
+  success: boolean;
+  error?: string;
 }
 
 export const useBulkImport = () => {
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<any>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
   const uploadFile = async (file: File, storeId: string): Promise<string> => {
@@ -141,57 +170,45 @@ export const useBulkImport = () => {
     }
   };
 
-  const startImport = async (jobId: string, config: ImportConfig) => {
+  const startImport = async (file: File, storeId: string, config: ImportConfig): Promise<ImportResult> => {
     setIsImporting(true);
-    setProgress(0);
+    setProgress({ stage: 'starting', message: 'Iniciando importação...', percentage: 0 });
     setResult(null);
     
     try {
       // Simular progresso para demonstração
       const interval = setInterval(() => {
         setProgress(prev => {
-          if (prev >= 90) {
+          if (!prev || prev.percentage >= 90) {
             clearInterval(interval);
             return prev;
           }
-          return prev + 10;
+          return {
+            ...prev,
+            percentage: prev.percentage + 10,
+            message: `Processando... ${prev.percentage + 10}%`
+          };
         });
       }, 500);
-
-      // Atualizar status para processing
-      await supabase
-        .from('bulk_import_jobs')
-        .update({ 
-          status: 'processing',
-          started_at: new Date().toISOString(),
-          config: config
-        })
-        .eq('id', jobId);
 
       // Simular processamento
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       clearInterval(interval);
-      setProgress(100);
+      setProgress({ stage: 'completed', message: 'Concluído!', percentage: 100 });
 
-      // Finalizar com sucesso
-      await supabase
-        .from('bulk_import_jobs')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          processed_products: 10,
-          successful_products: 8,
-          failed_products: 2
-        })
-        .eq('id', jobId);
-
-      setResult({
+      const finalResult: ImportResult = {
         success: true,
-        processedCount: 10,
-        successCount: 8,
-        errorCount: 2
-      });
+        total: 10,
+        successful: 8,
+        failed: 2,
+        logs: [
+          { rowNumber: 1, productName: 'Produto A', status: 'success', message: 'Criado com sucesso' },
+          { rowNumber: 2, productName: 'Produto B', status: 'error', message: 'Erro de validação' }
+        ]
+      };
+
+      setResult(finalResult);
 
       toast({
         title: "Importação concluída",
@@ -199,58 +216,65 @@ export const useBulkImport = () => {
       });
 
       await fetchJobs();
+      return finalResult;
     } catch (error: any) {
       console.error('Erro na importação:', error);
       
-      await supabase
-        .from('bulk_import_jobs')
-        .update({ 
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          error_message: error.message
-        })
-        .eq('id', jobId);
-
-      setResult({
+      const errorResult: ImportResult = {
         success: false,
-        error: error.message
-      });
+        error: error.message,
+        total: 0,
+        successful: 0,
+        failed: 0,
+        logs: []
+      };
+
+      setResult(errorResult);
+      setProgress({ stage: 'error', message: 'Erro na importação', percentage: 0 });
 
       toast({
         title: "Erro na importação",
         description: error.message,
         variant: "destructive"
       });
+
+      return errorResult;
     } finally {
       setIsImporting(false);
     }
   };
 
-  const downloadTemplate = useCallback(() => {
-    const csvContent = [
-      'nome,descricao,preco_varejo,preco_atacado,categoria,estoque,sku',
-      'Produto Exemplo,Descrição do produto,29.90,25.90,Categoria Teste,100,SKU001',
-      'Outro Produto,Outra descrição,15.50,12.90,Outra Categoria,50,SKU002'
-    ].join('\n');
+  const downloadTemplate = useCallback(async (): Promise<TemplateDownloadResult> => {
+    try {
+      const csvContent = [
+        'nome,descricao,preco_varejo,preco_atacado,categoria,estoque,sku',
+        'Produto Exemplo,Descrição do produto,29.90,25.90,Categoria Teste,100,SKU001',
+        'Outro Produto,Outra descrição,15.50,12.90,Outra Categoria,50,SKU002'
+      ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'template-produtos.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'template-produtos.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    toast({
-      title: "Template baixado",
-      description: "Use este arquivo como modelo para importação"
-    });
+      toast({
+        title: "Template baixado",
+        description: "Use este arquivo como modelo para importação"
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   }, [toast]);
 
   const resetImport = useCallback(() => {
-    setProgress(0);
+    setProgress(null);
     setResult(null);
     setIsImporting(false);
   }, []);

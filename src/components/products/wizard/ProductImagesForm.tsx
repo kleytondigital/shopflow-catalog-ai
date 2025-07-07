@@ -14,13 +14,22 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
   productId,
   onImageUploadReady,
 }) => {
-  const { draftImages, addImage, removeImage, uploadImages } = useDraftImages();
+  const { draftImages, addDraftImages, removeDraftImage, uploadAllImages } = useDraftImages();
+
+  // Map para compatibilidade com DraftImageUpload
+  const handleImageAdd = (files: File[]) => {
+    addDraftImages(files);
+  };
+
+  const handleImageRemove = (imageId: string) => {
+    removeDraftImage(imageId);
+  };
 
   React.useEffect(() => {
     if (onImageUploadReady) {
-      onImageUploadReady(uploadImages);
+      onImageUploadReady(uploadAllImages);
     }
-  }, [onImageUploadReady, uploadImages]);
+  }, [onImageUploadReady, uploadAllImages]);
 
   return (
     <Card>
@@ -33,8 +42,8 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       <CardContent>
         <DraftImageUpload
           draftImages={draftImages}
-          onImageAdd={addImage}
-          onImageRemove={removeImage}
+          onImageAdd={handleImageAdd}
+          onImageRemove={handleImageRemove}
         />
       </CardContent>
     </Card>

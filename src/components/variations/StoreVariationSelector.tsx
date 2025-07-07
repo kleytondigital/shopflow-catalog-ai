@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { useStoreVariations } from "@/hooks/useStoreVariations";
 import StoreQuickValueAdd from "@/components/variations/StoreQuickValueAdd";
-import { ProductVariation } from "@/types/variation";
+import { ProductVariation } from "@/types/product";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface StoreVariationSelectorProps {
@@ -205,11 +206,12 @@ const StoreVariationSelector: React.FC<StoreVariationSelectorProps> = ({
         const variation: ProductVariation = {
           id: `variation-${index}`,
           product_id: "",
-          name: combination.join(" - "),
           sku: "",
-          price: 0,
-          stock_quantity: 0,
+          stock: 0,
+          price_adjustment: 0,
           is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           display_order: index,
         };
 
@@ -256,11 +258,12 @@ const StoreVariationSelector: React.FC<StoreVariationSelectorProps> = ({
     const newVariation: ProductVariation = {
       id: `variation-${variations.length}`,
       product_id: "",
-      name: "Nova Variação",
       sku: "",
-      price: 0,
-      stock_quantity: 0,
+      stock: 0,
+      price_adjustment: 0,
       is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       display_order: variations.length,
     };
 
@@ -360,7 +363,6 @@ const StoreVariationSelector: React.FC<StoreVariationSelectorProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   <Checkbox
                     checked={selectedGroups.includes(group.id)}
-                    readOnly
                   />
                   {getGroupIcon(group.attribute_key)}
                   <span className="font-medium">{group.name}</span>
@@ -473,11 +475,11 @@ const StoreVariationSelector: React.FC<StoreVariationSelectorProps> = ({
                 >
                   <div className="flex-1">
                     <Input
-                      value={variation.name}
+                      value={variation.sku || ''}
                       onChange={(e) =>
-                        updateVariation(index, { name: e.target.value })
+                        updateVariation(index, { sku: e.target.value })
                       }
-                      placeholder="Nome da variação"
+                      placeholder="SKU da variação"
                     />
                   </div>
                   <div className="flex gap-1">

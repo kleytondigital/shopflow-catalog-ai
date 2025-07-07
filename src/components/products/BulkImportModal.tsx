@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
@@ -48,8 +49,10 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [config, setConfig] = useState<ImportConfig>({
-    createCategories: true,
+    skipDuplicates: true,
     updateExisting: false,
+    validateStock: true,
+    createCategories: true,
     strictValidation: true,
     uploadImages: false,
   });
