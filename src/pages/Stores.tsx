@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 import StoreForm from "@/components/stores/StoreForm";
+import ResponsiveAppLayout from "@/components/layout/ResponsiveAppLayout";
 import {
   Store,
   Plus,
@@ -32,8 +34,7 @@ import {
 } from "lucide-react";
 
 const Stores = () => {
-  const { stores, loading, createStore, updateStore, deleteStore } =
-    useStores();
+  const { stores, loading, createStore, updateStore } = useStores();
   const { profile } = useAuth();
   const { toast } = useToast();
   const [showStoreForm, setShowStoreForm] = useState(false);
@@ -93,7 +94,7 @@ const Stores = () => {
 
   if (profile?.role !== "superadmin") {
     return (
-      <AppLayout title="Acesso Negado">
+      <ResponsiveAppLayout title="Acesso Negado">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -104,12 +105,12 @@ const Stores = () => {
             </p>
           </div>
         </div>
-      </AppLayout>
+      </ResponsiveAppLayout>
     );
   }
 
   return (
-    <AppLayout
+    <ResponsiveAppLayout
       title="Gestão de Lojas"
       subtitle="Gerencie todas as lojas do sistema"
       breadcrumbs={breadcrumbs}
@@ -315,7 +316,7 @@ const Stores = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </ResponsiveAppLayout>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +19,7 @@ import { PlanBenefitsSelector } from "@/components/admin/PlanBenefitsSelector";
 import PaymentGatewayConfig from "@/components/admin/PaymentGatewayConfig";
 import PlanPaymentsTable from "@/components/admin/PlanPaymentsTable";
 import SubscriptionManagement from "@/components/admin/SubscriptionManagement";
+import ResponsiveAppLayout from "@/components/layout/ResponsiveAppLayout";
 
 const PlanManagement = () => {
   const { profile } = useAuth();
@@ -43,7 +45,7 @@ const PlanManagement = () => {
 
   if (profile?.role !== "superadmin") {
     return (
-      <AppLayout title="Acesso Negado">
+      <ResponsiveAppLayout title="Acesso Negado">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -54,7 +56,7 @@ const PlanManagement = () => {
             </p>
           </div>
         </div>
-      </AppLayout>
+      </ResponsiveAppLayout>
     );
   }
 
@@ -64,7 +66,7 @@ const PlanManagement = () => {
   ];
 
   return (
-    <AppLayout
+    <ResponsiveAppLayout
       title="Gestão de Planos e Benefícios"
       subtitle="Configure planos, gateways de pagamento e monitore financeiro do sistema"
       breadcrumbs={breadcrumbs}
@@ -103,7 +105,7 @@ const PlanManagement = () => {
           <PlanPaymentsTable />
         </TabsContent>
       </Tabs>
-    </AppLayout>
+    </ResponsiveAppLayout>
   );
 };
 

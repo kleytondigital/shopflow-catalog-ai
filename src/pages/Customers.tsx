@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Users, Search, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,9 +6,19 @@ import { Input } from "@/components/ui/input";
 import CustomersTable from "@/components/customers/CustomersTable";
 import CustomersFilters from "@/components/customers/CustomersFilters";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useCustomerExport } from "@/hooks/useCustomerExport";
 
 const Customers = () => {
-  const { customers, loading, error } = useCustomers();
+  const { customers, loading, error, searchTerm, setSearchTerm } = useCustomers();
+  const { exportToExcel, exportToPDF } = useCustomerExport();
+
+  const handleExportExcel = () => {
+    exportToExcel(customers || []);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(customers || []);
+  };
 
   return (
     <div className="space-y-6">
@@ -21,7 +32,7 @@ const Customers = () => {
             Gerencie sua base de clientes e acompanhe seus dados
           </p>
         </div>
-        <Button>
+        <Button onClick={handleExportExcel}>
           <Download className="mr-2 h-4 w-4" />
           Exportar
         </Button>
@@ -40,7 +51,13 @@ const Customers = () => {
         </Button>
       </div>
 
-      <CustomersFilters />
+      <CustomersFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
+        totalCustomers={customers?.length || 0}
+      />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
