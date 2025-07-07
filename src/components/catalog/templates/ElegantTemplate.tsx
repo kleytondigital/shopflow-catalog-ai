@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,13 @@ import { CatalogType } from "@/hooks/useCatalog";
 import { Heart, ShoppingCart, Eye, Package } from "lucide-react";
 
 export interface CatalogSettingsData {
-  colors: {
+  colors?: {
     primary: string;
     secondary: string;
     surface: string;
     text: string;
   };
-  global: {
+  global?: {
     borderRadius: number;
     fontSize: {
       small: string;
@@ -23,7 +24,7 @@ export interface CatalogSettingsData {
       large: string;
     };
   };
-  productCard: {
+  productCard?: {
     showQuickView: boolean;
     showAddToCart: boolean;
     productCardStyle: string;
@@ -47,12 +48,12 @@ export interface ElegantTemplateProps {
 const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   product,
   catalogType,
-  onAddToCart,
-  onAddToWishlist,
-  onQuickView,
-  isInWishlist,
-  showPrices,
-  showStock,
+  onAddToCart = () => {},
+  onAddToWishlist = () => {},
+  onQuickView = () => {},
+  isInWishlist = false,
+  showPrices = true,
+  showStock = true,
   editorSettings
 }) => {
   const displayPrice = catalogType === 'wholesale' && product.wholesale_price 

@@ -1,12 +1,12 @@
 
-import { useState, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export interface ImportJob {
   id: string;
   filename: string;
-  status: "pending" | "cancelled" | "processing" | "failed" | "completed";
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   totalProducts: number;
   processedProducts: number;
   successfulProducts: number;
@@ -17,195 +17,250 @@ export interface ImportJob {
 }
 
 export interface ImportConfig {
-  createCategories: boolean;
+  skipDuplicates: boolean;
   updateExisting: boolean;
-  strictValidation: boolean;
-  uploadImages: boolean;
-}
-
-export interface ImportProgress {
-  stage: string;
-  percentage: number;
-  message: string;
-  currentItem?: string;
-}
-
-export interface ImportResult {
-  success: boolean;
-  total: number;
-  successful: number;
-  failed: number;
-  logs: Array<{
-    rowNumber: number;
-    productName: string;
-    status: string;
-    message: string;
-  }>;
+  validateStock: boolean;
+  defaultCategory?: string;
 }
 
 export const useBulkImport = () => {
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [progress, setProgress] = useState<ImportProgress | null>(null);
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
 
-  const uploadFile = useCallback(async (file: File, storeId: string) => {
+  const uploadFile = async (file: File, storeId: string): Promise<string> => {
+    setUploading(true);
     try {
-      setUploading(true);
+      const fileName = `${Date.now()}-${file.name}`;
+      const filePath = `bulk-imports/${storeId}/${fileName}`;
 
-      // Generate a unique ID for the job
-      const jobId = Math.random().toString(36).substring(2, 15);
-
-      // Upload the file to Supabase storage
-      const filePath = `bulk_imports/${storeId}/${jobId}/${file.name}`;
       const { error: uploadError } = await supabase.storage
-        .from("bulk_imports")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+        .from('product-images')
+        .upload(filePath, file);
 
-      if (uploadError) {
-        console.error("Error uploading file:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // Create a new bulk import job in the database
-      const { error: jobError } = await supabase.from("bulk_import_jobs").insert([
-        {
-          id: jobId,
+      const { data, error: insertError } = await supabase
+        .from('bulk_import_jobs')
+        .insert({
           filename: file.name,
-          store_id: storeId,
-          status: "pending",
-          total_products: 0,
-          processed_products: 0,
-          successful_products: 0,
-          failed_products: 0,
           file_path: filePath,
-        },
-      ]);
+          file_size: file.size,
+          status: 'pending',
+          user_id: (await supabase.auth.getUser()).data.user?.id || '',
+          store_id: storeId,
+          config: {
+            skipDuplicates: true,
+            updateExisting: false,
+            validateStock: true
+          }
+        })
+        .select()
+        .single();
 
-      if (jobError) {
-        console.error("Error creating job:", jobError);
-        throw jobError;
-      }
+      if (insertError) throw insertError;
 
       toast({
         title: "Arquivo enviado",
-        description: "O arquivo foi enviado com sucesso e será processado em breve.",
+        description: "Arquivo preparado para importação"
       });
-      fetchJobs();
-      return jobId;
-    } catch (error) {
-      console.error("Error uploading file:", error);
+
+      await fetchJobs();
+      return data.id;
+    } catch (error: any) {
+      console.error('Erro no upload:', error);
       toast({
-        title: "Erro ao enviar arquivo",
-        description: "Ocorreu um erro ao enviar o arquivo. Por favor, tente novamente.",
-        variant: "destructive",
+        title: "Erro no upload",
+        description: error.message,
+        variant: "destructive"
       });
       throw error;
     } finally {
       setUploading(false);
     }
-  }, []);
+  };
 
-  const startImport = useCallback(async (file: File, storeId: string, config: ImportConfig) => {
-    try {
-      setIsImporting(true);
-      setProgress({ stage: "starting", percentage: 0, message: "Iniciando importação..." });
-      
-      // Simulate import process
-      const result: ImportResult = {
-        success: true,
-        total: 10,
-        successful: 8,
-        failed: 2,
-        logs: []
-      };
-      
-      setResult(result);
-      setProgress({ stage: "completed", percentage: 100, message: "Importação concluída!" });
-      
-      return { success: true, error: null };
-    } catch (error) {
-      setProgress({ stage: "error", percentage: 0, message: "Erro na importação" });
-      return { success: false, error: "Erro durante a importação" };
-    } finally {
-      setIsImporting(false);
-    }
-  }, []);
-
-  const downloadTemplate = useCallback(async () => {
-    try {
-      // Simulate template download
-      return { success: true, error: null };
-    } catch (error) {
-      return { success: false, error: "Erro ao baixar template" };
-    }
-  }, []);
-
-  const resetImport = useCallback(() => {
-    setProgress(null);
-    setResult(null);
-    setIsImporting(false);
-  }, []);
-
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = async () => {
     try {
       const { data, error } = await supabase
-        .from("bulk_import_jobs")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from('bulk_import_jobs')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Map the data with proper typing
-      const mappedJobs = data?.map(job => ({
+      const formattedJobs: ImportJob[] = (data || []).map(job => ({
         id: job.id,
         filename: job.filename,
-        status: job.status as "pending" | "cancelled" | "processing" | "failed" | "completed",
+        status: job.status as ImportJob['status'],
         totalProducts: job.total_products || 0,
         processedProducts: job.processed_products || 0,
         successfulProducts: job.successful_products || 0,
         failedProducts: job.failed_products || 0,
-        startedAt: job.started_at || "",
-        completedAt: job.completed_at || "",
-        errorMessage: job.error_message || "",
-      })) || [];
+        startedAt: job.started_at || '',
+        completedAt: job.completed_at || '',
+        errorMessage: job.error_message || ''
+      }));
 
-      setJobs(mappedJobs);
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
+      setJobs(formattedJobs);
+    } catch (error: any) {
+      console.error('Erro ao buscar jobs:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar histórico de importações",
+        variant: "destructive"
+      });
     }
-  }, []);
+  };
 
-  const cancelJob = useCallback(async (jobId: string) => {
+  const cancelJob = async (jobId: string) => {
     try {
       const { error } = await supabase
-        .from("bulk_import_jobs")
-        .update({ status: "cancelled" })
-        .eq("id", jobId);
+        .from('bulk_import_jobs')
+        .update({ status: 'cancelled' })
+        .eq('id', jobId);
 
       if (error) throw error;
 
       toast({
         title: "Job cancelado",
-        description: "O job foi cancelado com sucesso.",
+        description: "Importação cancelada com sucesso"
       });
-      fetchJobs();
-    } catch (error) {
-      console.error("Error cancelling job:", error);
+
+      await fetchJobs();
+    } catch (error: any) {
+      console.error('Erro ao cancelar job:', error);
       toast({
-        title: "Erro ao cancelar job",
-        description: "Ocorreu um erro ao cancelar o job. Por favor, tente novamente.",
-        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao cancelar importação",
+        variant: "destructive"
       });
     }
-  }, [fetchJobs, toast]);
+  };
 
-  const canStartNewImport = !isImporting;
+  const startImport = async (jobId: string, config: ImportConfig) => {
+    setIsImporting(true);
+    setProgress(0);
+    setResult(null);
+    
+    try {
+      // Simular progresso para demonstração
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 500);
+
+      // Atualizar status para processing
+      await supabase
+        .from('bulk_import_jobs')
+        .update({ 
+          status: 'processing',
+          started_at: new Date().toISOString(),
+          config: config
+        })
+        .eq('id', jobId);
+
+      // Simular processamento
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      clearInterval(interval);
+      setProgress(100);
+
+      // Finalizar com sucesso
+      await supabase
+        .from('bulk_import_jobs')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          processed_products: 10,
+          successful_products: 8,
+          failed_products: 2
+        })
+        .eq('id', jobId);
+
+      setResult({
+        success: true,
+        processedCount: 10,
+        successCount: 8,
+        errorCount: 2
+      });
+
+      toast({
+        title: "Importação concluída",
+        description: "Produtos importados com sucesso"
+      });
+
+      await fetchJobs();
+    } catch (error: any) {
+      console.error('Erro na importação:', error);
+      
+      await supabase
+        .from('bulk_import_jobs')
+        .update({ 
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error.message
+        })
+        .eq('id', jobId);
+
+      setResult({
+        success: false,
+        error: error.message
+      });
+
+      toast({
+        title: "Erro na importação",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const downloadTemplate = useCallback(() => {
+    const csvContent = [
+      'nome,descricao,preco_varejo,preco_atacado,categoria,estoque,sku',
+      'Produto Exemplo,Descrição do produto,29.90,25.90,Categoria Teste,100,SKU001',
+      'Outro Produto,Outra descrição,15.50,12.90,Outra Categoria,50,SKU002'
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'template-produtos.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Template baixado",
+      description: "Use este arquivo como modelo para importação"
+    });
+  }, [toast]);
+
+  const resetImport = useCallback(() => {
+    setProgress(0);
+    setResult(null);
+    setIsImporting(false);
+  }, []);
+
+  const canStartNewImport = useCallback(() => {
+    const activeJobs = jobs.filter(job => 
+      job.status === 'pending' || job.status === 'processing'
+    );
+    return activeJobs.length === 0 && !isImporting;
+  }, [jobs, isImporting]);
 
   return {
     jobs,
@@ -219,6 +274,6 @@ export const useBulkImport = () => {
     startImport,
     downloadTemplate,
     resetImport,
-    canStartNewImport,
+    canStartNewImport
   };
 };

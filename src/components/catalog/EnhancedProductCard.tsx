@@ -9,12 +9,14 @@ interface EnhancedProductCardProps {
   product: Product;
   catalogType?: CatalogType;
   onClick?: () => void;
+  storeIdentifier?: string;
 }
 
 const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
   product,
   catalogType = 'retail',
   onClick,
+  storeIdentifier,
 }) => {
   const displayPrice = catalogType === 'wholesale' && product.wholesale_price 
     ? product.wholesale_price 
