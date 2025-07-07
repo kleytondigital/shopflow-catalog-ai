@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type PriceModelType = 'retail_only' | 'simple_wholesale' | 'gradual_wholesale';
+
 export interface StorePriceModel {
   id: string;
   store_id: string;
-  price_model: string;
+  price_model: PriceModelType;
   tier_1_enabled: boolean;
   tier_1_name: string;
   tier_2_enabled: boolean;
@@ -94,7 +96,7 @@ export const useStorePriceModel = (storeId?: string) => {
 
     const defaultModel = {
       store_id: storeId,
-      price_model: 'retail_only',
+      price_model: 'retail_only' as PriceModelType,
       tier_1_enabled: true,
       tier_1_name: 'Varejo',
       tier_2_enabled: false,
@@ -131,7 +133,7 @@ export const useStorePriceModel = (storeId?: string) => {
     }
   };
 
-  const changePriceModel = async (newModel: string) => {
+  const changePriceModel = async (newModel: PriceModelType) => {
     await updatePriceModel({ price_model: newModel });
   };
 
@@ -147,7 +149,7 @@ export const useStorePriceModel = (storeId?: string) => {
     priceModel: priceModel || {
       id: '',
       store_id: storeId || '',
-      price_model: 'retail_only',
+      price_model: 'retail_only' as PriceModelType,
       tier_1_enabled: true,
       tier_1_name: 'Varejo',
       tier_2_enabled: false,

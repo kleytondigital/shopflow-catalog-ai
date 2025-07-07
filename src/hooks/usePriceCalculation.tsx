@@ -1,100 +1,71 @@
-import { useMemo } from "react";
-import { useProductPriceTiers } from "./useProductPriceTiers";
-import { useCatalogSettings } from "./useCatalogSettings";
 
-export interface PriceCalculation {
-  currentTier: any;
-  nextTier?: any;
-  price: number;
-  savings: {
-    amount: number;
-    percentage: number;
-  };
-  nextTierHint?: {
-    quantityNeeded: number;
-    potentialSavings: number;
-  };
+import { useMemo } from 'react';
+import { useStorePriceModel } from '@/hooks/useStorePriceModel';
+import { ProductPriceTier } from '@/types/product';
+
+interface PriceCalculationOptions {
+  product_id: string;
+  retail_price: number;
+  wholesale_price?: number;
+  min_wholesale_qty?: number;
+  quantity: number;
+  price_tiers?: ProductPriceTier[];
 }
 
-export const usePriceCalculation = (
-  productId: string,
-  storeId: string,
-  quantity: number,
-  retailPrice: number
-) => {
-  const { tiers, loading } = useProductPriceTiers(productId, storeId);
-  const { settings: catalogSettings } = useCatalogSettings(storeId);
+export const usePriceCalculation = (storeId: string, options: PriceCalculationOptions) => {
+  const { priceModel } = useStorePriceModel(storeId);
 
-  const calculation = useMemo((): PriceCalculation => {
-    // Se não for catálogo híbrido ou não há níveis, usar preço de varejo
-    if (
-      catalogSettings?.catalog_mode !== "hybrid" ||
-      loading ||
-      tiers.length <= 1
+  return useMemo(() => {
+    const { retail_price, wholesale_price, min_wholesale_qty, quantity, price_tiers } = options;
+
+    // Calcular preço baseado na quantidade e configurações
+    let finalPrice = retail_price;
+    let appliedTier: ProductPriceTier | null = null;
+    let savings = 0;
+
+    // Verificar níveis de preço personalizados primeiro
+    if (price_tiers && price_tiers.length > 0) {
+      const applicableTiers = price_tiers
+        .filter(tier => tier.is_active && quantity >= tier.min_quantity)
+        .sort((a, b) => b.min_quantity - a.min_quantity);
+
+      if (applicableTiers.length > 0) {
+        appliedTier = applicableTiers[0];
+        finalPrice = appliedTier.price;
+        savings = (retail_price - finalPrice) * quantity;
+      }
+    }
+    // Se não há tiers personalizados, verificar atacado simples
+    else if (
+      priceModel?.simple_wholesale_enabled &&
+      wholesale_price &&
+      quantity >= (min_wholesale_qty || 1)
     ) {
-      return {
-        currentTier: {
-          tier_name: "Varejo",
-          price: retailPrice,
-          min_quantity: 1,
-        },
-        price: retailPrice,
-        savings: { amount: 0, percentage: 0 },
-      };
+      finalPrice = wholesale_price;
+      savings = (retail_price - wholesale_price) * quantity;
     }
 
-    // Ordenar níveis por quantidade mínima (decrescente) para encontrar o melhor preço
-    const sortedTiers = [...tiers]
-      .filter((tier) => tier.is_active)
-      .sort((a, b) => b.min_quantity - a.min_quantity);
-
-    // Encontrar o nível atual baseado na quantidade
-    const currentTier = sortedTiers.find(
-      (tier) => quantity >= tier.min_quantity
-    );
-
-    if (!currentTier) {
-      // Se não encontrou nível, usar varejo
-      return {
-        currentTier: {
-          tier_name: "Varejo",
-          price: retailPrice,
-          min_quantity: 1,
-        },
-        price: retailPrice,
-        savings: { amount: 0, percentage: 0 },
-      };
-    }
-
-    // Calcular economia em relação ao varejo
-    const savingsAmount = retailPrice - currentTier.price;
-    const savingsPercentage = (savingsAmount / retailPrice) * 100;
-
-    // Encontrar próximo nível para dica
-    const nextTier = sortedTiers
-      .sort((a, b) => a.min_quantity - b.min_quantity)
-      .find((tier) => tier.min_quantity > quantity);
-
-    let nextTierHint;
-    if (nextTier) {
-      const nextTierSavings = retailPrice - nextTier.price;
-      nextTierHint = {
-        quantityNeeded: nextTier.min_quantity - quantity,
-        potentialSavings: nextTierSavings,
-      };
-    }
+    const total = finalPrice * quantity;
+    const retailTotal = retail_price * quantity;
 
     return {
-      currentTier,
-      nextTier,
-      price: currentTier.price,
-      savings: {
-        amount: savingsAmount,
-        percentage: savingsPercentage,
-      },
-      nextTierHint,
+      unitPrice: finalPrice,
+      total,
+      savings,
+      appliedTier,
+      isWholesale: finalPrice < retail_price,
+      formattedUnitPrice: new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(finalPrice),
+      formattedTotal: new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(total),
+      formattedSavings: new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(savings),
     };
-  }, [tiers, loading, quantity, retailPrice, catalogSettings?.catalog_mode]);
-
-  return calculation;
+  }, [options, priceModel]);
 };

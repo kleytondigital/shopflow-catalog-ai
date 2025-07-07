@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   useStoreVariations,
   StoreVariationGroup,
 } from "@/hooks/useStoreVariations";
+import { useToast } from "@/hooks/use-toast";
 
 interface StoreQuickValueAddProps {
   group: StoreVariationGroup;
@@ -165,7 +167,8 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
   group,
   onValueAdded,
 }) => {
-  const { createValue } = useStoreVariations();
+  const { createValue } = useStoreVariations(group.store_id);
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [hexColor, setHexColor] = useState("#000000");
@@ -190,7 +193,9 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
         // Criar cor composta
         const colorValue = selectedColors.join(" e ");
         const valueData = {
+          store_id: group.store_id,
           group_id: group.id,
+          master_value_id: '', // Valor padrão temporário
           value: colorValue,
           hex_color: selectedColors.length === 1 ? hexColor : null, // Só usar hex para cor única
           is_active: true,
@@ -198,17 +203,23 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
         };
 
         const result = await createValue(valueData);
-        if (result.success) {
+        if (result) {
           setSelectedColors([]);
           setNewValue("");
           setHexColor("#000000");
           setIsOpen(false);
           onValueAdded?.();
+          toast({
+            title: "Valor adicionado",
+            description: "Novo valor de variação criado com sucesso",
+          });
         }
       } else {
         // Criar valor normal
         const valueData = {
+          store_id: group.store_id,
           group_id: group.id,
+          master_value_id: '', // Valor padrão temporário
           value: newValue.trim(),
           hex_color: group.attribute_key === "color" ? hexColor : null,
           is_active: true,
@@ -216,15 +227,24 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
         };
 
         const result = await createValue(valueData);
-        if (result.success) {
+        if (result) {
           setNewValue("");
           setHexColor("#000000");
           setIsOpen(false);
           onValueAdded?.();
+          toast({
+            title: "Valor adicionado",
+            description: "Novo valor de variação criado com sucesso",
+          });
         }
       }
     } catch (error) {
       console.error("Erro ao adicionar valor:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao adicionar valor de variação",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

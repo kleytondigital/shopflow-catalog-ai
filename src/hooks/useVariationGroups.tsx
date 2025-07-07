@@ -18,13 +18,8 @@ export const useVariationGroups = (productId?: string) => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('product_variation_groups')
-        .select('*')
-        .eq('product_id', productId);
-
-      if (error) throw error;
-      setGroups(data || []);
+      // Como a tabela product_variation_groups não existe, vamos usar uma implementação simples
+      setGroups([]);
     } catch (err: any) {
       console.error('Error fetching variation groups:', err);
       setError(err.message);
@@ -45,12 +40,12 @@ export const useVariationGroups = (productId?: string) => {
 
       if (error) throw error;
       
-      const hierarchicalVariations = data?.map(v => ({
+      const hierarchicalVariations: HierarchicalVariation[] = data?.map(v => ({
         id: v.id,
         product_id: v.product_id,
         variation_group_id: v.variation_group_id,
         parent_variation_id: v.parent_variation_id,
-        variation_type: v.variation_type || 'simple',
+        variation_type: (v.variation_type as 'main' | 'sub' | 'simple') || 'simple',
         variation_value: v.variation_value || v.color || v.size || '',
         color: v.color,
         size: v.size,
@@ -76,10 +71,7 @@ export const useVariationGroups = (productId?: string) => {
     variations: HierarchicalVariation[]
   ) => {
     try {
-      // Salvar grupo de variação (se necessário)
-      let groupId = null;
-      
-      // Salvar variações
+      // Salvar variações diretamente na tabela product_variations
       if (variations.length > 0) {
         const variationsToSave = variations.map((variation, index) => ({
           product_id: productId,
@@ -93,7 +85,7 @@ export const useVariationGroups = (productId?: string) => {
           is_active: variation.is_active,
           image_url: variation.image_url,
           display_order: index,
-          variation_group_id: groupId,
+          variation_group_id: null,
           parent_variation_id: variation.parent_variation_id
         }));
 

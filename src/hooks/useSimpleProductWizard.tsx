@@ -5,29 +5,11 @@ import { useProductVariations } from "@/hooks/useProductVariations";
 import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { CreateProductData } from "@/types/product";
-
-export interface ProductVariation {
-  id?: string;
-  color?: string;
-  size?: string;
-  sku?: string;
-  stock: number;
-  price_adjustment: number;
-  is_active: boolean;
-  image_url?: string;
-  image_file?: File;
-}
+import { CreateProductData, ProductVariation, ProductPriceTier } from "@/types/product";
 
 export interface ProductFormData extends CreateProductData {
   variations?: ProductVariation[];
-  price_tiers?: Array<{
-    id: string;
-    name: string;
-    minQuantity: number;
-    price: number;
-    enabled: boolean;
-  }>;
+  price_tiers?: ProductPriceTier[];
 }
 
 export interface WizardStep {
@@ -127,7 +109,7 @@ export const useSimpleProductWizard = () => {
 
     try {
       // Carregar price_tiers se existir ID do produto
-      let loadedPriceTiers: any[] = [];
+      let loadedPriceTiers: ProductPriceTier[] = [];
       if (editingProduct.id) {
         console.log("💰 SIMPLE WIZARD - Carregando price_tiers...");
         
@@ -147,11 +129,16 @@ export const useSimpleProductWizard = () => {
           console.log("✅ SIMPLE WIZARD - Price_tiers carregados:", priceTiersData);
           
           loadedPriceTiers = priceTiersData.map((tier) => ({
-            id: tier.tier_type === "retail" ? "retail" : `tier${tier.tier_order}`,
-            name: tier.tier_name,
-            minQuantity: tier.min_quantity,
+            id: tier.id,
+            product_id: tier.product_id,
+            tier_name: tier.tier_name,
+            tier_type: tier.tier_type,
+            min_quantity: tier.min_quantity,
             price: tier.price,
-            enabled: true,
+            tier_order: tier.tier_order,
+            is_active: tier.is_active,
+            created_at: tier.created_at,
+            updated_at: tier.updated_at,
           }));
         }
       }
@@ -316,162 +303,67 @@ export const useSimpleProductWizard = () => {
           store_id: profile.store_id,
           name: formData.name.trim(),
           description: formData.description?.trim() || "",
-          category: formData.category?.trim() || "Geral",
-          retail_price: Number(formData.retail_price),
-          stock: Number(formData.stock),
+          category: formData.category?.trim() || "",
         };
 
-        console.log("📤 SIMPLE WIZARD - Dados do produto para salvar:", productData);
-
-        let result;
-        let savedProductId: string;
+        let savedProductId = productId;
 
         if (productId) {
-          console.log("🔄 SIMPLE WIZARD - Atualizando produto existente...");
-          result = await updateProduct({
-            ...productData,
-            id: productId,
-          });
+          console.log("✏️ SIMPLE WIZARD - Atualizando produto existente:", productId);
+          await updateProduct(productId, productData);
           savedProductId = productId;
         } else {
-          console.log("➕ SIMPLE WIZARD - Criando novo produto...");
-          result = await createProduct(productData);
-          savedProductId = result.data?.id;
+          console.log("➕ SIMPLE WIZARD - Criando novo produto");
+          const newProduct = await createProduct(productData);
+          savedProductId = newProduct.id;
         }
 
-        console.log("📋 SIMPLE WIZARD - Resultado da operação do produto:", result);
+        if (!savedProductId) {
+          throw new Error("Erro ao salvar produto: ID não retornado");
+        }
 
-        if (result.error || !savedProductId) {
-          console.error("❌ SIMPLE WIZARD - Erro na operação do produto:", result.error);
-          throw new Error(result.error || "Erro ao salvar produto");
+        // 2. Upload de imagens se houver função
+        if (imageUploadFn) {
+          console.log("📷 SIMPLE WIZARD - Executando upload de imagens");
+          await imageUploadFn(savedProductId);
+        }
+
+        // 3. Salvar variações se houver
+        if (variations && variations.length > 0) {
+          console.log("🎨 SIMPLE WIZARD - Salvando variações:", variations.length);
+          await saveVariations(savedProductId, variations);
+        }
+
+        // 4. Criar tiers de preço padrão se não existirem
+        if ((!price_tiers || price_tiers.length === 0) && !productId) {
+          console.log("💰 SIMPLE WIZARD - Criando tiers padrão");
+          await createDefaultTiers(formData.retail_price);
         }
 
         console.log("✅ SIMPLE WIZARD - Produto salvo com sucesso:", savedProductId);
-
-        // 2. Salvar Price Tiers se houver
-        if (formData.price_tiers && formData.price_tiers.length > 0) {
-          console.log("💰 SIMPLE WIZARD - Salvando price_tiers...");
-          
-          try {
-            const { supabase } = await import("@/integrations/supabase/client");
-
-            // Primeiro, desativar todos os tiers existentes
-            await supabase
-              .from("product_price_tiers")
-              .update({ is_active: false })
-              .eq("product_id", savedProductId);
-
-            // Preparar novos tiers
-            const tiersToInsert = [];
-
-            // Tier de varejo (sempre existe)
-            tiersToInsert.push({
-              product_id: savedProductId,
-              tier_name: "Varejo",
-              tier_order: 1,
-              tier_type: "retail",
-              price: formData.retail_price,
-              min_quantity: 1,
-              is_active: true,
-            });
-
-            // Tiers de atacado
-            const enabledTiers = formData.price_tiers.filter(
-              (tier) => tier.enabled && tier.price > 0 && tier.id !== "retail"
-            );
-
-            enabledTiers.forEach((tier, index) => {
-              tiersToInsert.push({
-                product_id: savedProductId,
-                tier_name: tier.name,
-                tier_order: index + 2,
-                tier_type: "gradual_wholesale",
-                price: tier.price,
-                min_quantity: tier.minQuantity,
-                is_active: true,
-              });
-            });
-
-            if (tiersToInsert.length > 0) {
-              const { error: insertError } = await supabase
-                .from("product_price_tiers")
-                .insert(tiersToInsert);
-
-              if (insertError) {
-                console.error("❌ SIMPLE WIZARD - Erro ao inserir price_tiers:", insertError);
-                // Não falhar por causa dos tiers
-              } else {
-                console.log("✅ SIMPLE WIZARD - Price_tiers salvos com sucesso");
-              }
-            }
-          } catch (tierError) {
-            console.error("❌ SIMPLE WIZARD - Erro nos price_tiers:", tierError);
-            // Não falhar por causa dos tiers
-          }
-        }
-
-        // 3. Fazer upload de imagens se houver função
-        if (imageUploadFn) {
-          console.log("📷 SIMPLE WIZARD - Fazendo upload de imagens...");
-          try {
-            await imageUploadFn(savedProductId);
-            console.log("✅ SIMPLE WIZARD - Upload de imagens concluído");
-          } catch (uploadError) {
-            console.error("❌ SIMPLE WIZARD - Erro no upload de imagens:", uploadError);
-            // Não falhar por causa das imagens
-          }
-        }
-
-        // 4. Salvar variações se houver
-        if (formData.variations && formData.variations.length > 0) {
-          console.log("🎨 SIMPLE WIZARD - Salvando variações...");
-          try {
-            const variationsToSave = formData.variations.map((variation) => ({
-              color: variation.color || null,
-              size: variation.size || null,
-              sku: variation.sku || null,
-              stock: variation.stock,
-              price_adjustment: variation.price_adjustment,
-              is_active: variation.is_active,
-              image_url: variation.image_url || null,
-            }));
-
-            const variationResult = await saveVariations(savedProductId, variationsToSave);
-            if (variationResult.success) {
-              console.log("✅ SIMPLE WIZARD - Variações salvas com sucesso");
-            } else {
-              console.error("❌ SIMPLE WIZARD - Erro ao salvar variações:", variationResult.error);
-            }
-          } catch (variationError) {
-            console.error("❌ SIMPLE WIZARD - Erro nas variações:", variationError);
-            // Não falhar por causa das variações
-          }
-        }
-
         toast({
-          title: "Sucesso!",
-          description: productId ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!",
+          title: "Produto salvo!",
+          description: productId ? "Produto atualizado com sucesso." : "Produto criado com sucesso.",
         });
 
         return savedProductId;
-      } catch (error) {
+      } catch (error: any) {
         console.error("💥 SIMPLE WIZARD - Erro durante salvamento:", error);
         toast({
-          title: "Erro",
-          description: error instanceof Error ? error.message : "Erro desconhecido ao salvar produto",
+          title: "Erro ao salvar produto",
+          description: error?.message || "Não foi possível salvar o produto.",
           variant: "destructive",
         });
         return null;
       } finally {
-        setIsSaving(false);
         savingRef.current = false;
+        setIsSaving(false);
       }
     },
-    [formData, profile, createProduct, updateProduct, saveVariations, toast]
+    [formData, profile?.store_id, createProduct, updateProduct, saveVariations, createDefaultTiers, toast]
   );
 
   const resetForm = useCallback(() => {
-    console.log("🧹 SIMPLE WIZARD - Resetando formulário");
     setFormData({
       store_id: "",
       name: "",

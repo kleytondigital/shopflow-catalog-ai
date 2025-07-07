@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useStoreVariations } from "@/hooks/useStoreVariations";
-import { ProductVariation } from "@/types/variation";
+import { ProductVariation } from "@/types/product";
 
 const TestStoreVariations = () => {
   const { groups, values, loading } = useStoreVariations();
@@ -70,10 +71,11 @@ const TestStoreVariations = () => {
 
     console.log("Combinações geradas:", combinations);
 
+    const now = new Date().toISOString();
     const newVariations: ProductVariation[] = combinations.map(
       (combo, index) => ({
         id: `test-${Date.now()}-${index}`,
-        variation_type: "master",
+        product_id: 'test-product',
         color: combo[0] || undefined,
         size: combo[1] || undefined,
         stock: 0,
@@ -81,7 +83,8 @@ const TestStoreVariations = () => {
         is_active: true,
         sku: "",
         image_url: null,
-        image_file: null,
+        created_at: now,
+        updated_at: now,
       })
     );
 
