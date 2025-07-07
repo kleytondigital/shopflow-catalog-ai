@@ -1,18 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
-// Interfaces para variações da loja
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
 export interface StoreVariationGroup {
   id: string;
   store_id: string;
-  master_group_id?: string;
+  master_group_id: string;
   name: string;
   description?: string;
   attribute_key: string;
-  is_active: boolean;
   display_order: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,7 +20,7 @@ export interface StoreVariationValue {
   id: string;
   store_id: string;
   group_id: string;
-  master_value_id?: string;
+  master_value_id: string;
   value: string;
   hex_color?: string;
   display_order: number;
@@ -30,483 +29,280 @@ export interface StoreVariationValue {
   updated_at: string;
 }
 
-export const useStoreVariations = () => {
+export const useStoreVariations = (storeId?: string) => {
   const [groups, setGroups] = useState<StoreVariationGroup[]>([]);
-  const [values, setValues] = useState<StoreVariationValue[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [values, setValues] =useState<StoreVariationValue[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { profile } = useAuth();
 
-  const fetchGroups = async () => {
-    if (!profile?.store_id) return;
+  const fetchGroups = useCallback(async () => {
+    if (!storeId) {
+      setGroups([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
 
     try {
       const { data, error } = await supabase
-        .from("store_variation_groups")
-        .select("*")
-        .eq("store_id", profile.store_id)
-        .eq("is_active", true)
-        .order("display_order");
+        .from('store_variation_groups')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('is_active', true)
+        .order('display_order');
 
       if (error) throw error;
       setGroups(data || []);
-    } catch (error) {
-      console.error("Erro ao buscar grupos de variação da loja:", error);
+    } catch (err: any) {
+      console.error('Error fetching store variation groups:', err);
+      setError(err.message);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os grupos de variação",
+        description: "Falha ao carregar grupos de variação da loja",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [storeId, toast]);
 
-  const fetchValues = async () => {
-    if (!profile?.store_id) return;
+  const fetchValues = useCallback(async () => {
+    if (!storeId) {
+      setValues([]);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
-        .from("store_variation_values")
-        .select("*")
-        .eq("store_id", profile.store_id)
-        .eq("is_active", true)
-        .order("display_order");
+        .from('store_variation_values')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('is_active', true)
+        .order('display_order');
 
       if (error) throw error;
       setValues(data || []);
-    } catch (error) {
-      console.error("Erro ao buscar valores de variação da loja:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os valores de variação",
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      console.error('Error fetching store variation values:', err);
+      setError(err.message);
     }
-  };
+  }, [storeId]);
 
-  const createGroup = async (
-    groupData: Omit<
-      StoreVariationGroup,
-      "id" | "created_at" | "updated_at" | "store_id"
-    >
-  ) => {
-    if (!profile?.store_id) {
-      toast({
-        title: "Erro",
-        description: "Store ID não encontrado",
-        variant: "destructive",
-      });
-      return { success: false, error: "no_store_id" };
-    }
-
+  const createGroup = useCallback(async (groupData: Omit<StoreVariationGroup, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from("store_variation_groups")
-        .insert({
-          ...groupData,
-          store_id: profile.store_id,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erro ao criar grupo da loja:", error);
-
-        if (error.code === "23505") {
-          // Unique violation
-          toast({
-            title: "Erro",
-            description: `Já existe um grupo "${groupData.attribute_key}" nesta loja`,
-            variant: "destructive",
-          });
-          return { success: false, error: "duplicate_group" };
-        }
-
-        throw error;
-      }
-
-      setGroups((prev) =>
-        [...prev, data].sort((a, b) => a.display_order - b.display_order)
-      );
-
-      toast({
-        title: "Sucesso",
-        description: "Grupo criado com sucesso",
-      });
-
-      return { success: true, data };
-    } catch (error) {
-      console.error("Erro ao criar grupo da loja:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o grupo",
-        variant: "destructive",
-      });
-      return { success: false, error };
-    }
-  };
-
-  const createValue = async (
-    valueData: Omit<
-      StoreVariationValue,
-      "id" | "created_at" | "updated_at" | "store_id"
-    >
-  ) => {
-    if (!profile?.store_id) {
-      toast({
-        title: "Erro",
-        description: "Store ID não encontrado",
-        variant: "destructive",
-      });
-      return { success: false, error: "no_store_id" };
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("store_variation_values")
-        .insert({
-          ...valueData,
-          store_id: profile.store_id,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erro ao criar valor da loja:", error);
-
-        if (error.code === "23505") {
-          // Unique violation
-          toast({
-            title: "Erro",
-            description: `O valor "${valueData.value}" já existe neste grupo`,
-            variant: "destructive",
-          });
-          return { success: false, error: "duplicate_value" };
-        }
-
-        throw error;
-      }
-
-      setValues((prev) =>
-        [...prev, data].sort((a, b) => a.display_order - b.display_order)
-      );
-
-      toast({
-        title: "Sucesso",
-        description: "Valor criado com sucesso",
-      });
-
-      return { success: true, data };
-    } catch (error) {
-      console.error("Erro ao criar valor da loja:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o valor",
-        variant: "destructive",
-      });
-      return { success: false, error };
-    }
-  };
-
-  const updateGroup = async (
-    id: string,
-    groupData: Partial<StoreVariationGroup>
-  ) => {
-    try {
-      const { data, error } = await supabase
-        .from("store_variation_groups")
-        .update(groupData)
-        .eq("id", id)
-        .eq("store_id", profile?.store_id) // Garantir que só atualiza da própria loja
+        .from('store_variation_groups')
+        .insert(groupData)
         .select()
         .single();
 
       if (error) throw error;
 
-      setGroups((prev) =>
-        prev
-          .map((group) => (group.id === id ? data : group))
-          .sort((a, b) => a.display_order - b.display_order)
-      );
-
+      setGroups(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
+      
       toast({
-        title: "Sucesso",
-        description: "Grupo atualizado com sucesso",
+        title: "Grupo criado",
+        description: "Grupo de variação criado com sucesso",
       });
 
-      return { success: true, data };
-    } catch (error) {
-      console.error("Erro ao atualizar grupo da loja:", error);
+      return data;
+    } catch (error: any) {
+      console.error('Error creating variation group:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o grupo",
+        description: "Falha ao criar grupo de variação",
         variant: "destructive",
       });
-      return { success: false, error };
+      throw error;
     }
-  };
+  }, [toast]);
 
-  const updateValue = async (
-    id: string,
-    valueData: Partial<StoreVariationValue>
-  ) => {
+  const updateGroup = useCallback(async (groupId: string, updates: Partial<StoreVariationGroup>) => {
     try {
       const { data, error } = await supabase
-        .from("store_variation_values")
-        .update(valueData)
-        .eq("id", id)
-        .eq("store_id", profile?.store_id) // Garantir que só atualiza da própria loja
+        .from('store_variation_groups')
+        .update(updates)
+        .eq('id', groupId)
         .select()
         .single();
 
       if (error) throw error;
 
-      setValues((prev) =>
-        prev
-          .map((value) => (value.id === id ? data : value))
-          .sort((a, b) => a.display_order - b.display_order)
-      );
+      setGroups(prev => prev.map(group => 
+        group.id === groupId ? { ...group, ...data } : group
+      ));
 
       toast({
-        title: "Sucesso",
-        description: "Valor atualizado com sucesso",
+        title: "Grupo atualizado",
+        description: "Grupo de variação atualizado com sucesso",
       });
 
-      return { success: true, data };
-    } catch (error) {
-      console.error("Erro ao atualizar valor da loja:", error);
+      return data;
+    } catch (error: any) {
+      console.error('Error updating variation group:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o valor",
+        description: "Falha ao atualizar grupo de variação",
         variant: "destructive",
       });
-      return { success: false, error };
+      throw error;
     }
-  };
+  }, [toast]);
 
-  const deleteGroup = async (id: string) => {
+  const deleteGroup = useCallback(async (groupId: string) => {
     try {
       const { error } = await supabase
-        .from("store_variation_groups")
+        .from('store_variation_groups')
         .delete()
-        .eq("id", id)
-        .eq("store_id", profile?.store_id); // Garantir que só deleta da própria loja
+        .eq('id', groupId);
 
       if (error) throw error;
 
-      setGroups((prev) => prev.filter((group) => group.id !== id));
-      setValues((prev) => prev.filter((value) => value.group_id !== id));
+      setGroups(prev => prev.filter(group => group.id !== groupId));
 
       toast({
-        title: "Sucesso",
-        description: "Grupo removido com sucesso",
+        title: "Grupo removido",
+        description: "Grupo de variação removido com sucesso",
       });
-
-      return { success: true };
-    } catch (error) {
-      console.error("Erro ao deletar grupo da loja:", error);
+    } catch (error: any) {
+      console.error('Error deleting variation group:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível remover o grupo",
+        description: "Falha ao remover grupo de variação",
         variant: "destructive",
       });
-      return { success: false, error };
+      throw error;
     }
-  };
+  }, [toast]);
 
-  const deleteValue = async (id: string) => {
+  const createValue = useCallback(async (valueData: Omit<StoreVariationValue, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('store_variation_values')
+        .insert(valueData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setValues(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
+      
+      toast({
+        title: "Valor criado",
+        description: "Valor de variação criado com sucesso",
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Error creating variation value:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao criar valor de variação",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }, [toast]);
+
+  const updateValue = useCallback(async (valueId: string, updates: Partial<StoreVariationValue>) => {
+    try {
+      const { data, error } = await supabase
+        .from('store_variation_values')
+        .update(updates)
+        .eq('id', valueId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setValues(prev => prev.map(value => 
+        value.id === valueId ? { ...value, ...data } : value
+      ));
+
+      toast({
+        title: "Valor atualizado",
+        description: "Valor de variação atualizado com sucesso",
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Error updating variation value:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar valor de variação",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }, [toast]);
+
+  const deleteValue = useCallback(async (valueId: string) => {
     try {
       const { error } = await supabase
-        .from("store_variation_values")
+        .from('store_variation_values')
         .delete()
-        .eq("id", id)
-        .eq("store_id", profile?.store_id); // Garantir que só deleta da própria loja
+        .eq('id', valueId);
 
       if (error) throw error;
 
-      setValues((prev) => prev.filter((value) => value.id !== id));
+      setValues(prev => prev.filter(value => value.id !== valueId));
 
       toast({
-        title: "Sucesso",
-        description: "Valor removido com sucesso",
+        title: "Valor removido",
+        description: "Valor de variação removido com sucesso",
       });
-
-      return { success: true };
-    } catch (error) {
-      console.error("Erro ao deletar valor da loja:", error);
+    } catch (error: any) {
+      console.error('Error deleting variation value:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível remover o valor",
+        description: "Falha ao remover valor de variação",
         variant: "destructive",
       });
-      return { success: false, error };
+      throw error;
     }
-  };
+  }, [toast]);
 
-  const getValuesByGroup = (groupId: string) => {
-    return values.filter(
-      (value) => value.group_id === groupId && value.is_active
-    );
-  };
-
-  // Função para inicializar variações da loja baseadas nas globais
-  const initializeFromGlobalVariations = async () => {
-    if (!profile?.store_id) return { success: false, error: "no_store_id" };
+  // Fetch benefits instead of store_benefits
+  const fetchStoreBenefits = useCallback(async () => {
+    if (!storeId) return [];
 
     try {
-      // Buscar grupos globais
-      const { data: globalGroups, error: groupsError } = await supabase
-        .from("variation_master_groups")
-        .select("*")
-        .eq("is_active", true);
+      const { data, error } = await supabase
+        .from('system_benefits')
+        .select('*')
+        .eq('is_active', true);
 
-      if (groupsError) throw groupsError;
-
-      // Buscar valores globais
-      const { data: globalValues, error: valuesError } = await supabase
-        .from("variation_master_values")
-        .select("*")
-        .eq("is_active", true);
-
-      if (valuesError) throw valuesError;
-
-      // Criar grupos da loja
-      for (const globalGroup of globalGroups || []) {
-        await createGroup({
-          master_group_id: globalGroup.id,
-          name: globalGroup.name,
-          description: globalGroup.description,
-          attribute_key: globalGroup.attribute_key,
-          is_active: true,
-          display_order: globalGroup.display_order,
-        });
-      }
-
-      // Aguardar um pouco para os grupos serem criados
-      await fetchGroups();
-
-      // Criar valores da loja
-      for (const globalValue of globalValues || []) {
-        const storeGroup = groups.find(
-          (g) => g.master_group_id === globalValue.group_id
-        );
-        if (storeGroup) {
-          await createValue({
-            group_id: storeGroup.id,
-            master_value_id: globalValue.id,
-            value: globalValue.value,
-            hex_color: globalValue.hex_color,
-            is_active: true,
-            display_order: globalValue.display_order,
-          });
-        }
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Variações inicializadas com base nos padrões globais",
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error("Erro ao inicializar variações da loja:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível inicializar as variações",
-        variant: "destructive",
-      });
-      return { success: false, error };
+      if (error) throw error;
+      return data || [];
+    } catch (err: any) {
+      console.error('Error fetching store benefits:', err);
+      return [];
     }
-  };
+  }, [storeId]);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!profile?.store_id) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      await Promise.all([fetchGroups(), fetchValues()]);
-      setLoading(false);
-    };
-
-    loadData();
-  }, [profile?.store_id]);
-
-  // Auto-initialization effect
-  useEffect(() => {
-    if (
-      profile?.role === "store_admin" &&
-      profile?.store_id &&
-      loading &&
-      !loading &&
-      (groups.length === 0 || values.length === 0)
-    ) {
-      initializeFromGlobalVariations();
-    }
-  }, [
-    profile?.role,
-    profile?.store_id,
-    loading,
-    groups.length,
-    values.length,
-    initializeFromGlobalVariations,
-  ]);
-
-  const addStoreBenefit = useCallback(
-    async (benefitData: any) => {
-      if (!benefitData.message || !benefitData.type || !profile?.store_id) {
-        toast({
-          title: "Erro de validação",
-          description: "Dados inválidos para criação do benefício",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase.from("store_benefits").insert({
-        store_id: profile.store_id,
-        benefit_id: benefitData.id,
-        message: benefitData.message,
-        is_active: true,
-        type: benefitData.type,
-        icon: benefitData.icon,
-        order_index: benefitData.order_index || 0,
-      });
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao adicionar benefício",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Sucesso!",
-        description: "Benefício adicionado com sucesso",
-      });
-
-      // Recarregar benefits se houver hook para isso
-      // refetchBenefits?.();
-    },
-    [profile?.store_id, toast]
-  );
+    fetchGroups();
+    fetchValues();
+  }, [fetchGroups, fetchValues]);
 
   return {
-    groups: groups.filter((g) => g.is_active),
+    groups,
     values,
     loading,
+    error,
+    fetchGroups,
+    fetchValues,
     createGroup,
     updateGroup,
     deleteGroup,
     createValue,
     updateValue,
     deleteValue,
-    getValuesByGroup,
-    initializeFromGlobalVariations,
-    refetch: () => Promise.all([fetchGroups(), fetchValues()]),
-    addStoreBenefit,
+    refetch: () => {
+      fetchGroups();
+      fetchValues();
+    }
   };
 };

@@ -1,15 +1,13 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { CurrencyInput } from '@/components/ui/currency-input';
-import { Trash2, Plus, Image } from 'lucide-react';
-import { ProductVariation } from '@/types/variation';
-import VariationImageUpload from './VariationImageUpload';
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Edit } from "lucide-react";
+import { ProductVariation } from "@/types/product";
 
 interface ProductVariationsManagerProps {
   variations: ProductVariation[];
@@ -18,128 +16,91 @@ interface ProductVariationsManagerProps {
 
 const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
   variations,
-  onChange
+  onChange,
 }) => {
-  const [showForm, setShowForm] = useState(false);
-
-  console.log('🎨 VARIATIONS MANAGER - Renderizando:', {
-    variationsCount: variations.length,
-    showForm
+  const [isAddingVariation, setIsAddingVariation] = useState(false);
+  const [newVariation, setNewVariation] = useState({
+    color: "",
+    size: "",
+    sku: "",
+    stock: 0,
+    price_adjustment: 0,
+    is_active: true,
+    image_url: null,
   });
 
   const addVariation = () => {
-    const newVariation: ProductVariation = {
-      color: '',
-      size: '',
-      sku: '',
+    const variation: ProductVariation = {
+      id: `temp-${Date.now()}`,
+      product_id: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...newVariation,
+    };
+
+    onChange([...variations, variation]);
+    setNewVariation({
+      color: "",
+      size: "",
+      sku: "",
       stock: 0,
       price_adjustment: 0,
       is_active: true,
-      image_url: null
-    };
-    
-    onChange([...variations, newVariation]);
-    setShowForm(true);
+      image_url: null,
+    });
+    setIsAddingVariation(false);
   };
 
-  const updateVariation = (index: number, updates: Partial<ProductVariation>) => {
-    const updatedVariations = variations.map((variation, i) => 
-      i === index ? { ...variation, ...updates } : variation
+  const removeVariation = (index: number) => {
+    const updatedVariations = variations.filter((_, i) => i !== index);
+    onChange(updatedVariations);
+  };
+
+  const updateVariation = (index: number, field: keyof ProductVariation, value: any) => {
+    const updatedVariations = variations.map((variation, i) =>
+      i === index ? { ...variation, [field]: value } : variation
     );
     onChange(updatedVariations);
   };
 
-  const removeVariation = (index: number) => {
-    const variation = variations[index];
-    
-    // Revogar blob URL se existir
-    if (variation.image_url && variation.image_url.startsWith('blob:')) {
-      URL.revokeObjectURL(variation.image_url);
-    }
-    
-    const updatedVariations = variations.filter((_, i) => i !== index);
-    onChange(updatedVariations);
-    if (updatedVariations.length === 0) {
-      setShowForm(false);
-    }
-  };
-
-  const handleImageUpload = (index: number, file: File) => {
-    console.log('📷 VARIATIONS MANAGER - Upload de imagem para variação:', index);
-    console.log('📁 VARIATIONS MANAGER - Arquivo:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-    
-    // Criar URL temporária para preview
-    const previewUrl = URL.createObjectURL(file);
-    console.log('🔗 VARIATIONS MANAGER - Preview URL criada:', previewUrl);
-    
-    updateVariation(index, { 
-      image_file: file,
-      image_url: previewUrl
-    });
-  };
-
-  const handleImageRemove = (index: number) => {
-    console.log('🗑 VARIATIONS MANAGER - Removendo imagem da variação:', index);
-    const variation = variations[index];
-    
-    // Revogar blob URL se existir
-    if (variation.image_url && variation.image_url.startsWith('blob:')) {
-      URL.revokeObjectURL(variation.image_url);
-    }
-    
-    updateVariation(index, { 
-      image_file: undefined,
-      image_url: null
-    });
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Variações do Produto</h3>
-          <p className="text-sm text-muted-foreground">
-            Adicione diferentes opções como cores, tamanhos ou materiais
-          </p>
-        </div>
-        <Button onClick={addVariation} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Variação
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Variações do Produto</CardTitle>
+        <Button
+          onClick={() => setIsAddingVariation(true)}
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar Variação
         </Button>
-      </div>
-
-      {variations.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Image className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="font-medium text-gray-900 mb-1">Nenhuma variação criada</h3>
-            <p className="text-sm text-gray-500 mb-4 text-center">
-              Variações permitem oferecer o mesmo produto em diferentes opções
-            </p>
-            <Button onClick={addVariation} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar primeira variação
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {variations.map((variation, index) => (
-            <Card key={`variation-${index}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    Variação {index + 1}
-                    {!variation.is_active && (
-                      <Badge variant="secondary" className="ml-2">Inativa</Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {variations.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>Nenhuma variação adicionada</p>
+            <p className="text-sm">Clique em "Adicionar Variação" para começar</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {variations.map((variation, index) => (
+              <div
+                key={variation.id || index}
+                className="border rounded-lg p-4 space-y-3"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-2">
+                    {variation.color && (
+                      <Badge variant="outline">Cor: {variation.color}</Badge>
                     )}
-                  </CardTitle>
+                    {variation.size && (
+                      <Badge variant="outline">Tamanho: {variation.size}</Badge>
+                    )}
+                    {!variation.is_active && (
+                      <Badge variant="destructive">Inativo</Badge>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -149,100 +110,168 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor={`variation-color-${index}`}>Cor</Label>
+                    <Label htmlFor={`color-${index}`}>Cor</Label>
                     <Input
-                      id={`variation-color-${index}`}
-                      value={variation.color || ''}
-                      onChange={(e) => updateVariation(index, { color: e.target.value })}
-                      placeholder="Ex: Azul, Vermelho"
+                      id={`color-${index}`}
+                      value={variation.color || ""}
+                      onChange={(e) => updateVariation(index, "color", e.target.value)}
+                      placeholder="Ex: Azul"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`variation-size-${index}`}>Tamanho</Label>
+                    <Label htmlFor={`size-${index}`}>Tamanho</Label>
                     <Input
-                      id={`variation-size-${index}`}
-                      value={variation.size || ''}
-                      onChange={(e) => updateVariation(index, { size: e.target.value })}
-                      placeholder="Ex: P, M, G, GG"
+                      id={`size-${index}`}
+                      value={variation.size || ""}
+                      onChange={(e) => updateVariation(index, "size", e.target.value)}
+                      placeholder="Ex: M"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`variation-sku-${index}`}>SKU</Label>
+                    <Label htmlFor={`sku-${index}`}>SKU</Label>
                     <Input
-                      id={`variation-sku-${index}`}
-                      value={variation.sku || ''}
-                      onChange={(e) => updateVariation(index, { sku: e.target.value })}
+                      id={`sku-${index}`}
+                      value={variation.sku || ""}
+                      onChange={(e) => updateVariation(index, "sku", e.target.value)}
                       placeholder="Código único"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor={`variation-stock-${index}`}>Estoque</Label>
+                    <Label htmlFor={`stock-${index}`}>Estoque</Label>
                     <Input
-                      id={`variation-stock-${index}`}
+                      id={`stock-${index}`}
                       type="number"
                       min="0"
                       value={variation.stock}
-                      onChange={(e) => updateVariation(index, { stock: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        updateVariation(index, "stock", parseInt(e.target.value) || 0)
+                      }
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`variation-price-adjustment-${index}`}>Ajuste de Preço</Label>
-                    <CurrencyInput
+                    <Label htmlFor={`price-${index}`}>Ajuste de Preço (R$)</Label>
+                    <Input
+                      id={`price-${index}`}
+                      type="number"
+                      step="0.01"
                       value={variation.price_adjustment}
-                      onChange={(value) => updateVariation(index, { price_adjustment: value })}
+                      onChange={(e) =>
+                        updateVariation(
+                          index,
+                          "price_adjustment",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Valor a ser somado/subtraído do preço base
-                    </p>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor={`variation-active-${index}`}>Variação Ativa</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Variações inativas não aparecem no catálogo
-                      </p>
-                    </div>
+                  <div className="flex items-center space-x-2 mt-6">
                     <Switch
-                      id={`variation-active-${index}`}
+                      id={`active-${index}`}
                       checked={variation.is_active}
-                      onCheckedChange={(checked) => updateVariation(index, { is_active: checked })}
+                      onCheckedChange={(checked) =>
+                        updateVariation(index, "is_active", checked)
+                      }
                     />
+                    <Label htmlFor={`active-${index}`}>Ativo</Label>
                   </div>
-
-                  <VariationImageUpload
-                    imageUrl={variation.image_url}
-                    onImageUpload={(file) => handleImageUpload(index, file)}
-                    onImageRemove={() => handleImageRemove(index)}
-                  />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
 
-      {variations.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">💡 Dicas para variações:</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Use nomes descritivos para cores e tamanhos</li>
-            <li>• O estoque da variação é independente do estoque principal</li>
-            <li>• Ajustes de preço podem ser positivos ou negativos</li>
-            <li>• Cada variação pode ter sua própria imagem</li>
-          </ul>
-        </div>
-      )}
-    </div>
+        {isAddingVariation && (
+          <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+            <h4 className="font-medium">Nova Variação</h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="new-color">Cor</Label>
+                <Input
+                  id="new-color"
+                  value={newVariation.color}
+                  onChange={(e) =>
+                    setNewVariation({ ...newVariation, color: e.target.value })
+                  }
+                  placeholder="Ex: Azul"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-size">Tamanho</Label>
+                <Input
+                  id="new-size"
+                  value={newVariation.size}
+                  onChange={(e) =>
+                    setNewVariation({ ...newVariation, size: e.target.value })
+                  }
+                  placeholder="Ex: M"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-sku">SKU</Label>
+                <Input
+                  id="new-sku"
+                  value={newVariation.sku}
+                  onChange={(e) =>
+                    setNewVariation({ ...newVariation, sku: e.target.value })
+                  }
+                  placeholder="Código único"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="new-stock">Estoque</Label>
+                <Input
+                  id="new-stock"
+                  type="number"
+                  min="0"
+                  value={newVariation.stock}
+                  onChange={(e) =>
+                    setNewVariation({
+                      ...newVariation,
+                      stock: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-price">Ajuste de Preço (R$)</Label>
+                <Input
+                  id="new-price"
+                  type="number"
+                  step="0.01"
+                  value={newVariation.price_adjustment}
+                  onChange={(e) =>
+                    setNewVariation({
+                      ...newVariation,
+                      price_adjustment: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsAddingVariation(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={addVariation}>Adicionar</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

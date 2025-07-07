@@ -1,25 +1,17 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Wand2, TrendingDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Trash2, Eye, Sparkles } from "lucide-react";
 import { Product } from "@/types/product";
-import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useProductImages } from "@/hooks/useProductImages";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ProductListProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
-  onGenerateDescription: (id: string) => void;
+  onGenerateDescription?: (productId: string) => void;
 }
 
 const ProductList: React.FC<ProductListProps> = ({
@@ -29,279 +21,144 @@ const ProductList: React.FC<ProductListProps> = ({
   onGenerateDescription,
 }) => {
   const { profile } = useAuth();
-  const [modalProductId, setModalProductId] = useState<string | null>(null);
-  const [refreshFlag, setRefreshFlag] = useState(0);
 
-  // Componente para exibir níveis de preço de um produto
-  const ProductPriceTiers = ({ product }: { product: Product }) => {
-    const { tiers, loading } = useProductPriceTiers(
-      product.id,
-      profile?.store_id
-    );
-
-    if (loading || !tiers || tiers.length <= 1) {
-      return null;
-    }
-
-    // Filtrar apenas níveis ativos (exceto varejo)
-    const activeTiers = tiers.filter(
-      (tier) => tier.tier_order > 1 && tier.is_active
-    );
-
-    if (activeTiers.length === 0) {
-      return null;
-    }
-
-    // Calcular desconto máximo
-    const maxDiscountTier = activeTiers.reduce(
-      (max, tier) => {
-        const savingsAmount = product.retail_price - tier.price;
-        const savingsPercentage = (savingsAmount / product.retail_price) * 100;
-        return savingsPercentage > max.percentage
-          ? { tier, percentage: savingsPercentage }
-          : max;
-      },
-      { tier: activeTiers[0], percentage: 0 }
-    );
-
-    return (
-      <div className="space-y-1">
-        <div className="flex items-center gap-1 text-xs text-gray-600">
-          <TrendingDown className="h-3 w-3" />
-          <span className="font-medium">Níveis Progressivos:</span>
-          <Badge
-            variant="outline"
-            className="text-xs bg-orange-100 text-orange-700"
-          >
-            Descontos até {maxDiscountTier.percentage.toFixed(0)}%
-          </Badge>
-        </div>
-        {activeTiers.map((tier) => {
-          const savingsAmount = product.retail_price - tier.price;
-          const savingsPercentage =
-            (savingsAmount / product.retail_price) * 100;
-
-          return (
-            <div
-              key={tier.id}
-              className="flex items-center justify-between text-xs"
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-gray-700">{tier.tier_name}:</span>
-                <Badge variant="outline" className="text-xs">
-                  {tier.min_quantity}+ un
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-semibold text-green-700">
-                  R$ {tier.price.toFixed(2).replace(".", ",")}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-green-100 text-green-700"
-                >
-                  -{savingsPercentage.toFixed(0)}%
-                </Badge>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price);
   };
-  if (!products || products.length === 0) {
+
+  const getStockStatus = (stock: number, threshold: number = 5) => {
+    if (stock === 0) return { label: "Sem estoque", color: "destructive" };
+    if (stock <= threshold) return { label: "Estoque baixo", color: "warning" };
+    return { label: "Em estoque", color: "success" };
+  };
+
+  if (products.length === 0) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">
-            Nenhum produto cadastrado ainda.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Clique em "Novo Produto" para começar.
-          </p>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nenhum produto encontrado
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Comece criando seu primeiro produto para aparecer aqui.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => {
-        const showSetMainImage = !product.image_url;
+        const stockStatus = getStockStatus(product.stock, product.stock_alert_threshold);
+        
         return (
-          <Card key={product.id + refreshFlag} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg line-clamp-2">
+          <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <div className="aspect-square relative overflow-hidden bg-gray-100">
+              {product.image_url ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Eye className="mx-auto h-12 w-12 mb-2" />
+                    <p className="text-sm">Sem imagem</p>
+                  </div>
+                </div>
+              )}
+              {product.is_featured && (
+                <Badge className="absolute top-2 right-2 bg-yellow-500">
+                  Destaque
+                </Badge>
+              )}
+            </div>
+            
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-semibold text-lg line-clamp-2">
                     {product.name}
-                  </CardTitle>
+                  </h3>
+                  {product.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+                      {product.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-primary">
+                      {formatPrice(product.retail_price)}
+                    </span>
+                    {product.wholesale_price && (
+                      <span className="text-sm text-gray-500">
+                        Atacado: {formatPrice(product.wholesale_price)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <Badge variant={stockStatus.color as any}>
+                      {stockStatus.label}
+                    </Badge>
+                    <span className="text-sm text-gray-500">
+                      Estoque: {product.stock}
+                    </span>
+                  </div>
+
                   {product.category && (
-                    <Badge variant="outline" className="mt-2">
+                    <Badge variant="outline" className="text-xs">
                       {product.category}
                     </Badge>
                   )}
                 </div>
-                <Badge variant={product.is_active ? "default" : "secondary"}>
-                  {product.is_active ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {product.image_url && (
-                <div className="aspect-video overflow-hidden rounded-md bg-muted">
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
 
-              {/* Botão para definir imagem principal se não houver image_url */}
-              {showSetMainImage && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModalProductId(product.id)}
-                  className="w-full mb-2"
-                >
-                  Definir imagem principal
-                </Button>
-              )}
-
-              {product.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {product.description}
-                </p>
-              )}
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Varejo:</span>
-                  <span className="font-semibold">
-                    R${" "}
-                    {product.retail_price.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-
-                {/* Níveis de preço progressivos */}
-                <ProductPriceTiers product={product} />
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Estoque:</span>
-                  <Badge
-                    variant={product.stock > 0 ? "default" : "destructive"}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(product)}
+                    className="flex-1"
                   >
-                    {product.stock} unidades
-                  </Badge>
+                    <Edit className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                  
+                  {onGenerateDescription && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onGenerateDescription(product.id)}
+                      title="Gerar descrição com IA"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDelete(product.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-
-                {product.variations && product.variations.length > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Variações:</span>
-                    <Badge variant="outline">
-                      {product.variations.length} opções
-                    </Badge>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(product)}
-                  className="flex-1"
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Editar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onGenerateDescription(product.id)}
-                >
-                  <Wand2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDelete(product.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             </CardContent>
-
-            {/* Modal de seleção de imagem principal */}
-            {modalProductId === product.id && (
-              <SelectMainImageModal
-                productId={product.id}
-                productName={product.name}
-                onClose={() => setModalProductId(null)}
-                onImageSelected={async (imageUrl) => {
-                  await supabase
-                    .from("products")
-                    .update({ image_url: imageUrl })
-                    .eq("id", product.id);
-                  setModalProductId(null);
-                  setRefreshFlag((f) => f + 1); // Forçar re-render
-                }}
-              />
-            )}
           </Card>
         );
       })}
     </div>
-  );
-};
-
-// Modal de seleção de imagem principal
-const SelectMainImageModal = ({
-  productId,
-  productName,
-  onClose,
-  onImageSelected,
-}) => {
-  const { images, loading } = useProductImages(productId);
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full">
-        <DialogHeader>
-          <DialogTitle>
-            Selecionar imagem principal para {productName}
-          </DialogTitle>
-        </DialogHeader>
-        {loading ? (
-          <div className="text-center py-8">Carregando imagens...</div>
-        ) : images.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhuma imagem encontrada para este produto.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {images.map((img) => (
-              <button
-                key={img.id}
-                className="aspect-square rounded border-2 border-transparent hover:border-primary focus:border-primary transition-all overflow-hidden"
-                onClick={() => onImageSelected(img.image_url)}
-                type="button"
-              >
-                <img
-                  src={img.image_url}
-                  alt="Imagem do produto"
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 };
 

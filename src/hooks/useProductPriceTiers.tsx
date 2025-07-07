@@ -142,6 +142,45 @@ export const useProductPriceTiers = (productId?: string) => {
     }
   }, [toast]);
 
+  const createDefaultTiers = useCallback(async (retailPrice: number) => {
+    if (!productId) return;
+
+    const defaultTiers = [
+      {
+        product_id: productId,
+        tier_name: 'Atacado',
+        tier_type: 'wholesale',
+        min_quantity: 10,
+        price: retailPrice * 0.9,
+        tier_order: 2,
+        is_active: true
+      }
+    ];
+
+    try {
+      const { data, error } = await supabase
+        .from('product_price_tiers')
+        .insert(defaultTiers)
+        .select();
+
+      if (error) throw error;
+
+      setTiers(prev => [...prev, ...data].sort((a, b) => a.tier_order - b.tier_order));
+      
+      toast({
+        title: "Níveis criados",
+        description: "Níveis de preço padrão foram criados",
+      });
+    } catch (err: any) {
+      console.error('Error creating default tiers:', err);
+      toast({
+        title: "Erro",
+        description: "Falha ao criar níveis padrão",
+        variant: "destructive",
+      });
+    }
+  }, [productId, toast]);
+
   useEffect(() => {
     fetchTiers();
   }, [fetchTiers]);
@@ -149,10 +188,11 @@ export const useProductPriceTiers = (productId?: string) => {
   return {
     tiers,
     loading,
-    error,
+    error: error || '',
     fetchTiers,
     createTier,
     updateTier,
     deleteTier,
+    createDefaultTiers
   };
 };

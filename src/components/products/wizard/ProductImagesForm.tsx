@@ -16,8 +16,8 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
 }) => {
   const { draftImages, addDraftImages, removeDraftImage, uploadAllImages } = useDraftImages();
 
-  const handleImageAdd = (files: File[]) => {
-    addDraftImages(files);
+  const handleImageAdd = (file: File) => {
+    addDraftImages([file]);
   };
 
   const handleImageRemove = (imageId: string) => {
