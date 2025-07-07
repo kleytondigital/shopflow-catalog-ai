@@ -1,9 +1,11 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ProductFormData {
   id?: string;
+  store_id?: string;
   name: string;
   description: string;
   category: string;
@@ -27,6 +29,7 @@ interface Step {
   id: number;
   label: string;
   description: string;
+  title: string;
 }
 
 export const useProductFormWizard = (storeId?: string) => {
@@ -51,15 +54,17 @@ export const useProductFormWizard = (storeId?: string) => {
     price_tiers: [],
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPriceTiers, setIsLoadingPriceTiers] = useState(false);
+  const [productId, setProductId] = useState<string>();
   const { toast } = useToast();
 
   const steps: Step[] = [
-    { id: 0, label: "Básico", description: "Informações básicas do produto" },
-    { id: 1, label: "Preços", description: "Defina preços e estoque" },
-    { id: 2, label: "Imagens", description: "Adicione imagens do produto" },
-    { id: 3, label: "Variações", description: "Gerencie as variações" },
-    { id: 4, label: "SEO", description: "Otimização para motores de busca" },
-    { id: 5, label: "Avançado", description: "Configurações avançadas" },
+    { id: 0, label: "Básico", description: "Informações básicas do produto", title: "Informações Básicas" },
+    { id: 1, label: "Preços", description: "Defina preços e estoque", title: "Preços e Estoque" },
+    { id: 2, label: "Imagens", description: "Adicione imagens do produto", title: "Imagens" },
+    { id: 3, label: "Variações", description: "Gerencie as variações", title: "Variações" },
+    { id: 4, label: "SEO", description: "Otimização para motores de busca", title: "SEO" },
+    { id: 5, label: "Avançado", description: "Configurações avançadas", title: "Configurações Avançadas" },
   ];
 
   const totalSteps = steps.length;
@@ -101,11 +106,13 @@ export const useProductFormWizard = (storeId?: string) => {
       price_tiers: [],
     });
     setCurrentStep(0);
+    setProductId(undefined);
   };
 
-  const loadProductData = (product: any) => {
+  const loadProductForEditing = useCallback((product: any) => {
     setFormData({
       id: product.id,
+      store_id: product.store_id,
       name: product.name || "",
       description: product.description || "",
       category: product.category || "",
@@ -124,7 +131,8 @@ export const useProductFormWizard = (storeId?: string) => {
       variations: product.variations || [],
       price_tiers: product.price_tiers || [],
     });
-  };
+    setProductId(product.id);
+  }, []);
 
   const saveProduct = useCallback(async (productData: any) => {
     if (!storeId) {
@@ -132,6 +140,8 @@ export const useProductFormWizard = (storeId?: string) => {
     }
 
     try {
+      setIsSaving(true);
+      
       // Save product using supabase client
       const { data, error } = await supabase
         .from("products")
@@ -141,12 +151,19 @@ export const useProductFormWizard = (storeId?: string) => {
 
       if (error) throw error;
 
+      setProductId(data.id);
       return data;
     } catch (error) {
       console.error("Error saving product:", error);
       throw error;
+    } finally {
+      setIsSaving(false);
     }
   }, [storeId]);
+
+  const cancelAndCleanup = useCallback(() => {
+    resetForm();
+  }, []);
 
   const canProceed = () => {
     if (currentStep === 0) {
@@ -164,13 +181,16 @@ export const useProductFormWizard = (storeId?: string) => {
     formData,
     isSaving,
     totalSteps,
+    isLoadingPriceTiers,
+    productId,
     updateFormData,
     nextStep,
     prevStep,
     goToStep,
     saveProduct,
     resetForm,
-    loadProductData,
+    loadProductForEditing,
+    cancelAndCleanup,
     canProceed,
   };
 };

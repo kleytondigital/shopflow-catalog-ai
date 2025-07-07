@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import {
   Dialog,
@@ -11,6 +12,13 @@ import { useProductVariations } from "@/hooks/useProductVariations";
 import ImprovedWizardStepNavigation from "./wizard/ImprovedWizardStepNavigation";
 import WizardStepContent from "./wizard/WizardStepContent";
 import ImprovedWizardActionButtons from "./wizard/ImprovedWizardActionButtons";
+
+interface WizardStep {
+  id: number;
+  label: string;
+  title: string;
+  description: string;
+}
 
 interface ProductFormWizardProps {
   isOpen: boolean;
@@ -34,7 +42,7 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
   const {
     currentStep,
     formData,
-    steps,
+    steps: originalSteps,
     isSaving,
     updateFormData,
     nextStep,
@@ -43,7 +51,6 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
     saveProduct,
     resetForm,
     canProceed,
-    isLoadingPriceTiers,
     loadProductForEditing,
     productId,
     cancelAndCleanup,
@@ -53,6 +60,12 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
   const { variations, loading: variationsLoading } = useProductVariations(
     editingProduct?.id
   );
+
+  // Convert steps to match WizardStep interface
+  const steps: WizardStep[] = originalSteps.map(step => ({
+    ...step,
+    title: step.title || step.label
+  }));
 
   // Carregar dados completos do produto para edição
   useEffect(() => {
@@ -73,146 +86,89 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
     }
   }, [editingProduct?.id, isOpen, loadProductForEditing, loadExistingImages]);
 
-  // Carregar variações existentes
-  useEffect(() => {
-    if (variations && variations.length > 0 && !variationsLoading) {
-      console.log(
-        "🎨 WIZARD - Carregando variações existentes:",
-        variations.length
-      );
-      const formattedVariations = variations.map((variation) => ({
-        id: variation.id,
-        color: variation.color || "",
-        size: variation.size || "",
-        sku: variation.sku || "",
-        stock: variation.stock,
-        price_adjustment: variation.price_adjustment,
-        is_active: variation.is_active,
-        image_url: variation.image_url || "",
-      }));
-
-      updateFormData({ variations: formattedVariations });
-    }
-  }, [variations, variationsLoading, updateFormData]);
-
-  // Limpar form ao fechar
+  // Limpar dados ao fechar
   useEffect(() => {
     if (!isOpen) {
-      console.log("🧹 WIZARD - Dialog fechado, limpando dados");
-      resetForm();
+      console.log("🧹 WIZARD - Limpando dados ao fechar");
       clearDraftImages();
+      resetForm();
     }
-  }, [isOpen, resetForm, clearDraftImages]);
+  }, [isOpen, clearDraftImages, resetForm]);
+
+  // Carregar variações existentes quando disponível
+  useEffect(() => {
+    if (variations.length > 0 && editingProduct) {
+      console.log(
+        "🎨 WIZARD - Sincronizando variações carregadas:",
+        variations.length
+      );
+      updateFormData({ variations });
+    }
+  }, [variations, editingProduct, updateFormData]);
 
   const handleSave = async () => {
-    console.log("💾 WIZARD - Tentativa de salvamento");
-
     try {
-      const productId = await saveProduct(editingProduct?.id);
-      console.log("📋 WIZARD - Resultado do salvamento:", productId);
+      console.log("💾 WIZARD - Salvando produto:", formData);
 
-      if (productId) {
-        console.log("✅ WIZARD - Salvamento bem-sucedido");
-        if (onSuccess) {
-          onSuccess();
-        }
-        onClose();
-      } else {
-        console.error("❌ WIZARD - Falha no salvamento");
-      }
+      // Usar o hook useSimpleProductWizard para salvar
+      const productFormData = {
+        ...formData,
+        store_id: editingProduct?.store_id || "",
+      };
+
+      const savedProduct = await saveProduct(productFormData);
+      
+      console.log("✅ WIZARD - Produto salvo:", savedProduct);
+      
+      onSuccess?.();
+      onClose();
+      
     } catch (error) {
-      console.error("💥 WIZARD - Erro durante salvamento:", error);
+      console.error("❌ WIZARD - Erro ao salvar:", error);
     }
   };
 
   const handleClose = () => {
-    console.log("❌ WIZARD - Fechando wizard");
     cancelAndCleanup();
     onClose();
   };
 
-  const isLastStep = currentStep === steps.length - 1;
-
-  // Calcular steps completados baseado na validação
-  const completedSteps: number[] = [];
-
-  // Step 0: Básico - precisa de nome e preço
-  if (formData.name?.trim() && formData.retail_price > 0) {
-    completedSteps.push(0);
-  }
-
-  // Step 1: Preços - precisa de preço válido e estoque >= 0
-  if (formData.retail_price > 0 && formData.stock >= 0) {
-    completedSteps.push(1);
-  }
-
-  // Steps 2-5 sempre podem ser marcados como completados (opcionais)
-  completedSteps.push(2, 3, 4, 5);
-
-  console.log("📊 WIZARD - Status atual:", {
-    currentStep,
-    canProceed,
-    completedSteps,
-    isLastStep,
-    formDataValid: {
-      name: !!formData.name?.trim(),
-      price: formData.retail_price > 0,
-      stock: formData.stock >= 0,
-    },
-  });
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl w-full max-h-[95vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="text-xl font-semibold">
-            {editingProduct ? `Editar: ${editingProduct.name}` : "Novo Produto"}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>
+            {editingProduct ? "Editar Produto" : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Navegação dos Steps */}
           <ImprovedWizardStepNavigation
             steps={steps}
             currentStep={currentStep}
             onStepClick={goToStep}
-            completedSteps={completedSteps.filter((step) => step < currentStep)}
           />
 
-          {/* Conteúdo do Step */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {isLoadingPriceTiers && editingProduct ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">
-                      Carregando configurações de preço...
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <WizardStepContent
-                  currentStep={currentStep}
-                  formData={formData}
-                  updateFormData={updateFormData}
-                  productId={productId || editingProduct?.id}
-                />
-              )}
-            </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <WizardStepContent
+              currentStep={currentStep}
+              formData={formData}
+              updateFormData={updateFormData}
+              productId={productId || editingProduct?.id}
+            />
           </div>
 
-          {/* Botões de Ação */}
           <ImprovedWizardActionButtons
             currentStep={currentStep}
             totalSteps={steps.length}
-            canProceed={canProceed && !isLoadingPriceTiers}
+            canProceed={canProceed()}
             isSaving={isSaving}
             onPrevious={prevStep}
             onNext={nextStep}
             onSave={handleSave}
             onCancel={handleClose}
-            isLastStep={isLastStep}
           />
         </div>
       </DialogContent>

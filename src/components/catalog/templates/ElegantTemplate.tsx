@@ -1,449 +1,348 @@
-import React, { useState, memo, useCallback, useMemo } from "react";
-import {
-  Heart,
-  ShoppingCart,
-  Eye,
-  Star,
-  Share2,
-  TrendingUp,
-  AlertCircle,
-  Crown,
-  Sparkles,
-  TrendingDown,
-} from "lucide-react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Product } from "@/hooks/useProducts";
-import { CatalogType } from "@/hooks/useCatalog";
-import { useProductVariations } from "@/hooks/useProductVariations";
-import { useCart } from "@/hooks/useCart";
-import { useCatalogMode } from "@/hooks/useCatalogMode";
-import { useToast } from "@/hooks/use-toast";
-import { createCartItem } from "@/utils/cartHelpers";
-import ProductDetailsModal from "../ProductDetailsModal";
-import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { formatCurrency } from "@/lib/utils";
+import { Product } from "@/types/product";
+import { Store } from "@/types/store";
+import { Heart, Share2, ShoppingCart, Search, Filter, Star, MessageCircle } from "lucide-react";
 
 interface ElegantTemplateProps {
-  product: Product;
-  catalogType: CatalogType;
-  onAddToCart: (product: Product) => void;
-  onAddToWishlist: (product: Product) => void;
-  onQuickView: (product: Product) => void;
-  isInWishlist: boolean;
-  showPrices: boolean;
-  showStock: boolean;
+  store: Store;
+  products: Product[];
+  onProductClick?: (product: Product) => void;
+  onAddToCart?: (product: Product, quantity: number) => void;
+  onContactWhatsApp?: (product: Product) => void;
 }
 
-const ElegantTemplate: React.FC<ElegantTemplateProps> = memo(
-  ({
-    product,
-    catalogType,
-    onAddToCart,
-    onAddToWishlist,
-    onQuickView,
-    isInWishlist,
-    showPrices,
-    showStock,
-  }) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [imageError, setImageError] = useState(false);
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
-    const { variations } = useProductVariations(product.id);
-    const { addItem, items } = useCart();
-    const { toast } = useToast();
+const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
+  store,
+  products,
+  onProductClick,
+  onAddToCart,
+  onContactWhatsApp,
+}) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-    const {
-      catalogMode,
-      currentCatalogType,
-      calculatePrice,
-      shouldShowSavingsIndicator,
-      calculatePotentialSavings,
-    } = useCatalogMode();
+  const productsPerPage = 12;
+  const categories = ["all", ...new Set(products.map(p => p.category).filter(Boolean))];
 
-    // Buscar níveis de preço do produto
-    const { tiers, loading: tiersLoading } = useProductPriceTiers(
-      product.id,
-      product.store_id
-    );
+  useEffect(() => {
+    let filtered = products;
 
-    // Usar variações do produto se disponíveis, senão usar do hook
-    const productVariations = product.variations || variations || [];
-
-    // Calcular quantidade atual no carrinho para este produto
-    const cartQuantity = useMemo(() => {
-      return items
-        .filter((item) => item.product.id === product.id)
-        .reduce((total, item) => total + item.quantity, 0);
-    }, [items, product.id]);
-
-    // Calcular preço baseado no modo e quantidade do carrinho
-    const effectivePrice = useMemo(() => {
-      return calculatePrice(product, cartQuantity + 1);
-    }, [calculatePrice, product, cartQuantity]);
-
-    // Calcular desconto potencial baseado nos níveis de preço
-    const potentialSavings = useMemo(() => {
-      if (!product.retail_price || tiersLoading || tiers.length <= 1) {
-        return null;
-      }
-
-      // Filtrar apenas níveis ativos (exceto varejo)
-      const activeTiers = tiers.filter(
-        (tier) => tier.tier_order > 1 && tier.is_active
+    if (searchQuery) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    }
 
-      if (activeTiers.length === 0) {
-        return null;
-      }
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
 
-      // Encontrar o nível com maior desconto
-      const maxDiscountTier = activeTiers.reduce(
-        (max, tier) => {
-          const savingsAmount = product.retail_price - tier.price;
-          const savingsPercentage =
-            (savingsAmount / product.retail_price) * 100;
-          return savingsPercentage > max.percentage
-            ? { tier, percentage: savingsPercentage, amount: savingsAmount }
-            : max;
-        },
-        { tier: activeTiers[0], percentage: 0, amount: 0 }
-      );
+    setFilteredProducts(filtered);
+    setCurrentPage(1);
+  }, [products, searchQuery, selectedCategory]);
 
-      return {
-        savings: maxDiscountTier.amount,
-        savingsPercentage: maxDiscountTier.percentage,
-        maxDiscountPercent: Math.round(maxDiscountTier.percentage),
-        tier: maxDiscountTier.tier,
-      };
-    }, [product.retail_price, tiers, tiersLoading]);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * productsPerPage,
+    currentPage * productsPerPage
+  );
 
-    // Verificar se deve mostrar indicador de economia
-    const showSavings = useMemo(() => {
-      return shouldShowSavingsIndicator(product, cartQuantity + 1);
-    }, [shouldShowSavingsIndicator, product, cartQuantity]);
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
-    const price =
-      catalogType === "wholesale"
-        ? product.wholesale_price
-        : product.retail_price;
+  const handleAddToCart = (product: Product) => {
+    onAddToCart?.(product, 1);
+  };
 
-    const discountPercentage =
-      catalogType === "wholesale" && product.wholesale_price
-        ? Math.round(
-            ((product.retail_price - product.wholesale_price) /
-              product.retail_price) *
-              100
-          )
-        : 0;
+  const handleContactWhatsApp = (product: Product) => {
+    onContactWhatsApp?.(product);
+  };
 
-    const handleShare = useCallback(async () => {
-      const shareData = {
-        title: product.name,
-        text: product.description || "Confira este produto incrível!",
-        url: window.location.href + `/produto/${product.id}`,
-      };
+  const toggleFavorite = (productId: string) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(productId)) {
+      newFavorites.delete(productId);
+    } else {
+      newFavorites.add(productId);
+    }
+    setFavorites(newFavorites);
+  };
 
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        navigator.clipboard.writeText(shareData.url);
-        toast({
-          title: "Link copiado!",
-          description:
-            "O link do produto foi copiado para a área de transferência.",
-        });
-      }
-    }, [product.name, product.description, product.id, toast]);
+  const formatPrice = (price: number) => {
+    return formatCurrency(price);
+  };
 
-    const handleAddToCart = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onAddToCart(product);
-      },
-      [onAddToCart, product]
-    );
-
-    const handleAddToWishlist = useCallback(() => {
-      onAddToWishlist(product);
-    }, [onAddToWishlist, product]);
-
-    const handleQuickView = useCallback(() => {
-      onQuickView(product);
-    }, [onQuickView, product]);
-
-    const handleImageLoad = useCallback(() => {
-      setImageLoaded(true);
-    }, []);
-
-    const handleImageError = useCallback(() => {
-      setImageError(true);
-    }, []);
-
-    const getStockStatus = () => {
-      if (product.stock === 0) return { text: "Esgotado", color: "bg-red-500" };
-      if (product.stock <= 5)
-        return { text: "Últimas unidades", color: "bg-orange-500" };
-      if (product.stock > 50)
-        return { text: "Em estoque", color: "bg-green-500" };
-      return { text: `${product.stock} disponíveis`, color: "bg-blue-500" };
-    };
-
-    const stockStatus = getStockStatus();
-
-    // Função para renderizar as estrelas
-    const renderStars = (rating: number) => {
-      const fullStars = Math.floor(rating);
-      const hasHalfStar = rating % 1 >= 0.5;
-      const stars = [];
-
-      for (let i = 0; i < 5; i++) {
-        if (i < fullStars) {
-          stars.push(
-            <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-          );
-        } else if (i === fullStars && hasHalfStar) {
-          stars.push(
-            <div key={i} className="relative h-3 w-3">
-              <Star className="h-3 w-3 text-gray-300 absolute" />
-              <div className="overflow-hidden w-1/2">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              </div>
-            </div>
-          );
-        } else {
-          stars.push(<Star key={i} className="h-3 w-3 text-gray-300" />);
-        }
-      }
-      return stars;
-    };
-
-    return (
-      <>
-        <Card
-          className="group hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] overflow-hidden bg-gradient-to-br from-white via-amber-50/20 to-white border border-amber-200/50 cursor-pointer"
-          onClick={handleQuickView}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          <CardContent className="p-0">
-            {/* Borda dourada elegante */}
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-200/20 via-amber-300/20 to-amber-200/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-lg"></div>
-
-            {/* Image Container */}
-            <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-amber-50 to-white">
-              {!imageError ? (
-                <img
-                  src={product.image_url || "/placeholder.svg"}
-                  alt={product.name}
-                  className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${
-                    imageLoaded ? "opacity-100" : "opacity-0"
-                  } ${isHovered ? "scale-110" : "scale-100"}`}
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-amber-400">
-                  <AlertCircle className="h-12 w-12" />
-                </div>
-              )}
-
-              {/* Overlay elegante */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-              {/* Ações rápidas */}
-              <div
-                className={`absolute top-2 right-2 flex flex-col gap-2 transition-opacity duration-300 ${
-                  isHovered ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDetailsModal(true);
-                  }}
-                  className="w-9 h-9 p-0 bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm rounded-full border-2 border-amber-200 transition-all duration-200"
-                >
-                  <Eye className="h-4 w-4 text-amber-700 hover:text-blue-600 transition-colors duration-200" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToWishlist();
-                  }}
-                  className="w-9 h-9 p-0 bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm rounded-full border-2 border-amber-200 transition-all duration-200"
-                >
-                  <Heart
-                    className={`h-4 w-4 ${
-                      isInWishlist
-                        ? "fill-red-500 text-red-500"
-                        : "text-amber-600 hover:text-red-500 transition-colors duration-200"
-                    }`}
-                  />
-                </Button>
-              </div>
-
-              {/* Discount Badge - Top Left */}
-              {product.wholesale_price && product.retail_price && (
-                <Badge className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs px-2 py-1 font-bold shadow-lg">
-                  <Sparkles className="h-3 w-3 mr-1" />-
-                  {Math.round(
-                    ((product.retail_price - product.wholesale_price) /
-                      product.retail_price) *
-                      100
-                  )}
-                  %
-                </Badge>
-              )}
-
-              {/* Desconto potencial (níveis progressivos) */}
-              {potentialSavings && potentialSavings.savingsPercentage > 0 && (
-                <Badge className="absolute top-2 left-20 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-1 font-bold shadow-lg">
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                  Até -{potentialSavings.maxDiscountPercent}%
-                </Badge>
-              )}
-
-              {/* Stock Badge - Bottom Right */}
-              {showStock && (
-                <Badge
-                  className={`absolute bottom-2 right-2 ${stockStatus.color} text-white text-xs px-2 py-1 shadow-lg`}
-                >
-                  {stockStatus.text}
-                </Badge>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="p-4 space-y-3">
-              {/* Category */}
-              {product.category && (
-                <p className="text-xs text-amber-600 uppercase tracking-wider font-semibold">
-                  {product.category}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                {store.name}
+              </h1>
+              {store.description && (
+                <p className="text-gray-600 hidden md:block">
+                  {store.description}
                 </p>
               )}
-
-              {/* Product Name */}
-              <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm leading-5 min-h-[40px]">
-                {product.name}
-              </h3>
-
-              {/* Rating */}
-              <div className="flex items-center gap-1">
-                <div className="flex gap-0.5">
-                  {renderStars(
-                    3.5 +
-                      Math.abs(
-                        product.id
-                          .split("")
-                          .reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0) %
-                          15
-                      ) /
-                        10
-                  )}
-                </div>
-                <span className="text-xs text-gray-500">
-                  (
-                  {Math.floor(
-                    5 +
-                      (product.name.length + ((product.retail_price || 0) % 45))
-                  )}
-                  )
-                </span>
-              </div>
-
-              {/* Prices */}
-              {showPrices && (
-                <div className="space-y-1">
-                  {/* Retail Price */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Varejo:</span>
-                    <span className="font-bold text-gray-900">
-                      R$ {product.retail_price?.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Wholesale Price */}
-                  {product.wholesale_price && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-amber-600">Atacado:</span>
-                      <span className="font-bold text-amber-600">
-                        R$ {product.wholesale_price.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Indicador de economia potencial */}
-              {potentialSavings && potentialSavings.savingsPercentage > 0 && (
-                <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-orange-700">
-                    <TrendingDown className="h-3 w-3" />
-                    <span className="text-xs font-medium">
-                      Economize até R$ {potentialSavings.savings.toFixed(2)}
-                      {potentialSavings.tier && (
-                        <span className="text-orange-600">
-                          {" "}
-                          ({potentialSavings.tier.tier_name})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Add to Cart Button */}
-              <Button
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-                className="w-full mt-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-sm py-2 shadow-lg"
-                size="sm"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                {product.stock === 0
-                  ? "Esgotado"
-                  : productVariations.length > 0
-                  ? "Ver Opções"
-                  : "Comprar"}
+            </div>
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm">
+                <Heart className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm">
+                <ShoppingCart className="h-4 w-4" />
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </header>
 
-        {/* Product Details Modal */}
-        {showDetailsModal && (
-          <ProductDetailsModal
-            product={product}
-            isOpen={showDetailsModal}
-            onClose={() => setShowDetailsModal(false)}
-            onAddToCart={(quantity, variation) => {
-              const cartItem = createCartItem(
-                product,
-                catalogType,
-                quantity,
-                variation
-              );
-              addItem(cartItem);
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl font-bold mb-4">
+            Bem-vindo à {store.name}
+          </h2>
+          <p className="text-xl opacity-90 mb-8">
+            Descubra produtos incríveis com qualidade excepcional
+          </p>
+          <div className="max-w-md mx-auto">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/90 border-0 text-gray-800"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
-              toast({
-                title: "Produto adicionado!",
-                description: `${product.name} foi adicionado ao carrinho.`,
-              });
-            }}
-            catalogType={catalogType}
-          />
+      {/* Filters */}
+      <section className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center space-x-4 overflow-x-auto">
+            <Filter className="h-5 w-5 text-gray-500 flex-shrink-0" />
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="whitespace-nowrap"
+              >
+                {category === "all" ? "Todos" : category}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Products Grid */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-900">
+            Nossos Produtos
+          </h3>
+          <p className="text-gray-600">
+            {filteredProducts.length} produtos encontrados
+          </p>
+        </div>
+
+        {paginatedProducts.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-gray-400 text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold mb-2">Nenhum produto encontrado</h3>
+            <p className="text-gray-600">
+              Tente ajustar os filtros ou termos de busca
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {paginatedProducts.map((product) => (
+                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
+                  <div className="relative">
+                    <div className="aspect-square bg-gray-100 overflow-hidden">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <Package className="h-16 w-16" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Overlay Actions */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => onProductClick?.(product)}
+                      >
+                        Ver Detalhes
+                      </Button>
+                    </div>
+
+                    {/* Badges */}
+                    <div className="absolute top-2 left-2 space-y-1">
+                      {product.is_featured && (
+                        <Badge className="bg-yellow-500 text-white">
+                          <Star className="h-3 w-3 mr-1" />
+                          Destaque
+                        </Badge>
+                      )}
+                      {product.stock <= 5 && product.stock > 0 && (
+                        <Badge variant="destructive">
+                          Últimas unidades
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Favorite Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                      onClick={() => toggleFavorite(product.id)}
+                    >
+                      <Heart
+                        className={`h-4 w-4 ${
+                          favorites.has(product.id)
+                            ? "fill-red-500 text-red-500"
+                            : "text-gray-600"
+                        }`}
+                      />
+                    </Button>
+                  </div>
+
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-lg mb-2 line-clamp-2">
+                      {product.name}
+                    </h4>
+                    
+                    {product.description && (
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold text-purple-600">
+                          {formatPrice(product.retail_price)}
+                        </span>
+                        {product.wholesale_price && (
+                          <span className="text-sm text-gray-500">
+                            Atacado: {formatPrice(product.wholesale_price)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-gray-600">
+                        Estoque: {product.stock} unidades
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleAddToCart(product)}
+                        disabled={product.stock === 0}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-1" />
+                        {product.stock === 0 ? "Sem Estoque" : "Adicionar"}
+                      </Button>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleContactWhatsApp(product)}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-2 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </Button>
+              </div>
+            )}
+          </>
         )}
-      </>
-    );
-  }
-);
+      </main>
 
-ElegantTemplate.displayName = "ElegantTemplate";
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h3 className="text-xl font-bold mb-2">{store.name}</h3>
+            {store.description && (
+              <p className="text-gray-300 mb-4">{store.description}</p>
+            )}
+            <p className="text-gray-400 text-sm">
+              © 2024 {store.name}. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
 
 export default ElegantTemplate;

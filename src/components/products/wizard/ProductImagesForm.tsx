@@ -23,7 +23,6 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
       </CardHeader>
       <CardContent>
         <DraftImageUpload
-          productId={productId}
           onUploadReady={onImageUploadReady}
         />
       </CardContent>
