@@ -1,0 +1,79 @@
+
+/* Estilos para corrigir o posicionamento do carrinho flutuante */
+
+.floating-cart-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+}
+
+.floating-cart-button {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 2px solid white;
+  transition: all 0.3s ease;
+}
+
+.floating-cart-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.floating-cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: #ef4444;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Responsividade para mobile */
+@media (max-width: 768px) {
+  .floating-cart-container {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .floating-cart-button {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .floating-cart-badge {
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+}
+
+/* Animação de pulsação quando há itens no carrinho */
+.floating-cart-pulse {
+  animation: cart-pulse 2s infinite;
+}
+
+@keyframes cart-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
