@@ -11,11 +11,17 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
   onComplete,
   onCancel,
 }) => {
+  const handleSuccess = (product: any) => {
+    if (onComplete) {
+      onComplete(product);
+    }
+  };
+
   return (
     <ImprovedProductFormWizard
       isOpen={true}
       onClose={onCancel || (() => {})}
-      onSuccess={onComplete}
+      onSuccess={handleSuccess}
     />
   );
 };

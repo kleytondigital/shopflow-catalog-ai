@@ -131,9 +131,8 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
       </Card>
 
       <ProductPriceTiersSection
-        priceTiers={priceTiers}
-        onPriceTiersChange={onPriceTiersChange}
         retailPrice={retailPrice}
+        onTiersChange={onPriceTiersChange}
       />
     </div>
   );

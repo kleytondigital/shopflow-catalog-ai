@@ -28,7 +28,6 @@ const ProductVariationsForm: React.FC<ProductVariationsFormProps> = ({
         <ProductVariationsManager
           variations={variations}
           onChange={onVariationsChange}
-          productId={productId}
         />
       </CardContent>
     </Card>
