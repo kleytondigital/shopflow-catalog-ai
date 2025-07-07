@@ -321,6 +321,21 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
     }
   };
 
+  // Nova função para editar tiers com atualização imediata do estado
+  const handleTierEdit = async (
+    tierId: string,
+    field: keyof PriceTier,
+    value: any
+  ) => {
+    // Atualizar estado local imediatamente
+    handleTierChange(tierId, field, value);
+
+    // Persistir no banco se for um produto existente
+    if (productId) {
+      await persistTierChange(tierId, field, value);
+    }
+  };
+
   const getCatalogModeInfo = () => {
     if (!catalogSettings) return null;
 
@@ -447,7 +462,7 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
                           min="1"
                           value={tier.minQuantity}
                           onChange={(e) =>
-                            persistTierChange(
+                            handleTierEdit(
                               tier.id,
                               "minQuantity",
                               parseInt(e.target.value) || 1
@@ -461,7 +476,7 @@ const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
                         <CurrencyInput
                           value={tier.price}
                           onChange={(value) =>
-                            persistTierChange(tier.id, "price", value)
+                            handleTierEdit(tier.id, "price", value)
                           }
                           placeholder="R$ 0,00"
                         />
