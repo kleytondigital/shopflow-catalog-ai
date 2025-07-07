@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useCatalog, CatalogType } from "@/hooks/useCatalog";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
@@ -61,7 +62,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
           product.category,
           ...(
             product.variations?.map((v) =>
-              [v.color, v.size, v.material].filter(Boolean)
+              [v.color, v.size].filter(Boolean)
             ) || []
           ).flat(),
         ]
@@ -98,8 +99,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     // Filtro por variações
     if (
       filters.variations.colors.length > 0 ||
-      filters.variations.sizes.length > 0 ||
-      filters.variations.materials.length > 0
+      filters.variations.sizes.length > 0
     ) {
       filtered = filtered.filter((product) => {
         if (!product.variations || product.variations.length === 0)
@@ -116,12 +116,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
             (variation.size &&
               filters.variations.sizes.includes(variation.size));
 
-          const materialMatch =
-            filters.variations.materials.length === 0 ||
-            (variation.material &&
-              filters.variations.materials.includes(variation.material));
-
-          return colorMatch && sizeMatch && materialMatch;
+          return colorMatch && sizeMatch;
         });
       });
     }

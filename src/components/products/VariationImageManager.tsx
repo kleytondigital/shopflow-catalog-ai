@@ -1,12 +1,11 @@
-import React, { useState, useCallback, useEffect } from "react";
+
+import React, { useState, useCallback } from "react";
 import {
   Upload,
   X,
   Camera,
   ImageIcon,
   Palette,
-  Shirt,
-  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +40,10 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
   const [showImageSelector, setShowImageSelector] = useState(false);
 
   const {
-    draftImages,
-    uploadVariationImage,
+    addVariationImage,
     removeVariationImage,
-    getImageForColor,
+    getVariationImage,
+    uploadVariationImages,
   } = useVariationDraftImages();
   const { images: productImages } = useSimpleDraftImages();
   const { images: savedProductImages } = useProductImages(productId);
@@ -104,7 +103,7 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
 
     // Procurar por imagem que contenha a palavra-chave da cor
     const matchingImage = productImages.find((image) => {
-      const imageName = image.name?.toLowerCase() || "";
+      const imageName = image.file?.name?.toLowerCase() || "";
       return keywords.some((keyword) => imageName.includes(keyword));
     });
 
@@ -121,14 +120,6 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
         imageUrl
       );
 
-      // Atualizar todas as variações da mesma cor
-      const updatedVariations = variations.map((v) => {
-        if (v.color && v.color.toLowerCase() === color.toLowerCase()) {
-          return { ...v, image_url: imageUrl };
-        }
-        return v;
-      });
-
       // Chamar o callback para atualizar o estado pai
       onImagesUpdated(color, imageUrl);
 
@@ -137,7 +128,7 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
         description: `Imagem aplicada para todas as variações da cor ${color}.`,
       });
     },
-    [variations, onImagesUpdated, toast]
+    [onImagesUpdated, toast]
   );
 
   const handleImageUpload = useCallback(
@@ -146,25 +137,26 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
       if (!file) return;
 
       try {
-        // Upload da imagem
-        const imageUrl = await uploadVariationImage(file, color);
+        // Adicionar imagem ao draft
+        addVariationImage(color, file);
 
         // Aplicar a todas as variações da mesma cor
+        const imageUrl = URL.createObjectURL(file);
         applyImageToColorVariations(color, imageUrl);
 
         toast({
-          title: "Imagem enviada",
-          description: `Imagem da cor ${color} enviada com sucesso.`,
+          title: "Imagem adicionada",
+          description: `Imagem da cor ${color} será enviada ao salvar o produto.`,
         });
       } catch (error) {
         toast({
           title: "Erro no upload",
-          description: "Erro ao enviar imagem da variação.",
+          description: "Erro ao adicionar imagem da variação.",
           variant: "destructive",
         });
       }
     },
-    [uploadVariationImage, applyImageToColorVariations, toast]
+    [addVariationImage, applyImageToColorVariations, toast]
   );
 
   const handleImageSelect = useCallback(
@@ -209,10 +201,8 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
       const colorLower = color.toLowerCase();
       const variationsOfColor = variationsByColor[colorLower] || [];
 
-      variationsOfColor.forEach((variation) => {
-        removeVariationImage(variation.id!);
-        onImagesUpdated(color, "");
-      });
+      removeVariationImage(color);
+      onImagesUpdated(color, "");
 
       toast({
         title: "Imagem removida",
@@ -238,10 +228,10 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
       }
 
       // Se não houver, verificar no draft
-      const draftImage = getImageForColor(color);
-      return draftImage?.preview || draftImage?.url || null;
+      const draftImage = getVariationImage(color);
+      return draftImage?.preview || draftImage?.file ? URL.createObjectURL(draftImage.file) : null;
     },
-    [variations, getImageForColor]
+    [variations, getVariationImage]
   );
 
   if (colorVariations.length === 0) {
@@ -264,217 +254,124 @@ const VariationImageManager: React.FC<VariationImageManagerProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Galeria de imagens do produto para seleção */}
-        {allProductImages.length > 0 && (
-          <div className="mb-6">
-            <div className="text-sm font-medium mb-2">
-              Selecione uma imagem para cada cor:
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {allProductImages.map((imgUrl, idx) => (
-                <div
-                  key={imgUrl}
-                  className="flex flex-col items-center relative"
-                >
-                  <img
-                    src={imgUrl}
-                    alt={`Imagem ${idx + 1}`}
-                    className={`w-16 h-16 object-cover rounded border-2 cursor-pointer transition-all
-                      ${
-                        Object.entries(variationsByColor).some(
-                          ([color, vars]) =>
-                            getCurrentImageForColor(color) === imgUrl
-                        )
-                          ? "border-blue-600 ring-2 ring-blue-300"
-                          : "border-gray-200 hover:border-primary"
-                      }
-                    `}
-                    onClick={() => {
-                      setSelectedVariationForImage(null);
-                      setShowImageSelector(true);
-                      window.__selectedImageUrl = imgUrl;
-                    }}
-                  />
-                  {/* Ícone de check se selecionada para alguma cor */}
-                  {Object.entries(variationsByColor).some(
-                    ([color, vars]) => getCurrentImageForColor(color) === imgUrl
-                  ) && (
-                    <span className="absolute top-1 right-1 bg-blue-600 text-white rounded-full p-1 shadow">
-                      ✓
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.keys(variationsByColor).map((color) => {
+            const currentImage = getCurrentImageForColor(color);
+            const variationsCount = variationsByColor[color].length;
 
-        {/* Lista de variações por cor */}
-        {Object.entries(variationsByColor).map(([color, variationsOfColor]) => {
-          const currentImage = getCurrentImageForColor(color);
-          const sizes = variationsOfColor.map((v) => v.size).filter(Boolean);
-
-          return (
-            <div key={color} className="border rounded-lg p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 flex items-center gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-sm font-medium">
-                        {color.charAt(0).toUpperCase() + color.slice(1)}
-                      </Badge>
-                      {sizes.length > 0 && (
-                        <span className="text-sm text-gray-600">
-                          Tamanhos: {sizes.join(", ")}
-                        </span>
-                      )}
+            return (
+              <Card key={color} className="border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-4 w-4" />
+                      <span className="font-medium capitalize">{color}</span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {variationsOfColor.length} variação
-                      {variationsOfColor.length > 1 ? "ões" : "ão"} • Estoque
-                      total:{" "}
-                      {variationsOfColor.reduce((sum, v) => sum + v.stock, 0)}
-                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {variationsCount} variações
+                    </Badge>
                   </div>
-                  {/* Imagem selecionada ao lado do nome/cor - agora clicável */}
-                  <div
-                    className="ml-4 cursor-pointer group"
-                    title="Clique para escolher a imagem da variação"
-                    onClick={() => {
-                      setSelectedVariationForImage(color);
-                      setShowImageSelector(true);
-                    }}
-                  >
-                    {currentImage ? (
-                      <img
-                        src={currentImage}
-                        alt={`Selecionada ${color}`}
-                        className="w-14 h-14 object-cover rounded border-2 border-blue-600 group-hover:shadow-lg group-hover:scale-105 transition-all"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300 rounded group-hover:border-blue-400 group-hover:bg-blue-50 transition-all">
-                        <ImageIcon className="h-7 w-7 text-gray-400 group-hover:text-blue-500" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                {/* Imagem Atual */}
-                <div className="flex-shrink-0">
+                </CardHeader>
+                <CardContent className="space-y-3">
                   {currentImage ? (
                     <div className="relative">
-                      <img
-                        src={currentImage}
-                        alt={`Variação ${color}`}
-                        className="w-24 h-24 object-cover rounded border"
-                      />
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border">
+                        <img
+                          src={currentImage}
+                          alt={`Variação ${color}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <Button
-                        size="sm"
                         variant="destructive"
-                        className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0"
                         onClick={() => handleRemoveImage(color)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
                   ) : (
-                    <div className="w-24 h-24 bg-gray-100 rounded border flex items-center justify-center">
-                      <ImageIcon className="h-8 w-8 text-gray-400" />
+                    <div className="aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center p-4">
+                      <Camera className="h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500 mb-2">
+                        Nenhuma imagem
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, color)}
+                        className="hidden"
+                        id={`upload-${color}`}
+                      />
+                      <label
+                        htmlFor={`upload-${color}`}
+                        className="cursor-pointer"
+                      >
+                        <Button size="sm" variant="outline" asChild>
+                          <span>
+                            <Upload className="h-3 w-3 mr-1" />
+                            Adicionar
+                          </span>
+                        </Button>
+                      </label>
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
 
-        {/* Debug Visual - Mostrar estado atual das variações */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="mt-4 p-4 bg-gray-50 rounded border">
-            <h4 className="text-sm font-medium mb-2">
-              🔍 Debug - Estado das Variações:
-            </h4>
-            <div className="text-xs space-y-1">
-              {variations.map((v, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="w-20 truncate">{v.color || "N/A"}</span>
-                  <span className="w-20 truncate">{v.size || "N/A"}</span>
-                  <span className="w-8 text-center">{v.stock}</span>
-                  <span className="flex-1 truncate">
-                    {v.image_url
-                      ? `✅ ${v.image_url.substring(0, 30)}...`
-                      : "❌ Sem imagem"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleOpenImageSelector(color)}
+                    >
+                      Escolher Existente
+                    </Button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, color)}
+                      className="hidden"
+                      id={`upload-new-${color}`}
+                    />
+                    <label htmlFor={`upload-new-${color}`}>
+                      <Button size="sm" variant="default" asChild>
+                        <span>Nova Imagem</span>
+                      </Button>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
-        {/* Dica de Reaproveitamento */}
-        {productImages.length > 0 && (
-          <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded">
-            💡 <strong>Dica:</strong> Você pode reaproveitar as imagens
-            principais do produto para as variações. O sistema tentará encontrar
-            automaticamente a imagem que corresponde à cor da variação.
-          </div>
-        )}
-      </CardContent>
-
-      {/* Modal de Seleção de Cor para aplicar a imagem */}
-      <Dialog open={showImageSelector} onOpenChange={setShowImageSelector}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Selecione a imagem para a cor:{" "}
-              {selectedVariationForImage &&
-                selectedVariationForImage.charAt(0).toUpperCase() +
-                  selectedVariationForImage.slice(1)}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-4 gap-4 p-4">
-            {allProductImages.map((imageUrl, index) => {
-              const isSelected =
-                selectedVariationForImage &&
-                getCurrentImageForColor(selectedVariationForImage) === imageUrl;
-              return (
-                <button
-                  key={`select-${index}`}
-                  onClick={() => {
-                    if (selectedVariationForImage) {
-                      applyImageToColorVariations(
-                        selectedVariationForImage,
-                        imageUrl
-                      );
-                      setShowImageSelector(false);
-                      setSelectedVariationForImage(null);
-                    }
-                  }}
-                  className={`aspect-square rounded-lg border-2 overflow-hidden transition-all relative
-                    ${
-                      isSelected
-                        ? "border-blue-600 ring-2 ring-blue-300"
-                        : "border-gray-200 hover:border-primary"
-                    }`}
+        {/* Modal de Seleção de Imagens */}
+        <Dialog open={showImageSelector} onOpenChange={setShowImageSelector}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Escolher Imagem para {selectedVariationForImage}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {allProductImages.map((imageUrl, index) => (
+                <div
+                  key={index}
+                  className="aspect-square bg-gray-100 rounded-lg overflow-hidden border cursor-pointer hover:border-primary"
+                  onClick={() => handleSelectImageFromModal(imageUrl)}
                 >
                   <img
                     src={imageUrl}
-                    alt={`Imagem ${index + 1}`}
+                    alt={`Opção ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  {isSelected && (
-                    <span className="absolute top-1 right-1 bg-blue-600 text-white rounded-full p-1 shadow">
-                      ✓
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
     </Card>
   );
 };

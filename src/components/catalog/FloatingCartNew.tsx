@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import {
   ShoppingCart,
@@ -261,7 +262,6 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ onCheckout, storeId }) => {
                             imageUrl={item.product?.image_url}
                             productName={item.product?.name || "Produto"}
                             size="md"
-                            className="flex-shrink-0"
                           />
 
                           <div className="flex-1 min-w-0 flex flex-col justify-between">

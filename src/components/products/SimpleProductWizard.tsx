@@ -119,14 +119,16 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
       console.log("💾 SIMPLE WIZARD - Iniciando salvamento");
 
       // Função para fazer upload das imagens após salvar o produto
-      const imageUploadFn = async (productId: string) => {
+      const imageUploadFn = async (productId: string): Promise<string[]> => {
         console.log("💾 SIMPLE WIZARD - Executando uploads para produto:", productId);
+        const uploadResults: string[] = [];
 
         // Upload das imagens principais
         if (imageUploadFunctionRef.current) {
           console.log("💾 SIMPLE WIZARD - Upload de imagens principais");
           try {
             const result = await imageUploadFunctionRef.current(productId);
+            uploadResults.push(...result);
             console.log("✅ SIMPLE WIZARD - Upload principal concluído:", result.length, "imagens");
           } catch (error) {
             console.error("❌ SIMPLE WIZARD - Erro no upload principal:", error);
@@ -138,6 +140,7 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
           console.log("💾 SIMPLE WIZARD - Upload de novas imagens (modo edição)");
           try {
             const result = await uploadNewImages(productId);
+            uploadResults.push(...result);
             console.log("✅ SIMPLE WIZARD - Upload de novas imagens concluído:", result.length);
           } catch (error) {
             console.error("❌ SIMPLE WIZARD - Erro no upload de novas imagens:", error);
@@ -171,6 +174,8 @@ const SimpleProductWizard: React.FC<SimpleProductWizardProps> = ({
           console.error("❌ SIMPLE WIZARD - Erro no upload das imagens das variações:", variationImageError);
           // Não falhar por causa das imagens das variações
         }
+
+        return uploadResults;
       };
 
       console.log("💾 SIMPLE WIZARD - Dados finais para salvamento:", {

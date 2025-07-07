@@ -1,9 +1,12 @@
-import React from "react";
+
+import React, { useState } from "react";
 import CatalogHeader from "./CatalogHeader";
 import ResponsiveProductGrid from "./ResponsiveProductGrid";
 import { useProducts } from "@/hooks/useProducts";
-import { useCatalog } from "@/hooks/useCatalog";
 import { useStoreData } from "@/hooks/useStoreData";
+import { useCart } from "@/hooks/useCart";
+
+export type CatalogType = "retail" | "wholesale";
 
 interface CatalogExampleProps {
   storeSlug: string;
@@ -12,15 +15,15 @@ interface CatalogExampleProps {
 const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
   const { store, loading: storeLoading } = useStoreData(storeSlug);
   const { products, loading: productsLoading } = useProducts();
-  const {
-    catalogType,
-    setCatalogType,
-    cartItemsCount,
-    wishlistCount,
-    searchQuery,
-    setSearchQuery,
-    toggleCart,
-  } = useCatalog();
+  const { totalItems, toggleCart } = useCart();
+  
+  const [catalogType, setCatalogType] = useState<CatalogType>("retail");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [wishlistCount, setWishlistCount] = useState(0);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
 
   if (storeLoading) {
     return (
@@ -57,10 +60,10 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
         store={store}
         catalogType={catalogType}
         onCatalogTypeChange={setCatalogType}
-        cartItemsCount={cartItemsCount}
+        cartItemsCount={totalItems}
         wishlistCount={wishlistCount}
-        whatsappNumber={store.whatsapp_number}
-        onSearch={setSearchQuery}
+        whatsappNumber={store.phone || ""}
+        onSearch={handleSearch}
         onCartClick={toggleCart}
       />
 
@@ -85,14 +88,14 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
             )}
             <div className="flex flex-wrap justify-center gap-4 text-sm">
               <span>Desenvolvido com VendeMais</span>
-              {store.whatsapp_number && (
+              {store.phone && (
                 <a
-                  href={`https://wa.me/${store.whatsapp_number}`}
+                  href={`https://wa.me/${store.phone}`}
                   className="text-blue-600 hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  WhatsApp: {store.whatsapp_number}
+                  WhatsApp: {store.phone}
                 </a>
               )}
             </div>

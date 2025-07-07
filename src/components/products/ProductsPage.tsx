@@ -1,8 +1,15 @@
-import { Plus, Upload, Download, Filter, Search } from "lucide-react";
+
+import React, { useState } from "react";
+import { Plus, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import BulkImportModal from "./BulkImportModal";
+import { useAuth } from "@/hooks/useAuth";
 
 const ProductsPage = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const { profile } = useAuth();
+  const currentStore = profile?.store_id;
 
   return (
     <div className="container mx-auto p-6">
@@ -36,7 +43,7 @@ const ProductsPage = () => {
       <BulkImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        storeId={currentStore?.id}
+        storeId={currentStore}
       />
     </div>
   );
