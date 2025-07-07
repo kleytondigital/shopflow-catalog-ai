@@ -1,130 +1,78 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Sparkles } from 'lucide-react';
-import { ProductFormData } from '@/hooks/useProductFormWizard';
-import { useCategories } from '@/hooks/useCategories';
-import SimpleCategoryDialog from '../SimpleCategoryDialog';
-import AIContentGenerator from '@/components/ai/AIContentGenerator';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Package, FileText, Tag } from "lucide-react";
 
-interface ProductBasicInfoFormProps {
-  formData: ProductFormData;
-  updateFormData: (updates: Partial<ProductFormData>) => void;
+export interface ProductBasicInfoFormProps {
+  name: string;
+  description: string;
+  category: string;
+  onNameChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
 }
 
 const ProductBasicInfoForm: React.FC<ProductBasicInfoFormProps> = ({
-  formData,
-  updateFormData
+  name,
+  description,
+  category,
+  onNameChange,
+  onDescriptionChange,
+  onCategoryChange,
 }) => {
-  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const { categories, loading: categoriesLoading } = useCategories();
-
-  const handleCategoryCreated = (category: any) => {
-    console.log('Nova categoria criada:', category);
-    updateFormData({ category: category.name });
-    setShowCategoryDialog(false);
-  };
-
-  const handleDescriptionGenerated = (description: string) => {
-    updateFormData({ description });
-  };
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações Básicas do Produto</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Nome do Produto */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome do Produto *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => updateFormData({ name: e.target.value })}
-              placeholder="Digite o nome do produto"
-              className="w-full"
-            />
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Informações Básicas
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="product-name">
+            Nome do Produto <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="product-name"
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Digite o nome do produto"
+            required
+          />
+        </div>
 
-          {/* Categoria */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
-            <div className="flex gap-2">
-              <Select
-                value={formData.category || ''}
-                onValueChange={(value) => updateFormData({ category: value })}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoriesLoading ? (
-                    <SelectItem value="loading" disabled>
-                      Carregando categorias...
-                    </SelectItem>
-                  ) : categories.length === 0 ? (
-                    <SelectItem value="no-categories" disabled>
-                      Nenhuma categoria encontrada
-                    </SelectItem>
-                  ) : (
-                    categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCategoryDialog(true)}
-                className="shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="product-description" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Descrição
+          </Label>
+          <Textarea
+            id="product-description"
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            placeholder="Descreva o produto em detalhes"
+            rows={4}
+          />
+        </div>
 
-          {/* Descrição */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="description">Descrição</Label>
-              <AIContentGenerator
-                productName={formData.name}
-                category={formData.category || 'produto'}
-                onDescriptionGenerated={handleDescriptionGenerated}
-                disabled={!formData.name}
-                variant="description"
-                size="sm"
-              />
-            </div>
-            <Textarea
-              id="description"
-              value={formData.description || ''}
-              onChange={(e) => updateFormData({ description: e.target.value })}
-              placeholder="Descreva o produto em detalhes"
-              rows={4}
-              className="w-full resize-none"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Dialog de Categoria */}
-      <SimpleCategoryDialog
-        open={showCategoryDialog}
-        onOpenChange={setShowCategoryDialog}
-        onCategoryCreated={handleCategoryCreated}
-      />
-    </div>
+        <div className="space-y-2">
+          <Label htmlFor="product-category" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Categoria
+          </Label>
+          <Input
+            id="product-category"
+            value={category}
+            onChange={(e) => onCategoryChange(e.target.value)}
+            placeholder="Ex: Roupas, Eletrônicos, Casa"
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

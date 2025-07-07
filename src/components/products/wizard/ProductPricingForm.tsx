@@ -1,543 +1,156 @@
-import React, { useEffect, useState } from "react";
+
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { CurrencyInput } from "@/components/ui/currency-input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useCatalogSettings } from "@/hooks/useCatalogSettings";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { useAuth } from "@/hooks/useAuth";
-import {
-  DollarSign,
-  TrendingDown,
-  Package,
-  Info,
-  Plus,
-  Minus,
-} from "lucide-react";
-import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
+import { DollarSign, Package, AlertTriangle } from "lucide-react";
 
-interface GenericProductFormData {
-  name: string;
-  description?: string;
-  retail_price: number;
-  wholesale_price?: number;
-  min_wholesale_qty?: number;
+export interface ProductPricingFormProps {
+  retailPrice: number;
+  wholesalePrice?: number;
+  minWholesaleQty?: number;
   stock: number;
-  category?: string;
-  keywords?: string;
-  meta_title?: string;
-  meta_description?: string;
-  seo_slug?: string;
-  is_featured?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
-  variations?: any[];
-  store_id?: string;
-  price_tiers?: Array<{
+  stockAlertThreshold?: number;
+  allowNegativeStock: boolean;
+  priceTiers: Array<{
     id: string;
     name: string;
     minQuantity: number;
     price: number;
     enabled: boolean;
   }>;
-}
-
-interface ProductPricingFormProps {
-  formData: GenericProductFormData;
-  updateFormData: (updates: Partial<GenericProductFormData>) => void;
-  productId?: string;
-}
-
-interface PriceTier {
-  id: string;
-  name: string;
-  minQuantity: number;
-  price: number;
-  enabled: boolean;
+  onRetailPriceChange: (value: number) => void;
+  onWholesalePriceChange: (value: number) => void;
+  onMinWholesaleQtyChange: (value: number) => void;
+  onStockChange: (value: number) => void;
+  onStockAlertThresholdChange: (value: number) => void;
+  onAllowNegativeStockChange: (value: boolean) => void;
+  onPriceTiersChange: (tiers: any[]) => void;
 }
 
 const ProductPricingForm: React.FC<ProductPricingFormProps> = ({
-  formData,
-  updateFormData,
-  productId,
+  retailPrice,
+  wholesalePrice,
+  minWholesaleQty,
+  stock,
+  stockAlertThreshold,
+  allowNegativeStock,
+  priceTiers,
+  onRetailPriceChange,
+  onWholesalePriceChange,
+  onMinWholesaleQtyChange,
+  onStockChange,
+  onStockAlertThresholdChange,
+  onAllowNegativeStockChange,
+  onPriceTiersChange,
 }) => {
-  const { profile } = useAuth();
-  const { settings: catalogSettings } = useCatalogSettings();
-  const { priceModel: storePriceModel } = useStorePriceModel(profile?.store_id);
-  const {
-    tiers,
-    loading,
-    updateTier,
-    deactivateTier,
-    createDefaultTiers,
-    refetch,
-  } = useProductPriceTiers(productId || "", formData.store_id);
-
-  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([
-    {
-      id: "retail",
-      name: "Varejo",
-      minQuantity: 1,
-      price: formData.retail_price || 0,
-      enabled: true,
-    },
-  ]);
-
-  // Sincronizar price_tiers do formData com o estado local
-  useEffect(() => {
-    console.log(
-      "🔄 PRODUCT PRICING FORM - Sincronizando price_tiers do formData:",
-      formData.price_tiers
-    );
-    if (formData.price_tiers && formData.price_tiers.length > 0) {
-      setPriceTiers(formData.price_tiers);
-    }
-  }, [formData.price_tiers]);
-
-  // Carregar configuração baseada no modelo do catálogo (apenas para novos produtos)
-  useEffect(() => {
-    if (!catalogSettings || !storePriceModel || productId) return; // Não carregar para produtos existentes
-
-    const tiers: PriceTier[] = [
-      {
-        id: "retail",
-        name: "Varejo",
-        minQuantity: 1,
-        price: formData.retail_price || 0,
-        enabled: true,
-      },
-    ];
-
-    // Se catálogo híbrido, adicionar níveis configuráveis
-    if (catalogSettings.catalog_mode === "hybrid") {
-      if (storePriceModel.price_model === "simple_wholesale") {
-        tiers.push({
-          id: "wholesale",
-          name: storePriceModel.simple_wholesale_name || "Atacado",
-          minQuantity:
-            formData.min_wholesale_qty ||
-            storePriceModel.simple_wholesale_min_qty,
-          price: formData.wholesale_price || 0,
-          enabled: true,
-        });
-      } else if (storePriceModel.price_model === "gradual_wholesale") {
-        // Adicionar níveis gradativos baseados na configuração da loja
-        if (storePriceModel.tier_2_enabled) {
-          tiers.push({
-            id: "tier2",
-            name: storePriceModel.tier_2_name || "Atacarejo",
-            minQuantity: 5,
-            price: 0,
-            enabled: true,
-          });
-        }
-        if (storePriceModel.tier_3_enabled) {
-          tiers.push({
-            id: "tier3",
-            name: storePriceModel.tier_3_name || "Atacado Pequeno",
-            minQuantity: 10,
-            price: 0,
-            enabled: true,
-          });
-        }
-        if (storePriceModel.tier_4_enabled) {
-          tiers.push({
-            id: "tier4",
-            name: storePriceModel.tier_4_name || "Atacado Grande",
-            minQuantity: 50,
-            price: 0,
-            enabled: true,
-          });
-        }
-      }
-    }
-
-    setPriceTiers(tiers);
-  }, [
-    catalogSettings,
-    storePriceModel,
-    formData.retail_price,
-    formData.wholesale_price,
-    formData.min_wholesale_qty,
-    productId, // Adicionar productId para evitar carregamento em edição
-  ]);
-
-  // Atualizar preço de varejo quando mudar
-  useEffect(() => {
-    setPriceTiers((prev) =>
-      prev.map((tier) =>
-        tier.id === "retail"
-          ? { ...tier, price: formData.retail_price || 0 }
-          : tier
-      )
-    );
-  }, [formData.retail_price]);
-
-  // Atualizar preço de atacado quando mudar
-  useEffect(() => {
-    setPriceTiers((prev) =>
-      prev.map((tier) =>
-        tier.id === "wholesale"
-          ? { ...tier, price: formData.wholesale_price || 0 }
-          : tier
-      )
-    );
-  }, [formData.wholesale_price]);
-
-  // Carregamento de price_tiers agora é feito centralmente no hook principal
-  // Este useEffect foi removido para evitar carregamento duplicado
-
-  // Garantir que os preços sejam sempre sincronizados com o formData
-  useEffect(() => {
-    console.log("🔄 PRODUCT PRICING FORM - Sincronizando preços com formData");
-    console.log(
-      "🔄 PRODUCT PRICING FORM - retail_price:",
-      formData.retail_price
-    );
-    console.log(
-      "🔄 PRODUCT PRICING FORM - wholesale_price:",
-      formData.wholesale_price
-    );
-
-    // Atualizar preço de varejo se mudou no formData
-    if (formData.retail_price !== undefined && formData.retail_price !== null) {
-      setPriceTiers((prev) =>
-        prev.map((tier) =>
-          tier.id === "retail"
-            ? { ...tier, price: formData.retail_price || 0 }
-            : tier
-        )
-      );
-    }
-
-    // Atualizar preço de atacado se mudou no formData
-    if (
-      formData.wholesale_price !== undefined &&
-      formData.wholesale_price !== null
-    ) {
-      setPriceTiers((prev) =>
-        prev.map((tier) =>
-          tier.id === "wholesale"
-            ? { ...tier, price: formData.wholesale_price || 0 }
-            : tier
-        )
-      );
-    }
-  }, [formData.retail_price, formData.wholesale_price]);
-
-  // Adicione este useEffect para garantir que sempre haja tiers para editar
-  useEffect(() => {
-    if (
-      (!formData.price_tiers || formData.price_tiers.length === 0) &&
-      storePriceModel
-    ) {
-      const tiers: PriceTier[] = [
-        {
-          id: "retail",
-          name: "Varejo",
-          minQuantity: 1,
-          price: formData.retail_price || 0,
-          enabled: true,
-        },
-      ];
-      if (storePriceModel.price_model === "simple_wholesale") {
-        tiers.push({
-          id: "wholesale",
-          name: storePriceModel.simple_wholesale_name || "Atacado",
-          minQuantity: storePriceModel.simple_wholesale_min_qty || 5,
-          price: 0,
-          enabled: false,
-        });
-      } else if (storePriceModel.price_model === "gradual_wholesale") {
-        if (storePriceModel.tier_2_enabled) {
-          tiers.push({
-            id: "tier2",
-            name: storePriceModel.tier_2_name || "Atacarejo",
-            minQuantity: 5,
-            price: 0,
-            enabled: false,
-          });
-        }
-        if (storePriceModel.tier_3_enabled) {
-          tiers.push({
-            id: "tier3",
-            name: storePriceModel.tier_3_name || "Atacado Pequeno",
-            minQuantity: 10,
-            price: 0,
-            enabled: false,
-          });
-        }
-        if (storePriceModel.tier_4_enabled) {
-          tiers.push({
-            id: "tier4",
-            name: storePriceModel.tier_4_name || "Atacado Grande",
-            minQuantity: 50,
-            price: 0,
-            enabled: false,
-          });
-        }
-      }
-      setPriceTiers(tiers);
-      updateFormData({ price_tiers: tiers });
-    }
-  }, [formData.price_tiers, storePriceModel]);
-
-  // Carregar tiers do banco ao abrir para edição
-  useEffect(() => {
-    if (productId) {
-      refetch();
-    }
-  }, [productId]);
-
-  // Função para persistir tiers imediatamente
-  const persistTierChange = async (tierId, field, value) => {
-    if (tierId && field) {
-      await updateTier(tierId, { [field]: value });
-      refetch();
-    }
-  };
-
-  const safeFormData = {
-    ...formData,
-    wholesale_price: formData.wholesale_price ?? 0,
-    min_wholesale_qty: formData.min_wholesale_qty ?? 1,
-  };
-
-  const handleTierChange = (
-    tierId: string,
-    field: keyof PriceTier,
-    value: any
-  ) => {
-    const updatedTiers = priceTiers.map((tier) =>
-      tier.id === tierId ? { ...tier, [field]: value } : tier
-    );
-    setPriceTiers(updatedTiers);
-    updateFormData({ price_tiers: updatedTiers });
-    // Sincronizar retail_price apenas para o tier de varejo
-    if (tierId === "retail" && field === "price") {
-      updateFormData({ retail_price: value });
-    }
-  };
-
-  // Nova função para editar tiers com atualização imediata do estado
-  const handleTierEdit = async (
-    tierId: string,
-    field: keyof PriceTier,
-    value: any
-  ) => {
-    // Atualizar estado local imediatamente
-    handleTierChange(tierId, field, value);
-
-    // Persistir no banco se for um produto existente
-    if (productId) {
-      await persistTierChange(tierId, field, value);
-    }
-  };
-
-  const getCatalogModeInfo = () => {
-    if (!catalogSettings) return null;
-
-    switch (catalogSettings.catalog_mode) {
-      case "separated":
-        return {
-          title: "Catálogos Separados",
-          description: "Este produto será exibido apenas no catálogo de varejo",
-          icon: Package,
-          color: "bg-blue-100 text-blue-800",
-        };
-      case "hybrid":
-        return {
-          title: "Catálogo Híbrido",
-          description: "Preços mudam automaticamente por quantidade",
-          icon: TrendingDown,
-          color: "bg-green-100 text-green-800",
-        };
-      case "toggle":
-        return {
-          title: "Catálogo Alternável",
-          description: "Cliente pode alternar entre varejo e atacado",
-          icon: DollarSign,
-          color: "bg-purple-100 text-purple-800",
-        };
-      default:
-        return null;
-    }
-  };
-
-  const catalogInfo = getCatalogModeInfo();
-
   return (
     <div className="space-y-6">
-      {/* Informação do Modo do Catálogo */}
-      {catalogInfo && (
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <catalogInfo.icon className="h-5 w-5 text-blue-600" />
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  {catalogInfo.title}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {catalogInfo.description}
-                </p>
-              </div>
-              <Badge className={catalogInfo.color}>
-                {catalogSettings?.catalog_mode}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Preço de Varejo (Sempre visível) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            Preço de Varejo
+            <DollarSign className="h-5 w-5" />
+            Preços
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="retail_price">Preço Unitário *</Label>
-              <CurrencyInput
-                value={safeFormData.retail_price}
-                onChange={(value) => updateFormData({ retail_price: value })}
-                placeholder="R$ 0,00"
-              />
-            </div>
-            <div>
-              <Label htmlFor="stock">Estoque</Label>
+            <div className="space-y-2">
+              <Label htmlFor="retail-price">
+                Preço Varejo <span className="text-red-500">*</span>
+              </Label>
               <Input
-                id="stock"
+                id="retail-price"
                 type="number"
                 min="0"
-                value={safeFormData.stock || undefined}
-                onChange={(e) =>
-                  updateFormData({ stock: parseInt(e.target.value) || 0 })
-                }
-                placeholder="0"
+                step="0.01"
+                value={retailPrice}
+                onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
+                placeholder="0,00"
+                required
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wholesale-price">Preço Atacado</Label>
+              <Input
+                id="wholesale-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={wholesalePrice || 0}
+                onChange={(e) => onWholesalePriceChange(parseFloat(e.target.value) || 0)}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="min-wholesale-qty">Quantidade Mínima Atacado</Label>
+            <Input
+              id="min-wholesale-qty"
+              type="number"
+              min="1"
+              value={minWholesaleQty || 1}
+              onChange={(e) => onMinWholesaleQtyChange(parseInt(e.target.value) || 1)}
+              placeholder="1"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Níveis de Preço (Sempre visível, independente do modo do catálogo) */}
-      {priceTiers.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-orange-600" />
-              Níveis de Preço por Quantidade
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {priceTiers.slice(1).map((tier) => (
-                <div key={tier.id} className="p-4 border rounded-lg bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-900">{tier.name}</h4>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={tier.enabled}
-                        onCheckedChange={(checked) =>
-                          persistTierChange(tier.id, "enabled", checked)
-                        }
-                      />
-                      <span className="text-sm text-gray-600">Ativo</span>
-                    </div>
-                  </div>
-
-                  {tier.enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Quantidade Mínima</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={tier.minQuantity}
-                          onChange={(e) =>
-                            handleTierEdit(
-                              tier.id,
-                              "minQuantity",
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                          placeholder="1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Preço Unitário</Label>
-                        <CurrencyInput
-                          value={tier.price}
-                          onChange={(value) =>
-                            handleTierEdit(tier.id, "price", value)
-                          }
-                          placeholder="R$ 0,00"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800">
-                <Info className="h-4 w-4" />
-                <span className="text-sm font-medium">Como funciona:</span>
-              </div>
-              <p className="text-sm text-blue-700 mt-1">
-                Clientes que comprarem a quantidade mínima ou mais pagarão o
-                preço do nível correspondente.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Configurações Avançadas */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Avançadas</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Estoque
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="allow_negative_stock">
-                Permitir Estoque Negativo
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock">
+                Quantidade em Estoque <span className="text-red-500">*</span>
               </Label>
-              <Switch
-                id="allow_negative_stock"
-                checked={safeFormData.allow_negative_stock || false}
-                onCheckedChange={(checked) =>
-                  updateFormData({ allow_negative_stock: checked })
-                }
+              <Input
+                id="stock"
+                type="number"
+                min="0"
+                value={stock}
+                onChange={(e) => onStockChange(parseInt(e.target.value) || 0)}
+                placeholder="0"
+                required
               />
             </div>
 
-            <div>
-              <Label htmlFor="stock_alert_threshold">
-                Alerta de Estoque Baixo
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="stock-alert">Alerta de Estoque Baixo</Label>
               <Input
-                id="stock_alert_threshold"
+                id="stock-alert"
                 type="number"
                 min="0"
-                value={safeFormData.stock_alert_threshold || undefined}
-                onChange={(e) =>
-                  updateFormData({
-                    stock_alert_threshold: parseInt(e.target.value) || 5,
-                  })
-                }
+                value={stockAlertThreshold || 5}
+                onChange={(e) => onStockAlertThresholdChange(parseInt(e.target.value) || 5)}
                 placeholder="5"
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Permitir Estoque Negativo
+              </Label>
+              <p className="text-sm text-gray-500">
+                Permite vendas mesmo com estoque zerado
+              </p>
+            </div>
+            <Switch
+              checked={allowNegativeStock}
+              onCheckedChange={onAllowNegativeStockChange}
+            />
           </div>
         </CardContent>
       </Card>

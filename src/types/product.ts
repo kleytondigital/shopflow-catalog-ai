@@ -11,6 +11,14 @@ export interface ProductVariation {
   image_url?: string;
   created_at: string;
   updated_at: string;
+  // Propriedades adicionais para compatibilidade
+  material?: string;
+  hex_color?: string;
+  variation_value?: string;
+  variation_type?: string;
+  name?: string;
+  display_order?: number;
+  parent_variation_id?: string;
 }
 
 export interface Product {
@@ -36,6 +44,8 @@ export interface Product {
   created_at?: string;
   updated_at?: string;
   variations?: ProductVariation[];
+  // Propriedade adicional para WhatsApp
+  whatsapp_number?: string;
 }
 
 export interface CreateProductData {

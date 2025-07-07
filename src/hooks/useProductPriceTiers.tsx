@@ -1,248 +1,165 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../integrations/supabase/client";
-import { ProductPriceTier, StorePriceModel } from "../types/price-models";
-import { useStorePriceModel } from "./useStorePriceModel";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-export const useProductPriceTiers = (productId: string, storeId?: string) => {
+export interface ProductPriceTier {
+  id: string;
+  product_id: string;
+  tier_name: string;
+  tier_type: "retail" | "wholesale" | "bulk";
+  min_quantity: number;
+  price: number;
+  tier_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const useProductPriceTiers = (productId?: string) => {
   const [tiers, setTiers] = useState<ProductPriceTier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const { priceModel: storePriceModel } = useStorePriceModel(storeId);
-
-  // Buscar níveis de preço do produto
-  const fetchTiers = async () => {
+  const fetchTiers = useCallback(async () => {
     if (!productId) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log(
-        "🔍 USE PRODUCT PRICE TIERS - Buscando níveis para produto:",
-        productId
-      );
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("product_price_tiers")
         .select("*")
         .eq("product_id", productId)
-        .eq("is_active", true)
         .order("tier_order");
 
-      if (fetchError) {
-        console.error(
-          "❌ USE PRODUCT PRICE TIERS - Erro ao buscar:",
-          fetchError
-        );
-        throw fetchError;
-      }
+      if (error) throw error;
 
-      console.log("🔍 USE PRODUCT PRICE TIERS - Níveis encontrados:", data);
-      setTiers(data || []);
-    } catch (err) {
-      console.error(
-        "💥 USE PRODUCT PRICE TIERS - Erro ao buscar níveis de preço:",
-        err
-      );
-      setError(err instanceof Error ? err.message : "Erro desconhecido");
+      // Map the data with proper typing
+      const typedTiers: ProductPriceTier[] = data?.map(tier => ({
+        ...tier,
+        tier_type: tier.tier_type as "retail" | "wholesale" | "bulk"
+      })) || [];
+
+      setTiers(typedTiers);
+    } catch (error) {
+      console.error("Error fetching price tiers:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar níveis de preço",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, toast]);
 
-  // Criar níveis padrão baseados no modelo da loja
-  const createDefaultTiers = async (retailPrice: number) => {
-    if (!productId || !storePriceModel) return;
-
-    try {
-      const defaultTiers: Omit<
-        ProductPriceTier,
-        "id" | "created_at" | "updated_at"
-      >[] = [];
-
-      // Sempre criar nível de varejo
-      defaultTiers.push({
-        product_id: productId,
-        tier_name: storePriceModel.tier_1_name || "Varejo",
-        tier_order: 1,
-        tier_type: "retail",
-        price: retailPrice,
-        min_quantity: 1,
-        is_active: true,
-      });
-
-      // Adicionar níveis conforme modelo da loja
-      if (
-        storePriceModel.price_model === "simple_wholesale" &&
-        storePriceModel.tier_2_enabled
-      ) {
-        const wholesalePrice = retailPrice * 0.85; // 15% desconto padrão
-        defaultTiers.push({
-          product_id: productId,
-          tier_name: storePriceModel.tier_2_name,
-          tier_order: 2,
-          tier_type: "simple_wholesale",
-          price: wholesalePrice,
-          min_quantity: storePriceModel.simple_wholesale_min_qty,
-          is_active: true,
-        });
-      }
-
-      if (storePriceModel.price_model === "gradual_wholesale") {
-        // Nível 2 (Atacarejo)
-        if (storePriceModel.tier_2_enabled) {
-          const tier2Price = retailPrice * 0.9; // 10% desconto
-          defaultTiers.push({
-            product_id: productId,
-            tier_name: storePriceModel.tier_2_name,
-            tier_order: 2,
-            tier_type: "gradual_wholesale",
-            price: tier2Price,
-            min_quantity: 5,
-            is_active: true,
-          });
-        }
-
-        // Nível 3 (Atacado Pequeno)
-        if (storePriceModel.tier_3_enabled) {
-          const tier3Price = retailPrice * 0.8; // 20% desconto
-          defaultTiers.push({
-            product_id: productId,
-            tier_name: storePriceModel.tier_3_name,
-            tier_order: 3,
-            tier_type: "gradual_wholesale",
-            price: tier3Price,
-            min_quantity: 10,
-            is_active: true,
-          });
-        }
-
-        // Nível 4 (Atacado Grande)
-        if (storePriceModel.tier_4_enabled) {
-          const tier4Price = retailPrice * 0.7; // 30% desconto
-          defaultTiers.push({
-            product_id: productId,
-            tier_name: storePriceModel.tier_4_name,
-            tier_order: 4,
-            tier_type: "gradual_wholesale",
-            price: tier4Price,
-            min_quantity: 50,
-            is_active: true,
-          });
-        }
-      }
-
-      if (defaultTiers.length > 0) {
-        const { data, error: createError } = await supabase
-          .from("product_price_tiers")
-          .insert(defaultTiers)
-          .select();
-
-        if (createError) throw createError;
-
-        setTiers(data || []);
-      }
-    } catch (err) {
-      console.error("Erro ao criar níveis padrão:", err);
-      setError(
-        err instanceof Error ? err.message : "Erro ao criar níveis padrão"
-      );
-    }
-  };
-
-  // Atualizar nível de preço
-  const updateTier = async (
-    tierId: string,
-    updates: Partial<ProductPriceTier>
-  ) => {
-    try {
-      setError(null);
-
-      const { data, error: updateError } = await supabase
-        .from("product_price_tiers")
-        .update(updates)
-        .eq("id", tierId)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-
-      setTiers((prev) =>
-        prev.map((tier) => (tier.id === tierId ? data : tier))
-      );
-      return data;
-    } catch (err) {
-      console.error("Erro ao atualizar nível:", err);
-      setError(err instanceof Error ? err.message : "Erro ao atualizar nível");
-      throw err;
-    }
-  };
-
-  // Desativar nível
-  const deactivateTier = async (tierId: string) => {
-    return await updateTier(tierId, { is_active: false });
-  };
-
-  // Calcular preço baseado na quantidade
-  const calculatePriceForQuantity = (
-    quantity: number
-  ): ProductPriceTier | null => {
-    if (!tiers.length) return null;
-
-    // Ordenar por quantidade mínima (decrescente) para encontrar o melhor preço
-    const sortedTiers = [...tiers].sort(
-      (a, b) => b.min_quantity - a.min_quantity
-    );
-
-    // Encontrar o primeiro nível que atende à quantidade
-    return sortedTiers.find((tier) => quantity >= tier.min_quantity) || null;
-  };
-
-  // Obter próximo nível disponível
-  const getNextTier = (currentQuantity: number): ProductPriceTier | null => {
-    if (!tiers.length) return null;
-
-    const sortedTiers = [...tiers].sort(
-      (a, b) => a.min_quantity - b.min_quantity
-    );
-    return (
-      sortedTiers.find((tier) => tier.min_quantity > currentQuantity) || null
-    );
-  };
-
-  // Calcular economia
-  const calculateSavings = (
-    currentTier: ProductPriceTier,
-    nextTier?: ProductPriceTier
-  ) => {
-    if (!nextTier) return { amount: 0, percentage: 0 };
-
-    const savingsAmount = currentTier.price - nextTier.price;
-    const savingsPercentage = (savingsAmount / currentTier.price) * 100;
-
-    return {
-      amount: savingsAmount,
-      percentage: savingsPercentage,
-    };
-  };
-
-  // Buscar dados quando productId mudar
   useEffect(() => {
-    if (productId) {
-      fetchTiers();
-    }
-  }, [productId]);
+    fetchTiers();
+  }, [fetchTiers, productId]);
+
+  const createTier = useCallback(
+    async (newTier: Omit<ProductPriceTier, "id" | "created_at" | "updated_at">) => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("product_price_tiers")
+          .insert([{ ...newTier }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setTiers((prevTiers) => [...prevTiers, data]);
+        toast({
+          title: "Sucesso",
+          description: "Nível de preço criado com sucesso",
+        });
+      } catch (error) {
+        console.error("Error creating price tier:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar nível de preço",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        fetchTiers();
+      }
+    },
+    [toast, fetchTiers]
+  );
+
+  const updateTier = useCallback(
+    async (tierId: string, updates: Partial<ProductPriceTier>) => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("product_price_tiers")
+          .update(updates)
+          .eq("id", tierId)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setTiers((prevTiers) =>
+          prevTiers.map((tier) => (tier.id === tierId ? { ...tier, ...data } : tier))
+        );
+        toast({
+          title: "Sucesso",
+          description: "Nível de preço atualizado com sucesso",
+        });
+      } catch (error) {
+        console.error("Error updating price tier:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar nível de preço",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        fetchTiers();
+      }
+    },
+    [toast, fetchTiers]
+  );
+
+  const deleteTier = useCallback(
+    async (tierId: string) => {
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from("product_price_tiers")
+          .delete()
+          .eq("id", tierId);
+
+        if (error) throw error;
+
+        setTiers((prevTiers) => prevTiers.filter((tier) => tier.id !== tierId));
+        toast({
+          title: "Sucesso",
+          description: "Nível de preço removido com sucesso",
+        });
+      } catch (error) {
+        console.error("Error deleting price tier:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao remover nível de preço",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        fetchTiers();
+      }
+    },
+    [toast, fetchTiers]
+  );
 
   return {
     tiers,
     loading,
-    error,
+    fetchTiers,
+    createTier,
     updateTier,
-    deactivateTier,
-    createDefaultTiers,
-    calculatePriceForQuantity,
-    getNextTier,
-    calculateSavings,
-    refetch: fetchTiers,
+    deleteTier,
   };
 };
