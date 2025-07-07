@@ -1,245 +1,199 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../integrations/supabase/client";
-import {
-  StorePriceModel,
-  PriceModelType,
-  PriceModelSettings,
-} from "../types/price-models";
-import { useAuth } from "./useAuth";
+
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+export type PriceModelType = 'retail_only' | 'simple_wholesale' | 'gradual_wholesale';
+
+export interface StorePriceModel {
+  id?: string;
+  store_id?: string;
+  price_model: PriceModelType;
+  simple_wholesale_enabled: boolean;
+  simple_wholesale_name: string;
+  simple_wholesale_min_qty: number;
+  gradual_wholesale_enabled: boolean;
+  gradual_tiers_count: number;
+  tier_1_enabled: boolean;
+  tier_1_name: string;
+  tier_2_enabled: boolean;
+  tier_2_name: string;
+  tier_3_enabled: boolean;
+  tier_3_name: string;
+  tier_4_enabled: boolean;
+  tier_4_name: string;
+  show_price_tiers: boolean;
+  show_savings_indicators: boolean;
+  show_next_tier_hint: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export const useStorePriceModel = (storeId?: string) => {
-  const { user } = useAuth();
-  const [priceModel, setPriceModel] = useState<StorePriceModel | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [priceModel, setPriceModel] = useState<StorePriceModel>({
+    price_model: 'retail_only',
+    simple_wholesale_enabled: false,
+    simple_wholesale_name: 'Atacado',
+    simple_wholesale_min_qty: 10,
+    gradual_wholesale_enabled: false,
+    gradual_tiers_count: 2,
+    tier_1_enabled: true,
+    tier_1_name: 'Varejo',
+    tier_2_enabled: false,
+    tier_2_name: 'Atacarejo',
+    tier_3_enabled: false,
+    tier_3_name: 'Atacado Pequeno',
+    tier_4_enabled: false,
+    tier_4_name: 'Atacado Grande',
+    show_price_tiers: true,
+    show_savings_indicators: true,
+    show_next_tier_hint: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  // Buscar modelo de preço da loja
-  const fetchPriceModel = async () => {
+  const fetchPriceModel = useCallback(async () => {
     if (!storeId) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from("store_price_models")
-        .select("*")
-        .eq("store_id", storeId)
+      const { data, error } = await supabase
+        .from('store_price_models')
+        .select('*')
+        .eq('store_id', storeId)
         .single();
 
-      if (fetchError && fetchError.code !== "PGRST116") {
-        throw fetchError;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
       if (data) {
-        setPriceModel(data);
-      } else {
-        // Criar modelo padrão se não existir
-        await createDefaultPriceModel(storeId);
+        // Convert string to PriceModelType
+        const convertedData = {
+          ...data,
+          price_model: data.price_model as PriceModelType
+        };
+        setPriceModel(convertedData);
       }
-    } catch (err) {
-      console.error("Erro ao buscar modelo de preço:", err);
-      setError(err instanceof Error ? err.message : "Erro desconhecido");
+    } catch (error: any) {
+      console.error('Error fetching price model:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar modelo de preços",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId, toast]);
 
-  // Criar modelo padrão (apenas varejo)
-  const createDefaultPriceModel = async (storeId: string) => {
+  const updatePriceModel = useCallback(async (updates: Partial<StorePriceModel>) => {
+    if (!storeId) return;
+
+    setLoading(true);
     try {
-      const defaultModel: Omit<
-        StorePriceModel,
-        "id" | "created_at" | "updated_at"
-      > = {
-        store_id: storeId,
-        price_model: "retail_only",
-        simple_wholesale_enabled: false,
-        simple_wholesale_name: "Atacado",
-        simple_wholesale_min_qty: 10,
-        gradual_wholesale_enabled: false,
-        gradual_tiers_count: 2,
-        tier_1_name: "Varejo",
-        tier_2_name: "Atacarejo",
-        tier_3_name: "Atacado Pequeno",
-        tier_4_name: "Atacado Grande",
-        tier_1_enabled: true,
-        tier_2_enabled: false,
-        tier_3_enabled: false,
-        tier_4_enabled: false,
-        show_price_tiers: true,
-        show_savings_indicators: true,
-        show_next_tier_hint: true,
+      const updatedModel = { ...priceModel, ...updates };
+      
+      const { data, error } = await supabase
+        .from('store_price_models')
+        .upsert({
+          ...updatedModel,
+          store_id: storeId,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Convert string to PriceModelType for state
+      const convertedData = {
+        ...data,
+        price_model: data.price_model as PriceModelType
       };
+      setPriceModel(convertedData);
 
-      const { data, error: createError } = await supabase
-        .from("store_price_models")
-        .insert(defaultModel)
-        .select()
-        .single();
-
-      if (createError) throw createError;
-
-      setPriceModel(data);
-    } catch (err) {
-      console.error("Erro ao criar modelo padrão:", err);
-      setError(
-        err instanceof Error ? err.message : "Erro ao criar modelo padrão"
-      );
+      toast({
+        title: "Sucesso",
+        description: "Modelo de preços atualizado com sucesso",
+      });
+    } catch (error: any) {
+      console.error('Error updating price model:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar modelo de preços",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [storeId, priceModel, toast]);
 
-  // Atualizar modelo de preço
-  const updatePriceModel = async (updates: Partial<StorePriceModel>) => {
-    if (!priceModel?.id) return;
+  const createDefaultPriceModel = useCallback(async () => {
+    if (!storeId) return;
 
+    setLoading(true);
     try {
-      setError(null);
-
-      const { data, error: updateError } = await supabase
-        .from("store_price_models")
-        .update(updates)
-        .eq("id", priceModel.id)
+      const { data, error } = await supabase
+        .from('store_price_models')
+        .insert({
+          store_id: storeId,
+          price_model: 'retail_only',
+          simple_wholesale_enabled: false,
+          simple_wholesale_name: 'Atacado',
+          simple_wholesale_min_qty: 10,
+          gradual_wholesale_enabled: false,
+          gradual_tiers_count: 2,
+          tier_1_enabled: true,
+          tier_1_name: 'Varejo',
+          tier_2_enabled: false,
+          tier_2_name: 'Atacarejo',
+          tier_3_enabled: false,
+          tier_3_name: 'Atacado Pequeno',
+          tier_4_enabled: false,
+          tier_4_name: 'Atacado Grande',
+          show_price_tiers: true,
+          show_savings_indicators: true,
+          show_next_tier_hint: true,
+        })
         .select()
         .single();
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      setPriceModel(data);
-      return data;
-    } catch (err) {
-      console.error("Erro ao atualizar modelo de preço:", err);
-      setError(err instanceof Error ? err.message : "Erro ao atualizar modelo");
-      throw err;
+      // Convert string to PriceModelType for state
+      const convertedData = {
+        ...data,
+        price_model: data.price_model as PriceModelType
+      };
+      setPriceModel(convertedData);
+
+      toast({
+        title: "Sucesso",
+        description: "Modelo de preços padrão criado",
+      });
+    } catch (error: any) {
+      console.error('Error creating default price model:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao criar modelo de preços padrão",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [storeId, toast]);
 
-  // Mudar modelo de preço
-  const changePriceModel = async (newModel: PriceModelType) => {
-    if (!priceModel) return;
-
-    const updates: Partial<StorePriceModel> = {
-      price_model: newModel,
-    };
-
-    // Configurações específicas por modelo
-    switch (newModel) {
-      case "retail_only":
-        updates.simple_wholesale_enabled = false;
-        updates.gradual_wholesale_enabled = false;
-        updates.tier_1_enabled = true;
-        updates.tier_2_enabled = false;
-        updates.tier_3_enabled = false;
-        updates.tier_4_enabled = false;
-        break;
-
-      case "simple_wholesale":
-        updates.simple_wholesale_enabled = true;
-        updates.gradual_wholesale_enabled = false;
-        updates.tier_1_enabled = true;
-        updates.tier_2_enabled = true;
-        updates.tier_3_enabled = false;
-        updates.tier_4_enabled = false;
-        break;
-
-      case "gradual_wholesale":
-        updates.simple_wholesale_enabled = false;
-        updates.gradual_wholesale_enabled = true;
-        updates.tier_1_enabled = true;
-        updates.tier_2_enabled = true;
-        updates.tier_3_enabled = true;
-        updates.tier_4_enabled = true;
-        break;
-    }
-
-    return await updatePriceModel(updates);
-  };
-
-  // Converter para configurações de interface
-  const getSettings = (): PriceModelSettings | null => {
-    if (!priceModel) return null;
-
-    return {
-      selectedModel: priceModel.price_model,
-      simpleWholesale: {
-        enabled: priceModel.simple_wholesale_enabled,
-        name: priceModel.simple_wholesale_name,
-        minQuantity: priceModel.simple_wholesale_min_qty,
-      },
-      gradualWholesale: {
-        enabled: priceModel.gradual_wholesale_enabled,
-        tiersCount: priceModel.gradual_tiers_count,
-        tiers: {
-          1: {
-            name: priceModel.tier_1_name,
-            enabled: priceModel.tier_1_enabled,
-            defaultMinQty: 1,
-          },
-          2: {
-            name: priceModel.tier_2_name,
-            enabled: priceModel.tier_2_enabled,
-            defaultMinQty: 5,
-          },
-          3: {
-            name: priceModel.tier_3_name,
-            enabled: priceModel.tier_3_enabled,
-            defaultMinQty: 10,
-          },
-          4: {
-            name: priceModel.tier_4_name,
-            enabled: priceModel.tier_4_enabled,
-            defaultMinQty: 50,
-          },
-        },
-      },
-      display: {
-        showPriceTiers: priceModel.show_price_tiers,
-        showSavingsIndicators: priceModel.show_savings_indicators,
-        showNextTierHint: priceModel.show_next_tier_hint,
-      },
-    };
-  };
-
-  // Verificar se modelo está ativo
-  const isModelActive = (model: PriceModelType): boolean => {
-    if (!priceModel) return false;
-    return priceModel.price_model === model;
-  };
-
-  // Verificar se nível está habilitado
-  const isTierEnabled = (tierOrder: number): boolean => {
-    if (!priceModel) return false;
-
-    switch (tierOrder) {
-      case 1:
-        return priceModel.tier_1_enabled;
-      case 2:
-        return priceModel.tier_2_enabled;
-      case 3:
-        return priceModel.tier_3_enabled;
-      case 4:
-        return priceModel.tier_4_enabled;
-      default:
-        return false;
-    }
-  };
-
-  // Buscar dados quando storeId mudar
   useEffect(() => {
     if (storeId) {
       fetchPriceModel();
     }
-  }, [storeId]);
+  }, [fetchPriceModel, storeId]);
 
   return {
     priceModel,
     loading,
-    error,
     updatePriceModel,
-    changePriceModel,
-    getSettings,
-    isModelActive,
-    isTierEnabled,
+    createDefaultPriceModel,
     refetch: fetchPriceModel,
   };
 };

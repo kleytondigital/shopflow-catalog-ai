@@ -1,7 +1,7 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { ProductVariation } from '@/types/product';
 
 export interface ProductFormData {
@@ -21,17 +21,16 @@ export interface ProductFormData {
   stock_alert_threshold?: number;
   is_active?: boolean;
   variations?: ProductVariation[];
-  price_tiers?: {
-    id: string;
-    name: string;
-    minQuantity: number;
+  price_tiers?: Array<{
+    tier_name: string;
+    tier_type: string;
+    min_quantity: number;
     price: number;
-    enabled: boolean;
-  }[];
-  store_id?: string;
+    tier_order: number;
+  }>;
 }
 
-export interface Step {
+export interface WizardStep {
   id: number;
   label: string;
   title: string;
@@ -42,7 +41,6 @@ export const useProductFormWizard = () => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingPriceTiers, setIsLoadingPriceTiers] = useState(false);
   const [productId, setProductId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ProductFormData>({
@@ -65,7 +63,7 @@ export const useProductFormWizard = () => {
     price_tiers: []
   });
 
-  const steps: Step[] = [
+  const steps: WizardStep[] = [
     {
       id: 0,
       label: 'Básico',
@@ -75,14 +73,14 @@ export const useProductFormWizard = () => {
     {
       id: 1,
       label: 'Preços',
-      title: 'Preço e Estoque',
-      description: 'Definir preços e controle de estoque'
+      title: 'Preços e Estoque',
+      description: 'Valores, estoque e configurações de preço'
     },
     {
       id: 2,
       label: 'Imagens',
       title: 'Imagens do Produto',
-      description: 'Adicionar fotos do produto'
+      description: 'Upload e organização das imagens'
     },
     {
       id: 3,
@@ -93,14 +91,14 @@ export const useProductFormWizard = () => {
     {
       id: 4,
       label: 'SEO',
-      title: 'Otimização SEO',
-      description: 'Configurações para motores de busca'
+      title: 'Otimização para Busca',
+      description: 'Meta tags e palavras-chave'
     },
     {
       id: 5,
       label: 'Avançado',
       title: 'Configurações Avançadas',
-      description: 'Configurações extras do produto'
+      description: 'Destaque, ativação e outras opções'
     }
   ];
 
@@ -126,6 +124,132 @@ export const useProductFormWizard = () => {
     }
   }, [steps.length]);
 
+  const canProceed = useCallback(() => {
+    switch (currentStep) {
+      case 0: // Básico
+        return formData.name.trim().length > 0;
+      case 1: // Preços
+        return formData.retail_price > 0 && formData.stock >= 0;
+      default:
+        return true;
+    }
+  }, [currentStep, formData]);
+
+  const loadProductForEditing = useCallback((product: any) => {
+    console.log('📥 Loading product for editing:', product);
+    
+    const productData: ProductFormData = {
+      name: product.name || '',
+      description: product.description || '',
+      retail_price: product.retail_price || 0,
+      wholesale_price: product.wholesale_price || undefined,
+      min_wholesale_qty: product.min_wholesale_qty || 1,
+      stock: product.stock || 0,
+      category: product.category || '',
+      keywords: product.keywords || '',
+      meta_title: product.meta_title || '',
+      meta_description: product.meta_description || '',
+      seo_slug: product.seo_slug || '',
+      is_featured: product.is_featured || false,
+      allow_negative_stock: product.allow_negative_stock || false,
+      stock_alert_threshold: product.stock_alert_threshold || 5,
+      is_active: product.is_active !== false,
+      variations: product.variations || [],
+      price_tiers: product.price_tiers || []
+    };
+
+    setFormData(productData);
+    setProductId(product.id);
+  }, []);
+
+  const saveProduct = useCallback(async (data: ProductFormData) => {
+    setIsSaving(true);
+    
+    try {
+      console.log('💾 Saving product with data:', data);
+      
+      const productData = {
+        name: data.name.trim(),
+        description: data.description || '',
+        retail_price: data.retail_price,
+        wholesale_price: data.wholesale_price,
+        min_wholesale_qty: data.min_wholesale_qty || 1,
+        stock: data.stock,
+        category: data.category || '',
+        keywords: data.keywords || '',
+        meta_title: data.meta_title || '',
+        meta_description: data.meta_description || '',
+        seo_slug: data.seo_slug || '',
+        is_featured: data.is_featured || false,
+        allow_negative_stock: data.allow_negative_stock || false,
+        stock_alert_threshold: data.stock_alert_threshold || 5,
+        is_active: data.is_active !== false
+      };
+
+      let result;
+      
+      if (productId) {
+        // Atualizar produto existente
+        const { data: updatedProduct, error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', productId)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = updatedProduct;
+        
+        toast({
+          title: 'Produto atualizado',
+          description: 'Produto atualizado com sucesso!',
+        });
+      } else {
+        // Criar novo produto
+        const { data: user } = await supabase.auth.getUser();
+        if (!user.user) throw new Error('Usuário não autenticado');
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('store_id')
+          .eq('id', user.user.id)
+          .single();
+
+        if (!profile?.store_id) throw new Error('Loja não encontrada');
+
+        const { data: newProduct, error } = await supabase
+          .from('products')
+          .insert({
+            ...productData,
+            store_id: profile.store_id
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = newProduct;
+        setProductId(result.id);
+        
+        toast({
+          title: 'Produto criado',
+          description: 'Produto criado com sucesso!',
+        });
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error saving product:', error);
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [productId, toast]);
+
   const resetForm = useCallback(() => {
     setFormData({
       name: '',
@@ -150,132 +274,27 @@ export const useProductFormWizard = () => {
     setProductId(null);
   }, []);
 
-  const loadProductForEditing = useCallback((product: any) => {
-    console.log('📥 Loading product for editing:', product);
-    setProductId(product.id);
-    setFormData({
-      name: product.name || '',
-      description: product.description || '',
-      retail_price: product.retail_price || 0,
-      wholesale_price: product.wholesale_price,
-      min_wholesale_qty: product.min_wholesale_qty || 1,
-      stock: product.stock || 0,
-      category: product.category || '',
-      keywords: product.keywords || '',
-      meta_title: product.meta_title || '',
-      meta_description: product.meta_description || '',
-      seo_slug: product.seo_slug || '',
-      is_featured: product.is_featured || false,
-      allow_negative_stock: product.allow_negative_stock || false,
-      stock_alert_threshold: product.stock_alert_threshold || 5,
-      is_active: product.is_active !== false,
-      variations: product.variations || [],
-      price_tiers: product.price_tiers || []
-    });
-  }, []);
-
   const cancelAndCleanup = useCallback(() => {
     resetForm();
   }, [resetForm]);
 
-  const canProceed = useCallback(() => {
-    switch (currentStep) {
-      case 0: // Básico
-        return formData.name.trim().length > 0;
-      case 1: // Preços
-        return formData.retail_price > 0 && formData.stock >= 0;
-      default:
-        return true;
-    }
-  }, [currentStep, formData]);
-
-  const saveProduct = async (productFormData: ProductFormData): Promise<string | null> => {
-    setIsSaving(true);
-    
-    try {
-      console.log('💾 Salvando produto:', productFormData);
-
-      const productData = {
-        name: productFormData.name,
-        description: productFormData.description || '',
-        retail_price: productFormData.retail_price,
-        wholesale_price: productFormData.wholesale_price,
-        min_wholesale_qty: productFormData.min_wholesale_qty || 1,
-        stock: productFormData.stock,
-        category: productFormData.category || '',
-        keywords: productFormData.keywords || '',
-        meta_title: productFormData.meta_title || '',
-        meta_description: productFormData.meta_description || '',
-        seo_slug: productFormData.seo_slug || '',
-        is_featured: productFormData.is_featured || false,
-        allow_negative_stock: productFormData.allow_negative_stock || false,
-        stock_alert_threshold: productFormData.stock_alert_threshold || 5,
-        is_active: productFormData.is_active !== false,
-        store_id: productFormData.store_id
-      };
-
-      let result;
-      
-      if (productId) {
-        // Atualizar produto existente
-        result = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', productId)
-          .select()
-          .single();
-      } else {
-        // Criar novo produto
-        result = await supabase
-          .from('products')
-          .insert([productData])
-          .select()
-          .single();
-      }
-
-      if (result.error) throw result.error;
-
-      const savedProduct = result.data;
-      setProductId(savedProduct.id);
-
-      toast({
-        title: productId ? "Produto atualizado" : "Produto criado",
-        description: `${savedProduct.name} foi ${productId ? 'atualizado' : 'criado'} com sucesso!`,
-      });
-
-      return savedProduct.id;
-    } catch (error: any) {
-      console.error('Erro ao salvar produto:', error);
-      toast({
-        title: "Erro",
-        description: `Falha ao ${productId ? 'atualizar' : 'criar'} produto: ${error.message}`,
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return {
     currentStep,
-    steps,
     formData,
+    steps,
     isSaving,
-    isLoadingPriceTiers,
     productId,
-    totalSteps: steps.length,
     updateFormData,
     nextStep,
     prevStep,
     goToStep,
+    canProceed,
+    loadProductForEditing,
     saveProduct,
     resetForm,
-    loadProductForEditing,
-    cancelAndCleanup,
-    canProceed
+    cancelAndCleanup
   };
 };
 
-// Export ProductVariation for compatibility
-export { ProductVariation } from '@/types/product';
+// Use export type for isolated modules
+export type { ProductVariation };

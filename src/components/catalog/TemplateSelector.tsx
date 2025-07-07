@@ -7,7 +7,7 @@ import { CatalogType } from '@/hooks/useCatalog';
 import { useEditorSync } from '@/hooks/useEditorSync';
 import ModernTemplate from './templates/ModernTemplate';
 import MinimalTemplate from './templates/MinimalTemplate';
-import ElegantTemplate from './templates/ElegantTemplate';
+import ElegantTemplate, { CatalogSettingsData } from './templates/ElegantTemplate';
 import IndustrialTemplate from './templates/IndustrialTemplate';
 
 interface TemplateSelectorProps {
@@ -37,6 +37,13 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   const { settings } = useEditorSync(storeIdentifier);
 
+  // Converter settings para o formato esperado pelo ElegantTemplate
+  const editorSettings: CatalogSettingsData = {
+    colors: settings?.colors || {},
+    global: settings?.global || {},
+    productCard: settings?.productCard || {}
+  };
+
   const templateProps = {
     product,
     catalogType,
@@ -46,7 +53,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     isInWishlist,
     showPrices,
     showStock,
-    editorSettings: settings
+    editorSettings
   };
 
   // Verificar se o produto tem variações

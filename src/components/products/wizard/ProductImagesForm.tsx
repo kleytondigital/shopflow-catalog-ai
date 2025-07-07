@@ -16,7 +16,6 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({
 }) => {
   const { draftImages, addDraftImages, removeDraftImage, uploadAllImages } = useDraftImages();
 
-  // Map para compatibilidade com DraftImageUpload
   const handleImageAdd = (files: File[]) => {
     addDraftImages(files);
   };

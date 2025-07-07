@@ -1,400 +1,249 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { useCatalogSettings } from "@/hooks/useCatalogSettings";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Store,
-  ArrowLeftRight,
-  ToggleLeft,
-  ShoppingCart,
-  Package,
-  Zap,
-  Users,
-  TrendingUp,
-} from "lucide-react";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 
-const CatalogModeSettings = () => {
-  const { settings, updateSettings } = useCatalogSettings();
-  const { toast } = useToast();
-  const {
-    priceModel,
-    changePriceModel,
-    updatePriceModel,
-    loading: loadingPriceModel,
-  } = useStorePriceModel(settings?.store_id);
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useStorePriceModel, PriceModelType } from '@/hooks/useStorePriceModel';
+import { Badge } from '@/components/ui/badge';
+import { Settings, DollarSign, TrendingUp, Package } from 'lucide-react';
 
-  // Estado local para seleção do modelo de atacado e níveis
-  const [selectedWholesale, setSelectedWholesale] = React.useState<string>(
-    priceModel?.price_model || "simple_wholesale"
-  );
-  const [localTiers, setLocalTiers] = React.useState([
-    { key: 2, label: "Atacarejo", enabled: priceModel?.tier_2_enabled ?? true },
-    {
-      key: 3,
-      label: "Atacado Pequeno",
-      enabled: priceModel?.tier_3_enabled ?? true,
-    },
-    {
-      key: 4,
-      label: "Atacado Grande",
-      enabled: priceModel?.tier_4_enabled ?? true,
-    },
-  ]);
-  const [saving, setSaving] = React.useState(false);
+interface CatalogModeSettingsProps {
+  storeId?: string;
+}
 
-  React.useEffect(() => {
-    if (priceModel) {
-      setSelectedWholesale(priceModel.price_model);
-      setLocalTiers([
-        {
-          key: 2,
-          label: priceModel.tier_2_name || "Atacarejo",
-          enabled: priceModel.tier_2_enabled,
-        },
-        {
-          key: 3,
-          label: priceModel.tier_3_name || "Atacado Pequeno",
-          enabled: priceModel.tier_3_enabled,
-        },
-        {
-          key: 4,
-          label: priceModel.tier_4_name || "Atacado Grande",
-          enabled: priceModel.tier_4_enabled,
-        },
-      ]);
-    }
+const CatalogModeSettings: React.FC<CatalogModeSettingsProps> = ({ storeId }) => {
+  const { priceModel, loading, updatePriceModel } = useStorePriceModel(storeId);
+  const [localModel, setLocalModel] = useState(priceModel);
+
+  useEffect(() => {
+    setLocalModel(priceModel);
   }, [priceModel]);
 
-  const handleSaveWholesale = async () => {
-    setSaving(true);
-    try {
-      await changePriceModel(selectedWholesale);
-      if (selectedWholesale === "gradual_wholesale") {
-        await updatePriceModel({
-          tier_2_enabled: localTiers[0].enabled,
-          tier_3_enabled: localTiers[1].enabled,
-          tier_4_enabled: localTiers[2].enabled,
-        });
-      }
-      toast({
-        title: "Configuração de atacado salva!",
-        description: "Modelo de preço atualizado com sucesso.",
-      });
-    } catch (e) {
-      toast({
-        title: "Erro ao salvar modelo de preço",
-        description: "Tente novamente.",
-        variant: "destructive",
-      });
-    }
-    setSaving(false);
+  const handlePriceModelChange = (value: string) => {
+    const newModel = { ...localModel, price_model: value as PriceModelType };
+    setLocalModel(newModel);
+    updatePriceModel({ price_model: value as PriceModelType });
   };
 
-  const handleModeChange = async (
-    newMode: "separated" | "hybrid" | "toggle"
-  ) => {
-    try {
-      const { error } = await updateSettings({ catalog_mode: newMode });
-
-      if (error) {
-        toast({
-          title: "Erro ao atualizar configuração",
-          description: "Tente novamente em alguns instantes",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Modo de catálogo atualizado",
-        description: `Modo ${getModeLabel(newMode)} ativado com sucesso!`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao salvar configuração",
-        description: "Tente novamente em alguns instantes",
-        variant: "destructive",
-      });
-    }
+  const handleToggleChange = (field: keyof typeof localModel, value: boolean) => {
+    const newModel = { ...localModel, [field]: value };
+    setLocalModel(newModel);
+    updatePriceModel({ [field]: value });
   };
 
-  const getModeLabel = (mode: string) => {
-    switch (mode) {
-      case "separated":
-        return "Separado";
-      case "hybrid":
-        return "Híbrido";
-      case "toggle":
-        return "Alternável";
-      default:
-        return "Separado";
-    }
+  const handleInputChange = (field: keyof typeof localModel, value: string | number) => {
+    const newModel = { ...localModel, [field]: value };
+    setLocalModel(newModel);
   };
 
-  if (!settings) return null;
+  const handleSave = () => {
+    updatePriceModel(localModel);
+  };
 
-  const catalogModes = [
-    {
-      id: "separated",
-      label: "Catálogos Separados",
-      description: "Links distintos para varejo e atacado",
-      icon: Store,
-      benefits: [
-        "Experiência focada por tipo de público",
-        "SEO otimizado para cada catálogo",
-        "Configurações independentes",
-        "Controle total sobre visibilidade",
-      ],
-      recommended: "Recomendado para lojas com públicos muito distintos",
-    },
-    {
-      id: "hybrid",
-      label: "Catálogo Híbrido",
-      description: "Preços mudam automaticamente por quantidade",
-      icon: Zap,
-      benefits: [
-        "Conversão automática para atacado",
-        "Experiência fluida para o cliente",
-        "Incentiva compras em maior quantidade",
-        "Reduz fricção no processo de compra",
-      ],
-      recommended: "Ideal para produtos com desconto progressivo",
-      badge: "Inteligente",
-    },
-    {
-      id: "toggle",
-      label: "Catálogo Alternável",
-      description: "Cliente pode alternar entre varejo e atacado",
-      icon: ToggleLeft,
-      benefits: [
-        "Flexibilidade total para o cliente",
-        "Comparação fácil entre preços",
-        "Controle na mão do usuário",
-        "Experiência personalizada",
-      ],
-      recommended: "Perfeito para clientes que compram nos dois modos",
-      badge: "Flexível",
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
+  if (loading) {
+    return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ArrowLeftRight className="h-5 w-5 text-blue-600" />
-            Modo de Exibição dos Catálogos
+            <Settings className="h-5 w-5" />
+            Configurações de Preços
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-6">
-            Escolha como seus clientes vão acessar e visualizar os preços de
-            varejo e atacado.
-          </p>
-
-          <RadioGroup
-            value={settings.catalog_mode}
-            onValueChange={handleModeChange}
-            className="grid md:grid-cols-3 gap-4"
-          >
-            {catalogModes.map((mode) => {
-              const IconComponent = mode.icon;
-              const isSelected = settings.catalog_mode === mode.id;
-              return (
-                <label
-                  key={mode.id}
-                  htmlFor={mode.id}
-                  className={`relative rounded-lg border-2 p-6 cursor-pointer transition-all duration-200 flex flex-col h-full ${
-                    isSelected
-                      ? "border-blue-500 bg-blue-50 shadow-lg"
-                      : "border-gray-200 hover:border-gray-300 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center space-x-2 mb-4">
-                    <RadioGroupItem value={mode.id} id={mode.id} />
-                    <div className="flex items-center gap-3">
-                      <IconComponent
-                        className={`h-5 w-5 ${
-                          isSelected ? "text-blue-600" : "text-gray-600"
-                        }`}
-                      />
-                      <span className="font-semibold text-lg">
-                        {mode.label}
-                      </span>
-                      {mode.badge && (
-                        <Badge variant="secondary" className="text-xs">
-                          {mode.badge}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-4 ml-6">{mode.description}</p>
-                  {/* Só mostra a configuração de atacado se for o híbrido e estiver selecionado */}
-                  {mode.id === "hybrid" && isSelected && (
-                    <div className="mt-8 p-4 border rounded-lg bg-green-50">
-                      <h4 className="font-semibold mb-2 text-green-800">
-                        Configuração de Atacado
-                      </h4>
-                      <div className="flex flex-col gap-4">
-                        <div>
-                          <label className="font-medium">
-                            Modelo de Atacado:
-                          </label>
-                          <div className="flex gap-4 mt-2">
-                            <Button
-                              variant={
-                                selectedWholesale === "simple_wholesale"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              onClick={() =>
-                                setSelectedWholesale("simple_wholesale")
-                              }
-                              disabled={saving || loadingPriceModel}
-                            >
-                              Atacado Simples
-                            </Button>
-                            <Button
-                              variant={
-                                selectedWholesale === "gradual_wholesale"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              onClick={() =>
-                                setSelectedWholesale("gradual_wholesale")
-                              }
-                              disabled={saving || loadingPriceModel}
-                            >
-                              Atacado Gradativo
-                            </Button>
-                          </div>
-                        </div>
-                        {selectedWholesale === "gradual_wholesale" && (
-                          <div>
-                            <label className="font-medium mb-2 block">
-                              Níveis de Atacado:
-                            </label>
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-start gap-4 md:gap-8 mb-8">
-                              {localTiers.map((tier, idx) => (
-                                <div
-                                  key={tier.key}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Switch
-                                    checked={tier.enabled}
-                                    onCheckedChange={(checked) => {
-                                      setLocalTiers((prev) =>
-                                        prev.map((t, i) =>
-                                          i === idx
-                                            ? { ...t, enabled: checked }
-                                            : t
-                                        )
-                                      );
-                                    }}
-                                  />
-                                  <span>{tier.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <Button
-                          onClick={handleSaveWholesale}
-                          disabled={saving || loadingPriceModel}
-                          className="mt-4 md:mt-8"
-                        >
-                          Salvar Configuração de Atacado
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </label>
-              );
-            })}
-          </RadioGroup>
-
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Como isso afeta seus clientes:
-            </h4>
-            <div className="space-y-2 text-sm text-gray-600">
-              {settings.catalog_mode === "separated" && (
-                <>
-                  <p>
-                    • Clientes acessam links diferentes para varejo e atacado
-                  </p>
-                  <p>• Experiência focada no tipo de compra desejada</p>
-                  <p>• Ideal para segmentação clara de público</p>
-                </>
-              )}
-              {settings.catalog_mode === "hybrid" && (
-                <>
-                  <p>
-                    • Preços mudam automaticamente ao atingir quantidade mínima
-                  </p>
-                  <p>• Cliente vê economia em tempo real</p>
-                  <p>• Incentiva compras maiores naturalmente</p>
-                  <p>• Cada produto pode ter seus próprios níveis de preço</p>
-                </>
-              )}
-              {settings.catalog_mode === "toggle" && (
-                <>
-                  <p>• Cliente pode alternar entre modo varejo e atacado</p>
-                  <p>• Comparação fácil entre preços</p>
-                  <p>• Flexibilidade total na experiência de compra</p>
-                </>
-              )}
-            </div>
-          </div>
+          <div className="text-center py-4">Carregando configurações...</div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Informação sobre configuração de níveis */}
-      {settings.catalog_mode === "hybrid" && (
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-700">
-              <Zap className="h-5 w-5" />
-              Configuração de Níveis por Produto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm text-gray-700">
-              <p>
-                <strong>Como funciona:</strong> No modo híbrido, cada produto
-                pode ter seus próprios níveis de preço configurados
-                individualmente.
-              </p>
-              <ul className="space-y-1 ml-4">
-                <li>
-                  • <strong>Atacado Simples:</strong> Apenas 1 nível de atacado
-                  por produto
-                </li>
-                <li>
-                  • <strong>Atacado Gradativo:</strong> Múltiplos níveis (até 4)
-                  por produto
-                </li>
-                <li>
-                  • <strong>Configuração:</strong> Feita no wizard de
-                  cadastro/edição de cada produto
-                </li>
-              </ul>
-              <p className="text-green-700 font-medium">
-                💡 Dica: Configure os níveis de cada produto durante o cadastro
-                para máxima flexibilidade!
-              </p>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="h-5 w-5" />
+          Configurações de Preços
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Modelo de Preços */}
+        <div className="space-y-4">
+          <Label className="text-base font-semibold">Modelo de Preços</Label>
+          <RadioGroup 
+            value={localModel.price_model} 
+            onValueChange={handlePriceModelChange}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                <RadioGroupItem value="retail_only" id="retail_only" />
+                <div className="flex-1">
+                  <Label htmlFor="retail_only" className="font-medium cursor-pointer">
+                    Apenas Varejo
+                  </Label>
+                  <p className="text-sm text-gray-600">Preço único para todos os clientes</p>
+                </div>
+                <Badge variant="outline">
+                  <Package className="h-3 w-3 mr-1" />
+                  Simples
+                </Badge>
+              </div>
+
+              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                <RadioGroupItem value="simple_wholesale" id="simple_wholesale" />
+                <div className="flex-1">
+                  <Label htmlFor="simple_wholesale" className="font-medium cursor-pointer">
+                    Varejo + Atacado Simples
+                  </Label>
+                  <p className="text-sm text-gray-600">Dois preços: varejo e atacado com quantidade mínima</p>
+                </div>
+                <Badge variant="outline">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  Básico
+                </Badge>
+              </div>
+
+              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                <RadioGroupItem value="gradual_wholesale" id="gradual_wholesale" />
+                <div className="flex-1">
+                  <Label htmlFor="gradual_wholesale" className="font-medium cursor-pointer">
+                    Níveis Graduais
+                  </Label>
+                  <p className="text-sm text-gray-600">Múltiplos níveis de preço baseados na quantidade</p>
+                </div>
+                <Badge variant="outline">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Avançado
+                </Badge>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          </RadioGroup>
+        </div>
+
+        {/* Configurações do Atacado Simples */}
+        {localModel.price_model === 'simple_wholesale' && (
+          <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="font-semibold text-blue-900">Configurações do Atacado Simples</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="wholesale-name">Nome do Atacado</Label>
+                <Input
+                  id="wholesale-name"
+                  value={localModel.simple_wholesale_name}
+                  onChange={(e) => handleInputChange('simple_wholesale_name', e.target.value)}
+                  placeholder="Ex: Atacado, Distribuidor"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="wholesale-min-qty">Quantidade Mínima</Label>
+                <Input
+                  id="wholesale-min-qty"
+                  type="number"
+                  value={localModel.simple_wholesale_min_qty}
+                  onChange={(e) => handleInputChange('simple_wholesale_min_qty', parseInt(e.target.value) || 0)}
+                  min="1"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Configurações dos Níveis Graduais */}
+        {localModel.price_model === 'gradual_wholesale' && (
+          <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            <h3 className="font-semibold text-green-900">Configurações dos Níveis Graduais</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="tiers-count">Número de Níveis</Label>
+                <Input
+                  id="tiers-count"
+                  type="number"
+                  value={localModel.gradual_tiers_count}
+                  onChange={(e) => handleInputChange('gradual_tiers_count', parseInt(e.target.value) || 2)}
+                  min="2"
+                  max="4"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].slice(0, localModel.gradual_tiers_count).map((tier) => (
+                  <div key={tier} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={localModel[`tier_${tier}_enabled` as keyof typeof localModel] as boolean}
+                        onCheckedChange={(checked) => 
+                          handleToggleChange(`tier_${tier}_enabled` as keyof typeof localModel, checked)
+                        }
+                      />
+                      <Label>Nível {tier}</Label>
+                    </div>
+                    {localModel[`tier_${tier}_enabled` as keyof typeof localModel] && (
+                      <Input
+                        value={localModel[`tier_${tier}_name` as keyof typeof localModel] as string}
+                        onChange={(e) => 
+                          handleInputChange(`tier_${tier}_name` as keyof typeof localModel, e.target.value)
+                        }
+                        placeholder={`Nome do Nível ${tier}`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Configurações de Exibição */}
+        <div className="space-y-4">
+          <Label className="text-base font-semibold">Configurações de Exibição</Label>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Mostrar Níveis de Preço</Label>
+                <p className="text-sm text-gray-600">Exibir tabela de preços no produto</p>
+              </div>
+              <Switch
+                checked={localModel.show_price_tiers}
+                onCheckedChange={(checked) => handleToggleChange('show_price_tiers', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Indicadores de Economia</Label>
+                <p className="text-sm text-gray-600">Mostrar quanto o cliente economiza</p>
+              </div>
+              <Switch
+                checked={localModel.show_savings_indicators}
+                onCheckedChange={(checked) => handleToggleChange('show_savings_indicators', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Dica do Próximo Nível</Label>
+                <p className="text-sm text-gray-600">Sugerir próximo nível de desconto</p>
+              </div>
+              <Switch
+                checked={localModel.show_next_tier_hint}
+                onCheckedChange={(checked) => handleToggleChange('show_next_tier_hint', checked)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4">
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar Configurações'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
