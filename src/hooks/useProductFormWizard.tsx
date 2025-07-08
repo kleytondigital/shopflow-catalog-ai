@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +21,7 @@ export interface ProductFormData {
   is_active?: boolean;
   variations?: ProductVariation[];
   price_tiers?: ProductPriceTier[];
+  store_id: string;
 }
 
 export interface WizardStep {

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import {
   Dialog,
@@ -112,10 +111,10 @@ const ProductFormWizard: React.FC<ProductFormWizardProps> = ({
     try {
       console.log("💾 WIZARD - Salvando produto:", formData);
 
-      // Usar o hook useSimpleProductWizard para salvar
+      // Garantir que store_id está presente
       const productFormData = {
         ...formData,
-        store_id: editingProduct?.store_id || "",
+        store_id: editingProduct?.store_id || formData.store_id || "",
       };
 
       const savedProduct = await saveProduct(productFormData);
