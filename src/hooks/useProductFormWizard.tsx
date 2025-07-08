@@ -10,17 +10,17 @@ export interface ProductFormData {
   wholesale_price?: number;
   min_wholesale_qty?: number;
   stock: number;
-  category?: string;
-  keywords?: string;
-  meta_title?: string;
-  meta_description?: string;
-  seo_slug?: string;
-  is_featured?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
-  is_active?: boolean;
-  variations?: ProductVariation[];
-  price_tiers?: ProductPriceTier[];
+  category: string;
+  keywords: string;
+  meta_title: string;
+  meta_description: string;
+  seo_slug: string;
+  is_featured: boolean;
+  allow_negative_stock: boolean;
+  stock_alert_threshold: number;
+  is_active: boolean;
+  variations: ProductVariation[];
+  price_tiers: ProductPriceTier[];
   store_id: string;
 }
 
@@ -54,7 +54,8 @@ export const useProductFormWizard = () => {
     stock_alert_threshold: 5,
     is_active: true,
     variations: [],
-    price_tiers: []
+    price_tiers: [],
+    store_id: ''
   });
 
   const steps: WizardStep[] = [
@@ -149,7 +150,8 @@ export const useProductFormWizard = () => {
       stock_alert_threshold: product.stock_alert_threshold || 5,
       is_active: product.is_active !== false,
       variations: product.variations || [],
-      price_tiers: product.price_tiers || []
+      price_tiers: product.price_tiers || [],
+      store_id: product.store_id || ''
     };
 
     setFormData(productData);
@@ -262,7 +264,8 @@ export const useProductFormWizard = () => {
       stock_alert_threshold: 5,
       is_active: true,
       variations: [],
-      price_tiers: []
+      price_tiers: [],
+      store_id: ''
     });
     setCurrentStep(0);
     setProductId(null);
