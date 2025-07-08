@@ -1,10 +1,10 @@
 
 import React from "react";
 import ProductBasicInfoForm from "./ProductBasicInfoForm";
-import IntelligentProductPricingForm from "./IntelligentProductPricingForm";
-import ProductImagesForm from "./ProductImagesForm";
-import HierarchicalVariationsManager from "../HierarchicalVariationsManager";
-import IntelligentSEOForm from "./IntelligentSEOForm";
+import ImprovedProductPricingForm from "./ImprovedProductPricingForm";
+import ImprovedProductImagesForm from "./ImprovedProductImagesForm";
+import FluidVariationsManager from "./FluidVariationsManager";
+import CompleteSEOGenerator from "./CompleteSEOGenerator";
 import ProductAdvancedForm from "./ProductAdvancedForm";
 import { ProductFormData } from "@/hooks/useImprovedProductFormWizard";
 
@@ -39,7 +39,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
 
       case 1:
         return (
-          <IntelligentProductPricingForm
+          <ImprovedProductPricingForm
             retailPrice={formData.retail_price}
             wholesalePrice={formData.wholesale_price}
             minWholesaleQty={formData.min_wholesale_qty}
@@ -71,7 +71,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
 
       case 2:
         return (
-          <ProductImagesForm
+          <ImprovedProductImagesForm
             productId={productId}
             onImageUploadReady={onImageUploadReady}
           />
@@ -79,7 +79,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
 
       case 3:
         return (
-          <HierarchicalVariationsManager
+          <FluidVariationsManager
             productId={productId}
             variations={formData.variations || []}
             onChange={(variations) => updateFormData({ variations })}
@@ -88,7 +88,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
 
       case 4:
         return (
-          <IntelligentSEOForm
+          <CompleteSEOGenerator
             productName={formData.name}
             category={formData.category}
             metaTitle={formData.meta_title}
