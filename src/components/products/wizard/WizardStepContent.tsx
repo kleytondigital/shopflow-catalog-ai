@@ -2,7 +2,7 @@
 import React from "react";
 import ProductBasicInfoForm from "./ProductBasicInfoForm";
 import ImprovedProductPricingForm from "./ImprovedProductPricingForm";
-import ImprovedProductImagesForm from "./ImprovedProductImagesForm";
+import ProductImagesForm from "./ProductImagesForm";
 import FluidVariationsManager from "./FluidVariationsManager";
 import CompleteSEOGenerator from "./CompleteSEOGenerator";
 import ProductAdvancedForm from "./ProductAdvancedForm";
@@ -23,6 +23,8 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   productId,
   onImageUploadReady,
 }) => {
+  console.log('📋 WIZARD STEP CONTENT - Step:', currentStep, 'ProductId:', productId);
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -71,7 +73,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
 
       case 2:
         return (
-          <ImprovedProductImagesForm
+          <ProductImagesForm
             productId={productId}
             onImageUploadReady={onImageUploadReady}
           />
@@ -82,7 +84,10 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           <FluidVariationsManager
             productId={productId}
             variations={formData.variations || []}
-            onChange={(variations) => updateFormData({ variations })}
+            onChange={(variations) => {
+              console.log('🎨 Variações atualizadas:', variations.length);
+              updateFormData({ variations });
+            }}
           />
         );
 

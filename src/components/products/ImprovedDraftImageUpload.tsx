@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, AlertCircle, Star, StarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useDraftImages } from '@/hooks/useDraftImages';
@@ -21,20 +21,22 @@ const ImprovedDraftImageUpload = ({
     isLoading,
     addDraftImages,
     removeDraftImage,
+    setPrimaryImage,
     loadExistingImages
   } = useDraftImages();
   const { toast } = useToast();
 
-  console.log('🖼 IMPROVED DRAFT IMAGE UPLOAD - Renderizando:', {
+  console.log('🖼 IMPROVED DRAFT IMAGE UPLOAD - Estado:', {
     productId,
     imagesCount: draftImages.length,
     uploading,
-    isLoading
+    isLoading,
+    primaryImage: draftImages.find(img => img.isPrimary)?.id
   });
 
   useEffect(() => {
     if (productId) {
-      console.log('📂 IMPROVED DRAFT IMAGE UPLOAD - Carregando imagens existentes para:', productId);
+      console.log('📂 Carregando imagens existentes para produto:', productId);
       loadExistingImages(productId);
     }
   }, [productId, loadExistingImages]);
@@ -58,7 +60,7 @@ const ImprovedDraftImageUpload = ({
   };
 
   const handleFiles = (files: File[]) => {
-    console.log('📁 IMPROVED DRAFT IMAGE UPLOAD - Arquivos selecionados:', files.length);
+    console.log('📁 Arquivos selecionados:', files.length);
     
     if (draftImages.length >= maxImages) {
       toast({
@@ -96,9 +98,18 @@ const ImprovedDraftImageUpload = ({
     });
 
     if (validFiles.length > 0) {
-      console.log('➕ IMPROVED DRAFT IMAGE UPLOAD - Adicionando arquivos válidos:', validFiles.length);
+      console.log('➕ Adicionando arquivos válidos:', validFiles.length);
       addDraftImages(validFiles);
     }
+  };
+
+  const handleSetPrimary = (imageId: string) => {
+    console.log('⭐ Definindo imagem principal:', imageId);
+    setPrimaryImage(imageId);
+    toast({
+      title: "Imagem principal definida",
+      description: "Esta será a imagem principal do produto",
+    });
   };
 
   if (isLoading) {
@@ -189,7 +200,7 @@ const ImprovedDraftImageUpload = ({
                         className="w-full h-full object-cover"
                         style={{ aspectRatio: '1/1' }}
                         onError={(e) => {
-                          console.error('❌ IMPROVED DRAFT IMAGE UPLOAD - Erro ao carregar:', image.id);
+                          console.error('❌ Erro ao carregar imagem:', image.id);
                           const target = e.currentTarget;
                           target.style.display = 'none';
                           const errorDiv = target.parentElement?.querySelector('.error-placeholder');
@@ -209,6 +220,7 @@ const ImprovedDraftImageUpload = ({
                     </div>
                   </div>
                   
+                  {/* Status da imagem */}
                   <div className="absolute top-2 left-2">
                     {image.uploaded ? (
                       <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
@@ -225,20 +237,37 @@ const ImprovedDraftImageUpload = ({
                     )}
                   </div>
 
-                  {index === 0 && (
+                  {/* Indicador de imagem principal */}
+                  {image.isPrimary && (
                     <div className="absolute top-2 right-8">
-                      <div className="bg-primary text-white text-xs px-2 py-1 rounded-full font-medium">
+                      <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                        <Star className="h-2 w-2 fill-current" />
                         Principal
                       </div>
                     </div>
                   )}
+
+                  {/* Botão para definir como principal */}
+                  {!image.isPrimary && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 right-8 h-6 px-2 py-0 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleSetPrimary(image.id)}
+                      disabled={uploading}
+                    >
+                      <StarOff className="h-2 w-2 mr-1" />
+                      Principal
+                    </Button>
+                  )}
                   
+                  {/* Botão remover */}
                   <Button
                     variant="destructive"
                     size="sm"
                     className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => {
-                      console.log('🗑 IMPROVED DRAFT IMAGE UPLOAD - Removendo:', image.id);
+                      console.log('🗑 Removendo imagem:', image.id);
                       removeDraftImage(image.id);
                     }}
                     disabled={uploading}
@@ -246,6 +275,7 @@ const ImprovedDraftImageUpload = ({
                     <X className="h-3 w-3" />
                   </Button>
 
+                  {/* Número da imagem */}
                   <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
                     {index + 1}
                   </div>
@@ -258,7 +288,7 @@ const ImprovedDraftImageUpload = ({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h5 className="font-medium text-blue-900 mb-2">💡 Dicas importantes:</h5>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• A primeira imagem será definida como principal</li>
+            <li>• Clique no botão "Principal" para definir a imagem de capa</li>
             <li>• Use imagens quadradas (1:1) para melhor visualização</li>
             <li>• Máximo de {maxImages} imagens por produto</li>
             <li>• Formatos aceitos: PNG, JPG, JPEG, GIF, WEBP</li>
