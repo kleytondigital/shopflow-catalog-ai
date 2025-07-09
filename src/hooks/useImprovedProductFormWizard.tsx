@@ -53,7 +53,7 @@ export const useImprovedProductFormWizard = () => {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { draftImages, uploadDraftImages, clearDraftImages } = useDraftImages();
+  const { uploadAllImages, clearDraftImages } = useDraftImages();
   const { profile } = useAuth();
 
   const steps = useMemo(
@@ -86,22 +86,32 @@ export const useImprovedProductFormWizard = () => {
 
   const updateFormData = useCallback(
     (updates: Partial<ProductFormData>) => {
-      console.log("📊 IMPROVED WIZARD - Atualizando formData:", updates);
+      console.log("📊 WIZARD - Atualizando formData:", updates);
       setFormData((prev) => {
         const updated = { ...prev, ...updates };
+        
+        // Garantir store_id sempre presente
         if (!updated.store_id && profile?.store_id) {
           updated.store_id = profile.store_id;
         }
         
-        // Log detalhado do nome para debug
+        // Debug específico para nome
         if (updates.name !== undefined) {
-          console.log("🔍 NOME DEBUG:", {
+          console.log("🔍 NOME UPDATE:", {
             original: prev.name,
             novo: updates.name,
             trimmed: updates.name?.trim(),
-            length: updates.name?.trim()?.length
+            isEmpty: !updates.name?.trim()
           });
         }
+        
+        console.log("📊 WIZARD - FormData atualizado:", {
+          name: `"${updated.name}"`,
+          nameLength: updated.name?.length || 0,
+          hasTrimmedName: !!(updated.name?.trim()),
+          retail_price: updated.retail_price,
+          store_id: updated.store_id
+        });
         
         return updated;
       });
@@ -110,21 +120,23 @@ export const useImprovedProductFormWizard = () => {
   );
 
   const canProceed = useMemo(() => {
-    const trimmedName = formData.name?.trim() || "";
+    const trimmedName = (formData.name || "").trim();
     
-    console.log("🔍 CAN PROCEED DEBUG:", {
+    console.log("🔍 CAN PROCEED CHECK:", {
       currentStep,
       name: `"${trimmedName}"`,
       nameLength: trimmedName.length,
       retail_price: formData.retail_price,
-      stock: formData.stock
+      stock: formData.stock,
+      rawName: `"${formData.name}"`,
+      hasName: trimmedName.length > 0
     });
 
     switch (currentStep) {
       case 0: // Informações básicas
-        const hasName = trimmedName.length > 0;
-        console.log("✅ Step 0 - hasName:", hasName);
-        return hasName;
+        const hasValidName = trimmedName.length > 0;
+        console.log("✅ Step 0 - hasValidName:", hasValidName);
+        return hasValidName;
       case 1: // Preços e estoque
         const hasPrice = formData.retail_price > 0;
         const hasStock = formData.stock >= 0;
@@ -169,19 +181,22 @@ export const useImprovedProductFormWizard = () => {
   const saveProduct = async (
     editingProductId?: string
   ): Promise<string | null> => {
-    const trimmedName = formData.name?.trim() || "";
+    // Usar o nome atual do formData com trim
+    const trimmedName = (formData.name || "").trim();
     
-    console.log("💾 SAVE PRODUCT - Início:", {
+    console.log("💾 SAVE PRODUCT - Validação inicial:", {
       name: `"${trimmedName}"`,
       nameLength: trimmedName.length,
-      hasName: trimmedName.length > 0,
+      hasValidName: trimmedName.length > 0,
       retail_price: formData.retail_price,
       stock: formData.stock,
-      editingProductId
+      editingProductId,
+      storeId: profile?.store_id
     });
 
-    if (trimmedName.length === 0) {
-      console.error("❌ SAVE - Nome vazio!");
+    // Validações críticas
+    if (!trimmedName) {
+      console.error("❌ SAVE - Nome vazio ou inválido!");
       toast({
         title: "Nome obrigatório",
         description: "Por favor, insira o nome do produto",
@@ -224,7 +239,7 @@ export const useImprovedProductFormWizard = () => {
         store_id: profile.store_id,
       };
 
-      console.log("📦 SAVE - Dados do produto:", productData);
+      console.log("📦 SAVE - Dados finais do produto:", productData);
 
       let productId = editingProductId;
 
@@ -239,6 +254,7 @@ export const useImprovedProductFormWizard = () => {
           console.error("❌ SAVE - Erro na atualização:", error);
           throw error;
         }
+        console.log("✅ SAVE - Produto atualizado com sucesso");
       } else {
         console.log("➕ SAVE - Criando novo produto");
         const { data: newProduct, error } = await supabase
@@ -256,11 +272,11 @@ export const useImprovedProductFormWizard = () => {
         console.log("✅ SAVE - Produto criado com ID:", productId);
       }
 
-      // Upload de imagens se houver
-      if (draftImages.length > 0 && productId) {
-        console.log("📷 SAVE - Uploading imagens:", draftImages.length);
-        const uploadResult = await uploadDraftImages(productId);
-        console.log("📷 SAVE - Resultado upload:", uploadResult.length);
+      // Upload de imagens
+      if (productId) {
+        console.log("📷 SAVE - Processando imagens...");
+        const uploadResult = await uploadAllImages(productId);
+        console.log("📷 SAVE - Resultado upload:", uploadResult.length, "imagens");
       }
 
       // Salvar variações se houver
@@ -294,6 +310,7 @@ export const useImprovedProductFormWizard = () => {
             console.error("❌ SAVE - Erro ao salvar variações:", variationsError);
             throw variationsError;
           }
+          console.log("✅ SAVE - Variações salvas com sucesso");
         }
       }
 
@@ -304,7 +321,7 @@ export const useImprovedProductFormWizard = () => {
           : "Produto criado com sucesso.",
       });
 
-      return productId || 'new-product';
+      return productId || 'success';
     } catch (error: any) {
       console.error("💥 SAVE - Erro durante salvamento:", error);
       toast({

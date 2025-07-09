@@ -20,7 +20,6 @@ export const useDraftImages = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Aliases para compatibilidade
   const isUploading = uploading;
 
   const addDraftImage = useCallback((file: File) => {
@@ -32,12 +31,11 @@ export const useDraftImages = () => {
         preview: e.target?.result as string,
         uploaded: false,
         isExisting: false,
-        isPrimary: false, // Nova imagem nunca é principal por padrão
+        isPrimary: false,
         displayOrder: draftImages.length,
       };
 
       setDraftImages(prev => {
-        // Se não há nenhuma imagem, a primeira pode ser principal
         if (prev.length === 0) {
           newImage.isPrimary = true;
         }
@@ -56,7 +54,6 @@ export const useDraftImages = () => {
       const imageToRemove = prev.find(img => img.id === imageId);
       const filtered = prev.filter(img => img.id !== imageId);
       
-      // Se removemos a imagem principal e ainda há imagens, tornar a primeira como principal
       if (imageToRemove?.isPrimary && filtered.length > 0) {
         filtered[0].isPrimary = true;
       }
@@ -66,10 +63,11 @@ export const useDraftImages = () => {
   }, []);
 
   const setPrimaryImage = useCallback((imageId: string) => {
+    console.log('🌟 SETTING PRIMARY IMAGE:', imageId);
     setDraftImages(prev => 
       prev.map(img => ({
         ...img,
-        isPrimary: img.id === imageId // Apenas a imagem selecionada será principal
+        isPrimary: img.id === imageId
       }))
     );
   }, []);
@@ -88,6 +86,8 @@ export const useDraftImages = () => {
   }, []);
 
   const loadExistingImages = useCallback(async (productId: string) => {
+    if (!productId) return;
+    
     setIsLoading(true);
     try {
       console.log('📂 LOADING EXISTING IMAGES para produto:', productId);
@@ -127,30 +127,22 @@ export const useDraftImages = () => {
   }, [toast]);
 
   const uploadAllImages = useCallback(async (productId: string): Promise<string[]> => {
-    const imagesToUpload = draftImages.filter(img => !img.uploaded && img.file);
+    console.log('📤 UPLOAD ALL IMAGES - Iniciado para produto:', productId);
+    console.log('📤 UPLOAD ALL IMAGES - Draft images:', draftImages.length);
     
-    if (imagesToUpload.length === 0) {
-      console.log('📋 Nenhuma imagem nova para upload');
-      
-      // Atualizar status das imagens existentes se necessário
-      const existingImages = draftImages.filter(img => img.isExisting && img.uploaded);
-      if (existingImages.length > 0) {
-        try {
-          for (const image of existingImages) {
-            await supabase
-              .from('product_images')
-              .update({
-                is_primary: image.isPrimary,
-                display_order: image.displayOrder
-              })
-              .eq('id', image.id);
-          }
-          console.log('✅ Status das imagens existentes atualizado');
-        } catch (error) {
-          console.error('❌ Erro ao atualizar imagens existentes:', error);
-        }
-      }
-      
+    if (!productId) {
+      console.error('❌ UPLOAD - Product ID é obrigatório');
+      return [];
+    }
+
+    const imagesToUpload = draftImages.filter(img => !img.uploaded && img.file);
+    const existingImages = draftImages.filter(img => img.isExisting && img.uploaded);
+    
+    console.log('📤 UPLOAD - Imagens para upload:', imagesToUpload.length);
+    console.log('📤 UPLOAD - Imagens existentes:', existingImages.length);
+
+    if (imagesToUpload.length === 0 && existingImages.length === 0) {
+      console.log('📋 Nenhuma imagem para processar');
       return [];
     }
 
@@ -158,74 +150,94 @@ export const useDraftImages = () => {
     const uploadedUrls: string[] = [];
 
     try {
-      console.log('📤 Iniciando upload de', imagesToUpload.length, 'imagens');
-
-      for (let i = 0; i < imagesToUpload.length; i++) {
-        const image = imagesToUpload[i];
-        if (!image.file) continue;
-
-        const fileExt = image.file.name.split('.').pop()?.toLowerCase();
-        const fileName = `products/${productId}/${Date.now()}-${i}.${fileExt}`;
-
-        console.log('📁 Upload arquivo:', fileName);
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(fileName, image.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('❌ Erro no upload:', uploadError);
-          throw uploadError;
+      // Atualizar imagens existentes se necessário
+      if (existingImages.length > 0) {
+        console.log('🔄 Atualizando imagens existentes...');
+        for (const image of existingImages) {
+          await supabase
+            .from('product_images')
+            .update({
+              is_primary: image.isPrimary,
+              display_order: image.displayOrder
+            })
+            .eq('id', image.id);
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(fileName);
-
-        console.log('🔗 URL pública gerada:', publicUrl);
-
-        const { error: dbError } = await supabase
-          .from('product_images')
-          .insert({
-            product_id: productId,
-            image_url: publicUrl,
-            display_order: image.displayOrder,
-            is_primary: image.isPrimary,
-            alt_text: `Produto ${image.displayOrder + 1}`
-          });
-
-        if (dbError) {
-          console.error('❌ Erro ao salvar no banco:', dbError);
-          throw dbError;
-        }
-
-        uploadedUrls.push(publicUrl);
-        console.log('✅ Imagem salva com sucesso');
-
-        // Atualizar estado local
-        setDraftImages(prev => 
-          prev.map(img => 
-            img.id === image.id 
-              ? { ...img, uploaded: true, url: publicUrl, isExisting: true }
-              : img
-          )
-        );
       }
 
-      toast({
-        title: "Imagens enviadas!",
-        description: `${uploadedUrls.length} imagem(s) enviada(s) com sucesso.`,
-      });
+      // Upload de novas imagens
+      if (imagesToUpload.length > 0) {
+        console.log('📤 Iniciando upload de', imagesToUpload.length, 'novas imagens');
+
+        for (let i = 0; i < imagesToUpload.length; i++) {
+          const image = imagesToUpload[i];
+          if (!image.file) continue;
+
+          const fileExt = image.file.name.split('.').pop()?.toLowerCase();
+          const fileName = `products/${productId}/${Date.now()}-${i}.${fileExt}`;
+
+          console.log('📁 Upload arquivo:', fileName);
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, image.file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('❌ Erro no upload:', uploadError);
+            throw uploadError;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(fileName);
+
+          console.log('🔗 URL pública gerada:', publicUrl);
+
+          const { error: dbError } = await supabase
+            .from('product_images')
+            .insert({
+              product_id: productId,
+              image_url: publicUrl,
+              display_order: image.displayOrder,
+              is_primary: image.isPrimary,
+              alt_text: `Produto ${image.displayOrder + 1}`
+            });
+
+          if (dbError) {
+            console.error('❌ Erro ao salvar no banco:', dbError);
+            throw dbError;
+          }
+
+          uploadedUrls.push(publicUrl);
+          console.log('✅ Imagem salva com sucesso');
+
+          // Atualizar estado local
+          setDraftImages(prev => 
+            prev.map(img => 
+              img.id === image.id 
+                ? { ...img, uploaded: true, url: publicUrl, isExisting: true }
+                : img
+            )
+          );
+        }
+      }
+
+      const totalProcessed = uploadedUrls.length + existingImages.length;
+      if (totalProcessed > 0) {
+        toast({
+          title: "Imagens processadas!",
+          description: `${totalProcessed} imagem(s) processada(s) com sucesso.`,
+        });
+      }
 
       return uploadedUrls;
     } catch (error) {
-      console.error('💥 Erro no upload das imagens:', error);
+      console.error('💥 Erro no processamento das imagens:', error);
       toast({
-        title: "Erro no upload",
-        description: "Ocorreu um erro ao enviar as imagens",
+        title: "Erro no processamento",
+        description: "Ocorreu um erro ao processar as imagens",
         variant: "destructive",
       });
       return [];
@@ -234,10 +246,10 @@ export const useDraftImages = () => {
     }
   }, [draftImages, toast]);
 
-  // Alias para compatibilidade
   const uploadDraftImages = uploadAllImages;
 
   const clearDraftImages = useCallback(() => {
+    console.log('🧹 CLEARING DRAFT IMAGES');
     setDraftImages([]);
   }, []);
 

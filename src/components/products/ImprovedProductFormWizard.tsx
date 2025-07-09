@@ -42,7 +42,7 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
     canProceed
   } = useImprovedProductFormWizard();
 
-  const { loadExistingImages, clearDraftImages } = useDraftImages();
+  const { loadExistingImages, clearDraftImages, uploadAllImages } = useDraftImages();
   const { variations, loading: variationsLoading } = useProductVariations(editingProduct?.id);
 
   // Carregar dados do produto para edição
@@ -56,7 +56,6 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
         category: editingProduct.category
       });
       
-      // Preparar dados completos para carregar
       const productDataToLoad = {
         name: editingProduct.name || '',
         description: editingProduct.description || '',
@@ -70,6 +69,7 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
         meta_description: editingProduct.meta_description || '',
         seo_slug: editingProduct.seo_slug || '',
         is_featured: editingProduct.is_featured || false,
+        is_active: editingProduct.is_active !== false,
         allow_negative_stock: editingProduct.allow_negative_stock || false,
         stock_alert_threshold: editingProduct.stock_alert_threshold || 5,
       };

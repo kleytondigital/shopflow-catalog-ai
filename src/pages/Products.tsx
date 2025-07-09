@@ -1,21 +1,24 @@
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter, Upload } from "lucide-react";
+import { Plus, Search, Filter, Upload, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProductList from "@/components/products/ProductList";
-import ProductFormModal from "@/components/products/ProductFormModal";
+import ImprovedProductFormWizard from "@/components/products/ImprovedProductFormWizard";
 import ImprovedAIToolsModal from "@/components/products/ImprovedAIToolsModal";
 import SimpleBulkImportModal from "@/components/products/SimpleBulkImportModal";
+import SimplePricingConfig from "@/components/catalog/SimplePricingConfig";
 import { useProducts } from "@/hooks/useProducts";
 import { useStores } from "@/hooks/useStores";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types/product";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Products = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPricingConfig, setShowPricingConfig] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const {
@@ -23,8 +26,6 @@ const Products = () => {
     loading,
     deleteProduct,
     fetchProducts,
-    createProduct,
-    updateProduct,
   } = useProducts();
   const { currentStore } = useStores();
   const { toast } = useToast();
@@ -61,7 +62,6 @@ const Products = () => {
         toast({
           title: "Produto excluído com sucesso",
         });
-        // Refresh imediato após exclusão
         await fetchProducts();
         console.log("✅ PRODUCTS - Lista atualizada após exclusão");
       }
@@ -81,56 +81,19 @@ const Products = () => {
       title: "Conteúdo aplicado com sucesso",
       description: "O conteúdo gerado pela IA foi aplicado ao produto.",
     });
-    // Refresh após aplicar IA
     await fetchProducts();
   };
 
-  const handleProductSubmit = async (data: any) => {
-    try {
-      console.log("📝 PRODUCTS - Salvando produto via modal:", data);
-
-      let result;
-      if (editingProduct) {
-        console.log("✏️ PRODUCTS - Atualizando produto ID:", editingProduct.id);
-        result = await updateProduct({ ...data, id: editingProduct.id });
-      } else {
-        console.log("➕ PRODUCTS - Criando novo produto");
-        result = await createProduct(data);
-      }
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      console.log("✅ PRODUCTS - Produto salvo, fechando modal e atualizando lista");
-
-      toast({
-        title: editingProduct
-          ? "Produto atualizado com sucesso"
-          : "Produto criado com sucesso",
-        description: `${data.name || 'Produto'} foi ${
-          editingProduct ? "atualizado" : "criado"
-        } com sucesso.`,
-      });
-
-      // Fechar modal primeiro
-      setShowProductForm(false);
-      setEditingProduct(null);
-
-      // Refresh garantido da lista com delay para garantir consistência
-      setTimeout(async () => {
-        await fetchProducts();
-        console.log("🔄 PRODUCTS - Lista recarregada com sucesso");
-      }, 500);
-    } catch (error) {
-      console.error("💥 PRODUCTS - Erro ao salvar produto:", error);
-      toast({
-        title: "Erro ao salvar produto",
-        description:
-          error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive",
-      });
-    }
+  const handleProductSuccess = async () => {
+    console.log("✅ PRODUCTS - Produto salvo com sucesso, atualizando lista");
+    setShowProductForm(false);
+    setEditingProduct(null);
+    
+    // Refresh garantido da lista
+    setTimeout(async () => {
+      await fetchProducts();
+      console.log("🔄 PRODUCTS - Lista recarregada com sucesso");
+    }, 500);
   };
 
   const handleCloseModal = () => {
@@ -156,7 +119,6 @@ const Products = () => {
     );
   }
 
-  // Mapear produtos para garantir compatibilidade
   const mappedProducts: Product[] = products.map((product) => ({
     ...product,
     description: product.description || "",
@@ -184,6 +146,33 @@ const Products = () => {
           </Button>
         </div>
         <div className="flex gap-2">
+          <Dialog open={showPricingConfig} onOpenChange={setShowPricingConfig}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shrink-0">
+                <Settings className="mr-2 h-4 w-4" />
+                Configurar Preços
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Configuração de Modelo de Preços</DialogTitle>
+              </DialogHeader>
+              {currentStore?.id && (
+                <SimplePricingConfig
+                  storeId={currentStore.id}
+                  onConfigChange={(config) => {
+                    console.log('Configuração atualizada:', config);
+                    setShowPricingConfig(false);
+                    toast({
+                      title: "Configuração salva!",
+                      description: "Modelo de preços configurado com sucesso.",
+                    });
+                  }}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+          
           <Button
             variant="outline"
             onClick={() => setShowImportModal(true)}
@@ -208,12 +197,11 @@ const Products = () => {
       />
 
       {/* Modal do formulário de produto */}
-      <ProductFormModal
-        open={showProductForm}
-        onOpenChange={handleCloseModal}
-        onSubmit={handleProductSubmit}
-        initialData={editingProduct}
-        mode={editingProduct ? "edit" : "create"}
+      <ImprovedProductFormWizard
+        isOpen={showProductForm}
+        onClose={handleCloseModal}
+        editingProduct={editingProduct}
+        onSuccess={handleProductSuccess}
       />
 
       {/* Modal de IA */}
