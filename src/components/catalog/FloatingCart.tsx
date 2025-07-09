@@ -156,19 +156,21 @@ const CartItem: React.FC<{
       </div>
       {/* Incentivo individual para próximo nível */}
       {item.nextTier && item.nextTierQuantityNeeded > 0 && (
-        <div className="flex items-center gap-2 mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
-          <TrendingUp size={14} />
-          Adicione mais <b>{item.nextTierQuantityNeeded}</b> unidade(s) para
-          ativar o próximo desconto!
-          {item.nextTierPotentialSavings > 0 && (
-            <span className="ml-1 text-green-700 font-bold">
-              Economize R$ {item.nextTierPotentialSavings.toFixed(2)} por un.
-            </span>
-          )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-2 bg-blue-50 border border-blue-200 rounded-lg px-2 py-2 sm:px-3 text-[11px] sm:text-xs text-blue-800 overflow-x-auto">
+          <div className="flex items-center gap-1 flex-wrap">
+            <TrendingUp size={13} className="flex-shrink-0" />
+            Adicione mais <b>{item.nextTierQuantityNeeded}</b> unidade(s) para
+            ativar o próximo desconto!
+            {item.nextTierPotentialSavings > 0 && (
+              <span className="ml-1 text-green-700 font-bold">
+                Economize R$ {item.nextTierPotentialSavings.toFixed(2)} por un.
+              </span>
+            )}
+          </div>
           <Button
-            size="xs"
+            size="sm"
             variant="outline"
-            className="ml-2 px-2 py-1 h-6 text-xs border-blue-400 text-blue-700 hover:bg-blue-100"
+            className="w-full sm:w-auto px-2 py-1 h-6 text-[11px] sm:text-xs border-blue-400 text-blue-700 hover:bg-blue-100 mt-1 sm:mt-0"
             onClick={handleCompleteTier}
           >
             Completar para {item.nextTier.tier_name}

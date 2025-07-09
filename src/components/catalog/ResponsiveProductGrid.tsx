@@ -326,20 +326,20 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Barra de Controles - Estilo Mercado Livre */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4 mb-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-4 items-stretch sm:items-center justify-between w-full overflow-x-auto">
           {/* Busca */}
-          <div className="flex-1 max-w-md">
+          <div className="w-full sm:flex-1 max-w-full sm:max-w-md">
             <Input
               placeholder="Buscar produtos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10"
+              className="h-10 w-full min-w-0"
             />
           </div>
 
           {/* Controles à direita */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4 flex-shrink-0">
             <Button
               variant={showFilters ? "default" : "outline"}
               onClick={() => setShowFilters(!showFilters)}
@@ -355,7 +355,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
               )}
             </Button>
 
-            <span className="text-sm text-gray-600 whitespace-nowrap">
+            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
               {sortedProducts.length} produtos
             </span>
 
@@ -364,7 +364,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
               value={sortBy}
               onValueChange={(value) => setSortBy(value as SortOption)}
             >
-              <SelectTrigger className="w-48 h-10">
+              <SelectTrigger className="w-full sm:w-48 h-10 min-w-0">
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>

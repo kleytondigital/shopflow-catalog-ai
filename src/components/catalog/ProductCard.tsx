@@ -134,21 +134,54 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return stars;
   };
 
+  // BADGES: limitar a 2 no mobile, badges menores e fora da imagem
+  const mobileBadges = [];
+  if (product.is_featured)
+    mobileBadges.push(
+      <Badge
+        key="destaque"
+        className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-[9px] px-1.5 py-0.5"
+      >
+        ⭐ Destaque
+      </Badge>
+    );
+  if (hasVariations)
+    mobileBadges.push(
+      <Badge
+        key="variacoes"
+        className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[9px] px-1.5 py-0.5"
+      >
+        Variações
+      </Badge>
+    );
+  if (mobileBadges.length < 2 && priceTiers.length > 0)
+    mobileBadges.push(
+      <Badge
+        key="atacado"
+        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 text-[9px] px-1.5 py-0.5"
+      >
+        Atacado
+      </Badge>
+    );
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+      {/* BADGES MOBILE FORA DA IMAGEM */}
+      <div className="flex flex-row flex-wrap gap-1 px-2 pt-2 sm:hidden">
+        {mobileBadges.slice(0, 2)}
+      </div>
       {/* ✅ CARROSSEL DE IMAGENS INTELIGENTE */}
       <div className="relative">
         <ProductImageCarousel
           productId={product.id}
           productName={product.name}
-          showThumbnails={true}
+          showThumbnails={false}
           showNavigation={true}
           showCounter={true}
           autoPlay={false}
         />
-
-        {/* ✅ BADGES INTELIGENTES */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1 z-30">
+        {/* BADGES DESKTOP SOBRE A IMAGEM */}
+        <div className="absolute top-2 left-2 flex-col gap-1 z-30 hidden sm:flex">
           {product.is_featured && (
             <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
               ⭐ Destaque
@@ -159,7 +192,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
               Variações
             </Badge>
           )}
-          {/* Badge de atacado */}
           {priceTiers.length > 0 && (
             <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 text-xs">
               Atacado
@@ -176,7 +208,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </Badge>
           )}
         </div>
-
         {/* Botão Wishlist */}
         {onToggleWishlist && (
           <button
@@ -193,39 +224,37 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </button>
         )}
       </div>
-
       {/* ✅ CONTEÚDO COM INFORMAÇÕES ESSENCIAIS */}
-      <div className="p-4">
-        <div className="space-y-3">
+      <div className="p-2 sm:p-4">
+        <div className="flex flex-col gap-1 sm:space-y-3">
           {/* Título e Descrição */}
           <div className="cursor-pointer" onClick={onClick}>
-            <h3 className="font-semibold text-base mb-1 line-clamp-2 hover:text-primary transition-colors">
+            <h3 className="font-semibold text-sm sm:text-base mb-1 line-clamp-2 hover:text-primary transition-colors truncate">
               {product.name}
             </h3>
             {product.description && (
-              <p className="text-sm text-gray-600 line-clamp-2">
+              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 truncate">
                 {product.description}
               </p>
             )}
           </div>
-
           {/* ✅ PREÇO PADRONIZADO USANDO COMPONENTE REUTILIZÁVEL */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-xl font-bold text-primary">
+          <div className="space-y-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-lg sm:text-xl font-bold text-primary">
                   {formatCurrency(product.retail_price)}
                 </span>
                 {/* Preço Atacado Destacado */}
                 {priceTiers.length > 0 && (
                   <div className="flex items-center gap-1">
-                    <span className="text-sm text-green-600 font-semibold">
+                    <span className="text-xs sm:text-sm text-green-600 font-semibold">
                       {priceTiers[0].tier_name}:{" "}
                       {formatCurrency(priceTiers[0].price)}
                     </span>
                     {priceTiers.length > 1 && (
                       <span
-                        className="text-xs text-gray-400 cursor-pointer"
+                        className="text-[10px] sm:text-xs text-gray-400 cursor-pointer"
                         title={priceTiers
                           .map(
                             (tier) =>
@@ -248,66 +277,104 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
             </div>
           </div>
-
           {/* ✅ CATEGORIA E AVALIAÇÃO */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mt-1">
             {product.category && (
-              <span className="inline-block text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+              <span className="inline-block text-[10px] sm:text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full truncate max-w-[90px]">
                 {product.category}
               </span>
             )}
             {/* ✅ AVALIAÇÃO COM ESTRELAS */}
             <div className="flex items-center gap-1">
               <div className="flex gap-0.5">{renderStars(rating)}</div>
-              <span className="text-xs text-gray-500">({reviewCount})</span>
+              <span className="text-[10px] sm:text-xs text-gray-500">
+                ({reviewCount})
+              </span>
             </div>
           </div>
-
-          {/* ✅ BOTÕES INTELIGENTES */}
-          <div className="flex gap-2 pt-2">
-            {/* Se TEM variações -> Ver detalhes */}
-            {hasVariations ? (
-              <Button
-                size="sm"
-                onClick={handleViewDetails}
-                className="flex-1 h-9 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                Ver detalhes
-              </Button>
-            ) : (
-              // Se NÃO tem variações -> Adicionar ao carrinho (se em estoque)
-              <>
-                {onViewDetails && (
+          {/* ✅ BOTÃO PRINCIPAL MOBILE */}
+          <div className="flex flex-col gap-2 pt-1 sm:flex-row">
+            {/* Mobile: dois botões se não tem variações */}
+            <div className="block sm:hidden w-full">
+              {hasVariations ? (
+                <Button
+                  size="sm"
+                  onClick={handleViewDetails}
+                  className="w-full h-9 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Ver detalhes
+                </Button>
+              ) : (
+                <>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleViewDetails}
-                    className="flex-1 h-9"
+                    className="w-full h-9 mb-1"
                   >
                     <Eye className="h-4 w-4 mr-1" />
                     Detalhes
                   </Button>
-                )}
-                {onAddToCart && isInStock && (
-                  <Button
-                    size="sm"
-                    onClick={handleAddToCart}
-                    className="flex-1 h-9 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
-                )}
-              </>
-            )}
-
-            {/* Se sem estoque */}
-            {!isInStock && (
-              <Button size="sm" disabled className="flex-1 h-9">
-                Indisponível
-              </Button>
-            )}
+                  {onAddToCart && isInStock ? (
+                    <Button
+                      size="sm"
+                      onClick={handleAddToCart}
+                      className="w-full h-9 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  ) : (
+                    <Button size="sm" disabled className="w-full h-9">
+                      Indisponível
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+            {/* Desktop: botões originais */}
+            <div className="hidden sm:flex gap-2 w-full">
+              {hasVariations ? (
+                <Button
+                  size="sm"
+                  onClick={handleViewDetails}
+                  className="flex-1 h-9 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Ver detalhes
+                </Button>
+              ) : (
+                <>
+                  {onViewDetails && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleViewDetails}
+                      className="flex-1 h-9"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Detalhes
+                    </Button>
+                  )}
+                  {onAddToCart && isInStock && (
+                    <Button
+                      size="sm"
+                      onClick={handleAddToCart}
+                      className="flex-1 h-9 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  )}
+                  {!isInStock && (
+                    <Button size="sm" disabled className="flex-1 h-9">
+                      Indisponível
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
