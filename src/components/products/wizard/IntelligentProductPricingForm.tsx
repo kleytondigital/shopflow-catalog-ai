@@ -1,12 +1,12 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { DollarSign, Info } from 'lucide-react';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { useAuth } from '@/hooks/useAuth';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { DollarSign, Info } from "lucide-react";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useAuth } from "@/hooks/useAuth";
+import { PriceModelType } from "@/types/price-models";
 
 interface PriceTier {
   id: string;
@@ -29,7 +29,9 @@ interface IntelligentProductPricingFormProps {
   onPriceTiersChange: (tiers: PriceTier[]) => void;
 }
 
-const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps> = ({
+const IntelligentProductPricingForm: React.FC<
+  IntelligentProductPricingFormProps
+> = ({
   retailPrice,
   wholesalePrice,
   minWholesaleQty,
@@ -44,20 +46,23 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
   const { profile } = useAuth();
   const { priceModel } = useStorePriceModel(profile?.store_id);
 
-  console.log('💰 INTELLIGENT PRICING - Modelo de preço:', priceModel?.price_model);
+  console.log(
+    "💰 INTELLIGENT PRICING - Modelo de preço:",
+    priceModel?.price_model
+  );
 
   const handleTierPriceChange = (tierId: string, price: number) => {
-    const updatedTiers = priceTiers.map(tier =>
+    const updatedTiers = priceTiers.map((tier) =>
       tier.id === tierId ? { ...tier, price } : tier
     );
     onPriceTiersChange(updatedTiers);
   };
 
   const renderPriceFields = () => {
-    const catalogMode = priceModel?.price_model || 'retail_only';
+    const catalogMode = priceModel?.price_model || "retail_only";
 
     switch (catalogMode) {
-      case 'retail_only':
+      case "retail_only":
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -69,7 +74,7 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                 Apenas o preço de varejo será configurado.
               </p>
             </div>
-            
+
             <div>
               <Label htmlFor="retail_price">Preço Varejo (R$) *</Label>
               <Input
@@ -77,14 +82,16 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                 type="number"
                 step="0.01"
                 value={retailPrice}
-                onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  onRetailPriceChange(parseFloat(e.target.value) || 0)
+                }
                 placeholder="0.00"
               />
             </div>
           </div>
         );
 
-      case 'simple_wholesale':
+      case "simple_wholesale":
         return (
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -105,21 +112,25 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   type="number"
                   step="0.01"
                   value={retailPrice}
-                  onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    onRetailPriceChange(parseFloat(e.target.value) || 0)
+                  }
                   placeholder="0.00"
                 />
               </div>
 
               <div>
                 <Label htmlFor="wholesale_price">
-                  Preço {priceModel?.simple_wholesale_name || 'Atacado'} (R$) *
+                  Preço {priceModel?.simple_wholesale_name || "Atacado"} (R$) *
                 </Label>
                 <Input
                   id="wholesale_price"
                   type="number"
                   step="0.01"
-                  value={wholesalePrice || ''}
-                  onChange={(e) => onWholesalePriceChange(parseFloat(e.target.value) || 0)}
+                  value={wholesalePrice || ""}
+                  onChange={(e) =>
+                    onWholesalePriceChange(parseFloat(e.target.value) || 0)
+                  }
                   placeholder="0.00"
                 />
               </div>
@@ -127,20 +138,73 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
 
             <div>
               <Label htmlFor="min_wholesale_qty">
-                Quantidade Mínima para {priceModel?.simple_wholesale_name || 'Atacado'}
+                Quantidade Mínima para{" "}
+                {priceModel?.simple_wholesale_name || "Atacado"}
               </Label>
               <Input
                 id="min_wholesale_qty"
                 type="number"
                 value={minWholesaleQty || 1}
-                onChange={(e) => onMinWholesaleQtyChange(parseInt(e.target.value) || 1)}
+                onChange={(e) =>
+                  onMinWholesaleQtyChange(parseInt(e.target.value) || 1)
+                }
                 placeholder="1"
               />
             </div>
           </div>
         );
 
-      case 'gradual_wholesale':
+      case "wholesale_only":
+        return (
+          <div className="space-y-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-orange-800">
+                <Info className="h-4 w-4" />
+                <span className="font-medium">Modo: Apenas Atacado</span>
+              </div>
+              <p className="text-sm text-orange-700 mt-1">
+                Configure apenas o preço de atacado com quantidade mínima
+                obrigatória.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="wholesale_price">
+                  Preço {priceModel?.simple_wholesale_name || "Atacado"} (R$) *
+                </Label>
+                <Input
+                  id="wholesale_price"
+                  type="number"
+                  step="0.01"
+                  value={wholesalePrice || ""}
+                  onChange={(e) =>
+                    onWholesalePriceChange(parseFloat(e.target.value) || 0)
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="min_wholesale_qty">
+                  Quantidade Mínima para{" "}
+                  {priceModel?.simple_wholesale_name || "Atacado"} *
+                </Label>
+                <Input
+                  id="min_wholesale_qty"
+                  type="number"
+                  value={minWholesaleQty || 1}
+                  onChange={(e) =>
+                    onMinWholesaleQtyChange(parseInt(e.target.value) || 1)
+                  }
+                  placeholder="1"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case "gradual_wholesale":
         return (
           <div className="space-y-4">
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
@@ -160,7 +224,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                 type="number"
                 step="0.01"
                 value={retailPrice}
-                onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  onRetailPriceChange(parseFloat(e.target.value) || 0)
+                }
                 placeholder="0.00"
               />
             </div>
@@ -169,16 +235,23 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
 
             <div className="space-y-4">
               <h4 className="font-medium text-gray-900">Níveis de Atacado</h4>
-              
+
               {priceModel?.tier_2_enabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>{priceModel.tier_2_name || 'Atacarejo'} (R$)</Label>
+                    <Label>{priceModel.tier_2_name || "Atacarejo"} (R$)</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={priceTiers.find(t => t.id === 'tier2')?.price || ''}
-                      onChange={(e) => handleTierPriceChange('tier2', parseFloat(e.target.value) || 0)}
+                      value={
+                        priceTiers.find((t) => t.id === "tier2")?.price || ""
+                      }
+                      onChange={(e) =>
+                        handleTierPriceChange(
+                          "tier2",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -186,10 +259,18 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                     <Label>Quantidade Mínima</Label>
                     <Input
                       type="number"
-                      value={priceTiers.find(t => t.id === 'tier2')?.minQuantity || 5}
+                      value={
+                        priceTiers.find((t) => t.id === "tier2")?.minQuantity ||
+                        5
+                      }
                       onChange={(e) => {
-                        const updatedTiers = priceTiers.map(tier =>
-                          tier.id === 'tier2' ? { ...tier, minQuantity: parseInt(e.target.value) || 5 } : tier
+                        const updatedTiers = priceTiers.map((tier) =>
+                          tier.id === "tier2"
+                            ? {
+                                ...tier,
+                                minQuantity: parseInt(e.target.value) || 5,
+                              }
+                            : tier
                         );
                         onPriceTiersChange(updatedTiers);
                       }}
@@ -202,12 +283,21 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
               {priceModel?.tier_3_enabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>{priceModel.tier_3_name || 'Atacado Pequeno'} (R$)</Label>
+                    <Label>
+                      {priceModel.tier_3_name || "Atacado Pequeno"} (R$)
+                    </Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={priceTiers.find(t => t.id === 'tier3')?.price || ''}
-                      onChange={(e) => handleTierPriceChange('tier3', parseFloat(e.target.value) || 0)}
+                      value={
+                        priceTiers.find((t) => t.id === "tier3")?.price || ""
+                      }
+                      onChange={(e) =>
+                        handleTierPriceChange(
+                          "tier3",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -215,10 +305,18 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                     <Label>Quantidade Mínima</Label>
                     <Input
                       type="number"
-                      value={priceTiers.find(t => t.id === 'tier3')?.minQuantity || 10}
+                      value={
+                        priceTiers.find((t) => t.id === "tier3")?.minQuantity ||
+                        10
+                      }
                       onChange={(e) => {
-                        const updatedTiers = priceTiers.map(tier =>
-                          tier.id === 'tier3' ? { ...tier, minQuantity: parseInt(e.target.value) || 10 } : tier
+                        const updatedTiers = priceTiers.map((tier) =>
+                          tier.id === "tier3"
+                            ? {
+                                ...tier,
+                                minQuantity: parseInt(e.target.value) || 10,
+                              }
+                            : tier
                         );
                         onPriceTiersChange(updatedTiers);
                       }}
@@ -231,12 +329,21 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
               {priceModel?.tier_4_enabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>{priceModel.tier_4_name || 'Atacado Grande'} (R$)</Label>
+                    <Label>
+                      {priceModel.tier_4_name || "Atacado Grande"} (R$)
+                    </Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={priceTiers.find(t => t.id === 'tier4')?.price || ''}
-                      onChange={(e) => handleTierPriceChange('tier4', parseFloat(e.target.value) || 0)}
+                      value={
+                        priceTiers.find((t) => t.id === "tier4")?.price || ""
+                      }
+                      onChange={(e) =>
+                        handleTierPriceChange(
+                          "tier4",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -244,10 +351,18 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                     <Label>Quantidade Mínima</Label>
                     <Input
                       type="number"
-                      value={priceTiers.find(t => t.id === 'tier4')?.minQuantity || 20}
+                      value={
+                        priceTiers.find((t) => t.id === "tier4")?.minQuantity ||
+                        20
+                      }
                       onChange={(e) => {
-                        const updatedTiers = priceTiers.map(tier =>
-                          tier.id === 'tier4' ? { ...tier, minQuantity: parseInt(e.target.value) || 20 } : tier
+                        const updatedTiers = priceTiers.map((tier) =>
+                          tier.id === "tier4"
+                            ? {
+                                ...tier,
+                                minQuantity: parseInt(e.target.value) || 20,
+                              }
+                            : tier
                         );
                         onPriceTiersChange(updatedTiers);
                       }}
@@ -269,9 +384,60 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
               type="number"
               step="0.01"
               value={retailPrice}
-              onChange={(e) => onRetailPriceChange(parseFloat(e.target.value) || 0)}
+              onChange={(e) =>
+                onRetailPriceChange(parseFloat(e.target.value) || 0)
+              }
               placeholder="0.00"
             />
+          </div>
+        );
+    }
+  };
+
+  const renderPriceModelInfo = () => {
+    switch (priceModel?.price_model) {
+      case "wholesale_only":
+        return (
+          <div className="mb-4 p-3 rounded bg-orange-100 border border-orange-300 text-orange-900 flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className="font-medium">Modelo de Preço: Apenas Atacado</span>
+            <span className="ml-2 text-sm">
+              Venda somente em quantidade mínima, sem preço de varejo.
+            </span>
+          </div>
+        );
+      case "simple_wholesale":
+        return (
+          <div className="mb-4 p-3 rounded bg-green-100 border border-green-300 text-green-900 flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className="font-medium">
+              Modelo de Preço: Varejo + Atacado
+            </span>
+            <span className="ml-2 text-sm">
+              Preço de varejo e preço de atacado com quantidade mínima.
+            </span>
+          </div>
+        );
+      case "gradual_wholesale":
+        return (
+          <div className="mb-4 p-3 rounded bg-purple-100 border border-purple-300 text-purple-900 flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className="font-medium">
+              Modelo de Preço: Atacado Gradual
+            </span>
+            <span className="ml-2 text-sm">
+              Múltiplos níveis de preço conforme a quantidade.
+            </span>
+          </div>
+        );
+      default:
+        return (
+          <div className="mb-4 p-3 rounded bg-blue-100 border border-blue-300 text-blue-900 flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className="font-medium">Modelo de Preço: Apenas Varejo</span>
+            <span className="ml-2 text-sm">
+              Preço único para todos os clientes.
+            </span>
           </div>
         );
     }
@@ -286,10 +452,24 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Log visual para debug do modelo de preço */}
+        <div
+          style={{
+            background: "#ffeeba",
+            color: "#856404",
+            padding: 8,
+            borderRadius: 4,
+            fontSize: 13,
+            marginBottom: 8,
+          }}
+        >
+          <strong>DEBUG:</strong> priceModel?.price_model ={" "}
+          <code>{String(priceModel?.price_model)}</code>
+        </div>
+        {renderPriceModelInfo()}
         {renderPriceFields()}
-        
+        {/* Exibir estoque sempre, mas ocultar resumo de preço base se for apenas atacado */}
         <Separator />
-        
         <div>
           <Label htmlFor="stock">Estoque *</Label>
           <Input
@@ -300,6 +480,32 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
             placeholder="0"
           />
         </div>
+        {/* Resumo de preço só se não for wholesale_only */}
+        {priceModel?.price_model !== "wholesale_only" && (
+          <div className="mt-4">
+            <div className="bg-gray-50 border rounded p-4 flex flex-col md:flex-row gap-4">
+              <div>
+                <span className="block text-xs text-gray-500 mb-1">
+                  Preço Base
+                </span>
+                <span className="text-lg font-semibold text-blue-700">
+                  {retailPrice?.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </span>
+              </div>
+              <div>
+                <span className="block text-xs text-gray-500 mb-1">
+                  Estoque
+                </span>
+                <span className="text-lg font-semibold text-gray-700">
+                  {stock} unidades
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

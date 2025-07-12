@@ -54,6 +54,7 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
             wholesalePrice={formData.wholesale_price}
             minWholesaleQty={formData.min_wholesale_qty}
             stock={formData.stock}
+            enableGradualWholesale={formData.enable_gradual_wholesale}
             priceTiers={
               formData.price_tiers?.map((tier) => ({
                 id: tier.id || "",
@@ -73,6 +74,9 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
               updateFormData({ min_wholesale_qty })
             }
             onStockChange={(stock) => updateFormData({ stock })}
+            onEnableGradualWholesaleChange={(enable_gradual_wholesale) =>
+              updateFormData({ enable_gradual_wholesale })
+            }
             onPriceTiersChange={(tiers) =>
               updateFormData({
                 price_tiers: tiers.map((tier) => ({
@@ -107,6 +111,9 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
               updateFormData({ variations });
             }}
             storeId={formData.store_id}
+            category={formData.category}
+            productName={formData.name}
+            useNewWizard={true}
           />
         );
 

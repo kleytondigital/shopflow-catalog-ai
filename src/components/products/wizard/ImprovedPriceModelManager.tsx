@@ -1,15 +1,14 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DollarSign,
   Settings,
@@ -18,9 +17,9 @@ import {
   Save,
   Loader2,
   CheckCircle,
-  AlertTriangle
-} from 'lucide-react';
-import { QuantityInput } from '@/components/ui/quantity-input';
+  AlertTriangle,
+} from "lucide-react";
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 interface PriceModelConfig {
   id?: string;
@@ -55,20 +54,20 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
 }) => {
   const [config, setConfig] = useState<PriceModelConfig>({
     store_id: storeId,
-    price_model: 'retail_only',
+    price_model: "retail_only",
     simple_wholesale_enabled: false,
     simple_wholesale_min_qty: 10,
-    simple_wholesale_name: 'Atacado',
+    simple_wholesale_name: "Atacado",
     gradual_wholesale_enabled: false,
     gradual_tiers_count: 2,
     tier_1_enabled: true,
-    tier_1_name: 'Varejo',
+    tier_1_name: "Varejo",
     tier_2_enabled: false,
-    tier_2_name: 'Atacarejo',
+    tier_2_name: "Atacarejo",
     tier_3_enabled: false,
-    tier_3_name: 'Atacado Pequeno',
+    tier_3_name: "Atacado Pequeno",
     tier_4_enabled: false,
-    tier_4_name: 'Atacado Grande',
+    tier_4_name: "Atacado Grande",
     show_price_tiers: true,
     show_savings_indicators: true,
     show_next_tier_hint: true,
@@ -79,11 +78,11 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
   const [saved, setSaved] = useState(false);
   const { toast } = useToast();
 
-  console.log('💰 PRICE MODEL MANAGER - Estado:', {
+  console.log("💰 PRICE MODEL MANAGER - Estado:", {
     storeId,
     priceModel: config.price_model,
     loading,
-    saving
+    saving,
   });
 
   useEffect(() => {
@@ -99,27 +98,27 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
   const loadPriceModelConfig = async () => {
     try {
       setLoading(true);
-      console.log('📂 Carregando configuração de preços para loja:', storeId);
+      console.log("📂 Carregando configuração de preços para loja:", storeId);
 
       const { data, error } = await supabase
-        .from('store_price_models')
-        .select('*')
-        .eq('store_id', storeId)
+        .from("store_price_models")
+        .select("*")
+        .eq("store_id", storeId)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('❌ Erro ao carregar configuração:', error);
+      if (error && error.code !== "PGRST116") {
+        console.error("❌ Erro ao carregar configuração:", error);
         throw error;
       }
 
       if (data) {
-        console.log('✅ Configuração carregada:', data);
-        setConfig(prev => ({ ...prev, ...data }));
+        console.log("✅ Configuração carregada:", data);
+        setConfig((prev) => ({ ...prev, ...data }));
       } else {
-        console.log('📋 Nenhuma configuração encontrada, usando padrões');
+        console.log("📋 Nenhuma configuração encontrada, usando padrões");
       }
     } catch (error) {
-      console.error('💥 Erro ao carregar configuração de preços:', error);
+      console.error("💥 Erro ao carregar configuração de preços:", error);
       toast({
         title: "Erro ao carregar configuração",
         description: "Não foi possível carregar as configurações de preço",
@@ -133,23 +132,23 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
   const savePriceModelConfig = async () => {
     try {
       setSaving(true);
-      console.log('💾 Salvando configuração de preços:', config);
+      console.log("💾 Salvando configuração de preços:", config);
 
       const { data, error } = await supabase
-        .from('store_price_models')
+        .from("store_price_models")
         .upsert(config, {
-          onConflict: 'store_id'
+          onConflict: "store_id",
         })
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Erro ao salvar:', error);
+        console.error("❌ Erro ao salvar:", error);
         throw error;
       }
 
-      console.log('✅ Configuração salva:', data);
-      setConfig(prev => ({ ...prev, ...data }));
+      console.log("✅ Configuração salva:", data);
+      setConfig((prev) => ({ ...prev, ...data }));
       setSaved(true);
 
       toast({
@@ -159,7 +158,7 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
 
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
-      console.error('💥 Erro ao salvar configuração:', error);
+      console.error("💥 Erro ao salvar configuração:", error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar a configuração",
@@ -171,19 +170,19 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
   };
 
   const updateConfig = (updates: Partial<PriceModelConfig>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig((prev) => ({ ...prev, ...updates }));
   };
 
   const getPriceModelDescription = () => {
     switch (config.price_model) {
-      case 'retail_only':
-        return 'Apenas preço de varejo para todos os clientes';
-      case 'simple_wholesale':
+      case "retail_only":
+        return "Apenas preço de varejo para todos os clientes";
+      case "simple_wholesale":
         return `Preço de varejo + atacado a partir de ${config.simple_wholesale_min_qty} unidades`;
-      case 'gradual_wholesale':
+      case "gradual_wholesale":
         return `Sistema de níveis graduais com ${config.gradual_tiers_count} faixas de preço`;
       default:
-        return 'Modelo personalizado';
+        return "Modelo personalizado";
     }
   };
 
@@ -221,58 +220,84 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
               {/* Apenas Varejo */}
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                  config.price_model === 'retail_only'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
+                  config.price_model === "retail_only"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
                 }`}
-                onClick={() => updateConfig({ price_model: 'retail_only' })}
+                onClick={() => updateConfig({ price_model: "retail_only" })}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="h-4 w-4" />
                   <span className="font-medium">Apenas Varejo</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Um único preço para todos os clientes. Ideal para lojas que vendem apenas no varejo.
+                  Um único preço para todos os clientes. Ideal para lojas que
+                  vendem apenas no varejo.
                 </p>
               </div>
 
-              {/* Atacado Simples */}
+              {/* Varejo + Atacado Simples */}
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                  config.price_model === 'simple_wholesale'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
+                  config.price_model === "simple_wholesale"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
                 }`}
-                onClick={() => updateConfig({ price_model: 'simple_wholesale' })}
+                onClick={() =>
+                  updateConfig({ price_model: "simple_wholesale" })
+                }
               >
                 <div className="flex items-center gap-2 mb-2">
                   <DollarSign className="h-4 w-4" />
-                  <span className="font-medium">Atacado Simples</span>
+                  <span className="font-medium">Varejo + Atacado</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Preço de varejo + preço de atacado com quantidade mínima. Ideal para lojas mistas.
+                  Preço de varejo + preço de atacado com quantidade mínima.
+                  Ideal para lojas mistas.
+                </p>
+              </div>
+
+              {/* Apenas Atacado */}
+              <div
+                className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                  config.price_model === "wholesale_only"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+                onClick={() => updateConfig({ price_model: "wholesale_only" })}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="font-medium">Apenas Atacado</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Venda apenas no atacado, com quantidade mínima obrigatória.
+                  Ideal para atacadistas.
                 </p>
               </div>
 
               {/* Atacado Gradual */}
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                  config.price_model === 'gradual_wholesale'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
+                  config.price_model === "gradual_wholesale"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
                 }`}
-                onClick={() => updateConfig({ price_model: 'gradual_wholesale' })}
+                onClick={() =>
+                  updateConfig({ price_model: "gradual_wholesale" })
+                }
               >
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-4 w-4" />
                   <span className="font-medium">Atacado Gradual</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Múltiplas faixas de preço baseadas na quantidade. Ideal para distribuidores.
+                  Múltiplas faixas de preço baseadas na quantidade. Ideal para
+                  distribuidores.
                 </p>
               </div>
             </div>
-            
+
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
@@ -281,29 +306,59 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
             </Alert>
           </div>
 
-          <Separator />
-
-          {/* Configurações específicas do Atacado Simples */}
-          {config.price_model === 'simple_wholesale' && (
+          {/* Configurações específicas do Apenas Atacado */}
+          {config.price_model === "wholesale_only" && (
             <div className="space-y-4">
-              <Label>Configurações do Atacado Simples</Label>
-              
+              <Label>Configurações do Apenas Atacado</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="wholesale_name">Nome do Atacado</Label>
                   <Input
                     id="wholesale_name"
                     value={config.simple_wholesale_name}
-                    onChange={(e) => updateConfig({ simple_wholesale_name: e.target.value })}
-                    placeholder="Ex: Atacado, Bulk, Varejo"
+                    onChange={(e) =>
+                      updateConfig({ simple_wholesale_name: e.target.value })
+                    }
+                    placeholder="Ex: Atacado, Distribuidor"
                   />
                 </div>
-                
                 <div>
                   <Label htmlFor="min_qty">Quantidade Mínima</Label>
                   <QuantityInput
                     value={config.simple_wholesale_min_qty}
-                    onChange={(value) => updateConfig({ simple_wholesale_min_qty: value })}
+                    onChange={(value) =>
+                      updateConfig({ simple_wholesale_min_qty: value })
+                    }
+                    min={1}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Configurações específicas do Atacado Simples */}
+          {config.price_model === "simple_wholesale" && (
+            <div className="space-y-4">
+              <Label>Configurações do Atacado Simples</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="wholesale_name">Nome do Atacado</Label>
+                  <Input
+                    id="wholesale_name"
+                    value={config.simple_wholesale_name}
+                    onChange={(e) =>
+                      updateConfig({ simple_wholesale_name: e.target.value })
+                    }
+                    placeholder="Ex: Atacado, Bulk, Varejo"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="min_qty">Quantidade Mínima</Label>
+                  <QuantityInput
+                    value={config.simple_wholesale_min_qty}
+                    onChange={(value) =>
+                      updateConfig({ simple_wholesale_min_qty: value })
+                    }
                     min={1}
                   />
                 </div>
@@ -312,34 +367,47 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
           )}
 
           {/* Configurações específicas do Atacado Gradual */}
-          {config.price_model === 'gradual_wholesale' && (
+          {config.price_model === "gradual_wholesale" && (
             <div className="space-y-4">
               <Label>Configurações do Atacado Gradual</Label>
-              
+
               <div className="space-y-3">
                 {[1, 2, 3, 4].map((tier) => {
                   const tierKey = `tier_${tier}` as keyof PriceModelConfig;
-                  const tierNameKey = `tier_${tier}_name` as keyof PriceModelConfig;
-                  const tierEnabledKey = `tier_${tier}_enabled` as keyof PriceModelConfig;
-                  
+                  const tierNameKey =
+                    `tier_${tier}_name` as keyof PriceModelConfig;
+                  const tierEnabledKey =
+                    `tier_${tier}_enabled` as keyof PriceModelConfig;
+
                   return (
-                    <div key={tier} className="flex items-center gap-4 p-3 border rounded-lg">
+                    <div
+                      key={tier}
+                      className="flex items-center gap-4 p-3 border rounded-lg"
+                    >
                       <Switch
                         checked={config[tierEnabledKey] as boolean}
-                        onCheckedChange={(checked) => updateConfig({ [tierEnabledKey]: checked })}
+                        onCheckedChange={(checked) =>
+                          updateConfig({ [tierEnabledKey]: checked })
+                        }
                       />
-                      
+
                       <div className="flex-1">
                         <Label>Nível {tier}</Label>
                         <Input
                           value={config[tierNameKey] as string}
-                          onChange={(e) => updateConfig({ [tierNameKey]: e.target.value })}
+                          onChange={(e) =>
+                            updateConfig({ [tierNameKey]: e.target.value })
+                          }
                           placeholder={`Nome do nível ${tier}`}
                           disabled={!(config[tierEnabledKey] as boolean)}
                         />
                       </div>
-                      
-                      <Badge variant={config[tierEnabledKey] ? "default" : "secondary"}>
+
+                      <Badge
+                        variant={
+                          config[tierEnabledKey] ? "default" : "secondary"
+                        }
+                      >
                         {config[tierEnabledKey] ? "Ativo" : "Inativo"}
                       </Badge>
                     </div>
@@ -354,7 +422,7 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
           {/* Configurações de Exibição */}
           <div className="space-y-4">
             <Label>Configurações de Exibição</Label>
-            
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -365,10 +433,12 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
                 </div>
                 <Switch
                   checked={config.show_price_tiers}
-                  onCheckedChange={(checked) => updateConfig({ show_price_tiers: checked })}
+                  onCheckedChange={(checked) =>
+                    updateConfig({ show_price_tiers: checked })
+                  }
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Indicadores de economia</Label>
@@ -378,10 +448,12 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
                 </div>
                 <Switch
                   checked={config.show_savings_indicators}
-                  onCheckedChange={(checked) => updateConfig({ show_savings_indicators: checked })}
+                  onCheckedChange={(checked) =>
+                    updateConfig({ show_savings_indicators: checked })
+                  }
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Dicas de próximo nível</Label>
@@ -391,7 +463,9 @@ const ImprovedPriceModelManager: React.FC<ImprovedPriceModelManagerProps> = ({
                 </div>
                 <Switch
                   checked={config.show_next_tier_hint}
-                  onCheckedChange={(checked) => updateConfig({ show_next_tier_hint: checked })}
+                  onCheckedChange={(checked) =>
+                    updateConfig({ show_next_tier_hint: checked })
+                  }
                 />
               </div>
             </div>

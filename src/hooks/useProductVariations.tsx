@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProductVariation } from "@/types/variation";
+import { ProductVariation } from "@/types/product";
 
 export const useProductVariations = (productId?: string) => {
   const [variations, setVariations] = useState<ProductVariation[]>([]);
@@ -44,6 +44,14 @@ export const useProductVariations = (productId?: string) => {
           image_url: v.image_url,
           created_at: v.created_at,
           updated_at: v.updated_at,
+          variation_type: v.variation_type,
+          name: v.name,
+          is_grade: v.is_grade,
+          grade_name: v.grade_name,
+          grade_color: v.grade_color,
+          grade_quantity: v.grade_quantity,
+          grade_sizes: v.grade_sizes,
+          grade_pairs: v.grade_pairs,
         })) || [];
 
       console.log(
@@ -103,13 +111,50 @@ export const useProductVariations = (productId?: string) => {
   ) => {
     try {
       console.log("💾 VARIAÇÕES - Salvando variações:", variations.length);
+      console.log(
+        "🔍 DEBUG - Variações recebidas no saveVariations:",
+        JSON.stringify(variations, null, 2)
+      );
+
+      // Verificar o modelo de preço da loja para determinar se deve enviar dados graduais
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("id")
+        .eq(
+          "id",
+          (
+            await supabase
+              .from("products")
+              .select("store_id")
+              .eq("id", productId)
+              .single()
+          ).data?.store_id
+        )
+        .single();
+
+      const { data: priceModelData } = await supabase
+        .from("store_price_models")
+        .select("price_model")
+        .eq("store_id", storeData?.id)
+        .single();
+
+      const isGradualWholesale =
+        priceModelData?.price_model === "gradual_wholesale";
+
+      console.log(
+        "🔍 DEBUG - Modelo de preço da loja:",
+        priceModelData?.price_model
+      );
+      console.log("🔍 DEBUG - Deve enviar dados graduais:", isGradualWholesale);
 
       // 1. Remover variações existentes que não são hierárquicas
       const { error: deleteError } = await supabase
         .from("product_variations")
         .delete()
         .eq("product_id", productId)
-        .or("variation_type.is.null,variation_type.eq.simple");
+        .or(
+          "variation_type.is.null,variation_type.eq.simple,variation_type.eq.grade"
+        );
 
       if (deleteError) {
         console.error("❌ Erro ao remover variações antigas:", deleteError);
@@ -136,20 +181,77 @@ export const useProductVariations = (productId?: string) => {
             }
           }
 
-          variationsToInsert.push({
+          // Determinar o tipo da variação
+          const variationType =
+            variation.variation_type === "grade" || variation.is_grade
+              ? "grade"
+              : variation.variation_type || "simple";
+
+          // Preparar dados da variação
+          const variationData: any = {
             product_id: productId,
-            variation_type: "simple",
+            variation_type: variationType,
             variation_value:
-              variation.color || variation.size || `Variação ${i + 1}`,
-            color: variation.color,
-            size: variation.size,
-            sku: variation.sku,
-            stock: variation.stock,
-            price_adjustment: variation.price_adjustment,
-            is_active: variation.is_active,
-            image_url: imageUrl,
+              variation.name ||
+              variation.color ||
+              variation.size ||
+              `Variação ${i + 1}`,
+            color: variation.color || null,
+            size: variation.size || null,
+            sku: variation.sku || null,
+            stock: typeof variation.stock === "number" ? variation.stock : 0,
+            price_adjustment:
+              typeof variation.price_adjustment === "number"
+                ? variation.price_adjustment
+                : 0,
+            is_active:
+              typeof variation.is_active === "boolean"
+                ? variation.is_active
+                : true,
+            image_url: imageUrl || null,
             display_order: i,
-          });
+            name: variation.name || null,
+            is_grade: !!variation.is_grade || variationType === "grade",
+          };
+
+          // Só incluir campos de grade se o modelo for gradual_wholesale
+          if (isGradualWholesale) {
+            variationData.grade_name =
+              variation.grade_name && variation.grade_name !== ""
+                ? variation.grade_name
+                : null;
+            variationData.grade_color =
+              variation.grade_color && variation.grade_color !== ""
+                ? variation.grade_color
+                : null;
+            variationData.grade_quantity =
+              typeof variation.grade_quantity === "number"
+                ? variation.grade_quantity
+                : null;
+            variationData.grade_sizes =
+              Array.isArray(variation.grade_sizes) &&
+              variation.grade_sizes.length > 0
+                ? variation.grade_sizes
+                : null;
+            variationData.grade_pairs =
+              Array.isArray(variation.grade_pairs) &&
+              variation.grade_pairs.length > 0
+                ? variation.grade_pairs
+                : null;
+          } else {
+            // Se não for gradual_wholesale, garantir que campos de grade sejam null
+            variationData.grade_name = null;
+            variationData.grade_color = null;
+            variationData.grade_quantity = null;
+            variationData.grade_sizes = null;
+            variationData.grade_pairs = null;
+          }
+
+          console.log(
+            "🔍 DEBUG - Dados da variação a serem salvos:",
+            JSON.stringify(variationData, null, 2)
+          );
+          variationsToInsert.push(variationData);
         }
 
         const { data, error: insertError } = await supabase
@@ -164,21 +266,8 @@ export const useProductVariations = (productId?: string) => {
 
         console.log("✅ VARIAÇÕES - Salvas com sucesso:", data?.length || 0);
 
-        // Atualizar estado local
-        const processedVariations =
-          data?.map((v) => ({
-            id: v.id,
-            product_id: v.product_id,
-            color: v.color,
-            size: v.size,
-            sku: v.sku,
-            stock: v.stock,
-            price_adjustment: v.price_adjustment,
-            is_active: v.is_active,
-            image_url: v.image_url,
-            created_at: v.created_at,
-            updated_at: v.updated_at,
-          })) || [];
+        // Atualizar estado local com todos os campos
+        const processedVariations = (data as any[]) || [];
 
         setVariations(processedVariations);
       } else {
@@ -206,6 +295,31 @@ export const useProductVariations = (productId?: string) => {
     }
   };
 
+  // Função para remover uma variação individualmente (por id)
+  const deleteVariationById = async (variationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("product_variations")
+        .delete()
+        .eq("id", variationId);
+      if (error) throw error;
+      // Atualizar estado local
+      setVariations((prev) => prev.filter((v) => v.id !== variationId));
+      toast({
+        title: "Variação excluída!",
+        description: "Variação removida com sucesso.",
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir variação",
+        description: String(error),
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (productId && productId.trim() !== "") {
       fetchVariations(productId);
@@ -222,5 +336,6 @@ export const useProductVariations = (productId?: string) => {
     error,
     saveVariations,
     refetch: () => productId && fetchVariations(productId),
+    deleteVariationById,
   };
 };

@@ -21,6 +21,14 @@ export interface ProductVariation {
   stock_quantity?: number;
   price?: number;
   image_file?: File | null;
+  // Suporte a variação composta (grade)
+  grade_model_id?: string; // Referência ao modelo de grade
+  grade_name?: string; // Nome da grade (ex: Baixa, Alta)
+  grade_color?: string; // Cor da grade
+  grade_quantity?: number; // Quantidade de grades
+  grade_sizes?: string[]; // Tamanhos da grade
+  grade_pairs?: number[]; // Quantidade de pares por tamanho
+  is_grade?: boolean; // Indica se é variação de grade
 }
 
 export interface Product {
@@ -48,6 +56,7 @@ export interface Product {
   variations?: ProductVariation[];
   whatsapp_number?: string;
   price_tiers?: ProductPriceTier[];
+  enable_gradual_wholesale?: boolean; // Toggle para ativar/desativar atacado gradativo
 }
 
 export interface CreateProductData {

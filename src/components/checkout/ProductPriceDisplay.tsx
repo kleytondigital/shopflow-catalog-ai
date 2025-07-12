@@ -1,4 +1,3 @@
-
 import React from "react";
 import { usePriceCalculation } from "../../hooks/usePriceCalculation";
 import { Badge } from "../ui/badge";
@@ -22,7 +21,7 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
   const calculation = usePriceCalculation(storeId, {
     product_id: productId,
     retail_price: retailPrice,
-    quantity
+    quantity,
   });
 
   const totalPrice = calculation.price * quantity;

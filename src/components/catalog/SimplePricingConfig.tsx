@@ -1,22 +1,21 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  Store, 
-  DollarSign, 
-  TrendingUp, 
-  Save, 
-  Loader2, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Store,
+  DollarSign,
+  TrendingUp,
+  Save,
+  Loader2,
   CheckCircle,
-  Info
-} from 'lucide-react';
+  Info,
+} from "lucide-react";
 
 interface PricingMode {
   id: string;
@@ -36,7 +35,7 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
   storeId,
   onConfigChange,
 }) => {
-  const [selectedMode, setSelectedMode] = useState<string>('retail_only');
+  const [selectedMode, setSelectedMode] = useState<string>("retail_only");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -44,57 +43,77 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
 
   const pricingModes: PricingMode[] = [
     {
-      id: 'retail_only',
-      name: 'Apenas Varejo',
-      description: 'Um único preço para todos os produtos. Ideal para lojas focadas no varejo.',
+      id: "retail_only",
+      name: "Apenas Varejo",
+      description:
+        "Um único preço para todos os produtos. Ideal para lojas focadas no varejo.",
       icon: <Store className="h-5 w-5" />,
-      preview: 'Produtos com preço único • Simples e direto',
+      preview: "Produtos com preço único • Simples e direto",
       config: {
-        price_model: 'retail_only',
+        price_model: "retail_only",
         simple_wholesale_enabled: false,
         gradual_wholesale_enabled: false,
-        show_price_tiers: false
-      }
+        show_price_tiers: false,
+      },
     },
     {
-      id: 'simple_wholesale',
-      name: 'Varejo + Atacado',
-      description: 'Dois preços: varejo e atacado com quantidade mínima. Perfeito para lojas mistas.',
+      id: "simple_wholesale",
+      name: "Varejo + Atacado",
+      description:
+        "Dois preços: varejo e atacado com quantidade mínima. Perfeito para lojas mistas.",
       icon: <DollarSign className="h-5 w-5" />,
-      preview: 'Preço varejo • Preço atacado a partir de X unidades',
+      preview: "Preço varejo • Preço atacado a partir de X unidades",
       config: {
-        price_model: 'simple_wholesale',
+        price_model: "simple_wholesale",
         simple_wholesale_enabled: true,
         simple_wholesale_min_qty: 10,
-        simple_wholesale_name: 'Atacado',
+        simple_wholesale_name: "Atacado",
         gradual_wholesale_enabled: false,
         show_price_tiers: true,
-        show_savings_indicators: true
-      }
+        show_savings_indicators: true,
+      },
     },
     {
-      id: 'gradual_wholesale',
-      name: 'Preços Graduais',
-      description: 'Múltiplos níveis de preço baseados na quantidade. Ideal para distribuidores.',
-      icon: <TrendingUp className="h-5 w-5" />,
-      preview: 'Varejo • Atacarejo • Atacado • Distribuidor',
+      id: "wholesale_only",
+      name: "Apenas Atacado",
+      description:
+        "Venda apenas no atacado, com quantidade mínima obrigatória. Ideal para atacadistas.",
+      icon: <DollarSign className="h-5 w-5" />,
+      preview: "Preço único de atacado • Quantidade mínima obrigatória",
       config: {
-        price_model: 'gradual_wholesale',
+        price_model: "wholesale_only",
+        simple_wholesale_enabled: true,
+        simple_wholesale_min_qty: 10,
+        simple_wholesale_name: "Atacado",
+        gradual_wholesale_enabled: false,
+        show_price_tiers: false,
+        show_savings_indicators: false,
+      },
+    },
+    {
+      id: "gradual_wholesale",
+      name: "Preços Graduais",
+      description:
+        "Múltiplos níveis de preço baseados na quantidade. Ideal para distribuidores.",
+      icon: <TrendingUp className="h-5 w-5" />,
+      preview: "Varejo • Atacarejo • Atacado • Distribuidor",
+      config: {
+        price_model: "gradual_wholesale",
         gradual_wholesale_enabled: true,
         gradual_tiers_count: 4,
         tier_1_enabled: true,
-        tier_1_name: 'Varejo',
+        tier_1_name: "Varejo",
         tier_2_enabled: true,
-        tier_2_name: 'Atacarejo',
+        tier_2_name: "Atacarejo",
         tier_3_enabled: true,
-        tier_3_name: 'Atacado',
+        tier_3_name: "Atacado",
         tier_4_enabled: true,
-        tier_4_name: 'Distribuidor',
+        tier_4_name: "Distribuidor",
         show_price_tiers: true,
         show_savings_indicators: true,
-        show_next_tier_hint: true
-      }
-    }
+        show_next_tier_hint: true,
+      },
+    },
   ];
 
   useEffect(() => {
@@ -104,24 +123,24 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
   const loadCurrentConfig = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
-        .from('store_price_models')
-        .select('*')
-        .eq('store_id', storeId)
+        .from("store_price_models")
+        .select("*")
+        .eq("store_id", storeId)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error && error.code !== "PGRST116") {
         throw error;
       }
 
       if (data) {
-        setSelectedMode(data.price_model || 'retail_only');
+        setSelectedMode(data.price_model || "retail_only");
       } else {
-        setSelectedMode('retail_only');
+        setSelectedMode("retail_only");
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração:', error);
+      console.error("Erro ao carregar configuração:", error);
       toast({
         title: "Erro ao carregar",
         description: "Não foi possível carregar a configuração atual",
@@ -135,19 +154,21 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
   const saveConfiguration = async () => {
     try {
       setSaving(true);
-      
-      const selectedModeConfig = pricingModes.find(mode => mode.id === selectedMode);
+
+      const selectedModeConfig = pricingModes.find(
+        (mode) => mode.id === selectedMode
+      );
       if (!selectedModeConfig) return;
 
       const configToSave = {
         store_id: storeId,
-        ...selectedModeConfig.config
+        ...selectedModeConfig.config,
       };
 
       const { error } = await supabase
-        .from('store_price_models')
+        .from("store_price_models")
         .upsert(configToSave, {
-          onConflict: 'store_id'
+          onConflict: "store_id",
         });
 
       if (error) throw error;
@@ -164,7 +185,7 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
 
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      console.error("Erro ao salvar:", error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar a configuração",
@@ -206,38 +227,46 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
         <CardContent className="space-y-6">
           {/* Seleção do Modo */}
           <div className="space-y-4">
-            <Label className="text-base font-medium">Escolha o modelo ideal para sua loja:</Label>
-            
+            <Label className="text-base font-medium">
+              Escolha o modelo ideal para sua loja:
+            </Label>
+
             <div className="grid gap-4">
               {pricingModes.map((mode) => (
                 <div
                   key={mode.id}
                   className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
                     selectedMode === mode.id
-                      ? 'border-primary bg-primary/5 shadow-md'
-                      : 'border-border hover:border-primary/50'
+                      ? "border-primary bg-primary/5 shadow-md"
+                      : "border-border hover:border-primary/50"
                   }`}
                   onClick={() => setSelectedMode(mode.id)}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      selectedMode === mode.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'
-                    }`}>
+                    <div
+                      className={`p-2 rounded-lg ${
+                        selectedMode === mode.id
+                          ? "bg-primary text-white"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
                       {mode.icon}
                     </div>
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold text-lg">{mode.name}</h3>
                         {selectedMode === mode.id && (
-                          <Badge variant="default" className="text-xs">Selecionado</Badge>
+                          <Badge variant="default" className="text-xs">
+                            Selecionado
+                          </Badge>
                         )}
                       </div>
-                      
+
                       <p className="text-gray-600 text-sm mb-3">
                         {mode.description}
                       </p>
-                      
+
                       <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded">
                         <strong>Preview:</strong> {mode.preview}
                       </div>
@@ -252,9 +281,10 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Modelo selecionado:</strong> {pricingModes.find(m => m.id === selectedMode)?.name}
+              <strong>Modelo selecionado:</strong>{" "}
+              {pricingModes.find((m) => m.id === selectedMode)?.name}
               <br />
-              {pricingModes.find(m => m.id === selectedMode)?.description}
+              {pricingModes.find((m) => m.id === selectedMode)?.description}
             </AlertDescription>
           </Alert>
 
@@ -293,11 +323,26 @@ const SimplePricingConfig: React.FC<SimplePricingConfigProps> = ({
         </CardHeader>
         <CardContent>
           <ul className="text-sm text-gray-600 space-y-2">
-            <li>• <strong>Apenas Varejo:</strong> Para lojas que vendem só no varejo com preço único</li>
-            <li>• <strong>Varejo + Atacado:</strong> Para lojas que vendem nos dois mercados com quantidade mínima</li>
-            <li>• <strong>Preços Graduais:</strong> Para distribuidores com múltiplos níveis de desconto</li>
-            <li>• <strong>Configuração automática:</strong> Todos os produtos seguirão este modelo</li>
-            <li>• <strong>Alteração a qualquer momento:</strong> Você pode mudar quando quiser</li>
+            <li>
+              • <strong>Apenas Varejo:</strong> Para lojas que vendem só no
+              varejo com preço único
+            </li>
+            <li>
+              • <strong>Varejo + Atacado:</strong> Para lojas que vendem nos
+              dois mercados com quantidade mínima
+            </li>
+            <li>
+              • <strong>Preços Graduais:</strong> Para distribuidores com
+              múltiplos níveis de desconto
+            </li>
+            <li>
+              • <strong>Configuração automática:</strong> Todos os produtos
+              seguirão este modelo
+            </li>
+            <li>
+              • <strong>Alteração a qualquer momento:</strong> Você pode mudar
+              quando quiser
+            </li>
           </ul>
         </CardContent>
       </Card>

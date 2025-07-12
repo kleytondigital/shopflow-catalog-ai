@@ -3,7 +3,8 @@
 export type PriceModelType =
   | "retail_only"
   | "simple_wholesale"
-  | "gradual_wholesale";
+  | "gradual_wholesale"
+  | "wholesale_only";
 
 export type TierType = "retail" | "simple_wholesale" | "gradual_wholesale";
 
@@ -163,12 +164,24 @@ export const PRICE_MODEL_CONFIGS: Record<PriceModelType, PriceModelConfig> = {
   simple_wholesale: {
     model: "simple_wholesale",
     enabled: true,
-    displayName: "Atacado Simples",
+    displayName: "Varejo + Atacado",
     description: "Varejo + 1 nível de atacado com quantidade mínima fixa",
     features: [
       "Preço de varejo para compras pequenas",
       "Preço de atacado para compras acima da quantidade mínima",
       "Configuração simples",
+    ],
+  },
+  wholesale_only: {
+    model: "wholesale_only",
+    enabled: true,
+    displayName: "Apenas Atacado",
+    description: "Venda apenas no atacado com quantidade mínima obrigatória",
+    features: [
+      "Preço único de atacado",
+      "Quantidade mínima obrigatória",
+      "Ideal para atacadistas",
+      "Foco em vendas em volume",
     ],
   },
   gradual_wholesale: {

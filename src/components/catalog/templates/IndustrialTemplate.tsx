@@ -22,6 +22,7 @@ import { useCatalogMode } from "@/hooks/useCatalogMode";
 import { useToast } from "@/hooks/use-toast";
 import { createCartItem } from "@/utils/cartHelpers";
 import ProductDetailsModal from "../ProductDetailsModal";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface IndustrialTemplateProps {
   product: Product;
@@ -60,6 +61,9 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(
       shouldShowSavingsIndicator,
       calculatePotentialSavings,
     } = useCatalogMode();
+
+    const { priceModel, loading } = useStorePriceModel(product.store_id);
+    const modelKey = priceModel?.price_model || "retail_only";
 
     // Usar variações do produto se disponíveis, senão usar do hook
     const productVariations = product.variations || variations || [];
@@ -135,9 +139,35 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(
     const handleAddToCart = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        onAddToCart(product);
+        if (loading) return;
+        let qty = 1;
+        let price = product.retail_price;
+        let isWholesale = false;
+
+        if (modelKey === "wholesale_only") {
+          qty = product.min_wholesale_qty || 1;
+          price = product.wholesale_price || product.retail_price;
+          isWholesale = true;
+        }
+
+        addItem(
+          {
+            id: `${product.id}-default`,
+            product: { ...product, price_model: modelKey },
+            quantity: qty,
+            price,
+            originalPrice: price,
+            catalogType,
+            isWholesalePrice: isWholesale,
+          },
+          modelKey
+        );
+        toast({
+          title: "Produto adicionado!",
+          description: `${product.name} foi adicionado ao carrinho.`,
+        });
       },
-      [onAddToCart, product]
+      [addItem, product, catalogType, modelKey, toast, loading]
     );
 
     const handleAddToWishlist = useCallback(() => {
@@ -331,26 +361,41 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = memo(
               {/* Prices */}
               {showPrices && (
                 <div className="space-y-1">
-                  {/* Retail Price */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-600 font-semibold">
-                      Varejo:
-                    </span>
-                    <span className="font-bold text-slate-900">
-                      R$ {product.retail_price?.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Wholesale Price */}
-                  {product.wholesale_price && (
+                  {modelKey === "wholesale_only" ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-red-600 font-semibold">
+                      <span className="text-xs text-orange-700 font-semibold">
                         Atacado:
                       </span>
-                      <span className="font-bold text-red-600">
-                        R$ {product.wholesale_price.toFixed(2)}
+                      <span className="font-bold text-orange-700">
+                        R$ {product.wholesale_price?.toFixed(2)}
                       </span>
+                      {product.min_wholesale_qty && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          Mín. {product.min_wholesale_qty} un.
+                        </span>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-600 font-semibold">
+                          Varejo:
+                        </span>
+                        <span className="font-bold text-slate-900">
+                          R$ {product.retail_price?.toFixed(2)}
+                        </span>
+                      </div>
+                      {product.wholesale_price && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-red-600 font-semibold">
+                            Atacado:
+                          </span>
+                          <span className="font-bold text-red-600">
+                            R$ {product.wholesale_price.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

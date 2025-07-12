@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@/types/variation";
 import { usePriceCalculation } from "./usePriceCalculation";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 export interface CartItem {
   id: string;
@@ -15,6 +16,8 @@ export interface CartItem {
     store_id?: string;
     stock: number;
     allow_negative_stock: boolean;
+    enable_gradual_wholesale?: boolean; // Toggle de atacado gradativo
+    price_model?: string; // Adicionado para controlar o modelo de preço
   };
   quantity: number;
   price: number;
@@ -36,13 +39,31 @@ export interface CartItem {
   };
   nextTierQuantityNeeded?: number | null;
   nextTierPotentialSavings?: number | null;
+  // Informações de grade da variação
+  gradeInfo?: {
+    name: string;
+    sizes: string[];
+    pairs: number[];
+  };
 }
+
+// Novo tipo para modelo de preço
+export type CartPriceModelType =
+  | "retail_only"
+  | "simple_wholesale"
+  | "gradual_wholesale"
+  | "wholesale_only";
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: CartItem) => void;
+  addItem: (item: CartItem, modelKey?: CartPriceModelType) => void;
   removeItem: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
+  updateQuantity: (
+    itemId: string,
+    quantity: number,
+    modelKey?: CartPriceModelType,
+    minWholesaleQty?: number
+  ) => void;
   clearCart: () => void;
   totalAmount: number;
   totalItems: number;
@@ -100,6 +121,9 @@ const validateCartItem = (item: any): CartItem | null => {
         image_url: item.product.image_url,
         stock: item.product.stock ?? 0,
         allow_negative_stock: item.product.allow_negative_stock ?? false,
+        enable_gradual_wholesale:
+          item.product.enable_gradual_wholesale ?? false,
+        price_model: item.product.price_model, // Adicionado para controlar o modelo de preço
       },
       quantity: Math.max(1, Math.floor(item.quantity)),
       price: item.price,
@@ -107,6 +131,14 @@ const validateCartItem = (item: any): CartItem | null => {
       variation: item.variation,
       catalogType: item.catalogType || "retail",
       isWholesalePrice: item.isWholesalePrice || false,
+      // Extrair informações de grade da variação
+      gradeInfo: item.variation?.grade_name
+        ? {
+            name: item.variation.grade_name,
+            sizes: item.variation.grade_sizes || [],
+            pairs: item.variation.grade_pairs || [],
+          }
+        : undefined,
     };
   } catch (error) {
     console.error("❌ Erro ao validar item do carrinho:", error, item);
@@ -157,14 +189,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       const product = item.product;
       const quantity = item.quantity;
 
+      // Se for apenas atacado, sempre usar preço de atacado
+      if (product.price_model === "wholesale_only") {
+        return {
+          ...item,
+          price: product.wholesale_price,
+          isWholesalePrice: true,
+          currentTier: undefined,
+          nextTier: undefined,
+          nextTierQuantityNeeded: undefined,
+          nextTierPotentialSavings: undefined,
+        };
+      }
+
       // LOG: Estado do cache de tiers
       console.log(
         `🟦 [recalculateItemPrices] Tiers cache para ${product.name}:`,
         priceTiersCache[product.id]
       );
 
-      // Verificar se temos níveis em cache
-      const tiers = priceTiersCache[product.id];
+      // Verificar se temos níveis em cache (só se atacado gradativo estiver ativo)
+      const tiers = product.enable_gradual_wholesale
+        ? priceTiersCache[product.id]
+        : null;
 
       if (tiers && tiers.length > 0) {
         // Ordenar por quantidade mínima (crescente) para encontrar o nível correto
@@ -214,8 +261,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      // Verificar preço atacado simples do produto
+      // Verificar preço atacado simples do produto (só se atacado gradativo estiver desativado)
       if (
+        !product.enable_gradual_wholesale && // Só atacado simples se gradativo estiver desativado
         product.wholesale_price &&
         product.min_wholesale_qty &&
         quantity >= product.min_wholesale_qty
@@ -307,7 +355,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [items]);
 
-  const addItem = (item: CartItem) => {
+  // addItem agora recebe modelKey como parâmetro
+  const addItem = (item: CartItem, modelKey?: CartPriceModelType) => {
     // Validar item antes de adicionar
     const validatedItem = validateCartItem(item);
     if (!validatedItem) {
@@ -322,6 +371,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         duration: 3000,
       });
       return;
+    }
+
+    const minQty =
+      modelKey === "wholesale_only"
+        ? validatedItem.product.min_wholesale_qty || 1
+        : 1;
+
+    // Se for wholesale_only, garantir quantidade mínima e preço de atacado
+    if (modelKey === "wholesale_only") {
+      validatedItem.quantity = Math.max(minQty, validatedItem.quantity);
+      validatedItem.price = validatedItem.product.wholesale_price;
+      validatedItem.originalPrice = validatedItem.product.wholesale_price;
     }
 
     // Buscar níveis de preço se não estiverem em cache
@@ -346,10 +407,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       let newItems;
       if (existingIndex >= 0) {
         newItems = [...current];
-        newItems[existingIndex] = {
-          ...newItems[existingIndex],
-          quantity: newItems[existingIndex].quantity + validatedItem.quantity,
-        };
+        // Se for wholesale_only, garantir que a soma nunca fique abaixo do mínimo
+        if (validatedItem.product.price_model === "wholesale_only") {
+          newItems[existingIndex].quantity = Math.max(
+            validatedItem.product.min_wholesale_qty || 1,
+            newItems[existingIndex].quantity + validatedItem.quantity
+          );
+        } else {
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: newItems[existingIndex].quantity + validatedItem.quantity,
+          };
+        }
       } else {
         newItems = [...current, validatedItem];
       }
@@ -402,58 +471,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const updateQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(itemId);
-      return;
-    }
-
+  // updateQuantity agora recebe modelKey como parâmetro
+  const updateQuantity = (
+    itemId: string,
+    quantity: number,
+    modelKey?: CartPriceModelType,
+    minWholesaleQty?: number
+  ) => {
     setItems((current) => {
       const item = current.find((i) => i.id === itemId);
-
-      // Buscar níveis de preço se não estiverem em cache
-      if (item && !priceTiersCache[item.product.id]) {
-        fetchProductTiers(item.product.id);
+      if (!item) return current;
+      const minQty = modelKey === "wholesale_only" ? minWholesaleQty || 1 : 1;
+      let newQuantity = Math.max(minQty, Math.floor(quantity));
+      if (newQuantity <= 0) {
+        return current.filter((i) => i.id !== itemId);
       }
-
-      const newItems = current.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: Math.max(1, Math.floor(quantity)) }
-          : item
+      const newItems = current.map((i) =>
+        i.id === itemId ? { ...i, quantity: newQuantity } : i
       );
-
-      const recalculatedItems = recalculateItemPrices(newItems);
-
-      // Verificar mudanças de preço para notificar
-      const changedItem = recalculatedItems.find((item) => item.id === itemId);
-      const oldItem = current.find((item) => item.id === itemId);
-
-      if (
-        changedItem &&
-        oldItem &&
-        changedItem.isWholesalePrice !== oldItem.isWholesalePrice
-      ) {
-        if (changedItem.isWholesalePrice) {
-          const savings =
-            (changedItem.originalPrice - changedItem.price) *
-            changedItem.quantity;
-          toast({
-            title: "🎉 Preço de atacado ativado!",
-            description: `Você economizou R$ ${savings.toFixed(2)} com ${
-              changedItem.product.name
-            }`,
-            duration: 4000,
-          });
-        } else {
-          toast({
-            title: "Preço alterado",
-            description: `${changedItem.product.name} voltou ao preço de varejo`,
-            duration: 3000,
-          });
-        }
-      }
-
-      return recalculatedItems;
+      return recalculateItemPrices(newItems);
     });
   };
 

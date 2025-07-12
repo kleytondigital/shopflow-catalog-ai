@@ -22,6 +22,9 @@ export interface VariationMasterValue {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Campos para grade
+  grade_sizes?: string[];
+  grade_pairs?: { [size: string]: number };
 }
 
 export const useVariationMasterGroups = () => {

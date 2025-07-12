@@ -17,6 +17,7 @@ import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
 import { createCartItem } from "@/utils/cartHelpers";
 import ProductDetailsModal from "../ProductDetailsModal";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface MinimalTemplateProps {
   product: Product;
@@ -47,6 +48,8 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = memo(
     const { variations } = useProductVariations(product.id);
     const { addItem } = useCart();
     const { toast } = useToast();
+    const { priceModel, loading } = useStorePriceModel(product.store_id);
+    const modelKey = priceModel?.price_model || "retail_only";
 
     // Usar variações do produto se disponíveis, senão usar do hook
     const productVariations = product.variations || variations || [];
@@ -82,9 +85,35 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = memo(
     const handleAddToCart = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        onAddToCart(product);
+        if (loading) return;
+        let qty = 1;
+        let price = product.retail_price;
+        let isWholesale = false;
+
+        if (modelKey === "wholesale_only") {
+          qty = product.min_wholesale_qty || 1;
+          price = product.wholesale_price || product.retail_price;
+          isWholesale = true;
+        }
+
+        addItem(
+          {
+            id: `${product.id}-default`,
+            product: { ...product, price_model: modelKey },
+            quantity: qty,
+            price,
+            originalPrice: price,
+            catalogType,
+            isWholesalePrice: isWholesale,
+          },
+          modelKey
+        );
+        toast({
+          title: "Produto adicionado!",
+          description: `${product.name} foi adicionado ao carrinho.`,
+        });
       },
-      [onAddToCart, product]
+      [addItem, product, catalogType, modelKey, toast, loading]
     );
 
     const handleCardClick = useCallback(() => {
@@ -274,22 +303,37 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = memo(
               {/* Prices */}
               {showPrices && (
                 <div className="space-y-1">
-                  {/* Retail Price */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Varejo:</span>
-                    <span className="font-bold text-gray-900">
-                      R$ {product.retail_price?.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Wholesale Price */}
-                  {product.wholesale_price && (
+                  {modelKey === "wholesale_only" ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Atacado:</span>
-                      <span className="font-bold text-gray-600">
-                        R$ {product.wholesale_price.toFixed(2)}
+                      <span className="text-xs text-orange-700">Atacado:</span>
+                      <span className="font-bold text-orange-700">
+                        R$ {product.wholesale_price?.toFixed(2)}
                       </span>
+                      {product.min_wholesale_qty && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          Mín. {product.min_wholesale_qty} un.
+                        </span>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Varejo:</span>
+                        <span className="font-bold text-gray-900">
+                          R$ {product.retail_price?.toFixed(2)}
+                        </span>
+                      </div>
+                      {product.wholesale_price && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">
+                            Atacado:
+                          </span>
+                          <span className="font-bold text-gray-600">
+                            R$ {product.wholesale_price.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -309,13 +353,13 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = memo(
               {/* Add to Cart Button */}
               <Button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={product.stock === 0 || loading}
                 className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white text-sm py-2"
                 size="sm"
               >
                 <ShoppingCart className="h-3 w-3 mr-2" />
-                {product.stock === 0
-                  ? "Esgotado"
+                {loading
+                  ? "Carregando..."
                   : productVariations.length > 0
                   ? "Ver Opções"
                   : "Comprar"}

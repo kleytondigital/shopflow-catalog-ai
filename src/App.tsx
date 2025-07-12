@@ -32,6 +32,7 @@ import PaymentFailure from "./pages/PaymentFailure";
 import PaymentPending from "./pages/PaymentPending";
 import NotFound from "./pages/NotFound";
 import TestStore from "./pages/TestStore";
+import TestGradeWizard from "./pages/TestGradeWizard";
 import ResponsiveAppLayout from "./components/layout/ResponsiveAppLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicCatalog from "./components/catalog/PublicCatalog";
@@ -82,6 +83,7 @@ function App() {
             <Route path="/payment/failure" element={<PaymentFailure />} />
             <Route path="/payment/pending" element={<PaymentPending />} />
             <Route path="/test-store" element={<TestStore />} />
+            <Route path="/test-grade-wizard" element={<TestGradeWizard />} />
             <Route
               path="/catalog/:storeSlug"
               element={<PublicCatalogWrapper />}

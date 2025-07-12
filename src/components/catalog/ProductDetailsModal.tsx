@@ -31,6 +31,8 @@ import MultipleVariationSelector from "@/components/catalog/MultipleVariationSel
 import { useProductVariations } from "@/hooks/useProductVariations";
 import { useToast } from "@/hooks/use-toast";
 import { CatalogType } from "@/hooks/useCatalog";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useCart } from "@/hooks/useCart";
 
 interface VariationSelection {
   variation: ProductVariation;
@@ -115,11 +117,33 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     "single"
   );
   const { toast } = useToast();
+  const { addItem } = useCart();
+  const { priceModel } = useStorePriceModel(product.store_id);
+  const modelKey = priceModel?.price_model || "retail_only";
 
   // Hook para carregar variações do produto
   const { variations, loading: variationsLoading } = useProductVariations(
     product.id
   );
+
+  // Dentro do componente ProductDetailsModal
+  // Função utilitária para identificar se atacado gradativo está ativo
+  const isGradualWholesale =
+    product.enable_gradual_wholesale &&
+    priceModel?.price_model === "gradual_wholesale";
+
+  // Função para extrair informações de grade das variações
+  const getGradeInfo = () => {
+    if (!product.variations || product.variations.length === 0) return null;
+    const gradeVar = product.variations.find((v) => v.grade_name);
+    if (!gradeVar) return null;
+    return {
+      name: gradeVar.grade_name,
+      sizes: gradeVar.grade_sizes,
+      pairs: gradeVar.grade_pairs,
+    };
+  };
+  const gradeInfo = getGradeInfo();
 
   // Obter imagem da variação selecionada
   const selectedVariationImage = useMemo(() => {
@@ -130,14 +154,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   // Reset quando produto muda
   useEffect(() => {
     if (product && isOpen) {
-      setQuantity(1);
+      // Definir quantidade inicial baseada no modelo de preço
+      const initialQuantity =
+        modelKey === "wholesale_only"
+          ? Math.max(product.min_wholesale_qty || 1, 1)
+          : 1;
+      setQuantity(initialQuantity);
       setSelectedVariation(null);
       setShowVariationError(false);
       setIsAddingToCart(false);
       setQuantityChangeKey((prev) => prev + 1);
       setSelectionMode("single");
     }
-  }, [product?.id, isOpen]);
+  }, [product?.id, isOpen, modelKey, product?.min_wholesale_qty]);
 
   // Reset variação selecionada quando variações carregam
   useEffect(() => {
@@ -167,40 +196,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     : product.stock;
 
   const isWholesale = catalogType === "wholesale";
-  const minQty = isWholesale ? product.min_wholesale_qty || 1 : 1;
+  // Definir quantidade mínima conforme modelo
+  const minQty =
+    modelKey === "wholesale_only" ? product.min_wholesale_qty || 1 : 1;
   const maxQty = Math.min(availableStock, 999); // Limite máximo de 999 unidades
 
-  // Função melhorada para mudança de quantidade
-  const handleQuantityChange = useCallback(
-    (newQuantity: number) => {
-      // Validar limites
-      let validQuantity = newQuantity;
-
-      if (validQuantity < minQty) {
-        validQuantity = minQty;
-      }
-
-      if (validQuantity > maxQty) {
-        validQuantity = maxQty;
-      }
-
-      // Atualizar estado apenas se houve mudança
-      if (validQuantity !== quantity) {
-        setQuantity(validQuantity);
-        setQuantityChangeKey((prev) => prev + 1);
-
-        // Feedback visual
-        toast({
-          title: "Quantidade atualizada",
-          description: `Quantidade alterada para ${validQuantity} unidade${
-            validQuantity > 1 ? "s" : ""
-          }`,
-          duration: 1500,
-        });
-      }
-    },
-    [quantity, minQty, maxQty, toast]
-  );
+  // Controle de quantidade: bloquear decremento abaixo do mínimo
+  const handleQuantityChange = (newQty: number) => {
+    if (modelKey === "wholesale_only") {
+      setQuantity(Math.max(minQty, newQty));
+    } else {
+      setQuantity(Math.max(1, newQty));
+    }
+  };
 
   const handleVariationChange = useCallback(
     (variation: ProductVariation | null) => {
@@ -259,7 +267,37 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     try {
       setIsAddingToCart(true);
 
-      await onAddToCart(product, quantity, selectedVariation || undefined);
+      // Debug logs
+      console.log("🔍 [ProductDetailsModal] Adicionando ao carrinho:", {
+        modelKey,
+        quantity,
+        minQty,
+        productName: product.name,
+        wholesalePrice: product.wholesale_price,
+        retailPrice: product.retail_price,
+        minWholesaleQty: product.min_wholesale_qty,
+      });
+
+      // Adicionar ao carrinho passando o modelKey
+      await addItem(
+        {
+          id: `${product.id}-${selectedVariation?.id || "default"}`,
+          product: product,
+          quantity: quantity,
+          price:
+            modelKey === "wholesale_only"
+              ? product.wholesale_price || product.retail_price
+              : product.retail_price,
+          originalPrice:
+            modelKey === "wholesale_only"
+              ? product.wholesale_price || product.retail_price
+              : product.retail_price,
+          catalogType,
+          isWholesalePrice: modelKey === "wholesale_only",
+          variation: selectedVariation || undefined,
+        },
+        modelKey
+      );
 
       toast({
         title: "Produto adicionado!",
@@ -288,6 +326,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     product,
     onClose,
     toast,
+    catalogType,
+    modelKey,
   ]);
 
   // Função para seleção múltipla de variações
@@ -394,6 +434,46 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     return stars;
   };
 
+  // Função para renderizar preço conforme modelo de preço
+  const renderPrice = () => {
+    if (modelKey === "wholesale_only") {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-3xl font-bold text-primary">
+            R${" "}
+            {product.wholesale_price?.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+            })}
+          </span>
+          <span className="text-lg text-orange-700 font-semibold">
+            Preço Atacado
+            {product.min_wholesale_qty
+              ? ` • mín. ${product.min_wholesale_qty} un.`
+              : ""}
+          </span>
+        </div>
+      );
+    }
+    // ... lógica original para outros modelos ...
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-3xl font-bold text-gray-900">
+          R$ {finalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+        </span>
+        {selectedVariation?.price_adjustment !== 0 &&
+          selectedVariation?.price_adjustment && (
+            <Badge variant="outline" className="text-sm">
+              {selectedVariation.price_adjustment > 0 ? "+" : ""}
+              R${" "}
+              {selectedVariation.price_adjustment.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+              })}
+            </Badge>
+          )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl w-full max-h-[95vh] overflow-y-auto">
@@ -415,6 +495,52 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 {product.name}
               </h1>
 
+              {/* Badges de Grade e Atacado Gradativo */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {/* Badge de Grade */}
+                {gradeInfo && (
+                  <Badge className="bg-blue-600 text-white text-xs px-2 py-0.5">
+                    Grade: {gradeInfo.name}
+                  </Badge>
+                )}
+                {/* Badge de Atacado Gradativo */}
+                {isGradualWholesale && (
+                  <Badge
+                    className="bg-yellow-500 text-white text-xs px-2 py-0.5"
+                    title="Descontos progressivos por quantidade"
+                  >
+                    Atacado Gradativo
+                  </Badge>
+                )}
+              </div>
+              {/* Tamanhos e pares por tamanho */}
+              {gradeInfo && (
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  {gradeInfo.sizes && gradeInfo.sizes.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {gradeInfo.sizes.map((size, idx) => (
+                        <div key={idx} className="relative inline-block">
+                          <span className="text-base bg-blue-100 text-blue-900 px-3 py-1 rounded-full border-2 border-blue-400 font-bold shadow-sm">
+                            {size}
+                          </span>
+                          {gradeInfo.pairs && gradeInfo.pairs[idx] && (
+                            <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-[10px] px-1.5 py-0.5 rounded-full border border-white shadow font-bold">
+                              {gradeInfo.pairs[idx]}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* SKU ainda mais discreto */}
+              {selectedVariation?.sku && (
+                <div className="text-[8px] text-gray-300 mt-1 mb-2 select-all font-mono">
+                  SKUS: {selectedVariation.sku}
+                </div>
+              )}
+
               {/* Descrição completa disponível no modal */}
               {product.description && (
                 <div className="space-y-2">
@@ -426,27 +552,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
             {/* Preços */}
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-gray-900">
-                  R${" "}
-                  {finalPrice.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-                {selectedVariation?.price_adjustment !== 0 &&
-                  selectedVariation?.price_adjustment && (
-                    <Badge variant="outline" className="text-sm">
-                      {selectedVariation.price_adjustment > 0 ? "+" : ""}
-                      R${" "}
-                      {selectedVariation.price_adjustment.toLocaleString(
-                        "pt-BR",
-                        { minimumFractionDigits: 2 }
-                      )}
-                    </Badge>
-                  )}
-              </div>
-
-              {product.wholesale_price &&
+              {renderPrice()}
+              {product.price_model !== "wholesale_only" &&
+                product.wholesale_price &&
                 product.wholesale_price !== product.retail_price && (
                   <div className="text-lg text-green-600 font-semibold">
                     Atacado: R${" "}

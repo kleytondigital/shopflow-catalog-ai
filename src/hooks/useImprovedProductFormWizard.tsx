@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDraftImagesContext } from "@/contexts/DraftImagesContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 import { ProductVariation, ProductPriceTier } from "@/types/product";
 
 export interface ProductFormData {
@@ -24,6 +25,7 @@ export interface ProductFormData {
   variations: ProductVariation[];
   price_tiers: ProductPriceTier[];
   store_id: string;
+  enable_gradual_wholesale?: boolean; // Toggle para ativar/desativar atacado gradativo
 }
 
 const initialFormData: ProductFormData = {
@@ -45,6 +47,7 @@ const initialFormData: ProductFormData = {
   variations: [],
   price_tiers: [],
   store_id: "",
+  enable_gradual_wholesale: false,
 };
 
 export const useImprovedProductFormWizard = () => {
@@ -54,6 +57,7 @@ export const useImprovedProductFormWizard = () => {
   const { toast } = useToast();
   const { uploadAllImages, clearDraftImages } = useDraftImagesContext();
   const { profile } = useAuth();
+  const { priceModel } = useStorePriceModel(formData.store_id);
 
   const steps = useMemo(
     () => [
@@ -126,6 +130,7 @@ export const useImprovedProductFormWizard = () => {
       name: `"${trimmedName}"`,
       nameLength: trimmedName.length,
       retail_price: formData.retail_price,
+      wholesale_price: formData.wholesale_price,
       stock: formData.stock,
       rawName: `"${formData.name}"`,
       hasName: trimmedName.length > 0,
@@ -137,10 +142,22 @@ export const useImprovedProductFormWizard = () => {
         console.log("✅ Step 0 - hasValidName:", hasValidName);
         return hasValidName;
       case 1: // Preços e estoque
-        const hasPrice = formData.retail_price > 0;
+        // Para wholesale_only, só precisa de preço de atacado e estoque
+        // Para outros modelos, precisa de preço de varejo e estoque
+        const hasValidPrice =
+          priceModel?.price_model === "wholesale_only"
+            ? (formData.wholesale_price || 0) > 0
+            : (formData.retail_price || 0) > 0;
         const hasStock = formData.stock >= 0;
-        console.log("✅ Step 1 - hasPrice:", hasPrice, "hasStock:", hasStock);
-        return hasPrice && hasStock;
+        console.log(
+          "✅ Step 1 - hasValidPrice:",
+          hasValidPrice,
+          "hasStock:",
+          hasStock,
+          "model:",
+          priceModel?.price_model
+        );
+        return hasValidPrice && hasStock;
       case 2: // Imagens (opcional)
       case 3: // Variações (opcional)
       case 4: // SEO (opcional)
@@ -150,7 +167,14 @@ export const useImprovedProductFormWizard = () => {
       default:
         return false;
     }
-  }, [currentStep, formData.name, formData.retail_price, formData.stock]);
+  }, [
+    currentStep,
+    formData.name,
+    formData.retail_price,
+    formData.wholesale_price,
+    formData.stock,
+    priceModel?.price_model,
+  ]);
 
   const nextStep = useCallback(() => {
     console.log("⏭️ NEXT STEP - Tentativa:", { currentStep, canProceed });
@@ -239,6 +263,7 @@ export const useImprovedProductFormWizard = () => {
         allow_negative_stock: formData.allow_negative_stock || false,
         stock_alert_threshold: formData.stock_alert_threshold || 5,
         store_id: profile.store_id,
+        enable_gradual_wholesale: formData.enable_gradual_wholesale || false,
       };
 
       console.log("📦 SAVE - Dados finais do produto:", productData);
@@ -308,6 +333,15 @@ export const useImprovedProductFormWizard = () => {
           price_adjustment: variation.price_adjustment || 0,
           is_active: variation.is_active !== false,
           image_url: variation.image_url || "",
+          // Campos de grade
+          grade_name: variation.grade_name || null,
+          grade_color: variation.grade_color || null,
+          grade_quantity: variation.grade_quantity || null,
+          grade_sizes: variation.grade_sizes || null,
+          grade_pairs: variation.grade_pairs || null,
+          is_grade: variation.is_grade || false,
+          variation_type: variation.variation_type || null,
+          name: variation.name || null,
         }));
 
         if (variationsToSave.length > 0) {

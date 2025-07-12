@@ -3,6 +3,7 @@ import { Badge } from "../ui/badge";
 import { TrendingDown, ArrowUp, Info } from "lucide-react";
 import { usePriceCalculation } from "@/hooks/usePriceCalculation";
 import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface CartItemPriceDisplayProps {
   item: any;
@@ -29,12 +30,28 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
     wholesale_price: product.wholesale_price,
     min_wholesale_qty: product.min_wholesale_qty,
     quantity,
-    price_tiers: priceTiers,
+    price_tiers: product.enable_gradual_wholesale ? priceTiers : [], // Só usar tiers se atacado gradativo estiver ativo
+    enable_gradual_wholesale: product.enable_gradual_wholesale, // Passar o toggle
   });
 
-  const totalPrice = calculation.price * quantity;
+  const { priceModel, loading } = useStorePriceModel(product.store_id);
+  const modelKey: import("@/types/price-models").PriceModelType =
+    product.price_model || priceModel?.price_model || "retail_only";
+
+  if (loading) {
+    return <div className={className}>Carregando preço...</div>;
+  }
+
+  // Para wholesale_only, usar sempre item.price
+  const totalPrice =
+    modelKey === "wholesale_only"
+      ? item.price * quantity
+      : calculation.price * quantity;
   const totalRetailPrice = originalPrice * quantity;
-  const totalSavings = totalRetailPrice - totalPrice;
+  const totalSavings =
+    modelKey === "wholesale_only"
+      ? (originalPrice - item.price) * quantity
+      : totalRetailPrice - totalPrice;
 
   return (
     <div className={`space-y-1 ${className}`}>
@@ -42,25 +59,24 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-1">
           <span className="text-gray-600">Preço:</span>
-          {calculation.percentage > 0 && (
-            <Badge
-              variant="secondary"
-              className="text-xs bg-green-100 text-green-700"
-            >
-              <TrendingDown className="h-3 w-3 mr-1" />-
-              {calculation.percentage.toFixed(0)}%
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-1">
-          {calculation.percentage > 0 && (
-            <span className="text-xs text-gray-400 line-through">
-              R$ {originalPrice.toFixed(2).replace(".", ",")}
+          {modelKey === "wholesale_only" ? (
+            <span className="font-semibold text-orange-700">
+              R$ {item.price?.toFixed(2).replace(".", ",")}
             </span>
+          ) : (
+            <>
+              {calculation.percentage > 0 && (
+                <span className="text-xs text-gray-400 line-through">
+                  R$ {originalPrice.toFixed(2).replace(".", ",")}
+                </span>
+              )}
+              <span className="font-semibold text-green-700">
+                R$ {calculation.price.toFixed(2).replace(".", ",")}
+              </span>
+            </>
           )}
-          <span className="font-semibold text-green-700">
-            R$ {calculation.price.toFixed(2).replace(".", ",")}
-          </span>
         </div>
       </div>
 
@@ -68,7 +84,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-600">Total ({quantity} un):</span>
         <div className="flex items-center gap-1">
-          {totalSavings > 0 && (
+          {modelKey !== "wholesale_only" && totalSavings > 0 && (
             <span className="text-xs text-gray-400 line-through">
               R$ {totalRetailPrice.toFixed(2).replace(".", ",")}
             </span>
@@ -79,10 +95,12 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
         </div>
       </div>
 
-      {/* Economia total */}
-      {totalSavings > 0 && (
+      {/* Economia total - só para outros modelos */}
+      {modelKey !== "wholesale_only" && totalSavings > 0 && (
         <div className="flex items-center justify-between text-xs bg-green-50 p-1 rounded">
-          <span className="text-green-700 font-medium">Economia total:</span>
+          <span className="text-green-700 font-medium">
+            {modelKey} Economia total:
+          </span>
           <span className="text-green-700 font-bold">
             R$ {totalSavings.toFixed(2).replace(".", ",")}
           </span>
@@ -90,7 +108,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       )}
 
       {/* Dica para próximo nível - INCENTIVO PRINCIPAL */}
-      {calculation.nextTierHint && (
+      {modelKey !== "wholesale_only" && calculation.nextTierHint && (
         <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-200">
           <ArrowUp className="h-3 w-3 flex-shrink-0" />
           <span className="flex-1">
@@ -100,7 +118,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
             </strong>{" "}
             unidades para ativar o{" "}
             <strong>
-              {calculation.nextTierHint.nextTierName || "próximo nível"}
+              {calculation.nextTierHint ? "próximo nível" : "próximo nível"}
             </strong>{" "}
             e economizar{" "}
             <strong className="text-green-600">
@@ -118,7 +136,12 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       <div className="flex items-center gap-1 text-xs text-gray-500">
         <Info className="h-3 w-3" />
         <span>
-          Nível atual: <strong>{calculation.currentTier.tier_name}</strong>
+          Nível atual:{" "}
+          <strong>
+            {modelKey === "wholesale_only"
+              ? "Atacado"
+              : calculation.currentTier.tier_name}
+          </strong>
         </span>
       </div>
     </div>

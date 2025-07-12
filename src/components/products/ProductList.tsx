@@ -10,10 +10,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Sparkles,
+  DollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Product } from "@/types/product";
 import ProductInfoCard from "./ProductInfoCard";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface ProductListProps {
   products: Product[];
@@ -28,6 +30,16 @@ const ProductList: React.FC<ProductListProps> = ({
   onDelete,
   onGenerateDescription,
 }) => {
+  const { priceModel } = useStorePriceModel(products[0]?.store_id);
+  // Mapeamento local para nome amigável do modelo
+  const priceModelNames: Record<string, string> = {
+    retail_only: "Apenas Varejo",
+    simple_wholesale: "Varejo + Atacado",
+    gradual_wholesale: "Atacado Gradativo",
+    wholesale_only: "Apenas Atacado",
+  };
+  const modelKey = priceModel?.price_model || "retail_only";
+  const modelDisplayName = priceModelNames[modelKey] || "Modelo Desconhecido";
   const getStockStatus = (stock: number, threshold: number = 5) => {
     if (stock <= 0) {
       return {
@@ -70,6 +82,14 @@ const ProductList: React.FC<ProductListProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Informativo do modelo de preço */}
+      {priceModel && (
+        <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 text-blue-900 flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          <span className="font-medium">Modelo de Preço da Loja:</span>
+          <span className="ml-2 text-sm">{modelDisplayName}</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -96,7 +116,7 @@ const ProductList: React.FC<ProductListProps> = ({
       </div>
 
       {/* Lista de Produtos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
         {products.map((product) => (
           <ProductInfoCard
             key={product.id}
@@ -106,6 +126,8 @@ const ProductList: React.FC<ProductListProps> = ({
               // Implementar visualização do produto
               console.log("Visualizando produto:", product.name);
             }}
+            onDelete={onDelete}
+            storePriceModel={modelKey}
           />
         ))}
       </div>

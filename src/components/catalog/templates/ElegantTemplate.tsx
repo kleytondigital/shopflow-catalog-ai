@@ -1,7 +1,8 @@
-
-import React from 'react';
-import { Product } from '@/hooks/useProducts';
-import { CatalogType } from '@/hooks/useCatalog';
+import React from "react";
+import { Product } from "@/hooks/useProducts";
+import { CatalogType } from "@/hooks/useCatalog";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useCart } from "@/hooks/useCart";
 
 export interface CatalogSettingsData {
   colors?: {
@@ -46,41 +47,70 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings = {}
+  editorSettings = {},
 }) => {
   const settings = {
     colors: {
-      primary: '#0057FF',
-      secondary: '#FF6F00',
-      surface: '#FFFFFF',
-      text: '#1E293B',
-      ...editorSettings.colors
+      primary: "#0057FF",
+      secondary: "#FF6F00",
+      surface: "#FFFFFF",
+      text: "#1E293B",
+      ...editorSettings.colors,
     },
     global: {
       borderRadius: 8,
       fontSize: {
-        small: '14px',
-        medium: '16px',
-        large: '20px'
+        small: "14px",
+        medium: "16px",
+        large: "20px",
       },
-      ...editorSettings.global
+      ...editorSettings.global,
     },
     productCard: {
       showQuickView: true,
       showAddToCart: true,
-      productCardStyle: 'default',
-      ...editorSettings.productCard
-    }
+      productCardStyle: "default",
+      ...editorSettings.productCard,
+    },
   };
 
-  const price = catalogType === 'wholesale' ? product.wholesale_price || product.retail_price : product.retail_price;
+  const { addItem } = useCart();
+  const { priceModel, loading } = useStorePriceModel(product.store_id);
+  const modelKey = priceModel?.price_model || "retail_only";
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (loading) return;
+    let qty = 1;
+    let price = product.retail_price;
+    let isWholesale = false;
+
+    if (modelKey === "wholesale_only") {
+      qty = product.min_wholesale_qty || 1;
+      price = product.wholesale_price || product.retail_price;
+      isWholesale = true;
+    }
+
+    addItem(
+      {
+        id: `${product.id}-default`,
+        product: { ...product, price_model: modelKey },
+        quantity: qty,
+        price,
+        originalPrice: price,
+        catalogType,
+        isWholesalePrice: isWholesale,
+      },
+      modelKey
+    );
+  };
 
   return (
-    <div 
+    <div
       className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border"
-      style={{ 
+      style={{
         borderRadius: `${settings.global.borderRadius}px`,
-        borderColor: settings.colors.surface
+        borderColor: settings.colors.surface,
       }}
     >
       {/* Product Image */}
@@ -96,16 +126,16 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
             <span>Sem imagem</span>
           </div>
         )}
-        
+
         {/* Quick actions overlay */}
         {settings.productCard.showQuickView && (
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
             <button
               onClick={() => onQuickView(product)}
               className="bg-white text-gray-900 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-gray-50 transition-colors"
-              style={{ 
+              style={{
                 borderRadius: `${settings.global.borderRadius * 2}px`,
-                fontSize: settings.global.fontSize.small
+                fontSize: settings.global.fontSize.small,
               }}
             >
               Visualizar
@@ -117,11 +147,11 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
       {/* Product Info */}
       <div className="p-4">
         {/* Product Name */}
-        <h3 
+        <h3
           className="font-medium text-gray-900 mb-2 line-clamp-2"
-          style={{ 
+          style={{
             color: settings.colors.text,
-            fontSize: settings.global.fontSize.medium
+            fontSize: settings.global.fontSize.medium,
           }}
         >
           {product.name}
@@ -130,33 +160,51 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         {/* Price */}
         {showPrices && (
           <div className="mb-3">
-            <span 
-              className="text-lg font-bold"
-              style={{ 
-                color: settings.colors.primary,
-                fontSize: settings.global.fontSize.large
-              }}
-            >
-              R$ {price.toFixed(2)}
-            </span>
-            {catalogType === 'wholesale' && product.min_wholesale_qty && (
-              <div 
-                className="text-xs text-gray-500 mt-1"
-                style={{ fontSize: settings.global.fontSize.small }}
+            {loading ? (
+              <div className="text-gray-500">Carregando preço...</div>
+            ) : modelKey === "wholesale_only" ? (
+              <>
+                <span
+                  className="text-lg font-bold"
+                  style={{
+                    color: settings.colors.primary,
+                    fontSize: settings.global.fontSize.large,
+                  }}
+                >
+                  R$ {product.wholesale_price?.toFixed(2)}
+                </span>
+                {product.min_wholesale_qty && (
+                  <div
+                    className="text-xs text-gray-500 mt-1"
+                    style={{ fontSize: settings.global.fontSize.small }}
+                  >
+                    Mín. {product.min_wholesale_qty} unidades
+                  </div>
+                )}
+              </>
+            ) : (
+              <span
+                className="text-lg font-bold"
+                style={{
+                  color: settings.colors.primary,
+                  fontSize: settings.global.fontSize.large,
+                }}
               >
-                Mín. {product.min_wholesale_qty} unidades
-              </div>
+                R$ {product.retail_price?.toFixed(2)}
+              </span>
             )}
           </div>
         )}
 
         {/* Stock */}
         {showStock && (
-          <div 
+          <div
             className="text-xs text-gray-500 mb-3"
             style={{ fontSize: settings.global.fontSize.small }}
           >
-            {product.stock > 0 ? `${product.stock} em estoque` : 'Fora de estoque'}
+            {product.stock > 0
+              ? `${product.stock} em estoque`
+              : "Fora de estoque"}
           </div>
         )}
 
@@ -164,28 +212,39 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         <div className="flex gap-2">
           {settings.productCard.showAddToCart && (
             <button
-              onClick={() => onAddToCart(product)}
-              disabled={product.stock <= 0}
+              onClick={handleAddToCart}
+              disabled={product.stock <= 0 || loading}
               className="flex-1 px-4 py-2 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ 
-                backgroundColor: product.stock > 0 ? settings.colors.primary : '#9CA3AF',
+              style={{
+                backgroundColor:
+                  product.stock > 0 && !loading
+                    ? settings.colors.primary
+                    : "#9CA3AF",
                 borderRadius: `${settings.global.borderRadius}px`,
-                fontSize: settings.global.fontSize.small
+                fontSize: settings.global.fontSize.small,
               }}
             >
-              {product.stock > 0 ? 'Adicionar' : 'Sem estoque'}
+              {loading
+                ? "Carregando..."
+                : product.stock > 0
+                ? "Adicionar"
+                : "Sem estoque"}
             </button>
           )}
-          
+
           <button
             onClick={() => onAddToWishlist(product)}
             className="p-2 border rounded-md hover:bg-gray-50 transition-colors"
-            style={{ 
+            style={{
               borderColor: settings.colors.surface,
-              borderRadius: `${settings.global.borderRadius}px`
+              borderRadius: `${settings.global.borderRadius}px`,
             }}
           >
-            <span className={`text-lg ${isInWishlist ? 'text-red-500' : 'text-gray-400'}`}>
+            <span
+              className={`text-lg ${
+                isInWishlist ? "text-red-500" : "text-gray-400"
+              }`}
+            >
               ♥
             </span>
           </button>

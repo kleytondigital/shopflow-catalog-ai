@@ -103,15 +103,7 @@ const ImprovedProductFormWizardContent: React.FC<
         variations.length
       );
       const formattedVariations = variations.map((variation) => ({
-        id: variation.id,
-        product_id: variation.product_id || "",
-        color: variation.color || "",
-        size: variation.size || "",
-        sku: variation.sku || "",
-        stock: variation.stock,
-        price_adjustment: variation.price_adjustment,
-        is_active: variation.is_active,
-        image_url: variation.image_url || "",
+        ...variation,
         created_at: variation.created_at || new Date().toISOString(),
         updated_at: variation.updated_at || new Date().toISOString(),
       }));
