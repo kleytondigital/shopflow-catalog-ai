@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     const { planName, planType, benefits, price } = await req.json();
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const openAIApiKey = Deno.env.get('OPENAI_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key não configurada');
     }
