@@ -10,7 +10,7 @@ export interface WizardFormData {
   description?: string; // Tornar opcional para alinhar com ProductFormData
   category: string;
   retail_price: number;
-  wholesale_price: number;
+  wholesale_price?: number; // Tornar opcional para alinhar com ProductFormData
   stock: number;
   min_wholesale_qty: number;
   is_featured: boolean;
