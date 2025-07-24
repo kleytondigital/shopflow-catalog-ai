@@ -1,0 +1,149 @@
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ProductVariation } from '@/types/product';
+import { Package, CheckCircle2, AlertCircle } from 'lucide-react';
+
+interface GradeVariationCardProps {
+  variation: ProductVariation;
+  isSelected: boolean;
+  onSelect: () => void;
+  showPrice?: boolean;
+  basePrice?: number;
+}
+
+const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
+  variation,
+  isSelected,
+  onSelect,
+  showPrice = false,
+  basePrice = 0,
+}) => {
+  const isAvailable = variation.stock > 0;
+  const finalPrice = basePrice + (variation.price_adjustment || 0);
+
+  return (
+    <Button
+      variant={isSelected ? "default" : "outline"}
+      onClick={onSelect}
+      disabled={!isAvailable}
+      className={`
+        relative h-auto p-4 w-full text-left transition-all duration-200
+        ${!isAvailable ? 'opacity-50' : ''}
+        ${isSelected ? 'bg-primary border-primary shadow-md scale-[1.02]' : 'hover:border-primary/50 hover:shadow-sm'}
+      `}
+    >
+      <div className="flex flex-col gap-3 w-full">
+        {/* Header with Grade Name and Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            <span className="font-semibold">
+              {variation.grade_name || 'Grade'}
+            </span>
+            {isSelected && (
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {variation.grade_color && (
+              <Badge 
+                variant={isSelected ? "secondary" : "outline"}
+                className="text-xs"
+              >
+                {variation.grade_color}
+              </Badge>
+            )}
+            
+            <Badge 
+              variant={isAvailable ? "outline" : "destructive"}
+              className="text-xs flex items-center gap-1"
+            >
+              {isAvailable ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3" />
+                  {variation.stock} disponível
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-3 w-3" />
+                  Esgotado
+                </>
+              )}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Size Grid */}
+        {variation.grade_sizes && variation.grade_sizes.length > 0 && (
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Tamanhos incluídos:
+            </span>
+            <div className="grid grid-cols-4 gap-2">
+              {variation.grade_sizes.map((size, idx) => (
+                <div 
+                  key={idx} 
+                  className="relative flex flex-col items-center p-2 bg-muted/50 rounded-md"
+                >
+                  <span className="text-sm font-medium">{size}</span>
+                  {variation.grade_pairs && variation.grade_pairs[idx] && (
+                    <span className="text-xs text-muted-foreground">
+                      {variation.grade_pairs[idx]} pares
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Price Information */}
+        {showPrice && (
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            {variation.price_adjustment !== 0 ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Preço:</span>
+                <span className="font-semibold">
+                  R$ {finalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                <Badge 
+                  variant={variation.price_adjustment > 0 ? "destructive" : "default"}
+                  className="text-xs"
+                >
+                  {variation.price_adjustment > 0 ? '+' : ''}
+                  R$ {variation.price_adjustment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </Badge>
+              </div>
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                Mesmo preço base
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* SKU */}
+        {variation.sku && (
+          <div className="text-xs text-muted-foreground font-mono">
+            SKU: {variation.sku}
+          </div>
+        )}
+      </div>
+
+      {/* Unavailable Overlay */}
+      {!isAvailable && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded">
+          <div className="text-sm font-medium text-destructive flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Indisponível
+          </div>
+        </div>
+      )}
+    </Button>
+  );
+};
+
+export default GradeVariationCard;

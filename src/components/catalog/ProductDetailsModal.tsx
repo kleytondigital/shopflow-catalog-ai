@@ -12,16 +12,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   ShoppingCart,
   Heart,
-  Star,
   Plus,
   Minus,
   X,
   Share2,
   TrendingDown,
   AlertCircle,
-  Palette,
-  Package,
-  Layers,
+  CheckCircle2,
 } from "lucide-react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
@@ -35,6 +32,7 @@ import ProductVariationSelector from "./ProductVariationSelector";
 import ProductPriceDisplay from "./ProductPriceDisplay";
 import MultipleVariationSelector from "./MultipleVariationSelector";
 import VariationModeSelector from "./VariationModeSelector";
+import VariationSelectionAlert from "./VariationSelectionAlert";
 import { formatCurrency } from "@/lib/utils";
 
 interface ProductDetailsModalProps {
@@ -216,6 +214,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   // Verificar se pode adicionar ao carrinho (só para modo single)
   const canAddToCart = !hasVariations || (selectionMode === 'single' && selectedVariation);
+  const isOutOfStock = selectedVariation ? 
+    (selectedVariation.stock === 0 && !product.allow_negative_stock) :
+    (product.stock === 0 && !product.allow_negative_stock);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -271,72 +272,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
             {/* Variation Summary */}
             {variationInfo && (
-              <div className="p-3 bg-blue-50 rounded-lg space-y-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">
-                    {variationInfo.totalVariations} Variações Disponíveis
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {variationInfo.hasColors && (
-                    <div className="flex items-center gap-1">
-                      <Palette className="h-3 w-3 text-blue-500" />
-                      <span>{variationInfo.colorCount} cores</span>
-                    </div>
-                  )}
-                  {variationInfo.hasSizes && (
-                    <div className="flex items-center gap-1">
-                      <Package className="h-3 w-3 text-green-500" />
-                      <span>{variationInfo.sizeCount} tamanhos</span>
-                    </div>
-                  )}
-                  {variationInfo.hasGrades && (
-                    <div className="flex items-center gap-1">
-                      <Layers className="h-3 w-3 text-purple-500" />
-                      <span>{variationInfo.gradeCount} grades</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Preview das primeiras variações */}
-                {variationInfo.colors.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-700">Cores disponíveis:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {variationInfo.colors.slice(0, 5).map((color, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {color}
-                        </Badge>
-                      ))}
-                      {variationInfo.colors.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{variationInfo.colors.length - 5} mais
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {variationInfo.sizes.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-700">Tamanhos disponíveis:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {variationInfo.sizes.slice(0, 5).map((size, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {size}
-                        </Badge>
-                      ))}
-                      {variationInfo.sizes.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{variationInfo.sizes.length - 5} mais
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <VariationSelectionAlert
+                type="info"
+                variationCount={variationInfo.totalVariations}
+                hasGrades={variationInfo.hasGrades}
+                hasColors={variationInfo.hasColors}
+                hasSizes={variationInfo.hasSizes}
+                title="Produto com múltiplas opções"
+                description={`${variationInfo.totalVariations} variações disponíveis. ${
+                  variationInfo.hasGrades ? 'Inclui grades completas. ' : ''
+                }${variationInfo.hasColors ? `${variationInfo.colorCount} cores diferentes. ` : ''}${
+                  variationInfo.hasSizes ? `${variationInfo.sizeCount} tamanhos variados.` : ''
+                }`}
+              />
             )}
 
             {/* Description */}
@@ -419,19 +367,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       selectedVariation={selectedVariation}
                       onVariationChange={setSelectedVariation}
                       loading={variationsLoading}
+                      basePrice={product.retail_price}
+                      showPriceInCards={true}
                     />
-                    
-                    {/* Validation Message */}
-                    {!selectedVariation && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-amber-800">
-                          <AlertCircle className="h-4 w-4" />
-                          <span className="text-sm font-medium">
-                            Selecione uma variação para continuar
-                          </span>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Quantity Selector for Single Mode */}
                     <div className="space-y-2">
@@ -472,17 +410,28 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     {/* Add to Cart for Single Mode */}
                     <Button
                       onClick={handleSingleVariationAdd}
-                      disabled={!canAddToCart || (!product.allow_negative_stock && 
-                        ((selectedVariation && selectedVariation.stock === 0) || 
-                         (!selectedVariation && product.stock === 0)))}
-                      className="w-full"
+                      disabled={!canAddToCart || isOutOfStock}
+                      className={`w-full transition-all duration-200 ${
+                        canAddToCart && !isOutOfStock ? 'hover:scale-[1.02]' : ''
+                      }`}
                       size="lg"
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {selectedVariation ? 
-                        `Adicionar ao Carrinho - ${formatCurrency(priceCalculation.price * quantity)}` :
-                        'Selecione uma variação'
-                      }
+                      {!canAddToCart ? (
+                        <>
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Selecione uma variação
+                        </>
+                      ) : isOutOfStock ? (
+                        <>
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Produto esgotado
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Adicionar ao Carrinho - {formatCurrency(priceCalculation.price * quantity)}
+                        </>
+                      )}
                     </Button>
                   </div>
                 ) : (
@@ -539,12 +488,23 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 {/* Add to Cart */}
                 <Button
                   onClick={handleSingleVariationAdd}
-                  disabled={(!product.allow_negative_stock && product.stock === 0)}
-                  className="w-full"
+                  disabled={isOutOfStock}
+                  className={`w-full transition-all duration-200 ${
+                    !isOutOfStock ? 'hover:scale-[1.02]' : ''
+                  }`}
                   size="lg"
                 >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Adicionar ao Carrinho - {formatCurrency(priceCalculation.price * quantity)}
+                  {isOutOfStock ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Produto esgotado
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Adicionar ao Carrinho - {formatCurrency(priceCalculation.price * quantity)}
+                    </>
+                  )}
                 </Button>
               </div>
             )}

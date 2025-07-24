@@ -1,14 +1,21 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductVariation } from "@/types/variation";
+import { Package, Palette } from "lucide-react";
+import GradeVariationCard from "./GradeVariationCard";
+import VariationInfoPanel from "./VariationInfoPanel";
+import VariationSelectionAlert from "./VariationSelectionAlert";
 
 interface ProductVariationSelectorProps {
   variations: ProductVariation[];
   selectedVariation: ProductVariation | null;
   onVariationChange: (variation: ProductVariation | null) => void;
   loading?: boolean;
+  basePrice?: number;
+  showPriceInCards?: boolean;
 }
 
 const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
@@ -16,14 +23,16 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   selectedVariation,
   onVariationChange,
   loading = false,
+  basePrice = 0,
+  showPriceInCards = false,
 }) => {
   if (loading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-4 w-20" />
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-10 w-20" />
+            <Skeleton key={i} className="h-32" />
           ))}
         </div>
       </div>
@@ -39,158 +48,73 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
     (v) => v.variation_type === "grade" || v.is_grade
   );
 
+  // Calcular informações sobre tipos de variação
+  const colors = [...new Set(variations.filter((v) => v.color).map((v) => v.color))];
+  const sizes = [...new Set(variations.filter((v) => v.size).map((v) => v.size))];
+  const grades = variations.filter(v => v.is_grade || v.variation_type === 'grade');
+
+  const variationInfo = {
+    hasColors: colors.length > 0,
+    hasSizes: sizes.length > 0,
+    hasGrades: grades.length > 0,
+    colorCount: colors.length,
+    sizeCount: sizes.length,
+    gradeCount: grades.length,
+  };
+
   if (hasGradeVariations) {
     // Renderizar seletor para variações de grade
     return (
-      <div className="space-y-4">
-        <div>
-          <h4 className="font-medium mb-3 text-blue-700">Selecione a Grade</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {variations.map((variation) => {
-              const isSelected = selectedVariation?.id === variation.id;
-              const isAvailable = variation.stock > 0;
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-lg flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            Selecione a Grade
+          </h4>
+          <Badge variant="outline" className="text-sm">
+            {variations.length} opções
+          </Badge>
+        </div>
 
-              return (
-                <Button
-                  key={variation.id}
-                  variant={isSelected ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => onVariationChange(variation)}
-                  disabled={!isAvailable}
-                  className={`relative h-auto p-4 ${
-                    !isAvailable ? "opacity-50" : ""
-                  } ${isSelected ? "bg-blue-600 text-white" : ""}`}
-                >
-                  <div className="flex flex-col items-start gap-2 w-full">
-                    <div className="flex items-center gap-2 w-full">
-                      <Badge
-                        variant={isSelected ? "secondary" : "outline"}
-                        className={
-                          isSelected ? "bg-blue-100 text-blue-800" : ""
-                        }
-                      >
-                        {variation.grade_name || "Grade"}
-                      </Badge>
-                      {variation.grade_color && (
-                        <Badge
-                          variant={isSelected ? "secondary" : "outline"}
-                          className={
-                            isSelected ? "bg-blue-100 text-blue-800" : ""
-                          }
-                        >
-                          {variation.grade_color}
-                        </Badge>
-                      )}
-                    </div>
+        {/* Alert de seleção */}
+        {!selectedVariation && (
+          <VariationSelectionAlert
+            type="select"
+            variationCount={variations.length}
+            hasGrades={variationInfo.hasGrades}
+            hasColors={variationInfo.hasColors}
+            hasSizes={variationInfo.hasSizes}
+          />
+        )}
 
-                    {variation.grade_sizes &&
-                      variation.grade_sizes.length > 0 && (
-                        <div className="flex flex-wrap gap-3 mt-1">
-                          {variation.grade_sizes.map((size, idx) => (
-                            <div key={idx} className="relative inline-block">
-                              <span
-                                className={`text-base bg-blue-100 text-blue-900 px-3 py-1 rounded-full border-2 border-blue-400 font-bold shadow-sm`}
-                              >
-                                {size}
-                              </span>
-                              {variation.grade_pairs &&
-                                variation.grade_pairs[idx] && (
-                                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-[10px] px-1.5 py-0.5 rounded-full border border-white shadow font-bold">
-                                    {variation.grade_pairs[idx]}
-                                  </span>
-                                )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    {/* SKU discreto */}
-                    {variation.sku && (
-                      <div className="text-[9px] text-gray-400 mt-1 select-all font-mono">
-                        SKU: {variation.sku}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between w-full mt-2">
-                      <span
-                        className={`text-sm font-medium ${
-                          isSelected ? "text-blue-100" : "text-gray-700"
-                        }`}
-                      >
-                        {variation.stock} disponível
-                      </span>
-                    </div>
-                  </div>
-
-                  {!isAvailable && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-full h-px bg-gray-400 transform rotate-45" />
-                    </div>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
+        {/* Grade Cards */}
+        <div className="grid grid-cols-1 gap-4">
+          {variations.map((variation) => (
+            <GradeVariationCard
+              key={variation.id}
+              variation={variation}
+              isSelected={selectedVariation?.id === variation.id}
+              onSelect={() => onVariationChange(variation)}
+              showPrice={showPriceInCards}
+              basePrice={basePrice}
+            />
+          ))}
         </div>
 
         {/* Informações da variação selecionada */}
         {selectedVariation && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <h5 className="font-medium text-blue-900">
-                Grade Selecionada: {selectedVariation.grade_name} -{" "}
-                {selectedVariation.grade_color}
-              </h5>
-              <Badge className="bg-blue-600 text-white">
-                {selectedVariation.stock} disponível
-              </Badge>
-            </div>
-
-            {selectedVariation.grade_sizes &&
-              selectedVariation.grade_sizes.length > 0 && (
-                <div className="mb-3">
-                  <span className="text-sm font-medium text-blue-800 mb-2 block">
-                    Tamanhos incluídos:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedVariation.grade_sizes.map((size, index) => (
-                      <span
-                        key={index}
-                        className="text-sm bg-white px-2 py-1 rounded border border-blue-300 text-blue-800"
-                      >
-                        {size}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {selectedVariation.price_adjustment !== 0 && (
-              <div className="text-sm">
-                <span className="text-blue-700">
-                  Ajuste de preço:{" "}
-                  {selectedVariation.price_adjustment > 0 ? "+" : ""}
-                  R${" "}
-                  {selectedVariation.price_adjustment.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            )}
-          </div>
+          <VariationInfoPanel
+            variation={selectedVariation}
+            basePrice={basePrice}
+            showAdvancedInfo={true}
+          />
         )}
       </div>
     );
   }
 
   // Renderizar seletor tradicional para variações normais
-  // Agrupar variações por atributos
-  const colors = [
-    ...new Set(variations.filter((v) => v.color).map((v) => v.color)),
-  ];
-  const sizes = [
-    ...new Set(variations.filter((v) => v.size).map((v) => v.size)),
-  ];
-
   const getVariationsForAttributes = (color?: string, size?: string) => {
     return variations.filter(
       (v) => (!color || v.color === color) && (!size || v.size === size)
@@ -217,12 +141,36 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-lg flex items-center gap-2">
+          <Palette className="h-5 w-5 text-primary" />
+          Opções Disponíveis
+        </h4>
+        <Badge variant="outline" className="text-sm">
+          {variations.length} variações
+        </Badge>
+      </div>
+
+      {/* Alert de seleção */}
+      {!selectedVariation && (
+        <VariationSelectionAlert
+          type="select"
+          variationCount={variations.length}
+          hasColors={variationInfo.hasColors}
+          hasSizes={variationInfo.hasSizes}
+        />
+      )}
+
       {/* Color Selection */}
       {colors.length > 0 && (
-        <div>
-          <h4 className="font-medium mb-2">Cor</h4>
-          <div className="flex gap-2 flex-wrap">
+        <div className="space-y-3">
+          <h5 className="font-medium text-base flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Cor
+          </h5>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {colors.map((color) => {
               const isSelected = selectedVariation?.color === color;
               const stock = getAvailableStock(
@@ -243,12 +191,19 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                     )
                   }
                   disabled={!isAvailable}
-                  className={`relative ${!isAvailable ? "opacity-50" : ""}`}
+                  className={`relative h-12 ${!isAvailable ? "opacity-50" : ""} ${
+                    isSelected ? "border-primary shadow-md" : "hover:border-primary/50"
+                  }`}
                 >
-                  {color}
+                  <div className="flex flex-col items-center">
+                    <span className="font-medium">{color}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {stock} disponível
+                    </span>
+                  </div>
                   {!isAvailable && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-full h-px bg-gray-400 transform rotate-45" />
+                      <div className="w-full h-px bg-destructive transform rotate-45" />
                     </div>
                   )}
                 </Button>
@@ -260,9 +215,12 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
 
       {/* Size Selection */}
       {sizes.length > 0 && (
-        <div>
-          <h4 className="font-medium mb-2">Tamanho</h4>
-          <div className="flex gap-2 flex-wrap">
+        <div className="space-y-3">
+          <h5 className="font-medium text-base flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Tamanho
+          </h5>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {sizes.map((size) => {
               const isSelected = selectedVariation?.size === size;
               const stock = getAvailableStock(
@@ -283,12 +241,19 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                     )
                   }
                   disabled={!isAvailable}
-                  className={`relative ${!isAvailable ? "opacity-50" : ""}`}
+                  className={`relative h-12 ${!isAvailable ? "opacity-50" : ""} ${
+                    isSelected ? "border-primary shadow-md" : "hover:border-primary/50"
+                  }`}
                 >
-                  {size}
+                  <div className="flex flex-col items-center">
+                    <span className="font-medium">{size}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {stock}
+                    </span>
+                  </div>
                   {!isAvailable && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-full h-px bg-gray-400 transform rotate-45" />
+                      <div className="w-full h-px bg-destructive transform rotate-45" />
                     </div>
                   )}
                 </Button>
@@ -300,48 +265,11 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
 
       {/* Selected Variation Info */}
       {selectedVariation && (
-        <div className="p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 items-center">
-              {selectedVariation.color && (
-                <Badge variant="outline">{selectedVariation.color}</Badge>
-              )}
-              {selectedVariation.size && (
-                <Badge variant="outline">{selectedVariation.size}</Badge>
-              )}
-              {selectedVariation.sku && (
-                <Badge variant="outline">SKU: {selectedVariation.sku}</Badge>
-              )}
-            </div>
-            <div className="text-sm flex items-center gap-2">
-              <span className="font-medium">
-                {selectedVariation.stock} em estoque
-              </span>
-              {selectedVariation.price_adjustment !== 0 && (
-                <span className="text-primary">
-                  {selectedVariation.price_adjustment > 0 ? "+" : ""}
-                  R${" "}
-                  {selectedVariation.price_adjustment.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Mostrar imagem da variação se disponível */}
-          {selectedVariation.image_url && (
-            <div className="mt-2">
-              <img
-                src={selectedVariation.image_url}
-                alt={`${selectedVariation.color || ""} ${
-                  selectedVariation.size || ""
-                }`.trim()}
-                className="w-16 h-16 object-cover rounded border"
-              />
-            </div>
-          )}
-        </div>
+        <VariationInfoPanel
+          variation={selectedVariation}
+          basePrice={basePrice}
+          showAdvancedInfo={true}
+        />
       )}
     </div>
   );
