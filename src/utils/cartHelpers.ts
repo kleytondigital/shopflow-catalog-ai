@@ -24,7 +24,9 @@ export const createCartItem = (
     } : null
   });
 
-  const basePrice = catalogType === 'wholesale' && product.wholesale_price 
+  // Para wholesale_only, sempre usar wholesale_price se disponível
+  // Para outros casos, usar retail_price inicialmente (será recalculado no hook)
+  const basePrice = (catalogType === 'wholesale' && product.wholesale_price) 
     ? product.wholesale_price 
     : product.retail_price;
 

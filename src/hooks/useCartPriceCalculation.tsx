@@ -56,20 +56,20 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
 
     switch (modelType) {
       case 'retail_only':
-        // Apenas varejo
+        // Apenas varejo - usar sempre o preço de varejo
         finalPrice = retailPrice;
         currentTierName = 'Varejo';
         break;
 
       case 'wholesale_only':
-        // Apenas atacado - não mostrar economia pois é o preço padrão
+        // Apenas atacado - usar sempre o preço de atacado
         finalPrice = wholesalePrice || retailPrice;
         currentTierName = 'Atacado';
         savings = 0; // Não mostrar economia para wholesale_only
         break;
 
       case 'simple_wholesale':
-        // Varejo + Atacado simples
+        // Varejo + Atacado simples - verificar quantidade
         if (wholesalePrice && quantity >= minWholesaleQty) {
           finalPrice = wholesalePrice;
           currentTierName = 'Atacado';
@@ -91,8 +91,8 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
         break;
 
       case 'gradual_wholesale':
-        // Para gradativo, usar preço exato do item calculado
-        finalPrice = item.price;
+        // Para gradativo, usar preço exato do item calculado (já vem correto do carrinho)
+        finalPrice = item.price || retailPrice;
         
         // Determinar nível baseado no preço final vs preço de varejo
         if (finalPrice < retailPrice) {
@@ -118,8 +118,14 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
         break;
 
       default:
-        finalPrice = retailPrice;
+        // Fallback para usar o preço do item se disponível, senão varejo
+        finalPrice = item.price || retailPrice;
         currentTierName = 'Varejo';
+    }
+
+    // Validar finalPrice para evitar valores inválidos
+    if (!finalPrice || finalPrice <= 0) {
+      finalPrice = retailPrice || 0;
     }
 
     const total = finalPrice * quantity;
