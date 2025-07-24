@@ -1,374 +1,295 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Package, Upload, Download, Check, X, Calculator } from 'lucide-react';
-import { useProducts } from '@/hooks/useProducts';
-import { useStockMovements } from '@/hooks/useStockMovements';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Package, Plus, Minus, Settings, TrendingUp, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { QuantityInput } from '@/components/ui/quantity-input';
+import { supabase } from '@/integrations/supabase/client';
+import { Product } from '@/types/product';
 
 interface BulkStockManagerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  storeId: string;
+  products: Product[];
+  onStockUpdated: () => void;
 }
 
-interface ProductStockUpdate {
-  id: string;
-  name: string;
-  sku?: string;
+interface StockOperation {
+  productId: string;
+  productName: string;
   currentStock: number;
   newStock: number;
-  adjustment: number;
-  selected: boolean;
+  operation: 'add' | 'subtract' | 'set';
+  quantity: number;
 }
 
 const BulkStockManager: React.FC<BulkStockManagerProps> = ({
-  isOpen,
-  onClose,
-  storeId
+  products,
+  onStockUpdated
 }) => {
-  const { products, fetchProducts } = useProducts();
-  const { createStockMovement } = useStockMovements();
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [operation, setOperation] = useState<'add' | 'subtract' | 'set'>('add');
+  const [quantity, setQuantity] = useState<number>(0);
+  const [operations, setOperations] = useState<StockOperation[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const [selectedProducts, setSelectedProducts] = useState<ProductStockUpdate[]>([]);
-  const [bulkAdjustment, setBulkAdjustment] = useState<number>(0);
-  const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract' | 'set'>('add');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  React.useEffect(() => {
-    if (isOpen && products.length > 0) {
-      const productUpdates = products
-        .filter(product => product.store_id === storeId)
-        .map(product => ({
-          id: product.id,
-          name: product.name,
-          sku: product.sku,
-          currentStock: product.stock,
-          newStock: product.stock,
-          adjustment: 0,
-          selected: false
-        }));
-      setSelectedProducts(productUpdates);
-    }
-  }, [isOpen, products, storeId]);
-
-  const filteredProducts = selectedProducts.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesSearch;
-  });
-
-  const handleSelectAll = (checked: boolean) => {
+  const handleProductSelect = (productId: string) => {
     setSelectedProducts(prev => 
-      prev.map(product => ({ ...product, selected: checked }))
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
     );
   };
 
-  const handleSelectProduct = (productId: string, checked: boolean) => {
-    setSelectedProducts(prev =>
-      prev.map(product =>
-        product.id === productId ? { ...product, selected: checked } : product
-      )
-    );
+  const selectAllProducts = () => {
+    setSelectedProducts(products.map(p => p.id));
   };
 
-  const handleStockChange = (productId: string, newStock: number) => {
-    setSelectedProducts(prev =>
-      prev.map(product =>
-        product.id === productId 
-          ? { 
-              ...product, 
-              newStock, 
-              adjustment: newStock - product.currentStock 
-            }
-          : product
-      )
-    );
+  const clearSelection = () => {
+    setSelectedProducts([]);
+    setOperations([]);
   };
 
-  const applyBulkAdjustment = () => {
-    if (bulkAdjustment === 0) return;
+  const previewOperations = () => {
+    if (selectedProducts.length === 0 || quantity <= 0) return;
 
-    setSelectedProducts(prev =>
-      prev.map(product => {
-        if (!product.selected) return product;
+    const newOperations: StockOperation[] = selectedProducts.map(productId => {
+      const product = products.find(p => p.id === productId);
+      if (!product) return null;
 
-        let newStock = product.currentStock;
-        
-        switch (adjustmentType) {
-          case 'add':
-            newStock = product.currentStock + bulkAdjustment;
-            break;
-          case 'subtract':
-            newStock = Math.max(0, product.currentStock - bulkAdjustment);
-            break;
-          case 'set':
-            newStock = bulkAdjustment;
-            break;
-        }
+      let newStock = product.stock;
+      
+      switch (operation) {
+        case 'add':
+          newStock = product.stock + quantity;
+          break;
+        case 'subtract':
+          newStock = Math.max(0, product.stock - quantity);
+          break;
+        case 'set':
+          newStock = quantity;
+          break;
+      }
 
-        return {
-          ...product,
-          newStock,
-          adjustment: newStock - product.currentStock
-        };
-      })
-    );
+      return {
+        productId,
+        productName: product.name,
+        currentStock: product.stock,
+        newStock,
+        operation,
+        quantity
+      };
+    }).filter(Boolean) as StockOperation[];
 
-    setBulkAdjustment(0);
-    toast({
-      title: "Ajuste aplicado!",
-      description: "Os valores foram calculados para os produtos selecionados.",
-    });
+    setOperations(newOperations);
   };
 
-  const handleSaveChanges = async () => {
-    const changedProducts = selectedProducts.filter(
-      product => product.selected && product.adjustment !== 0
-    );
-
-    if (changedProducts.length === 0) {
-      toast({
-        title: "Nenhuma alteração",
-        description: "Selecione produtos e faça ajustes antes de salvar.",
-        variant: "destructive"
-      });
-      return;
-    }
+  const executeOperations = async () => {
+    if (operations.length === 0) return;
 
     setIsProcessing(true);
-
     try {
-      for (const product of changedProducts) {
-        await createStockMovement({
-          product_id: product.id,
-          movement_type: 'adjustment',
-          quantity: product.newStock,
-          notes: `Ajuste em massa: ${product.adjustment > 0 ? '+' : ''}${product.adjustment}`
-        });
+      const updates = operations.map(op => ({
+        id: op.productId,
+        stock: op.newStock,
+        updated_at: new Date().toISOString()
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('products')
+          .update({ 
+            stock: update.stock,
+            updated_at: update.updated_at
+          })
+          .eq('id', update.id);
+
+        if (error) throw error;
       }
 
       toast({
         title: "Estoque atualizado!",
-        description: `${changedProducts.length} produto(s) tiveram seu estoque ajustado.`,
+        description: `${operations.length} produto(s) atualizado(s) com sucesso.`,
       });
 
-      await fetchProducts();
-      onClose();
-    } catch (error) {
+      onStockUpdated();
+      clearSelection();
+      setQuantity(0);
+
+    } catch (error: any) {
       console.error('Erro ao atualizar estoque:', error);
       toast({
-        title: "Erro ao atualizar",
-        description: "Ocorreu um erro ao salvar as alterações.",
-        variant: "destructive"
+        title: "Erro ao atualizar estoque",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const selectedCount = selectedProducts.filter(p => p.selected).length;
-  const hasChanges = selectedProducts.some(p => p.selected && p.adjustment !== 0);
+  useEffect(() => {
+    if (selectedProducts.length > 0 && quantity > 0) {
+      previewOperations();
+    } else {
+      setOperations([]);
+    }
+  }, [selectedProducts, operation, quantity]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Gestão de Estoque em Massa
-          </DialogTitle>
-        </DialogHeader>
-
-        <Tabs defaultValue="adjust" className="flex-1">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="adjust">Ajustar Estoque</TabsTrigger>
-            <TabsTrigger value="import">Importar/Exportar</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="adjust" className="space-y-4">
-            {/* Filtros e Busca */}
-            <div className="flex gap-4 items-center">
-              <div className="flex-1">
-                <Input
-                  placeholder="Buscar por nome ou SKU..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => handleSelectAll(true)}
-                size="sm"
-              >
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Gestão de Estoque em Massa
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Seleção de Produtos */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label>Selecionar Produtos</Label>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={selectAllProducts}>
                 Selecionar Todos
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleSelectAll(false)}
-                size="sm"
-              >
-                Desselecionar
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                Limpar Seleção
               </Button>
             </div>
+          </div>
 
-            {/* Ajuste em Massa */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calculator className="w-4 h-4" />
-                  Ajuste em Massa
-                  {selectedCount > 0 && (
-                    <Badge variant="secondary">
-                      {selectedCount} selecionado(s)
+          <div className="max-h-40 overflow-y-auto border rounded-lg">
+            {products.map(product => (
+              <div
+                key={product.id}
+                className={`p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
+                  selectedProducts.includes(product.id) ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+                onClick={() => handleProductSelect(product.id)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">{product.name}</span>
+                    <Badge variant="outline" className="ml-2">
+                      Estoque: {product.stock}
                     </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <Label>Tipo de Ajuste</Label>
-                    <Select value={adjustmentType} onValueChange={(value: any) => setAdjustmentType(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="add">Adicionar (+)</SelectItem>
-                        <SelectItem value="subtract">Subtrair (-)</SelectItem>
-                        <SelectItem value="set">Definir valor</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
-                  <div className="flex-1">
-                    <Label>Quantidade</Label>
-                    <QuantityInput
-                      value={bulkAdjustment}
-                      onChange={setBulkAdjustment}
-                      min={0}
-                    />
-                  </div>
-                  <Button 
-                    onClick={applyBulkAdjustment}
-                    disabled={selectedCount === 0 || bulkAdjustment === 0}
-                  >
-                    Aplicar
-                  </Button>
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.includes(product.id)}
+                    onChange={() => handleProductSelect(product.id)}
+                    className="rounded"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Lista de Produtos */}
-            <div className="border rounded-lg max-h-96 overflow-y-auto">
-              <div className="grid grid-cols-12 gap-4 p-4 bg-gray-50 font-medium text-sm border-b sticky top-0">
-                <div className="col-span-1">Sel.</div>
-                <div className="col-span-4">Produto</div>
-                <div className="col-span-2">SKU</div>
-                <div className="col-span-2">Estoque Atual</div>
-                <div className="col-span-2">Novo Estoque</div>
-                <div className="col-span-1">Ajuste</div>
               </div>
+            ))}
+          </div>
 
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="grid grid-cols-12 gap-4 p-4 border-b items-center hover:bg-gray-50">
-                  <div className="col-span-1">
-                    <Checkbox
-                      checked={product.selected}
-                      onCheckedChange={(checked) => 
-                        handleSelectProduct(product.id, checked as boolean)
-                      }
-                    />
-                  </div>
-                  <div className="col-span-4">
-                    <div className="font-medium">{product.name}</div>
-                  </div>
-                  <div className="col-span-2">
-                    <Badge variant="outline" className="text-xs">
-                      {product.sku || 'Sem SKU'}
-                    </Badge>
-                  </div>
-                  <div className="col-span-2 text-center">
-                    <Badge variant="secondary">
-                      {product.currentStock}
-                    </Badge>
-                  </div>
-                  <div className="col-span-2">
-                    <QuantityInput
-                      value={product.newStock}
-                      onChange={(value) => handleStockChange(product.id, value)}
-                      min={0}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-span-1 text-center">
-                    {product.adjustment !== 0 && (
-                      <Badge 
-                        variant={product.adjustment > 0 ? "default" : "destructive"}
-                        className="text-xs"
-                      >
-                        {product.adjustment > 0 ? '+' : ''}{product.adjustment}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          {selectedProducts.length > 0 && (
+            <Badge variant="secondary">
+              {selectedProducts.length} produto(s) selecionado(s)
+            </Badge>
+          )}
+        </div>
 
-            {/* Ações */}
-            <div className="flex justify-between items-center pt-4 border-t">
-              <div className="text-sm text-gray-600">
-                {selectedCount} produto(s) selecionado(s)
-                {hasChanges && ` • ${selectedProducts.filter(p => p.selected && p.adjustment !== 0).length} com alterações`}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveChanges}
-                  disabled={!hasChanges || isProcessing}
-                  className="min-w-32"
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Salvando...
+        <Separator />
+
+        {/* Configuração da Operação */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Tipo de Operação</Label>
+            <Select value={operation} onValueChange={(value: 'add' | 'subtract' | 'set') => setOperation(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="add">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 text-green-600" />
+                    Adicionar ao estoque
+                  </div>
+                </SelectItem>
+                <SelectItem value="subtract">
+                  <div className="flex items-center gap-2">
+                    <Minus className="h-4 w-4 text-red-600" />
+                    Subtrair do estoque
+                  </div>
+                </SelectItem>
+                <SelectItem value="set">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-blue-600" />
+                    Definir estoque exato
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Quantidade</Label>
+            <Input
+              type="number"
+              min="0"
+              value={quantity || ''}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              placeholder="Digite a quantidade"
+            />
+          </div>
+        </div>
+
+        {/* Preview das Operações */}
+        {operations.length > 0 && (
+          <div className="space-y-4">
+            <Separator />
+            <div>
+              <Label className="text-base font-semibold">Preview das Alterações</Label>
+              <div className="mt-2 max-h-32 overflow-y-auto border rounded-lg">
+                {operations.map(op => (
+                  <div key={op.productId} className="p-3 border-b last:border-b-0">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{op.productName}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{op.currentStock}</Badge>
+                        <span>→</span>
+                        <Badge 
+                          variant={op.newStock > op.currentStock ? "default" : "secondary"}
+                          className={op.newStock > op.currentStock ? "bg-green-600" : ""}
+                        >
+                          {op.newStock}
+                        </Badge>
+                        {op.newStock > op.currentStock ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : op.newStock < op.currentStock ? (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        ) : null}
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4 mr-2" />
-                      Salvar Alterações
-                    </>
-                  )}
-                </Button>
+                  </div>
+                ))}
               </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="import" className="space-y-4">
-            <div className="text-center py-8 text-gray-500">
-              <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium mb-2">Importação/Exportação de Estoque</p>
-              <p className="text-sm">
-                Funcionalidade em desenvolvimento. Em breve você poderá importar e exportar dados de estoque via CSV/Excel.
-              </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={executeOperations}
+                disabled={isProcessing}
+                className="flex-1"
+              >
+                {isProcessing ? 'Processando...' : `Aplicar Alterações (${operations.length} produtos)`}
+              </Button>
+              <Button variant="outline" onClick={clearSelection}>
+                Cancelar
+              </Button>
             </div>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
