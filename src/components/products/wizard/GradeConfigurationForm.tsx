@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { ProductVariation } from '@/types/product';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +18,14 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { generateUniqueSKU } from '@/utils/skuGenerator';
 
 interface GradeConfigurationFormProps {
   variations: ProductVariation[];
   onVariationsGenerated: (variations: ProductVariation[]) => void;
   productId?: string;
   storeId?: string;
+  productName?: string;
 }
 
 interface SizePairConfig {
@@ -36,7 +37,8 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
   variations,
   onVariationsGenerated,
   productId,
-  storeId
+  storeId,
+  productName = 'Produto'
 }) => {
   const { toast } = useToast();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -57,7 +59,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
     { 
       name: 'Grade Baixa', 
       sizes: ['35', '36', '37', '38', '39'],
-      distribution: [1, 2, 2, 2, 1] // Curva de distribuição padrão
+      distribution: [1, 2, 2, 2, 1]
     },
     { 
       name: 'Grade Média', 
@@ -143,18 +145,15 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
   const generateOptimizedDistribution = useCallback(() => {
     if (sizePairConfigs.length === 0) return;
 
-    // Aplicar curva ABC padrão baseada no número de tamanhos
     const totalSizes = sizePairConfigs.length;
     const newConfigs = sizePairConfigs.map((config, index) => {
       let pairs: number;
       
       if (totalSizes <= 3) {
-        pairs = 2; // Distribuição uniforme para poucas grades
+        pairs = 2;
       } else if (totalSizes <= 5) {
-        // Curva para grades pequenas
         pairs = index === Math.floor(totalSizes / 2) ? 3 : (index === 0 || index === totalSizes - 1) ? 1 : 2;
       } else {
-        // Curva ABC para grades maiores
         const middle = Math.floor(totalSizes / 2);
         const distance = Math.abs(index - middle);
         pairs = Math.max(1, 4 - distance);
@@ -171,11 +170,20 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
     });
   }, [sizePairConfigs, toast]);
 
-  const generateVariations = () => {
+  const generateVariations = async () => {
     if (selectedColors.length === 0 || sizePairConfigs.length === 0) {
       toast({
         title: "Configuração incompleta",
         description: "Selecione pelo menos uma cor e configure os tamanhos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!storeId) {
+      toast({
+        title: "Erro de configuração",
+        description: "Store ID não encontrado para geração de SKUs únicos.",
         variant: "destructive"
       });
       return;
@@ -188,60 +196,76 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
     const newVariations: ProductVariation[] = [];
     const totalPairsPerColor = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
 
-    // Gerar UMA variação por cor (não uma por tamanho)
-    selectedColors.forEach((color, colorIndex) => {
-      const uniqueId = `grade-${Date.now()}-${colorIndex}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      console.log(`🎨 Criando grade para cor: ${color}`);
-      console.log(`📦 Total de pares na grade: ${totalPairsPerColor}`);
-      console.log(`📏 Tamanhos inclusos: ${sizePairConfigs.map(c => c.size).join(', ')}`);
-      console.log(`🔢 Pares por tamanho: ${sizePairConfigs.map(c => c.pairs).join(', ')}`);
-      
-      const gradeVariation: ProductVariation = {
-        id: uniqueId,
-        product_id: productId || '',
-        color,
-        size: null, // Grade não tem tamanho único
-        stock: totalPairsPerColor, // Estoque total da grade
-        price_adjustment: 0,
-        is_active: true,
-        sku: `${gradeName.toLowerCase().replace(/\s+/g, '-')}-${color.toLowerCase().replace(/\s+/g, '-')}`,
-        image_url: '',
-        variation_type: 'grade',
-        is_grade: true,
-        grade_name: `${gradeName} - ${color}`,
-        grade_color: color,
-        grade_sizes: sizePairConfigs.map(c => c.size), // Array com todos os tamanhos
-        grade_pairs: sizePairConfigs.map(c => c.pairs), // Array com quantidades por tamanho  
-        grade_quantity: totalPairsPerColor, // Quantidade total da grade
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        display_order: colorIndex
-      };
+    try {
+      for (let colorIndex = 0; colorIndex < selectedColors.length; colorIndex++) {
+        const color = selectedColors[colorIndex];
+        
+        // Gerar SKU único para esta grade
+        const uniqueSKU = await generateUniqueSKU(
+          productName,
+          storeId,
+          { 
+            color: color,
+            name: `${gradeName}-${color}`,
+            index: colorIndex 
+          }
+        );
 
-      console.log('✅ Grade criada:', {
-        id: gradeVariation.id,
-        color: gradeVariation.color,
-        totalStock: gradeVariation.stock,
-        sizes: gradeVariation.grade_sizes,
-        pairs: gradeVariation.grade_pairs
+        console.log(`🎨 Criando grade para cor: ${color} com SKU: ${uniqueSKU}`);
+        
+        const gradeVariation: ProductVariation = {
+          id: `grade-${Date.now()}-${colorIndex}-${Math.random().toString(36).substr(2, 9)}`,
+          product_id: productId || '',
+          color,
+          size: null,
+          stock: totalPairsPerColor,
+          price_adjustment: 0,
+          is_active: true,
+          sku: uniqueSKU,
+          image_url: '',
+          variation_type: 'grade',
+          is_grade: true,
+          grade_name: `${gradeName} - ${color}`,
+          grade_color: color,
+          grade_sizes: sizePairConfigs.map(c => c.size),
+          grade_pairs: sizePairConfigs.map(c => c.pairs), 
+          grade_quantity: totalPairsPerColor,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          display_order: colorIndex
+        };
+
+        console.log('✅ Grade criada:', {
+          id: gradeVariation.id,
+          color: gradeVariation.color,
+          sku: gradeVariation.sku,
+          totalStock: gradeVariation.stock,
+          sizes: gradeVariation.grade_sizes,
+          pairs: gradeVariation.grade_pairs
+        });
+
+        newVariations.push(gradeVariation);
+      }
+
+      console.log(`🎯 RESULTADO: ${newVariations.length} grades criadas (uma por cor)`);
+
+      onVariationsGenerated(newVariations);
+
+      toast({
+        title: "Grades criadas com sucesso!",
+        description: `${newVariations.length} grade(s) foram geradas com SKUs únicos, totalizando ${totalPairsPerColor * selectedColors.length} pares.`
       });
-
-      newVariations.push(gradeVariation);
-    });
-
-    console.log(`🎯 RESULTADO: ${newVariations.length} grades criadas (uma por cor)`);
-    console.log(`📊 Total de variações geradas: ${newVariations.length}`);
-
-    onVariationsGenerated(newVariations);
-
-    toast({
-      title: "Grades criadas com sucesso!",
-      description: `${newVariations.length} grade(s) foram geradas, totalizando ${totalPairsPerColor * selectedColors.length} pares.`
-    });
+    } catch (error) {
+      console.error('❌ Erro ao gerar grades:', error);
+      toast({
+        title: "Erro ao gerar grades",
+        description: "Ocorreu um erro durante a geração das grades. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const totalVariations = selectedColors.length; // Uma variação por cor
+  const totalVariations = selectedColors.length;
   const totalPairs = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
   const totalPairsAllColors = totalPairs * selectedColors.length;
 
@@ -507,7 +531,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
               disabled={selectedColors.length === 0 || sizePairConfigs.length === 0}
             >
               <Package className="w-5 h-5 mr-2" />
-              Gerar {totalVariations} Grade{totalVariations > 1 ? 's' : ''} Personalizada{totalVariations > 1 ? 's' : ''}
+              Gerar {totalVariations} Grade{totalVariations > 1 ? 's' : ''} com SKUs Únicos
             </Button>
           </div>
         </CardContent>

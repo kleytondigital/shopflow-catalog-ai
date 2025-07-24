@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter, Upload, Settings } from "lucide-react";
+import { Plus, Search, Filter, Upload, Settings, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProductList from "@/components/products/ProductList";
@@ -8,6 +7,7 @@ import ImprovedProductFormWizard from "@/components/products/ImprovedProductForm
 import ImprovedAIToolsModal from "@/components/products/ImprovedAIToolsModal";
 import SimpleBulkImportModal from "@/components/products/SimpleBulkImportModal";
 import SimplePricingConfig from "@/components/catalog/SimplePricingConfig";
+import BulkStockManager from "@/components/products/BulkStockManager";
 import { useProducts } from "@/hooks/useProducts";
 import { useStores } from "@/hooks/useStores";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ const Products = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPricingConfig, setShowPricingConfig] = useState(false);
+  const [showBulkStockManager, setShowBulkStockManager] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const {
@@ -30,7 +31,6 @@ const Products = () => {
   const { currentStore } = useStores();
   const { toast } = useToast();
 
-  // Auto-refresh inteligente da lista
   useEffect(() => {
     const interval = setInterval(() => {
       if (!showProductForm && !loading) {
@@ -89,7 +89,6 @@ const Products = () => {
     setShowProductForm(false);
     setEditingProduct(null);
     
-    // Refresh garantido da lista
     setTimeout(async () => {
       await fetchProducts();
       console.log("🔄 PRODUCTS - Lista recarregada com sucesso");
@@ -146,6 +145,15 @@ const Products = () => {
           </Button>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowBulkStockManager(true)}
+            className="shrink-0"
+          >
+            <Package className="mr-2 h-4 w-4" />
+            Estoque em Massa
+          </Button>
+          
           <Dialog open={showPricingConfig} onOpenChange={setShowPricingConfig}>
             <DialogTrigger asChild>
               <Button variant="outline" className="shrink-0">
@@ -223,6 +231,13 @@ const Products = () => {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         storeId={currentStore?.id}
+      />
+
+      {/* Novo modal de estoque em massa */}
+      <BulkStockManager
+        isOpen={showBulkStockManager}
+        onClose={() => setShowBulkStockManager(false)}
+        storeId={currentStore?.id || ''}
       />
     </div>
   );
