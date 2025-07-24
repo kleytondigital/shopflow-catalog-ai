@@ -1,56 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { PriceModelType } from '@/types/price-models';
+
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useProductVariations } from '@/hooks/useProductVariations';
+import { ProductVariation } from '@/types/product';
 
 export interface WizardFormData {
-  // Basic product info
   name: string;
-  description?: string;
-  category?: string;
+  description: string;
+  category: string;
   retail_price: number;
-  wholesale_price?: number;
+  wholesale_price: number;
   stock: number;
-  min_wholesale_qty?: number;
-  
-  // Advanced settings
-  is_featured?: boolean;
-  is_active?: boolean;
-  allow_negative_stock?: boolean;
-  stock_alert_threshold?: number;
-  
-  // SEO
-  meta_title?: string;
-  meta_description?: string;
-  keywords?: string;
-  seo_slug?: string;
-  
-  // Price model settings
-  price_model?: PriceModelType;
-  simple_wholesale_enabled?: boolean;
-  gradual_wholesale_enabled?: boolean;
-  
-  // Store reference
-  store_id?: string;
-  
-  // Variations
-  variations?: any[];
+  min_wholesale_qty: number;
+  is_featured: boolean;
+  is_active: boolean;
+  allow_negative_stock: boolean;
+  stock_alert_threshold: number;
+  store_id: string;
+  variations: ProductVariation[];
+  price_model: string;
+  simple_wholesale_enabled: boolean;
+  gradual_wholesale_enabled: boolean;
 }
 
 export interface WizardStep {
-  id: string;
+  id: number;
   label: string;
-  title: string;
   description: string;
 }
 
 export const useImprovedProductFormWizard = () => {
   const { profile } = useAuth();
-  const { priceModel } = useStorePriceModel(profile?.store_id);
   const { toast } = useToast();
-  
+  const { saveVariations } = useProductVariations();
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<WizardFormData>({
     name: '',
     description: '',
@@ -63,297 +50,246 @@ export const useImprovedProductFormWizard = () => {
     is_active: true,
     allow_negative_stock: false,
     stock_alert_threshold: 5,
-    store_id: profile?.store_id,
-    variations: []
+    store_id: profile?.store_id || '',
+    variations: [],
+    price_model: 'wholesale_only',
+    simple_wholesale_enabled: true,
+    gradual_wholesale_enabled: false,
   });
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-
   const steps: WizardStep[] = [
-    {
-      id: "0",
-      label: "Básico",
-      title: "Informações Básicas",
-      description: "Nome, descrição e categoria do produto"
-    },
-    {
-      id: "1",
-      label: "Preços",
-      title: "Preços e Estoque",
-      description: "Preços de varejo/atacado e controle de estoque"
-    },
-    {
-      id: "2",
-      label: "Imagens",
-      title: "Imagens do Produto",
-      description: "Upload e organização das imagens"
-    },
-    {
-      id: "3",
-      label: "Variações",
-      title: "Variações do Produto",
-      description: "Cores, tamanhos e outras variações"
-    },
-    {
-      id: "4",
-      label: "SEO",
-      title: "Otimização para Busca",
-      description: "Meta tags e palavras-chave"
-    },
-    {
-      id: "5",
-      label: "Revisão",
-      title: "Revisar e Salvar",
-      description: "Confirme os dados antes de salvar"
-    }
+    { id: 0, label: 'Informações Básicas', description: 'Nome, categoria e descrição' },
+    { id: 1, label: 'Preços e Estoque', description: 'Preços, estoque e configurações' },
+    { id: 2, label: 'Imagens', description: 'Imagens do produto' },
+    { id: 3, label: 'Variações', description: 'Cores, tamanhos e outras variações' },
+    { id: 4, label: 'SEO e Marketing', description: 'Otimização e configurações de marketing' },
   ];
 
-  // Update store_id when profile changes
-  useEffect(() => {
-    if (profile?.store_id) {
-      setFormData(prev => ({
-        ...prev,
-        store_id: profile.store_id
-      }));
-    }
-  }, [profile?.store_id]);
-
-  // Update price model settings when model changes
-  useEffect(() => {
-    if (priceModel) {
-      setFormData(prev => ({
-        ...prev,
-        price_model: priceModel.price_model,
-        simple_wholesale_enabled: priceModel.simple_wholesale_enabled,
-        gradual_wholesale_enabled: priceModel.gradual_wholesale_enabled
-      }));
-    }
-  }, [priceModel]);
-
-  const updateFormData = (updates: Partial<WizardFormData>) => {
-    console.log('🔄 WIZARD - Atualizando formData:', updates);
+  const updateFormData = useCallback((updates: Partial<WizardFormData>) => {
+    console.log('📝 WIZARD - Atualizando formData:', updates);
     setFormData(prev => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const nextStep = () => {
-    if (canProceed()) {
-      setCurrentStep(prev => Math.min(steps.length - 1, prev + 1));
+  const nextStep = useCallback(() => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
     }
-  };
+  }, [currentStep, steps.length]);
 
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(0, prev - 1));
-  };
+  const prevStep = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  }, [currentStep]);
 
-  const goToStep = (step: number) => {
+  const goToStep = useCallback((step: number) => {
     if (step >= 0 && step < steps.length) {
       setCurrentStep(step);
     }
-  };
+  }, [steps.length]);
 
-  const canProceed = (): boolean => {
+  const canProceed = useCallback(() => {
     console.log('🔍 WIZARD - Verificando canProceed para step:', currentStep, formData);
     
     switch (currentStep) {
-      case 0: // Basic info
-        const hasName = Boolean(formData.name?.trim());
-        const hasCategory = Boolean(formData.category?.trim());
-        
-        console.log('🔍 WIZARD - Step 0 validation:', { 
-          hasName, 
-          hasCategory,
-          name: formData.name,
-          category: formData.category
-        });
-        
+      case 0: // Informações Básicas
+        const hasName = formData.name.trim() !== '';
+        const hasCategory = formData.category.trim() !== '';
+        console.log('🔍 WIZARD - Step 0 validation:', { hasName, hasCategory, name: formData.name, category: formData.category });
         return hasName && hasCategory;
-        
-      case 1: // Pricing - Validação baseada no modelo de preço
-        console.log('🔍 WIZARD - Validando preços com modelo:', priceModel?.price_model);
-        
-        // Se é wholesale_only, só precisa de preço de atacado
-        if (priceModel?.price_model === 'wholesale_only') {
-          const hasValidWholesalePrice = formData.wholesale_price && formData.wholesale_price > 0;
-          console.log('🔍 WIZARD - Wholesale only validation:', { 
-            hasValidWholesalePrice, 
-            wholesale_price: formData.wholesale_price 
-          });
-          return hasValidWholesalePrice;
-        }
-        
-        // Para retail_only ou outros modelos, precisa de preço de varejo
-        const hasValidRetailPrice = formData.retail_price > 0;
-        console.log('🔍 WIZARD - Retail price validation:', { 
-          hasValidRetailPrice, 
-          retail_price: formData.retail_price 
-        });
-        return hasValidRetailPrice;
-        
-      case 2: // Images
-        return true;
-        
-      case 3: // Variations
-        return true;
-        
-      case 4: // SEO
-        return true;
-        
-      case 5: // Review - Validação final baseada no modelo
-        const hasNameFinal = Boolean(formData.name?.trim());
-        const hasCategoryFinal = Boolean(formData.category?.trim());
-        
-        let hasPriceFinal = false;
-        if (priceModel?.price_model === 'wholesale_only') {
-          hasPriceFinal = Boolean(formData.wholesale_price && formData.wholesale_price > 0);
-        } else {
-          hasPriceFinal = Boolean(formData.retail_price > 0);
-        }
-        
-        const finalValidation = hasNameFinal && hasCategoryFinal && hasPriceFinal;
-        console.log('🔍 WIZARD - Final validation:', { 
-          finalValidation,
-          hasNameFinal,
-          hasCategoryFinal,
-          hasPriceFinal,
-          priceModel: priceModel?.price_model
-        });
-        return finalValidation;
-        
+      case 1: // Preços e Estoque
+        return formData.retail_price > 0;
+      case 2: // Imagens
+        return true; // Imagens são opcionais
+      case 3: // Variações
+        return true; // Variações são opcionais
+      case 4: // SEO e Marketing
+        return true; // SEO é opcional
       default:
         return true;
     }
-  };
+  }, [currentStep, formData]);
 
-  const saveProduct = async (editingProductId?: string, uploadImagesFn?: (productId: string) => Promise<string[]>): Promise<string | null> => {
-    console.log('💾 WIZARD - Iniciando salvamento:', { editingProductId, formData });
-    setLoading(true);
+  const loadProductForEditing = useCallback(async (product: any) => {
+    console.log('📂 WIZARD - Carregando produto para edição:', product);
     
     try {
-      // Validações básicas
-      if (!formData.name?.trim()) {
-        throw new Error('Nome do produto é obrigatório');
-      }
-      
-      if (!formData.category?.trim()) {
-        throw new Error('Categoria é obrigatória');
-      }
-      
-      // Validação de preço baseada no modelo
-      if (priceModel?.price_model === 'wholesale_only') {
-        if (!formData.wholesale_price || formData.wholesale_price <= 0) {
-          throw new Error('Preço de atacado deve ser maior que zero');
+      // Carregar variações do produto
+      let variations: ProductVariation[] = [];
+      if (product.id) {
+        const { data: variationsData, error: variationsError } = await supabase
+          .from('product_variations')
+          .select('*')
+          .eq('product_id', product.id)
+          .eq('is_active', true)
+          .order('display_order');
+
+        if (variationsError) {
+          console.error('Erro ao carregar variações:', variationsError);
+        } else {
+          variations = variationsData?.map(v => ({
+            id: v.id,
+            product_id: v.product_id,
+            color: v.color,
+            size: v.size,
+            sku: v.sku,
+            stock: v.stock,
+            price_adjustment: v.price_adjustment,
+            is_active: v.is_active,
+            image_url: v.image_url,
+            created_at: v.created_at,
+            updated_at: v.updated_at,
+            variation_type: v.variation_type,
+            name: v.name,
+            is_grade: v.is_grade,
+            grade_name: v.grade_name,
+            grade_color: v.grade_color,
+            grade_quantity: v.grade_quantity,
+            grade_sizes: v.grade_sizes,
+            grade_pairs: v.grade_pairs,
+            display_order: v.display_order,
+          })) || [];
         }
-      } else {
-        if (!formData.retail_price || formData.retail_price <= 0) {
-          throw new Error('Preço de varejo deve ser maior que zero');
-        }
-      }
-      
-      if (!profile?.store_id) {
-        throw new Error('Store ID não encontrado');
       }
 
+      console.log('📂 WIZARD - Variações carregadas:', variations.length);
+
+      // Atualizar formData com dados do produto
+      setFormData({
+        name: product.name || '',
+        description: product.description || '',
+        category: product.category || '',
+        retail_price: product.retail_price || 0,
+        wholesale_price: product.wholesale_price || 0,
+        stock: product.stock || 0,
+        min_wholesale_qty: product.min_wholesale_qty || 1,
+        is_featured: product.is_featured || false,
+        is_active: product.is_active !== false,
+        allow_negative_stock: product.allow_negative_stock || false,
+        stock_alert_threshold: product.stock_alert_threshold || 5,
+        store_id: product.store_id || profile?.store_id || '',
+        variations: variations,
+        price_model: 'wholesale_only', // Sempre wholesale_only por padrão
+        simple_wholesale_enabled: true,
+        gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar produto para edição:', error);
+      toast({
+        title: 'Erro ao carregar produto',
+        description: 'Não foi possível carregar os dados do produto.',
+        variant: 'destructive',
+      });
+    }
+  }, [profile?.store_id, toast]);
+
+  const saveProduct = useCallback(async (editingProductId?: string, uploadAllImages?: () => Promise<string[]>) => {
+    setLoading(true);
+    console.log('💾 WIZARD - Iniciando salvamento do produto', { editingProductId, formData });
+
+    try {
+      // Dados do produto
       const productData = {
-        name: formData.name.trim(),
-        description: formData.description || '',
-        category: formData.category.trim(),
-        retail_price: formData.retail_price || 0,
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        retail_price: formData.retail_price,
         wholesale_price: formData.wholesale_price,
-        stock: formData.stock || 0,
-        min_wholesale_qty: formData.min_wholesale_qty || 1,
-        is_featured: formData.is_featured || false,
-        is_active: formData.is_active !== false,
-        allow_negative_stock: formData.allow_negative_stock || false,
-        stock_alert_threshold: formData.stock_alert_threshold || 5,
-        meta_title: formData.meta_title || '',
-        meta_description: formData.meta_description || '',
-        keywords: formData.keywords || '',
-        seo_slug: formData.seo_slug || '',
-        store_id: profile.store_id
+        stock: formData.stock,
+        min_wholesale_qty: formData.min_wholesale_qty,
+        is_featured: formData.is_featured,
+        is_active: formData.is_active,
+        allow_negative_stock: formData.allow_negative_stock,
+        stock_alert_threshold: formData.stock_alert_threshold,
+        store_id: formData.store_id,
+        enable_gradual_wholesale: formData.gradual_wholesale_enabled,
       };
 
-      console.log('💾 WIZARD - Dados do produto:', productData);
+      let productId = editingProductId;
 
-      let result;
-      
       if (editingProductId) {
-        // Update existing product
-        const { data, error } = await supabase
+        // Atualizar produto existente
+        console.log('🔄 WIZARD - Atualizando produto existente:', editingProductId);
+        const { error: updateError } = await supabase
           .from('products')
-          .update({
-            ...productData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingProductId)
-          .select()
-          .single();
+          .update(productData)
+          .eq('id', editingProductId);
 
-        if (error) {
-          console.error('💾 WIZARD - Erro ao atualizar:', error);
-          throw error;
+        if (updateError) {
+          console.error('Erro ao atualizar produto:', updateError);
+          throw updateError;
         }
-        result = data;
       } else {
-        // Create new product
-        const { data, error } = await supabase
+        // Criar novo produto
+        console.log('✨ WIZARD - Criando novo produto');
+        const { data: newProduct, error: createError } = await supabase
           .from('products')
-          .insert({
-            ...productData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(productData)
           .select()
           .single();
 
-        if (error) {
-          console.error('💾 WIZARD - Erro ao criar:', error);
-          throw error;
+        if (createError) {
+          console.error('Erro ao criar produto:', createError);
+          throw createError;
         }
-        result = data;
+
+        productId = newProduct.id;
+        console.log('✅ WIZARD - Produto criado com ID:', productId);
       }
 
-      console.log('✅ WIZARD - Produto salvo:', result);
-
-      // Upload de imagens após salvar o produto (se função foi fornecida)
-      if (result?.id && uploadImagesFn) {
-        console.log('📤 WIZARD - Iniciando upload de imagens para produto:', result.id);
+      // Upload de imagens se houver função
+      if (uploadAllImages) {
+        console.log('📷 WIZARD - Fazendo upload de imagens');
         try {
-          const uploadedUrls = await uploadImagesFn(result.id);
-          console.log('✅ WIZARD - Imagens enviadas:', uploadedUrls.length);
+          await uploadAllImages();
         } catch (imageError) {
-          console.error('❌ WIZARD - Erro no upload de imagens:', imageError);
-          // Não falhar o salvamento do produto por erro de imagem
-          toast({
-            title: "Produto salvo com avisos",
-            description: "Produto salvo, mas houve problemas com o upload das imagens.",
-            variant: "destructive",
-          });
+          console.error('Erro no upload de imagens:', imageError);
+          // Não interromper o salvamento por erro de imagem
+        }
+      }
+
+      // Salvar variações se houver
+      if (formData.variations && formData.variations.length > 0 && productId) {
+        console.log('🎨 WIZARD - Salvando variações:', formData.variations.length);
+        try {
+          const { success, error: variationsError } = await saveVariations(productId, formData.variations);
+          if (!success) {
+            console.error('Erro ao salvar variações:', variationsError);
+            // Não interromper o salvamento por erro de variações
+            toast({
+              title: 'Aviso',
+              description: 'Produto salvo, mas houve problemas ao salvar as variações.',
+              variant: 'destructive',
+            });
+          } else {
+            console.log('✅ WIZARD - Variações salvas com sucesso');
+          }
+        } catch (variationError) {
+          console.error('Erro inesperado ao salvar variações:', variationError);
         }
       }
 
       toast({
-        title: "Produto salvo!",
-        description: editingProductId ? "Produto atualizado com sucesso." : "Produto criado com sucesso.",
+        title: 'Produto salvo!',
+        description: 'O produto foi salvo com sucesso.',
       });
 
-      return result?.id || null;
-    } catch (error: any) {
-      console.error('❌ WIZARD - Erro ao salvar produto:', error);
+      return productId;
+    } catch (error) {
+      console.error('💥 WIZARD - Erro no salvamento:', error);
       toast({
-        variant: "destructive",
-        title: "Erro ao salvar",
-        description: error.message || "Ocorreu um erro ao salvar o produto.",
+        title: 'Erro ao salvar produto',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
       });
-      return null;
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, saveVariations, toast]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     console.log('🧹 WIZARD - Resetando formulário');
-    setCurrentStep(0);
     setFormData({
       name: '',
       description: '',
@@ -366,58 +302,34 @@ export const useImprovedProductFormWizard = () => {
       is_active: true,
       allow_negative_stock: false,
       stock_alert_threshold: 5,
-      store_id: profile?.store_id,
-      variations: []
+      store_id: profile?.store_id || '',
+      variations: [],
+      price_model: 'wholesale_only',
+      simple_wholesale_enabled: true,
+      gradual_wholesale_enabled: false,
     });
-  };
+    setCurrentStep(0);
+  }, [profile?.store_id]);
 
-  // Check if current price model supports wholesale
-  const supportsWholesale = (): boolean => {
-    if (!priceModel) return false;
-    return priceModel.price_model !== 'retail_only';
-  };
-
-  // Função para carregar dados do produto para edição (sem imagens)
-  const loadProductForEditing = (editingProduct: any) => {
-    console.log("📂 WIZARD - Carregando produto para edição:", editingProduct.id);
-    
-    // Carregar dados do formulário
-    updateFormData({
-      name: editingProduct.name || '',
-      description: editingProduct.description || '',
-      category: editingProduct.category || '',
-      retail_price: editingProduct.retail_price || 0,
-      wholesale_price: editingProduct.wholesale_price || 0,
-      stock: editingProduct.stock || 0,
-      min_wholesale_qty: editingProduct.min_wholesale_qty || 1,
-      is_featured: editingProduct.is_featured || false,
-      is_active: editingProduct.is_active !== false,
-      allow_negative_stock: editingProduct.allow_negative_stock || false,
-      stock_alert_threshold: editingProduct.stock_alert_threshold || 5,
-      meta_title: editingProduct.meta_title || '',
-      meta_description: editingProduct.meta_description || '',
-      keywords: editingProduct.keywords || '',
-      seo_slug: editingProduct.seo_slug || '',
-    });
-  };
+  // Atualizar store_id quando o perfil mudar
+  useEffect(() => {
+    if (profile?.store_id && formData.store_id !== profile.store_id) {
+      updateFormData({ store_id: profile.store_id });
+    }
+  }, [profile?.store_id, formData.store_id, updateFormData]);
 
   return {
     formData,
     updateFormData,
     currentStep,
-    setCurrentStep,
     nextStep,
     prevStep,
     goToStep,
     canProceed,
     loading,
-    setLoading,
     resetForm,
-    supportsWholesale,
-    priceModel,
     steps,
-    isSaving: loading,
     saveProduct,
-    loadProductForEditing
+    loadProductForEditing,
   };
 };

@@ -1,27 +1,16 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Edit,
-  Trash2,
-  Eye,
-  Package,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Sparkles,
-  DollarSign,
-} from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
+import React, { useState } from "react";
 import { Product } from "@/types/product";
 import ProductInfoCard from "./ProductInfoCard";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { Button } from "@/components/ui/button";
+import { LayoutGrid, List, Search, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface ProductListProps {
   products: Product[];
-  onEdit: (product: any) => void;
+  onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
-  onGenerateDescription: (productId: string) => void;
+  onGenerateDescription?: (productId: string) => void;
 }
 
 const ProductList: React.FC<ProductListProps> = ({
@@ -30,107 +19,132 @@ const ProductList: React.FC<ProductListProps> = ({
   onDelete,
   onGenerateDescription,
 }) => {
-  const { priceModel } = useStorePriceModel(products[0]?.store_id);
-  // Mapeamento local para nome amigável do modelo
-  const priceModelNames: Record<string, string> = {
-    retail_only: "Apenas Varejo",
-    simple_wholesale: "Varejo + Atacado",
-    gradual_wholesale: "Atacado Gradativo",
-    wholesale_only: "Apenas Atacado",
-  };
-  const modelKey = priceModel?.price_model || "retail_only";
-  const modelDisplayName = priceModelNames[modelKey] || "Modelo Desconhecido";
-  const getStockStatus = (stock: number, threshold: number = 5) => {
-    if (stock <= 0) {
-      return {
-        status: "out",
-        color: "bg-red-100 text-red-800",
-        icon: AlertTriangle,
-        text: "Sem estoque",
-      };
-    }
-    if (stock <= threshold) {
-      return {
-        status: "low",
-        color: "bg-yellow-100 text-yellow-800",
-        icon: AlertTriangle,
-        text: `${stock} restantes`,
-      };
-    }
-    return {
-      status: "good",
-      color: "bg-green-100 text-green-800",
-      icon: CheckCircle,
-      text: `${stock} em estoque`,
-    };
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
+  // Filtrar produtos
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = searchTerm === '' || 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === '' || product.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
+
+  // Extrair categorias únicas
+  const categories = React.useMemo(() => {
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+    return cats.sort();
+  }, [products]);
+
+  const handleView = (product: Product) => {
+    // Implementar visualização do produto se necessário
+    console.log('Visualizando produto:', product.name);
   };
 
   if (products.length === 0) {
     return (
       <div className="text-center py-12">
-        <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Nenhum produto encontrado
-        </h3>
-        <p className="text-gray-500 mb-4">
-          Comece adicionando seu primeiro produto à loja.
-        </p>
-        <Button>Adicionar Produto</Button>
+        <div className="text-gray-500 mb-4">
+          <div className="text-lg font-medium">Nenhum produto encontrado</div>
+          <div className="text-sm">Crie seu primeiro produto para começar.</div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Informativo do modelo de preço */}
-      {priceModel && (
-        <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 text-blue-900 flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          <span className="font-medium">Modelo de Preço da Loja:</span>
-          <span className="ml-2 text-sm">{modelDisplayName}</span>
+      {/* Header com controles */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar produtos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="">Todas as categorias</option>
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
-      )}
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-gray-600" />
-          <span className="font-medium">
-            {products.length} produto{products.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full" />
-            Em estoque: {products.filter((p) => p.stock > 5).length}
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-            Estoque baixo:{" "}
-            {products.filter((p) => p.stock > 0 && p.stock <= 5).length}
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-red-500 rounded-full" />
-            Sem estoque: {products.filter((p) => p.stock <= 0).length}
-          </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex gap-1 border rounded-md p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-8 w-8 p-0"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-8 w-8 p-0"
+          >
+            <List className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Lista de Produtos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {products.map((product) => (
-          <ProductInfoCard
-            key={product.id}
-            product={product}
-            onEdit={onEdit}
-            onView={(product) => {
-              // Implementar visualização do produto
-              console.log("Visualizando produto:", product.name);
-            }}
-            onDelete={onDelete}
-            storePriceModel={modelKey}
-          />
-        ))}
+      {/* Results Count */}
+      <div className="text-sm text-gray-600">
+        {filteredProducts.length} de {products.length} produtos
+        {searchTerm && ` para "${searchTerm}"`}
+        {selectedCategory && ` na categoria "${selectedCategory}"`}
       </div>
+
+      {/* Products Grid/List */}
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="text-gray-500">
+            <div className="text-lg font-medium">Nenhum produto encontrado</div>
+            <div className="text-sm">Tente ajustar os filtros de busca.</div>
+          </div>
+        </div>
+      ) : (
+        <div className={`grid gap-4 ${
+          viewMode === 'grid' 
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            : 'grid-cols-1'
+        }`}>
+          {filteredProducts.map((product) => (
+            <ProductInfoCard
+              key={product.id}
+              product={product}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onView={handleView}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

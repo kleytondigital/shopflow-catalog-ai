@@ -6,7 +6,6 @@ import PricingStep from './steps/PricingStep';
 import ImagesStep from './steps/ImagesStep';
 import VariationsStep from './steps/VariationsStep';
 import SEOStep from './steps/SEOStep';
-import ReviewStep from './steps/ReviewStep';
 
 interface WizardStepContentProps {
   currentStep: number;
@@ -21,6 +20,8 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
   updateFormData,
   productId,
 }) => {
+  console.log('🎬 WIZARD STEP CONTENT - Renderizando step:', currentStep, 'com formData:', formData);
+
   switch (currentStep) {
     case 0:
       return (
@@ -59,14 +60,8 @@ const WizardStepContent: React.FC<WizardStepContentProps> = ({
           updateFormData={updateFormData}
         />
       );
-    case 5:
-      return (
-        <ReviewStep
-          formData={formData}
-        />
-      );
     default:
-      return null;
+      return <div>Step não encontrado</div>;
   }
 };
 

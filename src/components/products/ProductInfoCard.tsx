@@ -1,201 +1,227 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { Product } from "@/types/product";
-import {
-  Image as ImageIcon,
-  Package,
-  DollarSign,
-  Eye,
-  Edit,
-  Trash2,
-  ShoppingCart,
-  Star,
-} from "lucide-react";
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Package, Palette, Layers, AlertCircle, Eye, Edit, Trash2 } from 'lucide-react';
+import { Product } from '@/types/product';
+import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProductInfoCardProps {
   product: Product;
   onEdit?: (product: Product) => void;
-  onView?: (product: Product) => void;
   onDelete?: (id: string) => void;
-  storePriceModel?:
-    | "retail_only"
-    | "simple_wholesale"
-    | "gradual_wholesale"
-    | "wholesale_only";
+  onView?: (product: Product) => void;
 }
 
 const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   product,
   onEdit,
-  onView,
   onDelete,
-  storePriceModel,
+  onView,
 }) => {
-  const mainImage =
-    product.image_url ||
-    product.variations?.find((v) => v.image_url)?.image_url ||
-    null;
+  // Calcular informações sobre variações
+  const variationInfo = React.useMemo(() => {
+    if (!product.variations || product.variations.length === 0) {
+      return null;
+    }
 
-  const imageCount = ((): number => {
-    let count = 0;
-    if (product.image_url) count++;
-    if (product.variations)
-      count += product.variations.filter((v) => v.image_url).length;
-    return count;
-  })();
+    const colors = [...new Set(product.variations.filter(v => v.color).map(v => v.color))];
+    const sizes = [...new Set(product.variations.filter(v => v.size).map(v => v.size))];
+    const grades = product.variations.filter(v => v.is_grade || v.variation_type === 'grade');
+    
+    return {
+      total: product.variations.length,
+      colors: colors.length,
+      sizes: sizes.length,
+      grades: grades.length,
+      hasVariations: true,
+    };
+  }, [product.variations]);
 
-  // Corrigir linter: garantir que product.price_model existe
-  const modelKey = (storePriceModel ||
-    (product as any).price_model ||
-    "retail_only") as
-    | "retail_only"
-    | "simple_wholesale"
-    | "gradual_wholesale"
-    | "wholesale_only";
+  const totalStock = React.useMemo(() => {
+    if (variationInfo?.hasVariations) {
+      return product.variations?.reduce((sum, variation) => sum + variation.stock, 0) || 0;
+    }
+    return product.stock;
+  }, [product.variations, product.stock, variationInfo]);
 
-  const rating =
-    3.5 +
-    (Math.abs(
-      product.id
-        .split("")
-        .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) & a, 0)
-    ) %
-      15) /
-      10;
-  const reviewCount = Math.floor(
-    5 + ((product.name.length + (product.retail_price || 0)) % 45)
-  );
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(product);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete && window.confirm('Tem certeza que deseja excluir este produto?')) {
+      onDelete(product.id);
+    }
+  };
+
+  const handleView = () => {
+    if (onView) {
+      onView(product);
+    }
+  };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-300 rounded-2xl border border-gray-200 bg-white flex flex-col min-h-[340px]">
-      {/* Imagem do produto */}
-      <div className="w-full aspect-square bg-gray-100 rounded-2xl flex items-center justify-center overflow-hidden group">
-        {mainImage ? (
-          <img
-            src={mainImage}
-            alt={product.name}
-            className="object-contain w-full h-full transition-transform duration-300 group-hover:scale-105"
-            onError={(e) => (e.currentTarget.style.display = "none")}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center w-full h-full text-gray-400">
-            <ImageIcon className="h-10 w-10 mb-1" />
-            <span className="text-xs">Sem imagem</span>
-          </div>
-        )}
-      </div>
-
-      {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col px-4 pt-2 pb-3 justify-between">
-        {/* Topo: Título, ID e botões */}
-        <div className="flex items-start justify-between gap-2 mb-1">
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base font-bold truncate leading-tight">
+            <CardTitle className="text-lg line-clamp-2 mb-2">
               {product.name}
             </CardTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              ID: {product.id.slice(0, 8)}...
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {product.category && (
+                <Badge variant="outline" className="text-xs">
+                  {product.category}
+                </Badge>
+              )}
+              {product.is_featured && (
+                <Badge className="text-xs bg-yellow-500">
+                  Destaque
+                </Badge>
+              )}
+              {!product.is_active && (
+                <Badge variant="secondary" className="text-xs">
+                  Inativo
+                </Badge>
+              )}
+            </div>
           </div>
-          <div className="flex gap-1 mt-0.5">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 p-0"
-              onClick={() => onView?.(product)}
-              title="Visualizar produto no catálogo"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 p-0"
-              onClick={() => onEdit(product)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="destructive"
-              size="icon"
-              className="h-8 w-8 p-0"
-              onClick={() => onDelete(product.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          
+          {/* Product Image */}
+          <div className="ml-4 flex-shrink-0">
+            {product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-16 h-16 object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Package className="h-6 w-6 text-gray-400" />
+              </div>
+            )}
           </div>
         </div>
+      </CardHeader>
 
-        {/* Bloco compacto de informações */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-medium mb-2">
-          <div className="flex items-center gap-1">
-            <DollarSign className="h-4 w-4 text-orange-600" />
-            <span className="text-orange-600 font-bold">
-              {product.wholesale_price
-                ? formatCurrency(product.wholesale_price)
-                : "Não definido"}
-            </span>
+      <CardContent className="space-y-4">
+        {/* Price Information */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Preço Varejo:</span>
+            <span className="font-semibold">{formatCurrency(product.retail_price)}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Package className="h-4 w-4 text-green-600" />
-            <span className="text-green-600 font-bold">
-              {product.stock} un.
-            </span>
-          </div>
-          {modelKey === "wholesale_only" && (
-            <div className="flex items-center gap-1">
-              <Package className="h-4 w-4 text-orange-600" />
-              <span className="text-orange-600 font-bold">
-                Mín.: {product.min_wholesale_qty || 1} un.
+          {product.wholesale_price && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Preço Atacado:</span>
+              <span className="font-semibold text-orange-600">
+                {formatCurrency(product.wholesale_price)}
               </span>
+            </div>
+          )}
+          {product.min_wholesale_qty && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Qtd. Mín. Atacado:</span>
+              <span className="text-sm">{product.min_wholesale_qty} un.</span>
             </div>
           )}
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-1 mb-2">
-          {product.is_featured && (
-            <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-              Destaque
-            </Badge>
-          )}
-          {modelKey === "wholesale_only" && (
-            <Badge className="bg-orange-600 text-white">Apenas Atacado</Badge>
-          )}
-          {product.variations?.length > 0 && (
-            <Badge className="bg-purple-600 text-white">
-              {product.variations.length} Variações
-            </Badge>
-          )}
-          {product.stock <= (product.stock_alert_threshold || 5) &&
-            product.stock > 0 && (
-              <Badge className="bg-yellow-500 text-white">Estoque Baixo</Badge>
-            )}
-          {product.stock === 0 && (
-            <Badge variant="destructive">Sem estoque</Badge>
+        {/* Stock Information */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Estoque Total:</span>
+            <div className="flex items-center gap-2">
+              <span className={`font-medium ${totalStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {totalStock}
+              </span>
+              {totalStock <= (product.stock_alert_threshold || 5) && totalStock > 0 && (
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+              )}
+            </div>
+          </div>
+          {product.reserved_stock && product.reserved_stock > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Estoque Reservado:</span>
+              <span className="text-sm text-yellow-600">{product.reserved_stock}</span>
+            </div>
           )}
         </div>
 
-        {/* Avaliação */}
-        <div className="flex items-center gap-1 mt-auto pt-1">
-          <div className="flex gap-0.5">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Star
-                key={i}
-                className={`h-4 w-4 ${
-                  rating >= i ? "text-yellow-400" : "text-gray-300"
-                }`}
-              />
-            ))}
+        {/* Variation Information */}
+        {variationInfo?.hasVariations && (
+          <div className="space-y-2 p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Palette className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">
+                {variationInfo.total} Variações
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {variationInfo.colors > 0 && (
+                <div className="flex items-center gap-1">
+                  <Palette className="h-3 w-3 text-blue-500" />
+                  <span>{variationInfo.colors} cores</span>
+                </div>
+              )}
+              {variationInfo.sizes > 0 && (
+                <div className="flex items-center gap-1">
+                  <Package className="h-3 w-3 text-green-500" />
+                  <span>{variationInfo.sizes} tamanhos</span>
+                </div>
+              )}
+              {variationInfo.grades > 0 && (
+                <div className="flex items-center gap-1">
+                  <Layers className="h-3 w-3 text-purple-500" />
+                  <span>{variationInfo.grades} grades</span>
+                </div>
+              )}
+            </div>
           </div>
-          <span className="text-xs text-gray-500 ml-1">
-            {rating.toFixed(1)} ({reviewCount} avaliações)
-          </span>
+        )}
+
+        {/* Description */}
+        {product.description && (
+          <div className="text-sm text-gray-600 line-clamp-2">
+            {product.description}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleView}
+            className="flex-1"
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            Ver
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleEdit}
+            className="flex-1"
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Editar
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 };

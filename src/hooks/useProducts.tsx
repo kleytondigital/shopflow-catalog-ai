@@ -1,286 +1,164 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import type { Product, CreateProductData, UpdateProductData } from '@/types/product';
-
-export type { Product, CreateProductData, UpdateProductData };
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Product, ProductVariation } from "@/types/product";
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
 
   const fetchProducts = useCallback(async () => {
     if (!profile?.store_id) {
-      console.log('useProducts: Store ID não disponível');
+      console.log("useProducts: Nenhum store_id encontrado no perfil");
       setLoading(false);
       return;
     }
 
     try {
-      setError(null);
-      console.log('useProducts: Buscando produtos para store_id:', profile.store_id);
+      console.log("useProducts: Buscando produtos para store_id:", profile.store_id);
+      
+      // Buscar produtos
+      const { data: productsData, error: productsError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("store_id", profile.store_id)
+        .order("created_at", { ascending: false });
 
-      const { data, error: fetchError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_variations (
-            id,
-            product_id,
-            color,
-            size,
-            sku,
-            stock,
-            price_adjustment,
-            is_active,
-            image_url,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('store_id', profile.store_id)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) {
-        console.error('useProducts: Erro ao buscar produtos:', fetchError);
-        throw fetchError;
+      if (productsError) {
+        console.error("Erro ao buscar produtos:", productsError);
+        throw productsError;
       }
 
-      // Transformar os dados para incluir variações corretamente
-      const productsWithVariations = data?.map(product => ({
-        ...product,
-        variations: product.product_variations?.map(variation => ({
-          id: variation.id,
-          product_id: variation.product_id,
-          color: variation.color,
-          size: variation.size,
-          sku: variation.sku,
-          stock: variation.stock,
-          price_adjustment: variation.price_adjustment,
-          is_active: variation.is_active,
-          image_url: variation.image_url,
-          created_at: variation.created_at,
-          updated_at: variation.updated_at
-        })) || []
-      })) || [];
+      // Buscar todas as variações dos produtos em uma query separada
+      const productIds = productsData?.map(p => p.id) || [];
+      let variationsData: any[] = [];
+      
+      if (productIds.length > 0) {
+        const { data: variations, error: variationsError } = await supabase
+          .from("product_variations")
+          .select("*")
+          .in("product_id", productIds)
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
 
-      console.log('useProducts: Produtos carregados:', productsWithVariations?.length || 0);
+        if (variationsError) {
+          console.error("Erro ao buscar variações:", variationsError);
+        } else {
+          variationsData = variations || [];
+          console.log(`useProducts: ${variationsData.length} variações carregadas`);
+        }
+      }
+
+      // Mapear produtos e suas variações
+      const productsWithVariations: Product[] = (productsData || []).map(product => {
+        const productVariations = variationsData
+          .filter(v => v.product_id === product.id)
+          .map(v => ({
+            id: v.id,
+            product_id: v.product_id,
+            color: v.color,
+            size: v.size,
+            sku: v.sku,
+            stock: v.stock,
+            price_adjustment: v.price_adjustment,
+            is_active: v.is_active,
+            image_url: v.image_url,
+            created_at: v.created_at,
+            updated_at: v.updated_at,
+            variation_type: v.variation_type,
+            name: v.name,
+            is_grade: v.is_grade,
+            grade_name: v.grade_name,
+            grade_color: v.grade_color,
+            grade_quantity: v.grade_quantity,
+            grade_sizes: v.grade_sizes,
+            grade_pairs: v.grade_pairs,
+            display_order: v.display_order,
+          })) as ProductVariation[];
+
+        return {
+          ...product,
+          variations: productVariations
+        };
+      });
+
+      console.log(`useProducts: Produtos carregados: ${productsWithVariations.length}`);
+      console.log("useProducts: Produtos com variações:", 
+        productsWithVariations.filter(p => p.variations && p.variations.length > 0).length
+      );
+      
       setProducts(productsWithVariations);
     } catch (error) {
-      console.error('useProducts: Erro:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar produtos';
-      setError(errorMessage);
+      console.error("useProducts: Erro ao carregar produtos:", error);
       toast({
-        title: 'Erro ao carregar produtos',
-        description: errorMessage,
-        variant: 'destructive'
+        title: "Erro ao carregar produtos",
+        description: "Não foi possível carregar a lista de produtos.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   }, [profile?.store_id, toast]);
 
-  const createProduct = useCallback(async (productData: CreateProductData) => {
-    console.log('=== CRIANDO PRODUTO ===');
-    console.log('Dados recebidos:', productData);
-
+  const deleteProduct = async (id: string) => {
     try {
-      // Validar dados obrigatórios
-      if (!productData.name?.trim()) {
-        throw new Error('Nome do produto é obrigatório');
-      }
+      console.log("useProducts: Deletando produto:", id);
       
-      if (!productData.retail_price || productData.retail_price <= 0) {
-        throw new Error('Preço de varejo deve ser maior que zero');
-      }
-
-      if (!productData.store_id) {
-        throw new Error('Store ID é obrigatório');
-      }
-
-      // Preparar dados limpos para inserção
-      const cleanData = {
-        store_id: productData.store_id,
-        name: productData.name.trim(),
-        description: productData.description?.trim() || null,
-        retail_price: productData.retail_price,
-        wholesale_price: productData.wholesale_price || null,
-        category: productData.category?.trim() || null,
-        stock: productData.stock || 0,
-        min_wholesale_qty: productData.min_wholesale_qty || 1,
-        meta_title: productData.meta_title?.trim() || null,
-        meta_description: productData.meta_description?.trim() || null,
-        keywords: productData.keywords?.trim() || null,
-        seo_slug: productData.seo_slug?.trim() || null,
-        is_featured: productData.is_featured || false,
-        allow_negative_stock: productData.allow_negative_stock || false,
-        stock_alert_threshold: productData.stock_alert_threshold || 5,
-        is_active: true
-      };
-
-      console.log('Dados limpos para inserção:', cleanData);
-
-      const { data, error } = await supabase
-        .from('products')
-        .insert(cleanData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao criar produto:', error);
-        throw error;
-      }
-
-      console.log('Produto criado com sucesso:', data);
-
-      // Recarregar produtos
-      await fetchProducts();
-
-      toast({
-        title: 'Produto criado!',
-        description: `${productData.name} foi criado com sucesso.`
-      });
-
-      return { data, error: null };
-    } catch (error) {
-      console.error('useProducts: Erro ao criar produto:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar produto';
-      
-      toast({
-        title: 'Erro ao criar produto',
-        description: errorMessage,
-        variant: 'destructive'
-      });
-
-      return { data: null, error: errorMessage };
-    }
-  }, [fetchProducts, toast]);
-
-  const updateProduct = useCallback(async (productData: UpdateProductData) => {
-    console.log('=== ATUALIZANDO PRODUTO ===');
-    console.log('Dados recebidos:', productData);
-
-    try {
-      if (!productData.id) {
-        throw new Error('ID do produto é obrigatório');
-      }
-
-      if (!productData.name?.trim()) {
-        throw new Error('Nome do produto é obrigatório');
-      }
-      
-      if (!productData.retail_price || productData.retail_price <= 0) {
-        throw new Error('Preço de varejo deve ser maior que zero');
-      }
-
-      // Preparar dados limpos para atualização
-      const cleanData = {
-        name: productData.name.trim(),
-        description: productData.description?.trim() || null,
-        retail_price: productData.retail_price,
-        wholesale_price: productData.wholesale_price || null,
-        category: productData.category?.trim() || null,
-        stock: productData.stock || 0,
-        min_wholesale_qty: productData.min_wholesale_qty || 1,
-        meta_title: productData.meta_title?.trim() || null,
-        meta_description: productData.meta_description?.trim() || null,
-        keywords: productData.keywords?.trim() || null,
-        seo_slug: productData.seo_slug?.trim() || null,
-        is_featured: productData.is_featured || false,
-        allow_negative_stock: productData.allow_negative_stock || false,
-        stock_alert_threshold: productData.stock_alert_threshold || 5,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('Dados limpos para atualização:', cleanData);
-
-      const { data, error } = await supabase
-        .from('products')
-        .update(cleanData)
-        .eq('id', productData.id)
-        .eq('store_id', productData.store_id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao atualizar produto:', error);
-        throw error;
-      }
-
-      console.log('Produto atualizado com sucesso:', data);
-
-      // Recarregar produtos
-      await fetchProducts();
-
-      toast({
-        title: 'Produto atualizado!',
-        description: `${productData.name} foi atualizado com sucesso.`
-      });
-
-      return { data, error: null };
-    } catch (error) {
-      console.error('useProducts: Erro ao atualizar produto:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar produto';
-      
-      toast({
-        title: 'Erro ao atualizar produto',
-        description: errorMessage,
-        variant: 'destructive'
-      });
-
-      return { data: null, error: errorMessage };
-    }
-  }, [fetchProducts, toast]);
-
-  const deleteProduct = useCallback(async (productId: string) => {
-    try {
-      const { error } = await supabase
-        .from('products')
+      // Deletar variações primeiro
+      const { error: variationsError } = await supabase
+        .from("product_variations")
         .delete()
-        .eq('id', productId);
+        .eq("product_id", id);
 
-      if (error) throw error;
+      if (variationsError) {
+        console.error("Erro ao deletar variações:", variationsError);
+        throw variationsError;
+      }
 
-      await fetchProducts();
-      
-      toast({
-        title: 'Produto excluído',
-        description: 'O produto foi excluído com sucesso.'
-      });
+      // Deletar imagens
+      const { error: imagesError } = await supabase
+        .from("product_images")
+        .delete()
+        .eq("product_id", id);
 
+      if (imagesError) {
+        console.error("Erro ao deletar imagens:", imagesError);
+        throw imagesError;
+      }
+
+      // Deletar produto
+      const { error: productError } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
+
+      if (productError) {
+        console.error("Erro ao deletar produto:", productError);
+        throw productError;
+      }
+
+      console.log("useProducts: Produto deletado com sucesso");
       return { error: null };
     } catch (error) {
-      console.error('useProducts: Erro ao excluir produto:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao excluir produto';
-      
-      toast({
-        title: 'Erro ao excluir produto',
-        description: errorMessage,
-        variant: 'destructive'
-      });
-
-      return { error: errorMessage };
+      console.error("useProducts: Erro no deleteProduct:", error);
+      return { 
+        error: error instanceof Error ? error.message : "Erro desconhecido ao deletar produto" 
+      };
     }
-  }, [fetchProducts, toast]);
+  };
 
   useEffect(() => {
-    if (profile?.store_id) {
-      fetchProducts();
-    }
-  }, [fetchProducts, profile?.store_id]);
+    fetchProducts();
+  }, [fetchProducts]);
 
   return {
     products,
     loading,
-    error,
     fetchProducts,
-    createProduct,
-    updateProduct,
-    deleteProduct
+    deleteProduct,
   };
 };
