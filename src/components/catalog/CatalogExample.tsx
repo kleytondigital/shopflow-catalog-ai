@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import CatalogHeader from "./CatalogHeader";
 import ResponsiveProductGrid from "./ResponsiveProductGrid";
@@ -72,7 +71,6 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
         <ResponsiveProductGrid
           products={products}
           catalogType={catalogType}
-          storeIdentifier={storeSlug}
           loading={productsLoading}
           className="container mx-auto px-4"
         />

@@ -1,145 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { Product, ProductVariation } from '@/types/product';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
-import { useCart } from '@/hooks/useCart';
-import { AspectRatio } from "@/components/ui/aspect-ratio"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Link } from 'react-router-dom';
-import { Store } from '@/types/store';
-import { useStores } from '@/hooks/useStores';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useTheme } from 'next-themes';
 
-interface ResponsiveProductGridProps {
+import React, { useState, useMemo } from "react";
+import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
+import { Product } from "@/types/product";
+import { CatalogType } from "./CatalogExample";
+import MinimalTemplate from "./templates/MinimalTemplate";
+import ModernTemplate from "./templates/ModernTemplate";
+import ElegantTemplate from "./templates/ElegantTemplate";
+import IndustrialTemplate from "./templates/IndustrialTemplate";
+import QuickViewModal from "./QuickViewModal";
+import { Loader2 } from "lucide-react";
+
+export interface ResponsiveProductGridProps {
   products: Product[];
-  loading: boolean;
-  onAddToCart?: (product: Product, quantity: number, variation?: any) => void;
-  catalogType: string;
-  storeId: string;
+  catalogType: CatalogType;
+  loading?: boolean;
+  className?: string;
+  template?: 'minimal' | 'modern' | 'elegant' | 'industrial';
+  editorSettings?: any;
 }
 
 const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   products,
-  loading,
-  onAddToCart,
   catalogType,
-  storeId
+  loading = false,
+  className = "",
+  template = 'minimal',
+  editorSettings = {}
 }) => {
   const { addItem } = useCart();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const { stores } = useStores();
-  const store = stores?.find(store => store.id === storeId) as Store;
-  const { settings } = useCatalogSettings();
-  const { theme } = useTheme();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
-  useEffect(() => {
-    if (products) {
-      const filtered = products.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredProducts(filtered);
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => product.is_active !== false);
+  }, [products]);
+
+  const handleAddToCart = (product: Product) => {
+    console.log('Adding to cart:', product);
+    addItem(product);
+  };
+
+  const handleAddToWishlist = (product: Product) => {
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
     }
-  }, [products, searchTerm]);
-
-  const handleAddToCart = (product: Product, quantity: number = 1, variation?: any) => {
-    // Corrigir: passar apenas o produto, não um objeto com propriedade product
-    addItem(product, quantity, variation);
-    
-    toast({
-      title: "Produto adicionado!",
-      description: `${product.name} foi adicionado ao carrinho`,
-      duration: 2000,
-    });
   };
 
-  const getThemeVariables = () => {
-    const isDarkTheme = theme === 'dark';
-
-    return {
-      textColor: isDarkTheme ? 'white' : 'black',
-      backgroundColor: isDarkTheme ? '#121212' : 'white',
-      cardBackgroundColor: isDarkTheme ? '#333' : '#f9f9f9',
-      borderColor: isDarkTheme ? '#555' : '#ddd',
-    };
+  const handleQuickView = (product: Product) => {
+    setQuickViewProduct(product);
   };
 
-  const themeVars = getThemeVariables();
+  const templateProps = {
+    products: filteredProducts,
+    catalogType,
+    onAddToCart: handleAddToCart,
+    onAddToWishlist: handleAddToWishlist,
+    onQuickView: handleQuickView,
+    isInWishlist: (productId: string) => isInWishlist(productId),
+    loading,
+    showPrices: editorSettings.showPrices !== false,
+    showStock: editorSettings.showStock !== false,
+    editorSettings
+  };
+
+  if (loading) {
+    return (
+      <div className={`flex items-center justify-center py-16 ${className}`}>
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Carregando produtos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (filteredProducts.length === 0) {
+    return (
+      <div className={`text-center py-16 ${className}`}>
+        <h3 className="text-lg font-semibold mb-2">Nenhum produto encontrado</h3>
+        <p className="text-muted-foreground">
+          Não há produtos disponíveis no momento.
+        </p>
+      </div>
+    );
+  }
+
+  const renderTemplate = () => {
+    switch (template) {
+      case 'modern':
+        return <ModernTemplate {...templateProps} />;
+      case 'elegant':
+        return <ElegantTemplate {...templateProps} />;
+      case 'industrial':
+        return <IndustrialTemplate {...templateProps} />;
+      default:
+        return <MinimalTemplate {...templateProps} />;
+    }
+  };
 
   return (
-    <div className="w-full">
-      {/* Search Bar */}
-      <div className="mb-4">
-        <Input
-          type="text"
-          placeholder="Buscar produtos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full"
+    <div className={className}>
+      {renderTemplate()}
+      
+      {quickViewProduct && (
+        <QuickViewModal
+          product={quickViewProduct}
+          catalogType={catalogType}
+          isOpen={!!quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+          onAddToCart={handleAddToCart}
+          onAddToWishlist={handleAddToWishlist}
+          isInWishlist={isInWishlist(quickViewProduct.id)}
         />
-      </div>
-
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="mb-2">
-                  <Skeleton className="h-4 w-32" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-48" />
-                </div>
-                <div className="mt-4">
-                  <Skeleton className="h-8 w-24" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <Link to={`/product/${product.id}`}>
-                <div className="relative">
-                  <AspectRatio ratio={4 / 3}>
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="object-cover rounded-md"
-                      />
-                    ) : (
-                      <div className="bg-gray-100 flex items-center justify-center rounded-md">
-                        <span className="text-gray-500">Sem imagem</span>
-                      </div>
-                    )}
-                  </AspectRatio>
-                </div>
-              </Link>
-              <CardContent className="p-4">
-                <CardTitle className="text-lg font-semibold truncate">
-                  {product.name}
-                </CardTitle>
-                <CardDescription>
-                  R$ {product.retail_price.toFixed(2)}
-                </CardDescription>
-                <Button
-                  className="w-full mt-4"
-                  onClick={() => handleAddToCart(product)}
-                >
-                  Adicionar ao Carrinho
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       )}
     </div>
   );
