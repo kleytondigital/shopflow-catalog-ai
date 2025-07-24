@@ -1,9 +1,8 @@
-
 import React from "react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { useCart } from "@/hooks/useCart";
+import { useShoppingCart } from "@/hooks/useShoppingCart";
 import { PriceModelType } from "@/types/price-models";
 
 export interface CatalogSettingsData {
@@ -53,18 +52,18 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
 }) => {
   const settings = {
     colors: {
-      primary: "#0057FF",
-      secondary: "#FF6F00",
+      primary: "#374151",
+      secondary: "#6B7280",
       surface: "#FFFFFF",
-      text: "#1E293B",
+      text: "#111827",
       ...editorSettings.colors,
     },
     global: {
-      borderRadius: 4,
+      borderRadius: 6,
       fontSize: {
         small: "12px",
         medium: "14px",
-        large: "18px",
+        large: "16px",
       },
       ...editorSettings.global,
     },
@@ -76,7 +75,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
     },
   };
 
-  const { addItem } = useCart();
+  const { addItem } = useShoppingCart();
   const { priceModel, loading } = useStorePriceModel(product.store_id);
   const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
 
@@ -86,41 +85,31 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
     
     let qty = 1;
     let price = product.retail_price;
-    let isWholesale = false;
 
     if (modelKey === "wholesale_only") {
       qty = product.min_wholesale_qty || 1;
       price = product.wholesale_price || product.retail_price;
-      isWholesale = true;
     }
 
     addItem(
       {
-        id: `${product.id}-default`,
-        product: { 
-          ...product, 
-          price_model: modelKey,
-          allow_negative_stock: product.allow_negative_stock ?? false
-        },
-        quantity: qty,
-        price,
-        originalPrice: price,
-        catalogType,
-        isWholesalePrice: isWholesale,
+        ...product,
+        price_model: modelKey,
+        allow_negative_stock: product.allow_negative_stock ?? false
       },
-      modelKey
+      qty
     );
   };
 
   return (
     <div
-      className="bg-gray-900 border border-gray-700 hover:border-gray-600 transition-all duration-200 overflow-hidden"
+      className="bg-white shadow-md rounded-md overflow-hidden transition-shadow hover:shadow-lg"
       style={{
         borderRadius: `${settings.global.borderRadius}px`,
       }}
     >
       {/* Product Image */}
-      <div className="relative aspect-square bg-gray-800">
+      <div className="relative aspect-square bg-gray-100">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -128,34 +117,19 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500">
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
             <span>Sem imagem</span>
-          </div>
-        )}
-
-        {/* Industrial overlay */}
-        {settings.productCard.showQuickView && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-            <button
-              onClick={() => onQuickView(product)}
-              className="bg-orange-500 text-white px-3 py-1 text-xs font-bold uppercase tracking-wide hover:bg-orange-600 transition-colors"
-              style={{
-                borderRadius: `${settings.global.borderRadius}px`,
-                fontSize: settings.global.fontSize.small,
-              }}
-            >
-              VISUALIZAR
-            </button>
           </div>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="p-3 bg-gray-900">
+      <div className="p-4">
         {/* Product Name */}
         <h3
-          className="font-bold text-white mb-2 line-clamp-2 uppercase tracking-wide"
+          className="font-semibold text-gray-800 mb-2 line-clamp-2"
           style={{
+            color: settings.colors.text,
             fontSize: settings.global.fontSize.medium,
           }}
         >
@@ -166,12 +140,13 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         {showPrices && (
           <div className="mb-3">
             {loading ? (
-              <div className="text-gray-400">Carregando preço...</div>
+              <div className="text-gray-500">Carregando preço...</div>
             ) : modelKey === "wholesale_only" ? (
               <>
                 <span
-                  className="text-orange-400 font-bold"
+                  className="font-bold"
                   style={{
+                    color: settings.colors.primary,
                     fontSize: settings.global.fontSize.large,
                   }}
                 >
@@ -182,14 +157,15 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
                     className="text-xs text-gray-500 mt-1"
                     style={{ fontSize: settings.global.fontSize.small }}
                   >
-                    MÍN. {product.min_wholesale_qty} UNIDADES
+                    Mín. {product.min_wholesale_qty} unidades
                   </div>
                 )}
               </>
             ) : (
               <span
-                className="text-orange-400 font-bold"
+                className="font-bold"
                 style={{
+                  color: settings.colors.primary,
                   fontSize: settings.global.fontSize.large,
                 }}
               >
@@ -202,12 +178,12 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         {/* Stock */}
         {showStock && (
           <div
-            className="text-xs text-gray-400 mb-3 uppercase tracking-wide"
+            className="text-xs text-gray-500 mb-3"
             style={{ fontSize: settings.global.fontSize.small }}
           >
             {product.stock > 0
-              ? `${product.stock} EM ESTOQUE`
-              : "FORA DE ESTOQUE"}
+              ? `${product.stock} disponíveis`
+              : "Indisponível"}
           </div>
         )}
 
@@ -217,35 +193,41 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
             <button
               onClick={handleAddToCart}
               disabled={product.stock <= 0 || loading}
-              className="flex-1 px-3 py-2 text-white text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed border"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor:
-                  product.stock > 0 && !loading
-                    ? settings.colors.secondary
-                    : "#4B5563",
-                borderColor: settings.colors.secondary,
-                borderRadius: `${settings.global.borderRadius}px`,
                 fontSize: settings.global.fontSize.small,
               }}
             >
               {loading
-                ? "CARREGANDO..."
+                ? "Carregando..."
                 : product.stock > 0
-                ? "ADICIONAR"
-                : "SEM ESTOQUE"}
+                ? "Adicionar"
+                : "Indisponível"}
+            </button>
+          )}
+
+          {settings.productCard.showQuickView && (
+            <button
+              onClick={() => onQuickView(product)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold py-2 px-4 rounded-md transition-colors"
+              style={{
+                fontSize: settings.global.fontSize.small,
+              }}
+            >
+              Detalhes
             </button>
           )}
 
           <button
             onClick={() => onAddToWishlist(product)}
-            className="p-2 border border-gray-600 hover:border-orange-500 transition-colors"
+            className="text-gray-500 hover:text-gray-600 transition-colors"
             style={{
-              borderRadius: `${settings.global.borderRadius}px`,
+              fontSize: settings.global.fontSize.small,
             }}
           >
             <span
-              className={`text-sm ${
-                isInWishlist ? "text-orange-500" : "text-gray-400"
+              className={`${
+                isInWishlist ? "text-red-500" : "text-gray-400"
               }`}
             >
               ♥

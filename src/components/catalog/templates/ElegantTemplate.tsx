@@ -2,7 +2,7 @@ import React from "react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { useCart } from "@/hooks/useCart";
+import { useShoppingCart } from "@/hooks/useShoppingCart";
 import { PriceModelType } from "@/types/price-models";
 
 export interface CatalogSettingsData {
@@ -37,6 +37,7 @@ interface ElegantTemplateProps {
   showPrices: boolean;
   showStock: boolean;
   editorSettings?: CatalogSettingsData;
+  index?: number;
 }
 
 const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
@@ -49,73 +50,64 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   showPrices,
   showStock,
   editorSettings = {},
+  index = 0,
 }) => {
   const settings = {
     colors: {
-      primary: "#0057FF",
-      secondary: "#FF6F00",
-      surface: "#FFFFFF",
-      text: "#1E293B",
+      primary: "#000000",
+      secondary: "#FFFFFF",
+      surface: "#F9FAFB",
+      text: "#111827",
       ...editorSettings.colors,
     },
     global: {
-      borderRadius: 8,
+      borderRadius: 0,
       fontSize: {
-        small: "14px",
-        medium: "16px",
-        large: "20px",
+        small: "12px",
+        medium: "14px",
+        large: "16px",
       },
       ...editorSettings.global,
     },
     productCard: {
       showQuickView: true,
       showAddToCart: true,
-      productCardStyle: "default",
+      productCardStyle: "elegant",
       ...editorSettings.productCard,
     },
   };
 
-  const { addItem } = useCart();
+  const { addItem } = useShoppingCart();
   const { priceModel, loading } = useStorePriceModel(product.store_id);
   const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (loading) return;
+    
     let qty = 1;
     let price = product.retail_price;
-    let isWholesale = false;
 
     if (modelKey === "wholesale_only") {
       qty = product.min_wholesale_qty || 1;
       price = product.wholesale_price || product.retail_price;
-      isWholesale = true;
     }
 
     addItem(
       {
-        id: `${product.id}-default`,
-        product: { 
-          ...product, 
-          price_model: modelKey,
-          allow_negative_stock: product.allow_negative_stock || false
-        },
-        quantity: qty,
-        price,
-        originalPrice: price,
-        catalogType,
-        isWholesalePrice: isWholesale,
+        ...product,
+        price_model: modelKey,
+        allow_negative_stock: product.allow_negative_stock ?? false
       },
-      modelKey
+      qty
     );
   };
 
   return (
     <div
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border"
+      className="bg-white hover:bg-gray-50 transition-colors duration-200 overflow-hidden border-b border-gray-200"
       style={{
         borderRadius: `${settings.global.borderRadius}px`,
-        borderColor: settings.colors.surface,
       }}
     >
       {/* Product Image */}
@@ -132,18 +124,17 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
           </div>
         )}
 
-        {/* Quick actions overlay */}
+        {/* Elegant overlay */}
         {settings.productCard.showQuickView && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
+          <div className="absolute inset-0 bg-white bg-opacity-0 hover:bg-opacity-80 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
             <button
               onClick={() => onQuickView(product)}
-              className="bg-white text-gray-900 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-gray-50 transition-colors"
+              className="text-black text-xs uppercase tracking-wider underline hover:no-underline transition-all"
               style={{
-                borderRadius: `${settings.global.borderRadius * 2}px`,
                 fontSize: settings.global.fontSize.small,
               }}
             >
-              Visualizar
+              Ver detalhes
             </button>
           </div>
         )}
@@ -153,7 +144,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
       <div className="p-4">
         {/* Product Name */}
         <h3
-          className="font-medium text-gray-900 mb-2 line-clamp-2"
+          className="font-light text-gray-900 mb-2 line-clamp-2"
           style={{
             color: settings.colors.text,
             fontSize: settings.global.fontSize.medium,
@@ -170,9 +161,9 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
             ) : modelKey === "wholesale_only" ? (
               <>
                 <span
-                  className="text-lg font-bold"
+                  className="font-light"
                   style={{
-                    color: settings.colors.primary,
+                    color: settings.colors.text,
                     fontSize: settings.global.fontSize.large,
                   }}
                 >
@@ -189,9 +180,9 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
               </>
             ) : (
               <span
-                className="text-lg font-bold"
+                className="font-light"
                 style={{
-                  color: settings.colors.primary,
+                  color: settings.colors.text,
                   fontSize: settings.global.fontSize.large,
                 }}
               >
@@ -208,24 +199,23 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
             style={{ fontSize: settings.global.fontSize.small }}
           >
             {product.stock > 0
-              ? `${product.stock} em estoque`
-              : "Fora de estoque"}
+              ? `${product.stock} disponíveis`
+              : "Indisponível"}
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-center">
           {settings.productCard.showAddToCart && (
             <button
               onClick={handleAddToCart}
               disabled={product.stock <= 0 || loading}
-              className="flex-1 px-4 py-2 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs uppercase tracking-wider underline hover:no-underline transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor:
+                color:
                   product.stock > 0 && !loading
-                    ? settings.colors.primary
+                    ? settings.colors.text
                     : "#9CA3AF",
-                borderRadius: `${settings.global.borderRadius}px`,
                 fontSize: settings.global.fontSize.small,
               }}
             >
@@ -233,21 +223,20 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
                 ? "Carregando..."
                 : product.stock > 0
                 ? "Adicionar"
-                : "Sem estoque"}
+                : "Indisponível"}
             </button>
           )}
 
           <button
             onClick={() => onAddToWishlist(product)}
-            className="p-2 border rounded-md hover:bg-gray-50 transition-colors"
+            className="text-xs uppercase tracking-wider underline hover:no-underline transition-all"
             style={{
-              borderColor: settings.colors.surface,
-              borderRadius: `${settings.global.borderRadius}px`,
+              fontSize: settings.global.fontSize.small,
             }}
           >
             <span
-              className={`text-lg ${
-                isInWishlist ? "text-red-500" : "text-gray-400"
+              className={`${
+                isInWishlist ? "text-black" : "text-gray-400"
               }`}
             >
               ♥

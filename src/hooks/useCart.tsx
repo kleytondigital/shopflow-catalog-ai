@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Product } from '@/types/product';
@@ -7,7 +8,7 @@ import { useProductPriceTiers } from '@/hooks/useProductPriceTiers';
 import { useStorePriceModel } from '@/hooks/useStorePriceModel';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 
-interface CartItem {
+export interface CartItem {
   id: string;
   product: Product;
   quantity: number;
@@ -91,43 +92,29 @@ export const useCart = () => {
     return items.map(item => {
       const product = item.product;
       
-      const { settings } = useCatalogSettings();
-      const { priceModel } = useStorePriceModel(product.store_id);
+      // Usar hooks de pricing se disponíveis
+      let enrichedItem = { ...item };
       
-      const catalogMode = settings?.catalog_mode || 'separated';
-      const modelKey = product.price_model || priceModel?.price_model || "retail_only";
+      try {
+        const { settings } = useCatalogSettings();
+        const { priceModel } = useStorePriceModel(product.store_id);
+        
+        const catalogMode = settings?.catalog_mode || 'separated';
+        const modelKey = product.price_model || priceModel?.price_model || "retail_only";
 
-      const { tiers: priceTiers } = useProductPriceTiers(product.id, {
-        wholesale_price: product.wholesale_price,
-        min_wholesale_qty: product.min_wholesale_qty,
-        retail_price: product.retail_price,
-      });
+        enrichedItem = {
+          ...item,
+          catalogMode,
+          priceModel: modelKey,
+          finalPrice: modelKey === "wholesale_only" ? item.price : item.price,
+          totalSavings: 0,
+          savingsPercentage: 0
+        };
+      } catch (error) {
+        console.warn('Error enriching item with pricing:', error);
+      }
 
-      const calculation = usePriceCalculation(product.store_id, {
-        product_id: product.id,
-        retail_price: product.retail_price,
-        wholesale_price: product.wholesale_price,
-        min_wholesale_qty: product.min_wholesale_qty,
-        quantity: item.quantity,
-        price_tiers: product.enable_gradual_wholesale ? priceTiers : [],
-        enable_gradual_wholesale: product.enable_gradual_wholesale,
-      });
-
-      return {
-        ...item,
-        currentTier: calculation.currentTier,
-        nextTier: calculation.nextTierHint ? {
-          tier_name: `Próximo Nível`,
-          price: calculation.price - (calculation.nextTierHint.potentialSavings || 0)
-        } : null,
-        nextTierQuantityNeeded: calculation.nextTierHint?.quantityNeeded || 0,
-        nextTierPotentialSavings: calculation.nextTierHint?.potentialSavings || 0,
-        catalogMode,
-        priceModel: modelKey,
-        finalPrice: modelKey === "wholesale_only" ? item.price : calculation.price,
-        totalSavings: calculation.savings,
-        savingsPercentage: calculation.percentage
-      };
+      return enrichedItem;
     });
   }, []);
 
@@ -148,11 +135,11 @@ export const useCart = () => {
 
   const cartAnalysis = useMemo(() => {
     const itemsWithNextTier = enrichedItems.filter(item => 
-      item.nextTierQuantityNeeded > 0
+      item.nextTierQuantityNeeded && item.nextTierQuantityNeeded > 0
     );
     
     const potentialSavings = itemsWithNextTier.reduce((sum, item) => 
-      sum + (item.nextTierPotentialSavings * item.nextTierQuantityNeeded), 0
+      sum + ((item.nextTierPotentialSavings || 0) * (item.nextTierQuantityNeeded || 0)), 0
     );
 
     const canGetWholesalePrice = enrichedItems.some(item => 
@@ -172,10 +159,8 @@ export const useCart = () => {
 
   return {
     items: enrichedItems,
-    
     cartAnalysis,
     totalSavings,
-    
     totalItems,
     totalAmount,
     addItem,
@@ -186,7 +171,6 @@ export const useCart = () => {
     toggleCart,
     openCart,
     closeCart,
-    
     potentialSavings: cartAnalysis.totalPotentialSavings,
     canGetWholesalePrice: cartAnalysis.canGetWholesalePrice,
     itemsToWholesale: cartAnalysis.itemsWithUpgradeOpportunity,
