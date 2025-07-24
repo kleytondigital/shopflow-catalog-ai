@@ -2,17 +2,18 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useStorePriceModel } from '@/hooks/useStorePriceModel';
 import { useProductVariations } from '@/hooks/useProductVariations';
 import { ProductVariation } from '@/types/product';
 
 export interface WizardFormData {
   name: string;
-  description?: string; // Tornar opcional para alinhar com ProductFormData
+  description?: string;
   category: string;
   retail_price: number;
-  wholesale_price?: number; // Tornar opcional para alinhar com ProductFormData
+  wholesale_price?: number;
   stock: number;
-  min_wholesale_qty?: number; // Tornar opcional para alinhar com ProductFormData
+  min_wholesale_qty?: number;
   is_featured: boolean;
   is_active: boolean;
   allow_negative_stock: boolean;
@@ -22,7 +23,6 @@ export interface WizardFormData {
   price_model: string;
   simple_wholesale_enabled: boolean;
   gradual_wholesale_enabled: boolean;
-  // Propriedades SEO
   meta_title?: string;
   meta_description?: string;
   keywords?: string;
@@ -39,6 +39,7 @@ export const useImprovedProductFormWizard = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { saveVariations } = useProductVariations();
+  const { priceModel } = useStorePriceModel(profile?.store_id);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -97,16 +98,48 @@ export const useImprovedProductFormWizard = () => {
   }, [steps.length]);
 
   const canProceed = useCallback(() => {
-    console.log('🔍 WIZARD - Verificando canProceed para step:', currentStep, formData);
+    console.log('🔍 WIZARD - Verificando canProceed para step:', currentStep, {
+      formData,
+      priceModel: priceModel?.price_model
+    });
     
     switch (currentStep) {
       case 0: // Informações Básicas
         const hasName = formData.name.trim() !== '';
         const hasCategory = formData.category.trim() !== '';
-        console.log('🔍 WIZARD - Step 0 validation:', { hasName, hasCategory, name: formData.name, category: formData.category });
+        console.log('🔍 WIZARD - Step 0 validation:', { hasName, hasCategory });
         return hasName && hasCategory;
+      
       case 1: // Preços e Estoque
-        return formData.retail_price > 0;
+        if (!priceModel) {
+          console.log('🔍 WIZARD - Step 1: Aguardando modelo de preços...');
+          return false;
+        }
+
+        const modelType = priceModel.price_model;
+        console.log('🔍 WIZARD - Step 1 validation:', {
+          modelType,
+          retailPrice: formData.retail_price,
+          wholesalePrice: formData.wholesale_price
+        });
+
+        switch (modelType) {
+          case 'retail_only':
+            return formData.retail_price > 0;
+          
+          case 'wholesale_only':
+            return formData.wholesale_price && formData.wholesale_price > 0;
+          
+          case 'simple_wholesale':
+          case 'gradual_wholesale':
+            // Precisa de pelo menos um dos dois preços
+            return (formData.retail_price > 0) || (formData.wholesale_price && formData.wholesale_price > 0);
+          
+          default:
+            // Fallback para garantir compatibilidade
+            return formData.retail_price > 0;
+        }
+      
       case 2: // Imagens
         return true; // Imagens são opcionais
       case 3: // Variações
@@ -116,7 +149,7 @@ export const useImprovedProductFormWizard = () => {
       default:
         return true;
     }
-  }, [currentStep, formData]);
+  }, [currentStep, formData, priceModel]);
 
   const loadProductForEditing = useCallback(async (product: any) => {
     console.log('📂 WIZARD - Carregando produto para edição:', product);
@@ -162,6 +195,22 @@ export const useImprovedProductFormWizard = () => {
 
       console.log('📂 WIZARD - Variações carregadas:', variations.length);
 
+      // Buscar o modelo de preços da loja
+      let currentPriceModel = 'wholesale_only'; // fallback
+      if (product.store_id) {
+        const { data: priceModelData } = await supabase
+          .from('store_price_models')
+          .select('price_model')
+          .eq('store_id', product.store_id)
+          .single();
+        
+        if (priceModelData?.price_model) {
+          currentPriceModel = priceModelData.price_model;
+        }
+      }
+
+      console.log('📂 WIZARD - Modelo de preços da loja:', currentPriceModel);
+
       // Atualizar formData com dados do produto
       setFormData({
         name: product.name || '',
@@ -177,8 +226,8 @@ export const useImprovedProductFormWizard = () => {
         stock_alert_threshold: product.stock_alert_threshold || 5,
         store_id: product.store_id || profile?.store_id || '',
         variations: variations,
-        price_model: 'wholesale_only', // Sempre wholesale_only por padrão
-        simple_wholesale_enabled: true,
+        price_model: currentPriceModel,
+        simple_wholesale_enabled: currentPriceModel === 'simple_wholesale',
         gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',

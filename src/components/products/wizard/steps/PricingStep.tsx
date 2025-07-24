@@ -22,7 +22,20 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
 
   const isWholesaleOnly = priceModel?.price_model === 'wholesale_only';
   const isRetailOnly = priceModel?.price_model === 'retail_only';
-  const supportsWholesale = priceModel?.price_model !== 'retail_only';
+  const isSimpleWholesale = priceModel?.price_model === 'simple_wholesale';
+  const isGradualWholesale = priceModel?.price_model === 'gradual_wholesale';
+  
+  // Determinar quais campos são obrigatórios
+  const isRetailRequired = isRetailOnly || isSimpleWholesale || isGradualWholesale;
+  const isWholesaleRequired = isWholesaleOnly || isSimpleWholesale || isGradualWholesale;
+
+  console.log('🔍 PRICING STEP - Modelo de preço:', {
+    priceModel: priceModel?.price_model,
+    isRetailRequired,
+    isWholesaleRequired,
+    retailPrice: formData.retail_price,
+    wholesalePrice: formData.wholesale_price
+  });
 
   return (
     <div className="space-y-6">
@@ -49,6 +62,26 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
         </Alert>
       )}
 
+      {isSimpleWholesale && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Varejo + Atacado:</strong> Sua loja vende no varejo e atacado.
+            Ambos os preços são obrigatórios.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isGradualWholesale && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Atacado Gradativo:</strong> Sua loja usa múltiplos níveis de preço.
+            Configure pelo menos o preço de varejo.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Preço de Varejo */}
         {!isWholesaleOnly && (
@@ -56,12 +89,14 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 Preço de Varejo
-                {isRetailOnly && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
+                {isRetailRequired && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="retailPrice">Preço de Varejo (R$) {isRetailOnly && '*'}</Label>
+                <Label htmlFor="retailPrice">
+                  Preço de Varejo (R$) {isRetailRequired && '*'}
+                </Label>
                 <Input
                   id="retailPrice"
                   type="number"
@@ -70,9 +105,9 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
                   value={formData.retail_price || ''}
                   onChange={(e) => updateFormData({ retail_price: parseFloat(e.target.value) || 0 })}
                   placeholder="0,00"
-                  className={`${isRetailOnly && (!formData.retail_price || formData.retail_price <= 0) ? 'border-red-300' : ''}`}
+                  className={`${isRetailRequired && (!formData.retail_price || formData.retail_price <= 0) ? 'border-red-300' : ''}`}
                 />
-                {isRetailOnly && (!formData.retail_price || formData.retail_price <= 0) && (
+                {isRetailRequired && (!formData.retail_price || formData.retail_price <= 0) && (
                   <p className="text-xs text-red-500">Preço de varejo é obrigatório</p>
                 )}
               </div>
@@ -81,17 +116,19 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
         )}
 
         {/* Preço de Atacado */}
-        {supportsWholesale && (
+        {!isRetailOnly && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 Preço de Atacado
-                {isWholesaleOnly && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
+                {isWholesaleRequired && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="wholesalePrice">Preço de Atacado (R$) {isWholesaleOnly && '*'}</Label>
+                <Label htmlFor="wholesalePrice">
+                  Preço de Atacado (R$) {isWholesaleRequired && '*'}
+                </Label>
                 <Input
                   id="wholesalePrice"
                   type="number"
@@ -100,13 +137,13 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
                   value={formData.wholesale_price || ''}
                   onChange={(e) => updateFormData({ wholesale_price: parseFloat(e.target.value) || undefined })}
                   placeholder="0,00"
-                  className={`${isWholesaleOnly && (!formData.wholesale_price || formData.wholesale_price <= 0) ? 'border-red-300' : ''}`}
+                  className={`${isWholesaleRequired && (!formData.wholesale_price || formData.wholesale_price <= 0) ? 'border-red-300' : ''}`}
                 />
-                {isWholesaleOnly && (!formData.wholesale_price || formData.wholesale_price <= 0) && (
+                {isWholesaleRequired && (!formData.wholesale_price || formData.wholesale_price <= 0) && (
                   <p className="text-xs text-red-500">Preço de atacado é obrigatório</p>
                 )}
               </div>
-              {!isRetailOnly && (
+              {(isSimpleWholesale || isGradualWholesale) && (
                 <div className="space-y-2">
                   <Label htmlFor="minWholesaleQty">Quantidade Mínima Atacado</Label>
                   <Input
