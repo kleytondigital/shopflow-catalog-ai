@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/useCart";
-import { useCartPriceCalculation } from "@/hooks/useCartPriceCalculation";
 import CartItemThumbnail from "./checkout/CartItemThumbnail";
 import CartItemPriceDisplay from "./CartItemPriceDisplay";
-import TierProgressIndicator from "./TierProgressIndicator";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 const formatCurrency = (value: number | undefined | null): string => {
@@ -61,7 +59,7 @@ const CartItem: React.FC<{
         };
       case "gradual_wholesale":
         return {
-          text: item.currentTier?.tier_name || "Varejo",
+          text: item.currentTier?.tier_name || "Nível 1",
           className: "bg-purple-100 text-purple-800 border-purple-300"
         };
       default: // retail_only
@@ -222,10 +220,12 @@ const CartItem: React.FC<{
           </Button>
         </div>
         
-        {/* Badge no rodapé */}
-        <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${badgeInfo.className}`}>
-          {badgeInfo.text}
-        </span>
+        {/* Badge no rodapé - só mostrar se não for retail_only */}
+        {modelKey !== "retail_only" && (
+          <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${badgeInfo.className}`}>
+            {badgeInfo.text}
+          </span>
+        )}
       </div>
       
       {/* Incentivo individual para próximo nível */}
@@ -425,7 +425,6 @@ const FloatingCart: React.FC<{ onCheckout?: () => void; storeId?: string }> = ({
                   </div>
 
                   <div className="border-t bg-gray-50 p-6 space-y-4">
-                    {/* Removido: <TierProgressIndicator /> e economia potencial geral */}
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold">Total:</span>
                       <span className="text-2xl font-bold text-blue-600">

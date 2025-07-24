@@ -2,8 +2,6 @@
 import React from "react";
 import { Badge } from "../ui/badge";
 import { TrendingDown, ArrowUp, Info } from "lucide-react";
-import { usePriceCalculation } from "@/hooks/usePriceCalculation";
-import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface CartItemPriceDisplayProps {
@@ -51,47 +49,34 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       case "simple_wholesale":
         const minQty = product.min_wholesale_qty || 1;
         const isWholesale = quantity >= minQty;
-        const currentPrice = isWholesale ? product.wholesale_price : product.retail_price;
+        const currentPrice = isWholesale ? (product.wholesale_price || product.retail_price) : product.retail_price;
         
         return {
           currentPrice,
           totalPrice: currentPrice * quantity,
           tierLabel: isWholesale ? "Atacado" : "Varejo",
-          showIncentive: !isWholesale && product.wholesale_price,
-          showOriginalPrice: isWholesale && product.wholesale_price < product.retail_price,
-          incentiveData: !isWholesale ? {
+          showIncentive: !isWholesale && product.wholesale_price && product.wholesale_price < product.retail_price,
+          showOriginalPrice: isWholesale && product.wholesale_price && product.wholesale_price < product.retail_price,
+          incentiveData: !isWholesale && product.wholesale_price ? {
             needed: minQty - quantity,
             savings: (product.retail_price - product.wholesale_price) * minQty
           } : null
         };
 
       case "gradual_wholesale":
-        // Para gradativo, usar o hook de cálculo
-        const { tiers } = useProductPriceTiers(product.id, {
-          wholesale_price: product.wholesale_price,
-          min_wholesale_qty: product.min_wholesale_qty,
-          retail_price: product.retail_price,
-        });
-
-        const calculation = usePriceCalculation(product.store_id, {
-          product_id: product.id,
-          retail_price: product.retail_price,
-          wholesale_price: product.wholesale_price,
-          min_wholesale_qty: product.min_wholesale_qty,
-          quantity,
-          price_tiers: tiers,
-          enable_gradual_wholesale: true,
-        });
-
+        // Para gradativo, usar dados do item se disponíveis
+        const currentTierPrice = item.price || product.retail_price;
+        const hasNextTier = item.nextTierQuantityNeeded && item.nextTierQuantityNeeded > 0;
+        
         return {
-          currentPrice: calculation.price,
-          totalPrice: calculation.total,
-          tierLabel: calculation.currentTier.tier_name,
-          showIncentive: !!calculation.nextTierHint,
-          showOriginalPrice: calculation.savings > 0,
-          incentiveData: calculation.nextTierHint ? {
-            needed: calculation.nextTierHint.quantityNeeded,
-            savings: calculation.nextTierHint.potentialSavings * (quantity + calculation.nextTierHint.quantityNeeded)
+          currentPrice: currentTierPrice,
+          totalPrice: currentTierPrice * quantity,
+          tierLabel: item.currentTier?.tier_name || "Nível 1",
+          showIncentive: hasNextTier,
+          showOriginalPrice: currentTierPrice < product.retail_price,
+          incentiveData: hasNextTier ? {
+            needed: item.nextTierQuantityNeeded,
+            savings: (item.nextTierPotentialSavings || 0) * (quantity + item.nextTierQuantityNeeded)
           } : null
         };
 
@@ -153,7 +138,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
           <div className="flex-1">
             <div className="font-medium mb-1">
               💡 Adicione mais {displayInfo.incentiveData.needed} unidade{displayInfo.incentiveData.needed > 1 ? 's' : ''} 
-              {modelType === 'simple_wholesale' ? ' para ativar preço de atacado!' : ' para o próximo nível!'}
+              {modelType === 'simple_wholesale' ? ' para preço de atacado!' : ' para próximo nível!'}
             </div>
             {displayInfo.incentiveData.savings > 0 && (
               <div className="text-green-600 font-bold">
@@ -164,16 +149,18 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
         </div>
       )}
 
-      {/* Nível atual */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1 text-gray-500">
-          <Info className="h-3 w-3" />
-          <span>Nível:</span>
+      {/* Nível atual - só mostrar se não for retail_only */}
+      {modelType !== "retail_only" && (
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1 text-gray-500">
+            <Info className="h-3 w-3" />
+            <span>Nível:</span>
+          </div>
+          <Badge variant="outline" className="text-xs font-medium">
+            {displayInfo.tierLabel}
+          </Badge>
         </div>
-        <Badge variant="outline" className="text-xs font-medium">
-          {displayInfo.tierLabel}
-        </Badge>
-      </div>
+      )}
     </div>
   );
 };
