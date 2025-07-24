@@ -34,6 +34,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
           tierLabel: "Varejo",
           showIncentive: false,
           showOriginalPrice: false,
+          showTierBadge: false,
         };
 
       case "wholesale_only":
@@ -43,13 +44,14 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
           totalPrice: wholesalePrice * quantity,
           tierLabel: "Atacado",
           showIncentive: false,
-          showOriginalPrice: false,
+          showOriginalPrice: wholesalePrice < product.retail_price,
+          showTierBadge: true,
         };
 
       case "simple_wholesale":
         const minQty = product.min_wholesale_qty || 1;
-        const isWholesale = quantity >= minQty;
-        const currentPrice = isWholesale ? (product.wholesale_price || product.retail_price) : product.retail_price;
+        const isWholesale = quantity >= minQty && product.wholesale_price;
+        const currentPrice = isWholesale ? product.wholesale_price : product.retail_price;
         
         return {
           currentPrice,
@@ -57,6 +59,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
           tierLabel: isWholesale ? "Atacado" : "Varejo",
           showIncentive: !isWholesale && product.wholesale_price && product.wholesale_price < product.retail_price,
           showOriginalPrice: isWholesale && product.wholesale_price && product.wholesale_price < product.retail_price,
+          showTierBadge: true,
           incentiveData: !isWholesale && product.wholesale_price ? {
             needed: minQty - quantity,
             savings: (product.retail_price - product.wholesale_price) * minQty
@@ -64,16 +67,18 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
         };
 
       case "gradual_wholesale":
-        // Para gradativo, usar dados do item se disponíveis
+        // Para gradativo, usar dados do item ou preço padrão
         const currentTierPrice = item.price || product.retail_price;
         const hasNextTier = item.nextTierQuantityNeeded && item.nextTierQuantityNeeded > 0;
+        const tierName = item.currentTier?.tier_name || "Varejo";
         
         return {
           currentPrice: currentTierPrice,
           totalPrice: currentTierPrice * quantity,
-          tierLabel: item.currentTier?.tier_name || "Nível 1",
+          tierLabel: tierName,
           showIncentive: hasNextTier,
           showOriginalPrice: currentTierPrice < product.retail_price,
+          showTierBadge: true,
           incentiveData: hasNextTier ? {
             needed: item.nextTierQuantityNeeded,
             savings: (item.nextTierPotentialSavings || 0) * (quantity + item.nextTierQuantityNeeded)
@@ -87,6 +92,7 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
           tierLabel: "Varejo",
           showIncentive: false,
           showOriginalPrice: false,
+          showTierBadge: false,
         };
     }
   };
@@ -149,14 +155,21 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
         </div>
       )}
 
-      {/* Nível atual - só mostrar se não for retail_only */}
-      {modelType !== "retail_only" && (
+      {/* Identificador do nível atual - só mostrar quando necessário */}
+      {displayInfo.showTierBadge && (
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 text-gray-500">
             <Info className="h-3 w-3" />
             <span>Nível:</span>
           </div>
-          <Badge variant="outline" className="text-xs font-medium">
+          <Badge 
+            variant={displayInfo.tierLabel === "Atacado" ? "default" : "outline"} 
+            className={`text-xs font-medium ${
+              displayInfo.tierLabel === "Atacado" 
+                ? "bg-green-600 hover:bg-green-700" 
+                : ""
+            }`}
+          >
             {displayInfo.tierLabel}
           </Badge>
         </div>

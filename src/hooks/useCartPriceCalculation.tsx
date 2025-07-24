@@ -51,27 +51,67 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
     let savings = 0;
     let nextTierHint: { quantityNeeded: number; potentialSavings: number; } | undefined;
 
-    // Verificar se qualifica para preço de atacado
-    if (
-      priceModel?.simple_wholesale_enabled &&
-      wholesalePrice && 
-      quantity >= minWholesaleQty
-    ) {
-      finalPrice = wholesalePrice;
-      currentTierName = priceModel.simple_wholesale_name || 'Atacado';
-      savings = (retailPrice - wholesalePrice) * quantity;
-    } else if (
-      priceModel?.simple_wholesale_enabled &&
-      wholesalePrice &&
-      quantity < minWholesaleQty
-    ) {
-      // Dica para próximo nível
-      const neededQty = minWholesaleQty - quantity;
-      const potentialSavings = retailPrice - wholesalePrice;
-      nextTierHint = {
-        quantityNeeded: neededQty,
-        potentialSavings
-      };
+    const modelType = priceModel?.price_model || 'retail_only';
+
+    switch (modelType) {
+      case 'retail_only':
+        // Apenas varejo
+        finalPrice = retailPrice;
+        currentTierName = 'Varejo';
+        break;
+
+      case 'wholesale_only':
+        // Apenas atacado
+        finalPrice = wholesalePrice || retailPrice;
+        currentTierName = 'Atacado';
+        if (wholesalePrice && wholesalePrice < retailPrice) {
+          savings = (retailPrice - wholesalePrice) * quantity;
+        }
+        break;
+
+      case 'simple_wholesale':
+        // Varejo + Atacado simples
+        if (wholesalePrice && quantity >= minWholesaleQty) {
+          finalPrice = wholesalePrice;
+          currentTierName = 'Atacado';
+          savings = (retailPrice - wholesalePrice) * quantity;
+        } else {
+          finalPrice = retailPrice;
+          currentTierName = 'Varejo';
+          
+          // Dica para próximo nível
+          if (wholesalePrice && quantity < minWholesaleQty) {
+            const neededQty = minWholesaleQty - quantity;
+            const potentialSavings = (retailPrice - wholesalePrice) * minWholesaleQty;
+            nextTierHint = {
+              quantityNeeded: neededQty,
+              potentialSavings
+            };
+          }
+        }
+        break;
+
+      case 'gradual_wholesale':
+        // Atacado gradativo - usar preço calculado pelo carrinho
+        finalPrice = item.price || retailPrice;
+        currentTierName = item.currentTier?.tier_name || 'Varejo';
+        
+        if (finalPrice < retailPrice) {
+          savings = (retailPrice - finalPrice) * quantity;
+        }
+
+        // Dica para próximo nível
+        if (item.nextTierQuantityNeeded && item.nextTierPotentialSavings) {
+          nextTierHint = {
+            quantityNeeded: item.nextTierQuantityNeeded,
+            potentialSavings: item.nextTierPotentialSavings * quantity
+          };
+        }
+        break;
+
+      default:
+        finalPrice = retailPrice;
+        currentTierName = 'Varejo';
     }
 
     const total = finalPrice * quantity;
