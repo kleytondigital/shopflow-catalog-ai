@@ -132,27 +132,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
 
-        {/* Variation Indicators */}
-        {variationInfo && (
-          <div className="absolute bottom-2 left-2 flex gap-1">
-            {variationInfo.colors > 0 && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Palette className="h-3 w-3" />
-                {variationInfo.colors} cores
-              </Badge>
-            )}
-            {variationInfo.grades > 0 && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Layers className="h-3 w-3" />
-                {variationInfo.grades} grades
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Variation Required Indicator */}
+        {/* Variation Required Indicator - Posicionado fora da imagem */}
         {hasVariations && (
-          <div className="absolute bottom-2 right-2">
+          <div className="absolute top-2 left-2">
             <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
               Variações
@@ -169,49 +151,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </p>
         </div>
 
-        {/* Variation Preview */}
+        {/* Badges de Variação - Posicionados no conteúdo do card */}
         {variationInfo && (
-          <div className="space-y-2">
-            {variationInfo.colorList.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">Cores:</span>
-                <div className="flex gap-1">
-                  {variationInfo.colorList.map((color, index) => (
-                    <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                      {color}
-                    </span>
-                  ))}
-                  {variationInfo.colors > 3 && (
-                    <span className="text-xs text-gray-500">
-                      +{variationInfo.colors - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
+          <div className="flex flex-wrap gap-1">
+            {variationInfo.colors > 0 && (
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Palette className="h-3 w-3" />
+                {variationInfo.colors} cores
+              </Badge>
             )}
-            
-            {variationInfo.sizeList.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">Tamanhos:</span>
-                <div className="flex gap-1">
-                  {variationInfo.sizeList.map((size, index) => (
-                    <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                      {size}
-                    </span>
-                  ))}
-                  {variationInfo.sizes > 3 && (
-                    <span className="text-xs text-gray-500">
-                      +{variationInfo.sizes - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
+            {variationInfo.sizes > 0 && (
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Layers className="h-3 w-3" />
+                {variationInfo.sizes} tam.
+              </Badge>
             )}
-
-            {variationInfo.total > 0 && (
-              <div className="text-xs text-blue-600">
-                {variationInfo.total} variação{variationInfo.total > 1 ? 'ões' : ''} disponível{variationInfo.total > 1 ? 'is' : ''}
-              </div>
+            {variationInfo.grades > 0 && (
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Layers className="h-3 w-3" />
+                {variationInfo.grades} grades
+              </Badge>
             )}
           </div>
         )}
@@ -248,10 +207,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         </div>
         
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           {onViewDetails && (
-            <Button variant="outline" size="sm" onClick={handleViewDetails} className="flex-1">
-              <Eye className="mr-2 h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleViewDetails} 
+              className="flex-1 text-xs px-2 py-1 h-8"
+            >
+              <Eye className="mr-1 h-3 w-3" />
               Ver
             </Button>
           )}
@@ -259,16 +223,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
             size="sm" 
             onClick={handleAction}
             disabled={product.stock === 0 && !product.allow_negative_stock}
-            className="flex-1"
+            className="flex-1 text-xs px-2 py-1 h-8"
           >
             {hasVariations ? (
               <>
-                <Package className="mr-2 h-4 w-4" />
-                Ver Opções
+                <Package className="mr-1 h-3 w-3" />
+                Opções
               </>
             ) : (
               <>
-                <ShoppingCart className="mr-2 h-4 w-4" />
+                <ShoppingCart className="mr-1 h-3 w-3" />
                 {modelKey === "wholesale_only" ? 'Atacado' : 'Comprar'}
               </>
             )}

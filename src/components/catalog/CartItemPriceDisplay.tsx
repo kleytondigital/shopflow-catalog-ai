@@ -28,7 +28,23 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
 
   const showSavings = savings > 0;
   const showIncentive = nextTierHint && nextTierHint.quantityNeeded > 0;
-  const showTierBadge = currentTier.tier_name !== 'Varejo' || (currentTier.tier_name === 'Varejo' && item.catalogType === 'wholesale');
+  
+  // Determinar se deve mostrar badge baseado no modelo de preço da loja
+  const showTierBadge = (() => {
+    // Se não temos store_id no produto, mostrar baseado no tier_name
+    if (!product.store_id) {
+      return currentTier.tier_name !== 'Varejo';
+    }
+    
+    // Verificar modelo da loja através do item
+    const isRetailOnly = item.catalogType === 'retail' && currentTier.tier_name === 'Varejo';
+    
+    // Não mostrar badge para retail_only quando está no varejo
+    if (isRetailOnly) return false;
+    
+    // Para outros casos, mostrar se não for Varejo
+    return currentTier.tier_name !== 'Varejo';
+  })();
 
   return (
     <div className={`space-y-2 ${className}`}>

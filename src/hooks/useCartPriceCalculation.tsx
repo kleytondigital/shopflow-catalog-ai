@@ -92,15 +92,17 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
         break;
 
       case 'gradual_wholesale':
-        // Para gradativo, usar preço do item ou calcular baseado na quantidade
-        finalPrice = item.price || retailPrice;
+        // Para gradativo, usar preço exato do item calculado
+        finalPrice = item.price;
         
-        // Determinar nível baseado na quantidade e preço
-        if (wholesalePrice && quantity >= minWholesaleQty && finalPrice <= wholesalePrice) {
-          currentTierName = 'Atacado';
-          if (finalPrice < retailPrice) {
-            savings = (retailPrice - finalPrice) * quantity;
+        // Determinar nível baseado no preço final vs preço de varejo
+        if (finalPrice < retailPrice) {
+          if (wholesalePrice && finalPrice <= wholesalePrice) {
+            currentTierName = priceModel?.simple_wholesale_name || 'Atacado';
+          } else {
+            currentTierName = 'Atacarejo';
           }
+          savings = (retailPrice - finalPrice) * quantity;
         } else {
           currentTierName = 'Varejo';
         }
