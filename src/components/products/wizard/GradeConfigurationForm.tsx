@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ProductVariation } from '@/types/product';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,14 +7,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Plus, Minus, Palette } from 'lucide-react';
+import { 
+  Package, 
+  Plus, 
+  Minus, 
+  Palette, 
+  RotateCcw,
+  Sparkles,
+  TrendingUp
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface GradeConfigurationFormProps {
   variations: ProductVariation[];
   onVariationsGenerated: (variations: ProductVariation[]) => void;
   productId?: string;
   storeId?: string;
+}
+
+interface SizePairConfig {
+  size: string;
+  pairs: number;
 }
 
 const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
@@ -26,8 +40,8 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
   const { toast } = useToast();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [customColor, setCustomColor] = useState('');
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [pairsPerSize, setPairsPerSize] = useState<number>(1);
+  const [sizePairConfigs, setSizePairConfigs] = useState<SizePairConfig[]>([]);
+  const [gradeName, setGradeName] = useState('Grade Personalizada');
 
   const commonColors = [
     'Preto', 'Branco', 'Azul', 'Vermelho', 'Verde',
@@ -39,11 +53,31 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
   ];
 
   const gradeTemplates = [
-    { name: 'Grade Baixa', sizes: ['35', '36', '37', '38', '39'] },
-    { name: 'Grade Média', sizes: ['34', '35', '36', '37', '38', '39', '40'] },
-    { name: 'Grade Alta', sizes: ['36', '37', '38', '39', '40', '41', '42'] },
-    { name: 'Grade Masculina', sizes: ['38', '39', '40', '41', '42', '43', '44'] },
-    { name: 'Grade Infantil', sizes: ['20', '21', '22', '23', '24', '25', '26'] }
+    { 
+      name: 'Grade Baixa', 
+      sizes: ['35', '36', '37', '38', '39'],
+      distribution: [1, 2, 2, 2, 1] // Curva de distribuição padrão
+    },
+    { 
+      name: 'Grade Média', 
+      sizes: ['34', '35', '36', '37', '38', '39', '40'],
+      distribution: [1, 2, 2, 3, 2, 2, 1]
+    },
+    { 
+      name: 'Grade Alta', 
+      sizes: ['36', '37', '38', '39', '40', '41', '42'],
+      distribution: [1, 2, 2, 3, 2, 2, 1]
+    },
+    { 
+      name: 'Grade Masculina', 
+      sizes: ['38', '39', '40', '41', '42', '43', '44'],
+      distribution: [1, 2, 3, 3, 2, 1, 1]
+    },
+    { 
+      name: 'Grade Infantil', 
+      sizes: ['20', '21', '22', '23', '24', '25', '26'],
+      distribution: [1, 1, 2, 2, 2, 1, 1]
+    }
   ];
 
   const toggleColor = (color: string) => {
@@ -61,52 +95,118 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
     }
   };
 
-  const toggleSize = (size: string) => {
-    setSelectedSizes(prev => 
-      prev.includes(size) 
-        ? prev.filter(s => s !== size)
-        : [...prev, size]
-    );
+  const applyGradeTemplate = (template: typeof gradeTemplates[0]) => {
+    const newConfigs: SizePairConfig[] = template.sizes.map((size, index) => ({
+      size,
+      pairs: template.distribution[index] || 1
+    }));
+    setSizePairConfigs(newConfigs);
+    setGradeName(`Grade ${template.name}`);
   };
 
-  const applyGradeTemplate = (template: typeof gradeTemplates[0]) => {
-    setSelectedSizes(template.sizes);
+  const addSizePair = () => {
+    const availableSizes = commonSizes.filter(size => 
+      !sizePairConfigs.some(config => config.size === size)
+    );
+    
+    if (availableSizes.length > 0) {
+      setSizePairConfigs(prev => [...prev, { size: availableSizes[0], pairs: 1 }]);
+    }
   };
+
+  const removeSizePair = (index: number) => {
+    setSizePairConfigs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSizePair = (index: number, field: keyof SizePairConfig, value: string | number) => {
+    setSizePairConfigs(prev => prev.map((config, i) => 
+      i === index ? { ...config, [field]: value } : config
+    ));
+  };
+
+  const adjustPairs = (index: number, delta: number) => {
+    setSizePairConfigs(prev => prev.map((config, i) => 
+      i === index 
+        ? { ...config, pairs: Math.max(0, config.pairs + delta) }
+        : config
+    ));
+  };
+
+  const resetConfiguration = () => {
+    setSelectedColors([]);
+    setSizePairConfigs([]);
+    setGradeName('Grade Personalizada');
+    setCustomColor('');
+  };
+
+  const generateOptimizedDistribution = useCallback(() => {
+    if (sizePairConfigs.length === 0) return;
+
+    // Aplicar curva ABC padrão baseada no número de tamanhos
+    const totalSizes = sizePairConfigs.length;
+    const newConfigs = sizePairConfigs.map((config, index) => {
+      let pairs: number;
+      
+      if (totalSizes <= 3) {
+        pairs = 2; // Distribuição uniforme para poucas grades
+      } else if (totalSizes <= 5) {
+        // Curva para grades pequenas
+        pairs = index === Math.floor(totalSizes / 2) ? 3 : (index === 0 || index === totalSizes - 1) ? 1 : 2;
+      } else {
+        // Curva ABC para grades maiores
+        const middle = Math.floor(totalSizes / 2);
+        const distance = Math.abs(index - middle);
+        pairs = Math.max(1, 4 - distance);
+      }
+      
+      return { ...config, pairs };
+    });
+
+    setSizePairConfigs(newConfigs);
+    
+    toast({
+      title: "Distribuição otimizada!",
+      description: "Aplicada curva ABC para melhor distribuição de estoque.",
+    });
+  }, [sizePairConfigs, toast]);
 
   const generateVariations = () => {
-    if (selectedColors.length === 0 || selectedSizes.length === 0) {
+    if (selectedColors.length === 0 || sizePairConfigs.length === 0) {
       toast({
         title: "Configuração incompleta",
-        description: "Selecione pelo menos uma cor e um tamanho.",
+        description: "Selecione pelo menos uma cor e configure os tamanhos.",
         variant: "destructive"
       });
       return;
     }
 
     const newVariations: ProductVariation[] = [];
+    const totalPairsPerColor = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
 
-    selectedColors.forEach(color => {
-      selectedSizes.forEach(size => {
-        const uniqueId = `variation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    selectedColors.forEach((color, colorIndex) => {
+      sizePairConfigs.forEach((sizeConfig, sizeIndex) => {
+        const uniqueId = `variation-${Date.now()}-${colorIndex}-${sizeIndex}-${Math.random().toString(36).substr(2, 9)}`;
         
         newVariations.push({
           id: uniqueId,
           product_id: productId || '',
           color,
-          size,
-          stock: pairsPerSize,
+          size: sizeConfig.size,
+          stock: sizeConfig.pairs,
           price_adjustment: 0,
           is_active: true,
-          sku: `${color.toLowerCase()}-${size}`,
+          sku: `${color.toLowerCase().replace(/\s+/g, '-')}-${sizeConfig.size}`,
           image_url: '',
           variation_type: 'grade',
           is_grade: true,
-          grade_name: `Grade ${color}`,
-          grade_sizes: selectedSizes,
-          grade_pairs: selectedSizes.map(() => pairsPerSize),
-          grade_quantity: selectedSizes.length * pairsPerSize,
+          grade_name: `${gradeName} - ${color}`,
+          grade_color: color,
+          grade_sizes: sizePairConfigs.map(c => c.size),
+          grade_pairs: sizePairConfigs.map(c => c.pairs),
+          grade_quantity: totalPairsPerColor,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          display_order: newVariations.length
         });
       });
     });
@@ -115,9 +215,13 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
 
     toast({
       title: "Grade criada com sucesso!",
-      description: `${newVariations.length} variações foram geradas.`
+      description: `${newVariations.length} variações foram geradas com distribuição personalizada.`
     });
   };
+
+  const totalVariations = selectedColors.length * sizePairConfigs.length;
+  const totalPairs = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
+  const totalPairsAllColors = totalPairs * selectedColors.length;
 
   return (
     <div className="space-y-6">
@@ -125,10 +229,22 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-blue-600" />
-            Configuração de Grades
+            Configuração Avançada de Grades
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Nome da Grade */}
+          <div>
+            <Label htmlFor="grade-name" className="text-base font-semibold">Nome da Grade</Label>
+            <Input
+              id="grade-name"
+              value={gradeName}
+              onChange={(e) => setGradeName(e.target.value)}
+              placeholder="Ex: Grade Verão 2024"
+              className="mt-2"
+            />
+          </div>
+
           {/* Seleção de Cores */}
           <div>
             <Label className="text-base font-semibold">1. Escolha as Cores</Label>
@@ -183,9 +299,9 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
 
           {/* Templates de Grade */}
           <div>
-            <Label className="text-base font-semibold">2. Escolha a Grade de Tamanhos</Label>
+            <Label className="text-base font-semibold">2. Templates de Grade</Label>
             <p className="text-sm text-gray-600 mb-3">
-              Use um template pronto ou selecione tamanhos individuais
+              Use um template pronto ou configure manualmente
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
@@ -206,89 +322,139 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
               ))}
             </div>
 
-            <div className="grid grid-cols-6 md:grid-cols-10 gap-2">
-              {commonSizes.map(size => (
-                <Button
-                  key={size}
-                  variant={selectedSizes.includes(size) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleSize(size)}
-                >
-                  {size}
-                </Button>
-              ))}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={generateOptimizedDistribution}
+                disabled={sizePairConfigs.length === 0}
+                className="flex items-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Aplicar Curva ABC
+              </Button>
+              <Button
+                variant="outline"
+                onClick={resetConfiguration}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Limpar Tudo
+              </Button>
             </div>
+          </div>
 
-            {selectedSizes.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-medium mb-2">Tamanhos selecionados:</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedSizes.map(size => (
-                    <Badge 
-                      key={size} 
-                      variant="secondary"
-                      className="cursor-pointer"
-                      onClick={() => toggleSize(size)}
+          {/* Configuração Individual de Pares */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-base font-semibold">3. Pares por Tamanho</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addSizePair}
+                disabled={sizePairConfigs.length >= commonSizes.length}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Adicionar Tamanho
+              </Button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Configure individualmente quantos pares de cada tamanho
+            </p>
+
+            {sizePairConfigs.length === 0 ? (
+              <Alert>
+                <Sparkles className="h-4 w-4" />
+                <AlertDescription>
+                  Use um template acima ou adicione tamanhos manualmente para começar.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-3">
+                {sizePairConfigs.map((config, index) => (
+                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium">Tamanho</Label>
+                      <select
+                        value={config.size}
+                        onChange={(e) => updateSizePair(index, 'size', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border rounded-md"
+                      >
+                        {commonSizes.map(size => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium">Pares</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => adjustPairs(index, -1)}
+                          disabled={config.pairs <= 0}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={config.pairs}
+                          onChange={(e) => updateSizePair(index, 'pairs', parseInt(e.target.value) || 0)}
+                          className="w-20 text-center"
+                          min="0"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => adjustPairs(index, 1)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeSizePair(index)}
+                      className="text-red-600 hover:text-red-700"
                     >
-                      {size} ×
-                    </Badge>
-                  ))}
-                </div>
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Quantidade por Tamanho */}
-          <div>
-            <Label className="text-base font-semibold">3. Pares por Tamanho</Label>
-            <p className="text-sm text-gray-600 mb-3">
-              Quantos pares de cada tamanho você terá em estoque?
-            </p>
-            
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPairsPerSize(Math.max(1, pairsPerSize - 1))}
-              >
-                <Minus className="w-4 h-4" />
-              </Button>
-              <span className="text-lg font-semibold min-w-[3rem] text-center">
-                {pairsPerSize}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPairsPerSize(pairsPerSize + 1)}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-gray-600">pares por tamanho</span>
-            </div>
-          </div>
-
           {/* Resumo */}
-          {selectedColors.length > 0 && selectedSizes.length > 0 && (
+          {selectedColors.length > 0 && sizePairConfigs.length > 0 && (
             <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">Resumo da Grade:</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <h4 className="font-semibold text-blue-900 mb-3">Resumo da Grade:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-blue-700">Cores: </span>
                   <span className="font-medium">{selectedColors.length}</span>
                 </div>
                 <div>
                   <span className="text-blue-700">Tamanhos: </span>
-                  <span className="font-medium">{selectedSizes.length}</span>
+                  <span className="font-medium">{sizePairConfigs.length}</span>
                 </div>
                 <div>
-                  <span className="text-blue-700">Pares por tamanho: </span>
-                  <span className="font-medium">{pairsPerSize}</span>
+                  <span className="text-blue-700">Pares por cor: </span>
+                  <span className="font-medium">{totalPairs}</span>
                 </div>
                 <div>
                   <span className="text-blue-700">Total de variações: </span>
-                  <span className="font-medium text-blue-900">
-                    {selectedColors.length * selectedSizes.length}
-                  </span>
+                  <span className="font-medium text-blue-900">{totalVariations}</span>
+                </div>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <div className="text-sm">
+                  <span className="text-blue-700">Estoque total previsto: </span>
+                  <span className="font-bold text-blue-900 text-lg">{totalPairsAllColors} pares</span>
                 </div>
               </div>
             </div>
@@ -299,10 +465,10 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
             <Button
               onClick={generateVariations}
               className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
-              disabled={selectedColors.length === 0 || selectedSizes.length === 0}
+              disabled={selectedColors.length === 0 || sizePairConfigs.length === 0}
             >
               <Package className="w-5 h-5 mr-2" />
-              Gerar Grade ({selectedColors.length * selectedSizes.length} variações)
+              Gerar Grade Personalizada ({totalVariations} variações)
             </Button>
           </div>
         </CardContent>
