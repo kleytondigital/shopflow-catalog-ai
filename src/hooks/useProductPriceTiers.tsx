@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductPriceTier } from "@/types/product";
@@ -75,6 +76,113 @@ export const useProductPriceTiers = (
     }
   };
 
+  const createTier = async (tierData: Omit<ProductPriceTier, "id">) => {
+    if (!productId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("product_price_tiers")
+        .insert([
+          {
+            product_id: productId,
+            tier_name: tierData.tier_name,
+            tier_type: tierData.tier_type,
+            min_quantity: tierData.min_quantity,
+            price: tierData.price,
+            tier_order: tierData.tier_order,
+            is_active: tierData.is_active ?? true,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newTier: ProductPriceTier = {
+          id: data.id,
+          tier_name: data.tier_name,
+          tier_type: data.tier_type,
+          min_quantity: data.min_quantity,
+          price: data.price,
+          tier_order: data.tier_order,
+          is_active: data.is_active,
+        };
+        setTiers(prev => [...prev, newTier].sort((a, b) => a.tier_order - b.tier_order));
+      }
+      
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar tier");
+      throw err;
+    }
+  };
+
+  const updateTier = async (tierId: string, tierData: Partial<ProductPriceTier>) => {
+    try {
+      const { data, error } = await supabase
+        .from("product_price_tiers")
+        .update({
+          tier_name: tierData.tier_name,
+          tier_type: tierData.tier_type,
+          min_quantity: tierData.min_quantity,
+          price: tierData.price,
+          tier_order: tierData.tier_order,
+          is_active: tierData.is_active,
+        })
+        .eq("id", tierId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setTiers(prev =>
+          prev.map(tier =>
+            tier.id === tierId
+              ? {
+                  id: data.id,
+                  tier_name: data.tier_name,
+                  tier_type: data.tier_type,
+                  min_quantity: data.min_quantity,
+                  price: data.price,
+                  tier_order: data.tier_order,
+                  is_active: data.is_active,
+                }
+              : tier
+          )
+        );
+      }
+
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao atualizar tier");
+      throw err;
+    }
+  };
+
+  const deleteTier = async (tierId: string) => {
+    try {
+      const { error } = await supabase
+        .from("product_price_tiers")
+        .delete()
+        .eq("id", tierId);
+
+      if (error) throw error;
+
+      setTiers(prev => prev.filter(tier => tier.id !== tierId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao deletar tier");
+      throw err;
+    }
+  };
+
+  const refetch = async () => {
+    if (productId) {
+      await fetchTiers(productId);
+    }
+  };
+
   useEffect(() => {
     if (productId && productId.trim() !== "") {
       fetchTiers(productId);
@@ -94,6 +202,9 @@ export const useProductPriceTiers = (
     tiers,
     loading,
     error,
-    refetch: () => productId && fetchTiers(productId),
+    refetch,
+    createTier,
+    updateTier,
+    deleteTier,
   };
 };
