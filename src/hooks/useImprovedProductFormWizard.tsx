@@ -4,7 +4,6 @@ import { useStorePriceModel } from '@/hooks/useStorePriceModel';
 import { PriceModelType } from '@/types/price-models';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useDraftImagesContext } from '@/contexts/DraftImagesContext';
 
 export interface WizardFormData {
   // Basic product info
@@ -51,7 +50,6 @@ export const useImprovedProductFormWizard = () => {
   const { profile } = useAuth();
   const { priceModel } = useStorePriceModel(profile?.store_id);
   const { toast } = useToast();
-  const { uploadAllImages, clearDraftImages, loadExistingImages } = useDraftImagesContext();
   
   const [formData, setFormData] = useState<WizardFormData>({
     name: '',
@@ -227,7 +225,7 @@ export const useImprovedProductFormWizard = () => {
     }
   };
 
-  const saveProduct = async (editingProductId?: string): Promise<string | null> => {
+  const saveProduct = async (editingProductId?: string, uploadImagesFn?: (productId: string) => Promise<string[]>): Promise<string | null> => {
     console.log('💾 WIZARD - Iniciando salvamento:', { editingProductId, formData });
     setLoading(true);
     
@@ -317,15 +315,12 @@ export const useImprovedProductFormWizard = () => {
 
       console.log('✅ WIZARD - Produto salvo:', result);
 
-      // Upload de imagens após salvar o produto
-      if (result?.id) {
+      // Upload de imagens após salvar o produto (se função foi fornecida)
+      if (result?.id && uploadImagesFn) {
         console.log('📤 WIZARD - Iniciando upload de imagens para produto:', result.id);
         try {
-          const uploadedUrls = await uploadAllImages(result.id);
+          const uploadedUrls = await uploadImagesFn(result.id);
           console.log('✅ WIZARD - Imagens enviadas:', uploadedUrls.length);
-          
-          // Limpar as imagens do contexto após upload bem-sucedido
-          clearDraftImages();
         } catch (imageError) {
           console.error('❌ WIZARD - Erro no upload de imagens:', imageError);
           // Não falhar o salvamento do produto por erro de imagem
@@ -374,8 +369,6 @@ export const useImprovedProductFormWizard = () => {
       store_id: profile?.store_id,
       variations: []
     });
-    // Limpar imagens do contexto
-    clearDraftImages();
   };
 
   // Check if current price model supports wholesale
@@ -384,7 +377,7 @@ export const useImprovedProductFormWizard = () => {
     return priceModel.price_model !== 'retail_only';
   };
 
-  // Função para carregar imagens existentes durante a edição
+  // Função para carregar dados do produto para edição (sem imagens)
   const loadProductForEditing = (editingProduct: any) => {
     console.log("📂 WIZARD - Carregando produto para edição:", editingProduct.id);
     
@@ -406,12 +399,6 @@ export const useImprovedProductFormWizard = () => {
       keywords: editingProduct.keywords || '',
       seo_slug: editingProduct.seo_slug || '',
     });
-
-    // Carregar imagens existentes
-    if (editingProduct.id) {
-      console.log("📷 WIZARD - Carregando imagens existentes para produto:", editingProduct.id);
-      loadExistingImages(editingProduct.id);
-    }
   };
 
   return {

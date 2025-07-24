@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useImprovedProductFormWizard } from '@/hooks/useImprovedProductFormWizard';
-import { DraftImagesProvider } from '@/contexts/DraftImagesContext';
+import { DraftImagesProvider, useDraftImagesContext } from '@/contexts/DraftImagesContext';
 import ImprovedWizardStepNavigation from './wizard/ImprovedWizardStepNavigation';
 import WizardStepContent from './wizard/WizardStepContent';
 import ImprovedWizardActionButtons from './wizard/ImprovedWizardActionButtons';
@@ -14,7 +14,7 @@ interface ImprovedProductFormWizardProps {
   editingProduct?: any;
 }
 
-const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
+const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps> = ({
   isOpen,
   onClose,
   onSuccess,
@@ -35,23 +35,32 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
     loadProductForEditing
   } = useImprovedProductFormWizard();
 
+  const { uploadAllImages, clearDraftImages, loadExistingImages } = useDraftImagesContext();
+
   React.useEffect(() => {
     console.log("🧙 WIZARD - useEffect triggered:", { editingProduct: !!editingProduct, isOpen });
     
     if (editingProduct && isOpen) {
       console.log("🧙 WIZARD - Carregando dados do produto para edição:", editingProduct.id);
-      // Usar a função integrada que carrega tanto dados quanto imagens
+      // Carregar dados do produto
       loadProductForEditing(editingProduct);
+      
+      // Carregar imagens existentes
+      if (editingProduct.id) {
+        console.log("📷 WIZARD - Carregando imagens existentes para produto:", editingProduct.id);
+        loadExistingImages(editingProduct.id);
+      }
     }
-  }, [editingProduct, isOpen, loadProductForEditing]);
+  }, [editingProduct, isOpen, loadProductForEditing, loadExistingImages]);
 
   const handleSave = async () => {
     try {
       console.log('🔄 WIZARD - Iniciando salvamento do produto');
-      const productId = await saveProduct(editingProduct?.id);
+      const productId = await saveProduct(editingProduct?.id, uploadAllImages);
       
       if (productId) {
         console.log('✅ WIZARD - Produto salvo com sucesso:', productId);
+        clearDraftImages();
         resetForm();
         onClose();
         if (onSuccess) {
@@ -64,6 +73,7 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
   };
 
   const handleClose = () => {
+    clearDraftImages();
     resetForm();
     onClose();
   };
@@ -78,48 +88,54 @@ const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = ({
   }));
 
   return (
-    <DraftImagesProvider>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {editingProduct ? 'Editar Produto' : 'Novo Produto'}
-            </DialogTitle>
-          </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+          </DialogTitle>
+        </DialogHeader>
 
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Step Navigation */}
-            <ImprovedWizardStepNavigation
-              steps={navigationSteps}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Step Navigation */}
+          <ImprovedWizardStepNavigation
+            steps={navigationSteps}
+            currentStep={currentStep}
+            onStepClick={goToStep}
+          />
+
+          {/* Step Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <WizardStepContent
               currentStep={currentStep}
-              onStepClick={goToStep}
-            />
-
-            {/* Step Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <WizardStepContent
-                currentStep={currentStep}
-                formData={formData}
-                updateFormData={updateFormData}
-                productId={editingProduct?.id}
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <ImprovedWizardActionButtons
-              currentStep={currentStep}
-              totalSteps={steps.length}
-              canProceed={canProceed()}
-              isSaving={loading}
-              onPrevious={prevStep}
-              onNext={nextStep}
-              onSave={handleSave}
-              onCancel={handleClose}
-              isLastStep={isLastStep}
+              formData={formData}
+              updateFormData={updateFormData}
+              productId={editingProduct?.id}
             />
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Action Buttons */}
+          <ImprovedWizardActionButtons
+            currentStep={currentStep}
+            totalSteps={steps.length}
+            canProceed={canProceed()}
+            isSaving={loading}
+            onPrevious={prevStep}
+            onNext={nextStep}
+            onSave={handleSave}
+            onCancel={handleClose}
+            isLastStep={isLastStep}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = (props) => {
+  return (
+    <DraftImagesProvider>
+      <ImprovedProductFormWizardContent {...props} />
     </DraftImagesProvider>
   );
 };
