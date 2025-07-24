@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,8 @@ interface VariationWizardSelectorProps {
   productName?: string;
 }
 
-type WizardMode = "selector" | "simple" | "advanced" | "help";
+type WizardMode = "selector" | "simple" | "advanced" | "intelligent";
+type IntelligentViewMode = "wizard" | "matrix" | "list" | "grade";
 
 const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   variations,
@@ -51,6 +53,7 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   productName,
 }) => {
   const [wizardMode, setWizardMode] = useState<WizardMode>("selector");
+  const [intelligentViewMode, setIntelligentViewMode] = useState<IntelligentViewMode>("wizard");
   const [showHelp, setShowHelp] = useState(false);
 
   // Detectar se já existem variações para sugerir modo apropriado
@@ -58,6 +61,18 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   const hasGradeVariations = variations.some(
     (v) => v.variation_type === "grade" || v.is_grade
   );
+
+  const handleNavigateToGrade = () => {
+    console.log('🎯 Navegando para tab Grade');
+    setWizardMode("intelligent");
+    setIntelligentViewMode("grade");
+  };
+
+  const handleVariationsGenerated = (newVariations: ProductVariation[]) => {
+    console.log('✅ Variações geradas, navegando para Lista');
+    onVariationsChange(newVariations);
+    setIntelligentViewMode("list");
+  };
 
   const renderSelector = () => (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -92,15 +107,15 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Wizard Simples */}
+        {/* Wizard Simples - Focado apenas em Grades */}
         <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-blue-300">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <Wand2 className="w-6 h-6 text-blue-600" />
+                <Package className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-lg">Assistente Simples</CardTitle>
+                <CardTitle className="text-lg">Sistema de Grades</CardTitle>
                 <Badge variant="secondary" className="mt-1">
                   Recomendado
                 </Badge>
@@ -109,8 +124,7 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
-              Ideal para iniciantes ou produtos com grades (calçados, kits de
-              tamanhos).
+              Ideal para produtos com kits de tamanhos como calçados, chinelos e produtos para revenda.
             </p>
 
             <div className="space-y-2">
@@ -118,10 +132,10 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
                 ✅ Perfeito para:
               </h4>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>• Primeira vez criando variações</li>
-                <li>• Produtos com grades (sapatos, chinelos)</li>
+                <li>• Calçados (sapatos, tênis, chinelos)</li>
+                <li>• Produtos com grades (33-38, P-G)</li>
                 <li>• Vendas para revendedores</li>
-                <li>• Produtos vendidos em kits</li>
+                <li>• Kits de tamanhos</li>
               </ul>
             </div>
 
@@ -130,10 +144,10 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
                 🎯 Características:
               </h4>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>• Linguagem simples e clara</li>
-                <li>• Passo a passo guiado</li>
+                <li>• Configuração simples por cores</li>
                 <li>• Grades pré-definidas</li>
-                <li>• Explicações visuais</li>
+                <li>• Quantidades por tamanho</li>
+                <li>• Geração automática</li>
               </ul>
             </div>
 
@@ -141,8 +155,8 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               onClick={() => setWizardMode("simple")}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              <User className="w-4 h-4 mr-2" />
-              Usar Assistente Simples
+              <Package className="w-4 h-4 mr-2" />
+              Usar Sistema de Grades
             </Button>
           </CardContent>
         </Card>
@@ -187,7 +201,7 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               <ul className="text-xs text-gray-600 space-y-1">
                 <li>• Todos os atributos disponíveis</li>
                 <li>• Configurações técnicas</li>
-                <li>• Bulk operations</li>
+                <li>• Operações em lote</li>
                 <li>• Máxima flexibilidade</li>
               </ul>
             </div>
@@ -216,9 +230,8 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
                 Não sabe qual escolher?
               </h3>
               <p className="text-sm text-yellow-800 mb-3">
-                Não se preocupe! Preparamos um guia completo para ajudar você a
-                entender os diferentes tipos de variações e qual é o melhor para
-                seu produto.
+                Para a maioria dos produtos, recomendamos começar com o Sistema de Grades. 
+                É mais simples e atende a maioria dos casos de uso.
               </p>
               <div className="flex gap-2">
                 <Dialog open={showHelp} onOpenChange={setShowHelp}>
@@ -246,40 +259,9 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
                   className="border-blue-600 text-blue-700"
                 >
                   <ArrowRight className="w-4 h-4 mr-1" />
-                  Começar com Simples
+                  Começar com Grades
                 </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Comparação Rápida */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center">Comparação Rápida</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="space-y-2">
-              <Package className="w-8 h-8 text-green-600 mx-auto" />
-              <h4 className="font-medium">Produto Único</h4>
-              <p className="text-xs text-gray-600">Sem variações</p>
-              <p className="text-xs text-gray-500">Ex: Caneca branca</p>
-            </div>
-            <div className="space-y-2">
-              <Palette className="w-8 h-8 text-purple-600 mx-auto" />
-              <h4 className="font-medium">Com Variações</h4>
-              <p className="text-xs text-gray-600">
-                Cores/tamanhos individuais
-              </p>
-              <p className="text-xs text-gray-500">Ex: Camiseta P, M, G</p>
-            </div>
-            <div className="space-y-2">
-              <Shirt className="w-8 h-8 text-blue-600 mx-auto" />
-              <h4 className="font-medium">Com Grade</h4>
-              <p className="text-xs text-gray-600">Kits de tamanhos</p>
-              <p className="text-xs text-gray-500">Ex: Sapatos 33-38</p>
             </div>
           </div>
         </CardContent>
@@ -300,7 +282,7 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               >
                 ← Voltar
               </Button>
-              <Badge variant="secondary">Assistente Simples</Badge>
+              <Badge variant="secondary">Sistema de Grades</Badge>
             </div>
             <SimpleGradeWizard
               variations={variations}
@@ -309,6 +291,7 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               storeId={storeId}
               category={category}
               productName={productName}
+              onNavigateToGrade={handleNavigateToGrade}
             />
           </div>
         );
@@ -331,6 +314,33 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               onVariationsChange={onVariationsChange}
               productId={productId}
               storeId={storeId}
+            />
+          </div>
+        );
+
+      case "intelligent":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setWizardMode("selector");
+                  setIntelligentViewMode("wizard");
+                }}
+                size="sm"
+              >
+                ← Voltar ao Início
+              </Button>
+              <Badge variant="secondary">Sistema Inteligente</Badge>
+            </div>
+            <IntelligentVariationsForm
+              variations={variations}
+              onVariationsChange={handleVariationsGenerated}
+              productId={productId}
+              storeId={storeId}
+              initialViewMode={intelligentViewMode}
+              onViewModeChange={setIntelligentViewMode}
             />
           </div>
         );
