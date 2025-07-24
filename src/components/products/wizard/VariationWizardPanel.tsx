@@ -11,6 +11,7 @@ interface VariationWizardPanelProps {
   groups?: any[];
   values?: any[];
   loading?: boolean;
+  onNavigateToGrade?: () => void;
 }
 
 const VariationWizardPanel: React.FC<VariationWizardPanelProps> = ({
@@ -18,8 +19,16 @@ const VariationWizardPanel: React.FC<VariationWizardPanelProps> = ({
   onVariationsChange,
   groups = [],
   values = [],
-  loading = false
+  loading = false,
+  onNavigateToGrade
 }) => {
+  const handleNavigateToGrade = () => {
+    console.log('🎯 Navegando para Grade via prop onNavigateToGrade');
+    if (onNavigateToGrade) {
+      onNavigateToGrade();
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-8">
@@ -54,10 +63,7 @@ const VariationWizardPanel: React.FC<VariationWizardPanelProps> = ({
             <Button
               size="lg"
               className="bg-purple-600 hover:bg-purple-700 gap-2"
-              onClick={() => {
-                // Esta ação será interceptada pelo componente pai
-                console.log('Navegar para Grade sugerido');
-              }}
+              onClick={handleNavigateToGrade}
             >
               <Sparkles className="w-5 h-5" />
               Ir para Sistema de Grades

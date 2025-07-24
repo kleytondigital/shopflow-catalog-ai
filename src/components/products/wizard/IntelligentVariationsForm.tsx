@@ -67,6 +67,11 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
     }
   };
 
+  const handleNavigateToGrade = () => {
+    console.log('🎯 Navegando para Grade via handleNavigateToGrade');
+    handleViewModeChange("grade");
+  };
+
   const handleGradeGenerated = (gradeVariations: ProductVariation[]) => {
     console.log('✅ Grade gerada, navegando para Lista:', gradeVariations.length);
     onVariationsChange(gradeVariations);
@@ -154,6 +159,7 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                   groups={groups}
                   values={values}
                   loading={groupsLoading}
+                  onNavigateToGrade={handleNavigateToGrade}
                 />
               </TabsContent>
 

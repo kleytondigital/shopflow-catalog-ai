@@ -14,7 +14,8 @@ import {
   Palette, 
   RotateCcw,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -101,7 +102,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
       pairs: template.distribution[index] || 1
     }));
     setSizePairConfigs(newConfigs);
-    setGradeName(`Grade ${template.name}`);
+    setGradeName(`${template.name}`);
   };
 
   const addSizePair = () => {
@@ -180,46 +181,67 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
       return;
     }
 
+    console.log('🎨 GRADE - Gerando variações...');
+    console.log('📋 Cores selecionadas:', selectedColors);
+    console.log('📐 Configuração de pares:', sizePairConfigs);
+
     const newVariations: ProductVariation[] = [];
     const totalPairsPerColor = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
 
+    // Gerar UMA variação por cor (não uma por tamanho)
     selectedColors.forEach((color, colorIndex) => {
-      sizePairConfigs.forEach((sizeConfig, sizeIndex) => {
-        const uniqueId = `variation-${Date.now()}-${colorIndex}-${sizeIndex}-${Math.random().toString(36).substr(2, 9)}`;
-        
-        newVariations.push({
-          id: uniqueId,
-          product_id: productId || '',
-          color,
-          size: sizeConfig.size,
-          stock: sizeConfig.pairs,
-          price_adjustment: 0,
-          is_active: true,
-          sku: `${color.toLowerCase().replace(/\s+/g, '-')}-${sizeConfig.size}`,
-          image_url: '',
-          variation_type: 'grade',
-          is_grade: true,
-          grade_name: `${gradeName} - ${color}`,
-          grade_color: color,
-          grade_sizes: sizePairConfigs.map(c => c.size),
-          grade_pairs: sizePairConfigs.map(c => c.pairs),
-          grade_quantity: totalPairsPerColor,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          display_order: newVariations.length
-        });
+      const uniqueId = `grade-${Date.now()}-${colorIndex}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log(`🎨 Criando grade para cor: ${color}`);
+      console.log(`📦 Total de pares na grade: ${totalPairsPerColor}`);
+      console.log(`📏 Tamanhos inclusos: ${sizePairConfigs.map(c => c.size).join(', ')}`);
+      console.log(`🔢 Pares por tamanho: ${sizePairConfigs.map(c => c.pairs).join(', ')}`);
+      
+      const gradeVariation: ProductVariation = {
+        id: uniqueId,
+        product_id: productId || '',
+        color,
+        size: null, // Grade não tem tamanho único
+        stock: totalPairsPerColor, // Estoque total da grade
+        price_adjustment: 0,
+        is_active: true,
+        sku: `${gradeName.toLowerCase().replace(/\s+/g, '-')}-${color.toLowerCase().replace(/\s+/g, '-')}`,
+        image_url: '',
+        variation_type: 'grade',
+        is_grade: true,
+        grade_name: `${gradeName} - ${color}`,
+        grade_color: color,
+        grade_sizes: sizePairConfigs.map(c => c.size), // Array com todos os tamanhos
+        grade_pairs: sizePairConfigs.map(c => c.pairs), // Array com quantidades por tamanho  
+        grade_quantity: totalPairsPerColor, // Quantidade total da grade
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        display_order: colorIndex
+      };
+
+      console.log('✅ Grade criada:', {
+        id: gradeVariation.id,
+        color: gradeVariation.color,
+        totalStock: gradeVariation.stock,
+        sizes: gradeVariation.grade_sizes,
+        pairs: gradeVariation.grade_pairs
       });
+
+      newVariations.push(gradeVariation);
     });
+
+    console.log(`🎯 RESULTADO: ${newVariations.length} grades criadas (uma por cor)`);
+    console.log(`📊 Total de variações geradas: ${newVariations.length}`);
 
     onVariationsGenerated(newVariations);
 
     toast({
-      title: "Grade criada com sucesso!",
-      description: `${newVariations.length} variações foram geradas com distribuição personalizada.`
+      title: "Grades criadas com sucesso!",
+      description: `${newVariations.length} grade(s) foram geradas, totalizando ${totalPairsPerColor * selectedColors.length} pares.`
     });
   };
 
-  const totalVariations = selectedColors.length * sizePairConfigs.length;
+  const totalVariations = selectedColors.length; // Uma variação por cor
   const totalPairs = sizePairConfigs.reduce((sum, config) => sum + config.pairs, 0);
   const totalPairsAllColors = totalPairs * selectedColors.length;
 
@@ -249,7 +271,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
           <div>
             <Label className="text-base font-semibold">1. Escolha as Cores</Label>
             <p className="text-sm text-gray-600 mb-3">
-              Selecione as cores disponíveis para este produto
+              Selecione as cores disponíveis para este produto. Cada cor será uma grade separada.
             </p>
             
             <div className="grid grid-cols-5 gap-2 mb-4">
@@ -301,7 +323,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
           <div>
             <Label className="text-base font-semibold">2. Templates de Grade</Label>
             <p className="text-sm text-gray-600 mb-3">
-              Use um template pronto ou configure manualmente
+              Use um template pronto ou configure manualmente os tamanhos e quantidades
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
@@ -359,7 +381,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
             </div>
             
             <p className="text-sm text-gray-600 mb-4">
-              Configure individualmente quantos pares de cada tamanho
+              Configure individualmente quantos pares de cada tamanho estarão na grade
             </p>
 
             {sizePairConfigs.length === 0 ? (
@@ -372,13 +394,13 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
             ) : (
               <div className="space-y-3">
                 {sizePairConfigs.map((config, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
                     <div className="flex-1">
                       <Label className="text-sm font-medium">Tamanho</Label>
                       <select
                         value={config.size}
                         onChange={(e) => updateSizePair(index, 'size', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border rounded-md"
+                        className="w-full mt-1 px-3 py-2 border rounded-md bg-white"
                       >
                         {commonSizes.map(size => (
                           <option key={size} value={size}>{size}</option>
@@ -428,33 +450,50 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
             )}
           </div>
 
-          {/* Resumo */}
+          {/* Preview da Grade */}
           {selectedColors.length > 0 && sizePairConfigs.length > 0 && (
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-3">Resumo da Grade:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-700">Cores: </span>
-                  <span className="font-medium">{selectedColors.length}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Tamanhos: </span>
-                  <span className="font-medium">{sizePairConfigs.length}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Pares por cor: </span>
-                  <span className="font-medium">{totalPairs}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Total de variações: </span>
-                  <span className="font-medium text-blue-900">{totalVariations}</span>
-                </div>
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Preview das Grades:
+              </h4>
+              
+              <div className="space-y-3">
+                {selectedColors.map((color, index) => (
+                  <div key={color} className="bg-white p-3 rounded border">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-gray-900">
+                        Grade {index + 1}: {gradeName} - {color}
+                      </h5>
+                      <Badge variant="secondary">
+                        {totalPairs} pares
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <strong>Tamanhos:</strong> {sizePairConfigs.map(c => `${c.size} (${c.pairs})`).join(', ')}
+                    </div>
+                  </div>
+                ))}
               </div>
               
-              <div className="mt-3 pt-3 border-t border-blue-200">
-                <div className="text-sm">
-                  <span className="text-blue-700">Estoque total previsto: </span>
-                  <span className="font-bold text-blue-900 text-lg">{totalPairsAllColors} pares</span>
+              <div className="mt-4 pt-3 border-t border-green-200">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-green-700">Grades: </span>
+                    <span className="font-medium">{selectedColors.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-green-700">Tamanhos por grade: </span>
+                    <span className="font-medium">{sizePairConfigs.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-green-700">Pares por grade: </span>
+                    <span className="font-medium">{totalPairs}</span>
+                  </div>
+                  <div>
+                    <span className="text-green-700">Total geral: </span>
+                    <span className="font-bold text-green-900 text-lg">{totalPairsAllColors} pares</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -468,7 +507,7 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
               disabled={selectedColors.length === 0 || sizePairConfigs.length === 0}
             >
               <Package className="w-5 h-5 mr-2" />
-              Gerar Grade Personalizada ({totalVariations} variações)
+              Gerar {totalVariations} Grade{totalVariations > 1 ? 's' : ''} Personalizada{totalVariations > 1 ? 's' : ''}
             </Button>
           </div>
         </CardContent>
