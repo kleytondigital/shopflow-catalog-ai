@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useCatalog, CatalogType } from "@/hooks/useCatalog";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import { useGlobalTemplateStyles } from "@/hooks/useGlobalTemplateStyles";
-import ResponsiveProductGrid from "./ResponsiveProductGrid";
+import ProductGrid from "./ProductGrid";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
@@ -21,6 +21,7 @@ export default function PublicCatalog({ storeIdentifier, catalogType = 'retail' 
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [wishlist, setWishlist] = useState<Product[]>([]);
 
   const toggleFilters = () => {
     setShowFilters(!showFilters);
@@ -34,6 +35,22 @@ export default function PublicCatalog({ storeIdentifier, catalogType = 'retail' 
     );
     setFilteredProducts(results);
   }, [searchTerm, products]);
+
+  const handleAddToWishlist = useCallback((product: Product) => {
+    setWishlist(prev => {
+      const isAlreadyInWishlist = prev.some(item => item.id === product.id);
+      if (isAlreadyInWishlist) {
+        return prev.filter(item => item.id !== product.id);
+      } else {
+        return [...prev, product];
+      }
+    });
+  }, []);
+
+  const handleQuickView = useCallback((product: Product) => {
+    console.log('Quick view:', product);
+    // Implementar modal de visualização rápida se necessário
+  }, []);
 
   useEffect(() => {
     handleSearch();
@@ -164,29 +181,18 @@ export default function PublicCatalog({ storeIdentifier, catalogType = 'retail' 
           </aside>
           
           <div className="lg:col-span-3">
-            {filteredProducts.length > 0 ? (
-              <div>
-                <ResponsiveProductGrid
-                  products={filteredProducts}
-                  catalogType={catalogType}
-                  loading={loading}
-                  template={settings?.template_name as any || 'minimal'}
-                  storeId={store.id}
-                  editorSettings={{
-                    showPrices: true,
-                    showStock: true
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="text-gray-400 text-6xl mb-4">📦</div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum produto encontrado</h3>
-                <p className="text-gray-500 text-center max-w-md">
-                  Não encontramos produtos que correspondam aos seus critérios de busca.
-                </p>
-              </div>
-            )}
+            <ProductGrid
+              products={filteredProducts}
+              catalogType={catalogType}
+              loading={loading}
+              onAddToWishlist={handleAddToWishlist}
+              onQuickView={handleQuickView}
+              wishlist={wishlist}
+              storeIdentifier={storeIdentifier}
+              templateName={settings?.template_name || 'minimal'}
+              showPrices={true}
+              showStock={true}
+            />
           </div>
         </div>
       </main>
