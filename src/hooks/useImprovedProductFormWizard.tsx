@@ -170,9 +170,22 @@ export const useImprovedProductFormWizard = () => {
         
         return hasName && hasCategory;
         
-      case 1: // Pricing
+      case 1: // Pricing - Validação baseada no modelo de preço
+        console.log('🔍 WIZARD - Validando preços com modelo:', priceModel?.price_model);
+        
+        // Se é wholesale_only, só precisa de preço de atacado
+        if (priceModel?.price_model === 'wholesale_only') {
+          const hasValidWholesalePrice = formData.wholesale_price && formData.wholesale_price > 0;
+          console.log('🔍 WIZARD - Wholesale only validation:', { 
+            hasValidWholesalePrice, 
+            wholesale_price: formData.wholesale_price 
+          });
+          return hasValidWholesalePrice;
+        }
+        
+        // Para retail_only ou outros modelos, precisa de preço de varejo
         const hasValidRetailPrice = formData.retail_price > 0;
-        console.log('🔍 WIZARD - Step 1 validation:', { 
+        console.log('🔍 WIZARD - Retail price validation:', { 
           hasValidRetailPrice, 
           retail_price: formData.retail_price 
         });
@@ -187,15 +200,24 @@ export const useImprovedProductFormWizard = () => {
       case 4: // SEO
         return true;
         
-      case 5: // Review
-        const finalValidation = formData.name?.trim() && 
-                               formData.category?.trim() && 
-                               formData.retail_price > 0;
+      case 5: // Review - Validação final baseada no modelo
+        const hasNameFinal = Boolean(formData.name?.trim());
+        const hasCategoryFinal = Boolean(formData.category?.trim());
+        
+        let hasPriceFinal = false;
+        if (priceModel?.price_model === 'wholesale_only') {
+          hasPriceFinal = Boolean(formData.wholesale_price && formData.wholesale_price > 0);
+        } else {
+          hasPriceFinal = Boolean(formData.retail_price > 0);
+        }
+        
+        const finalValidation = hasNameFinal && hasCategoryFinal && hasPriceFinal;
         console.log('🔍 WIZARD - Final validation:', { 
           finalValidation,
-          name: formData.name,
-          category: formData.category,
-          retail_price: formData.retail_price
+          hasNameFinal,
+          hasCategoryFinal,
+          hasPriceFinal,
+          priceModel: priceModel?.price_model
         });
         return finalValidation;
         
@@ -218,8 +240,15 @@ export const useImprovedProductFormWizard = () => {
         throw new Error('Categoria é obrigatória');
       }
       
-      if (!formData.retail_price || formData.retail_price <= 0) {
-        throw new Error('Preço de varejo deve ser maior que zero');
+      // Validação de preço baseada no modelo
+      if (priceModel?.price_model === 'wholesale_only') {
+        if (!formData.wholesale_price || formData.wholesale_price <= 0) {
+          throw new Error('Preço de atacado deve ser maior que zero');
+        }
+      } else {
+        if (!formData.retail_price || formData.retail_price <= 0) {
+          throw new Error('Preço de varejo deve ser maior que zero');
+        }
       }
       
       if (!profile?.store_id) {
@@ -230,7 +259,7 @@ export const useImprovedProductFormWizard = () => {
         name: formData.name.trim(),
         description: formData.description || '',
         category: formData.category.trim(),
-        retail_price: formData.retail_price,
+        retail_price: formData.retail_price || 0,
         wholesale_price: formData.wholesale_price,
         stock: formData.stock || 0,
         min_wholesale_qty: formData.min_wholesale_qty || 1,

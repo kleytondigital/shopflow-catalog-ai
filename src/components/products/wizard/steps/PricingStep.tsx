@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import { WizardFormData } from '@/hooks/useImprovedProductFormWizard';
 import { useStorePriceModel } from '@/hooks/useStorePriceModel';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,48 +20,78 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
   const { profile } = useAuth();
   const { priceModel } = useStorePriceModel(profile?.store_id);
 
+  const isWholesaleOnly = priceModel?.price_model === 'wholesale_only';
+  const isRetailOnly = priceModel?.price_model === 'retail_only';
   const supportsWholesale = priceModel?.price_model !== 'retail_only';
 
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">Preços e Estoque</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              Preço de Varejo
-              <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="retailPrice">Preço de Varejo (R$) *</Label>
-              <Input
-                id="retailPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.retail_price || ''}
-                onChange={(e) => updateFormData({ retail_price: parseFloat(e.target.value) || 0 })}
-                placeholder="0,00"
-                className={`${!formData.retail_price || formData.retail_price <= 0 ? 'border-red-300' : ''}`}
-              />
-              {(!formData.retail_price || formData.retail_price <= 0) && (
-                <p className="text-xs text-red-500">Preço de varejo é obrigatório</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Alerta do modelo de preço */}
+      {isWholesaleOnly && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Modo Atacado:</strong> Sua loja está configurada para venda apenas no atacado.
+            O preço de atacado é obrigatório.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {supportsWholesale && (
+      {isRetailOnly && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Modo Varejo:</strong> Sua loja está configurada para venda apenas no varejo.
+            O preço de varejo é obrigatório.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Preço de Varejo */}
+        {!isWholesaleOnly && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Preço de Atacado</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                Preço de Varejo
+                {isRetailOnly && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="wholesalePrice">Preço de Atacado (R$)</Label>
+                <Label htmlFor="retailPrice">Preço de Varejo (R$) {isRetailOnly && '*'}</Label>
+                <Input
+                  id="retailPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.retail_price || ''}
+                  onChange={(e) => updateFormData({ retail_price: parseFloat(e.target.value) || 0 })}
+                  placeholder="0,00"
+                  className={`${isRetailOnly && (!formData.retail_price || formData.retail_price <= 0) ? 'border-red-300' : ''}`}
+                />
+                {isRetailOnly && (!formData.retail_price || formData.retail_price <= 0) && (
+                  <p className="text-xs text-red-500">Preço de varejo é obrigatório</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Preço de Atacado */}
+        {supportsWholesale && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                Preço de Atacado
+                {isWholesaleOnly && <Badge variant="destructive" className="text-xs">Obrigatório</Badge>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="wholesalePrice">Preço de Atacado (R$) {isWholesaleOnly && '*'}</Label>
                 <Input
                   id="wholesalePrice"
                   type="number"
@@ -68,24 +100,31 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
                   value={formData.wholesale_price || ''}
                   onChange={(e) => updateFormData({ wholesale_price: parseFloat(e.target.value) || undefined })}
                   placeholder="0,00"
+                  className={`${isWholesaleOnly && (!formData.wholesale_price || formData.wholesale_price <= 0) ? 'border-red-300' : ''}`}
                 />
+                {isWholesaleOnly && (!formData.wholesale_price || formData.wholesale_price <= 0) && (
+                  <p className="text-xs text-red-500">Preço de atacado é obrigatório</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="minWholesaleQty">Quantidade Mínima Atacado</Label>
-                <Input
-                  id="minWholesaleQty"
-                  type="number"
-                  min="1"
-                  value={formData.min_wholesale_qty || 1}
-                  onChange={(e) => updateFormData({ min_wholesale_qty: parseInt(e.target.value) || 1 })}
-                  placeholder="1"
-                />
-              </div>
+              {!isRetailOnly && (
+                <div className="space-y-2">
+                  <Label htmlFor="minWholesaleQty">Quantidade Mínima Atacado</Label>
+                  <Input
+                    id="minWholesaleQty"
+                    type="number"
+                    min="1"
+                    value={formData.min_wholesale_qty || 1}
+                    onChange={(e) => updateFormData({ min_wholesale_qty: parseInt(e.target.value) || 1 })}
+                    placeholder="1"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Controle de Estoque */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Controle de Estoque</CardTitle>
