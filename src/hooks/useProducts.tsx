@@ -151,6 +151,30 @@ export const useProducts = () => {
     }
   };
 
+  const createProduct = async (productData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .insert({
+          ...productData,
+          store_id: profile?.store_id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await fetchProducts(); // Recarregar produtos após criação
+      return { data, error: null };
+    } catch (error) {
+      console.error("Erro ao criar produto:", error);
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : "Erro ao criar produto" 
+      };
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -160,5 +184,9 @@ export const useProducts = () => {
     loading,
     fetchProducts,
     deleteProduct,
+    createProduct,
   };
 };
+
+// Exportar tipos para uso em outros componentes
+export type { Product, ProductVariation } from "@/types/product";

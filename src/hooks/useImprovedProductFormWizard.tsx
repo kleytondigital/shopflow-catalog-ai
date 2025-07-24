@@ -23,6 +23,11 @@ export interface WizardFormData {
   price_model: string;
   simple_wholesale_enabled: boolean;
   gradual_wholesale_enabled: boolean;
+  // Propriedades SEO
+  meta_title?: string;
+  meta_description?: string;
+  keywords?: string;
+  seo_slug?: string;
 }
 
 export interface WizardStep {
@@ -55,6 +60,10 @@ export const useImprovedProductFormWizard = () => {
     price_model: 'wholesale_only',
     simple_wholesale_enabled: true,
     gradual_wholesale_enabled: false,
+    meta_title: '',
+    meta_description: '',
+    keywords: '',
+    seo_slug: '',
   });
 
   const steps: WizardStep[] = [
@@ -127,7 +136,7 @@ export const useImprovedProductFormWizard = () => {
         if (variationsError) {
           console.error('Erro ao carregar variações:', variationsError);
         } else {
-          variations = variationsData?.map(v => ({
+          variations = variationsData?.map((v: any) => ({
             id: v.id,
             product_id: v.product_id,
             color: v.color,
@@ -172,6 +181,10 @@ export const useImprovedProductFormWizard = () => {
         price_model: 'wholesale_only', // Sempre wholesale_only por padrão
         simple_wholesale_enabled: true,
         gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
+        meta_title: product.meta_title || '',
+        meta_description: product.meta_description || '',
+        keywords: product.keywords || '',
+        seo_slug: product.seo_slug || '',
       });
     } catch (error) {
       console.error('Erro ao carregar produto para edição:', error);
@@ -183,7 +196,7 @@ export const useImprovedProductFormWizard = () => {
     }
   }, [profile?.store_id, toast]);
 
-  const saveProduct = useCallback(async (editingProductId?: string, uploadAllImages?: () => Promise<string[]>) => {
+  const saveProduct = useCallback(async (editingProductId?: string, uploadAllImages?: (productId: string) => Promise<string[]>) => {
     setLoading(true);
     console.log('💾 WIZARD - Iniciando salvamento do produto', { editingProductId, formData });
 
@@ -203,6 +216,10 @@ export const useImprovedProductFormWizard = () => {
         stock_alert_threshold: formData.stock_alert_threshold,
         store_id: formData.store_id,
         enable_gradual_wholesale: formData.gradual_wholesale_enabled,
+        meta_title: formData.meta_title,
+        meta_description: formData.meta_description,
+        keywords: formData.keywords,
+        seo_slug: formData.seo_slug,
       };
 
       let productId = editingProductId;
@@ -238,10 +255,10 @@ export const useImprovedProductFormWizard = () => {
       }
 
       // Upload de imagens se houver função
-      if (uploadAllImages) {
+      if (uploadAllImages && productId) {
         console.log('📷 WIZARD - Fazendo upload de imagens');
         try {
-          await uploadAllImages();
+          await uploadAllImages(productId);
         } catch (imageError) {
           console.error('Erro no upload de imagens:', imageError);
           // Não interromper o salvamento por erro de imagem
@@ -307,6 +324,10 @@ export const useImprovedProductFormWizard = () => {
       price_model: 'wholesale_only',
       simple_wholesale_enabled: true,
       gradual_wholesale_enabled: false,
+      meta_title: '',
+      meta_description: '',
+      keywords: '',
+      seo_slug: '',
     });
     setCurrentStep(0);
   }, [profile?.store_id]);
