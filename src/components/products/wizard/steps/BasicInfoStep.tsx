@@ -50,7 +50,10 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFormData 
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na função:', error);
+        throw new Error(error.message || 'Erro na API de IA');
+      }
 
       if (data?.content) {
         updateFormData({ description: data.content });
@@ -58,12 +61,14 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFormData 
           title: "Descrição gerada!",
           description: "A IA gerou uma descrição para o produto",
         });
+      } else {
+        throw new Error('Nenhum conteúdo foi gerado pela IA');
       }
     } catch (error: any) {
       console.error('Erro ao gerar descrição:', error);
       toast({
         title: "Erro na geração",
-        description: "Não foi possível gerar a descrição. Tente novamente.",
+        description: error.message || "Não foi possível gerar a descrição. Tente novamente.",
         variant: "destructive",
       });
     } finally {
