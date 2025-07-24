@@ -116,37 +116,6 @@ export const useProductVariations = (productId?: string) => {
         JSON.stringify(variations, null, 2)
       );
 
-      // Verificar o modelo de preço da loja para determinar se deve enviar dados graduais
-      const { data: storeData } = await supabase
-        .from("stores")
-        .select("id")
-        .eq(
-          "id",
-          (
-            await supabase
-              .from("products")
-              .select("store_id")
-              .eq("id", productId)
-              .single()
-          ).data?.store_id
-        )
-        .single();
-
-      const { data: priceModelData } = await supabase
-        .from("store_price_models")
-        .select("price_model")
-        .eq("store_id", storeData?.id)
-        .single();
-
-      const isGradualWholesale =
-        priceModelData?.price_model === "gradual_wholesale";
-
-      console.log(
-        "🔍 DEBUG - Modelo de preço da loja:",
-        priceModelData?.price_model
-      );
-      console.log("🔍 DEBUG - Deve enviar dados graduais:", isGradualWholesale);
-
       // 1. Remover variações existentes que não são hierárquicas
       const { error: deleteError } = await supabase
         .from("product_variations")
@@ -187,6 +156,9 @@ export const useProductVariations = (productId?: string) => {
               ? "grade"
               : variation.variation_type || "simple";
 
+          // Verificar se é uma variação de grade
+          const isGradeVariation = !!variation.is_grade || variationType === "grade";
+
           // Preparar dados da variação
           const variationData: any = {
             product_id: productId,
@@ -211,11 +183,11 @@ export const useProductVariations = (productId?: string) => {
             image_url: imageUrl || null,
             display_order: i,
             name: variation.name || null,
-            is_grade: !!variation.is_grade || variationType === "grade",
+            is_grade: isGradeVariation,
           };
 
-          // Só incluir campos de grade se o modelo for gradual_wholesale
-          if (isGradualWholesale) {
+          // Incluir campos de grade sempre que for uma variação de grade
+          if (isGradeVariation) {
             variationData.grade_name =
               variation.grade_name && variation.grade_name !== ""
                 ? variation.grade_name
@@ -238,8 +210,19 @@ export const useProductVariations = (productId?: string) => {
               variation.grade_pairs.length > 0
                 ? variation.grade_pairs
                 : null;
+
+            console.log(
+              "🎯 GRADE - Salvando campos de grade:",
+              {
+                grade_name: variationData.grade_name,
+                grade_color: variationData.grade_color,
+                grade_quantity: variationData.grade_quantity,
+                grade_sizes: variationData.grade_sizes,
+                grade_pairs: variationData.grade_pairs,
+              }
+            );
           } else {
-            // Se não for gradual_wholesale, garantir que campos de grade sejam null
+            // Se não for grade, garantir que campos de grade sejam null
             variationData.grade_name = null;
             variationData.grade_color = null;
             variationData.grade_quantity = null;
@@ -295,7 +278,6 @@ export const useProductVariations = (productId?: string) => {
     }
   };
 
-  // Função para remover uma variação individualmente (por id)
   const deleteVariationById = async (variationId: string) => {
     try {
       const { error } = await supabase
