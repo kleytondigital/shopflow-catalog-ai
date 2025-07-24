@@ -3,10 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Product } from '@/types/product';
 import { ProductVariation } from '@/types/variation';
-import { usePriceCalculation } from '@/hooks/usePriceCalculation';
-import { useProductPriceTiers } from '@/hooks/useProductPriceTiers';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 
 export interface CartItem {
   id: string;
@@ -88,39 +84,17 @@ export const useCart = () => {
     setIsOpen(false);
   };
 
-  const enrichItemsWithPricing = useCallback((items: CartItem[]) => {
-    return items.map(item => {
-      const product = item.product;
-      
-      // Usar hooks de pricing se disponíveis
-      let enrichedItem = { ...item };
-      
-      try {
-        const { settings } = useCatalogSettings();
-        const { priceModel } = useStorePriceModel(product.store_id);
-        
-        const catalogMode = settings?.catalog_mode || 'separated';
-        const modelKey = product.price_model || priceModel?.price_model || "retail_only";
-
-        enrichedItem = {
-          ...item,
-          catalogMode,
-          priceModel: modelKey,
-          finalPrice: modelKey === "wholesale_only" ? item.price : item.price,
-          totalSavings: 0,
-          savingsPercentage: 0
-        };
-      } catch (error) {
-        console.warn('Error enriching item with pricing:', error);
-      }
-
-      return enrichedItem;
-    });
-  }, []);
-
+  // Cálculos simplificados sem hooks condicionais
   const enrichedItems = useMemo(() => {
-    return enrichItemsWithPricing(cartItems);
-  }, [cartItems, enrichItemsWithPricing]);
+    return cartItems.map(item => ({
+      ...item,
+      catalogMode: 'separated',
+      priceModel: 'retail_only',
+      finalPrice: item.price,
+      totalSavings: 0,
+      savingsPercentage: 0
+    }));
+  }, [cartItems]);
 
   const totalItems = enrichedItems.reduce((sum, item) => sum + item.quantity, 0);
   

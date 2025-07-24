@@ -89,7 +89,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
       showPrices: editorSettings.showPrices !== false,
       showStock: editorSettings.showStock !== false,
       editorSettings,
-      storeId
+      storeId: storeId || ''
     };
 
     switch (template) {
