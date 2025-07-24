@@ -1,15 +1,20 @@
 
 import React, { useState } from "react";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BulkImportModal from "./BulkImportModal";
+import BulkStockModal from "./BulkStockModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useProducts } from "@/hooks/useProducts";
 
 const ProductsPage = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBulkStockModalOpen, setIsBulkStockModalOpen] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const { profile } = useAuth();
   const currentStore = profile?.store_id;
+  
+  const { products, refetch } = useProducts();
 
   return (
     <div className="container mx-auto p-6">
@@ -20,6 +25,15 @@ const ProductsPage = () => {
         </div>
 
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsBulkStockModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Package className="h-4 w-4" />
+            Estoque em Massa
+          </Button>
+
           <Button
             variant="outline"
             onClick={() => setIsImportModalOpen(true)}
@@ -44,6 +58,14 @@ const ProductsPage = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         storeId={currentStore}
+      />
+
+      {/* Modal de Estoque em Massa */}
+      <BulkStockModal
+        isOpen={isBulkStockModalOpen}
+        onClose={() => setIsBulkStockModalOpen(false)}
+        products={products}
+        onStockUpdated={refetch}
       />
     </div>
   );

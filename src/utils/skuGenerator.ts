@@ -146,6 +146,50 @@ export const generateVariationSKU = async (
   return newSKU;
 };
 
+// Função para gerar SKU único (compatibilidade)
+export const generateUniqueSKU = (
+  productName: string, 
+  variationData?: { 
+    color?: string; 
+    size?: string; 
+    name?: string; 
+    index?: number;
+  }
+): string => {
+  const baseName = normalizeText(productName);
+  const parts = [baseName.substring(0, 8)];
+  
+  if (variationData?.color) {
+    parts.push(normalizeText(variationData.color).substring(0, 3));
+  }
+  
+  if (variationData?.size) {
+    parts.push(normalizeText(variationData.size).substring(0, 3));
+  }
+  
+  if (variationData?.index !== undefined) {
+    parts.push(String(variationData.index + 1).padStart(2, '0'));
+  }
+  
+  return parts.join('-').toUpperCase();
+};
+
+// Função para gerar SKUs em lote
+export const generateBatchSKUs = (
+  productName: string,
+  variations: Array<{ color?: string; size?: string; name?: string }>
+): string[] => {
+  return variations.map((variation, index) => 
+    generateUniqueSKU(productName, { ...variation, index })
+  );
+};
+
+// Função para validar unicidade de SKUs
+export const validateSKUUniqueness = (skus: string[]): boolean => {
+  const uniqueSkus = new Set(skus);
+  return uniqueSkus.size === skus.length;
+};
+
 // Função para sugerir SKU (usada em tempo real nos forms)
 export const suggestSKU = async (input: string, type: 'product' | 'variation' = 'product'): Promise<string> => {
   const normalized = normalizeText(input);
