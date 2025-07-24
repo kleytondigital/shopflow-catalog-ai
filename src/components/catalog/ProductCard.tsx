@@ -17,6 +17,9 @@ interface ProductCardProps {
   showPrices?: boolean;
   showStock?: boolean;
   storeId?: string;
+  className?: string;
+  imageClassName?: string;
+  contentClassName?: string;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -28,7 +31,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isInWishlist,
   showPrices = true,
   showStock = true,
-  storeId
+  storeId,
+  className = "",
+  imageClassName = "",
+  contentClassName = ""
 }) => {
   const { tiers } = useProductPriceTiers(product.id, {
     wholesale_price: product.wholesale_price,
@@ -37,8 +43,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative aspect-square bg-gray-100">
+    <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow ${className}`}>
+      <div className={`relative aspect-square bg-gray-100 ${imageClassName}`}>
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -63,7 +69,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       </div>
 
-      <div className="p-4">
+      <div className={`p-4 ${contentClassName}`}>
         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
           {product.name}
         </h3>
