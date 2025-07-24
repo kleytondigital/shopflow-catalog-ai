@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useCatalog, CatalogType } from "@/hooks/useCatalog";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
@@ -8,8 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
 import { Product } from "@/types/product";
 
-export default function PublicCatalog({ storeIdentifier }: { storeIdentifier: string }) {
-  const { products, loading, catalogType } = useCatalog(storeIdentifier);
+export interface PublicCatalogProps {
+  storeIdentifier: string;
+  catalogType?: CatalogType;
+}
+
+export default function PublicCatalog({ storeIdentifier, catalogType = 'retail' }: PublicCatalogProps) {
+  const { products, loading } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
   const { isReady, templateName } = useGlobalTemplateStyles(storeIdentifier);
   const [searchTerm, setSearchTerm] = useState("");
