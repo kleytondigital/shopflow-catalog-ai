@@ -12,7 +12,7 @@ export interface WizardFormData {
   retail_price: number;
   wholesale_price?: number; // Tornar opcional para alinhar com ProductFormData
   stock: number;
-  min_wholesale_qty: number;
+  min_wholesale_qty?: number; // Tornar opcional para alinhar com ProductFormData
   is_featured: boolean;
   is_active: boolean;
   allow_negative_stock: boolean;
