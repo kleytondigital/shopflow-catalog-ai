@@ -18,8 +18,7 @@ export interface CatalogSettings {
 }
 
 export const useSettings = (storeId?: string) => {
-  const [settings, setSettings] = useState<Settings[]>([]);
-  const [catalogSettings, setCatalogSettings] = useState<CatalogSettings | null>(null);
+  const [settings, setSettings] = useState<CatalogSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,61 +27,30 @@ export const useSettings = (storeId?: string) => {
     setError(null);
 
     try {
+      // Buscar configurações da tabela store_settings ao invés de uma tabela genérica
       const { data, error: fetchError } = await supabase
         .from('store_settings')
         .select('*')
-        .eq('store_id', id);
+        .eq('store_id', id)
+        .single();
 
-      if (fetchError) {
+      if (fetchError && fetchError.code !== 'PGRST116') {
         setError(fetchError.message);
         return;
       }
 
-      setSettings(data || []);
-      
-      // Convert settings array to catalog settings object
+      // Converter dados da store_settings para o formato esperado
       const catalogData: CatalogSettings = {
-        catalog_mode: 'separated',
-        retail_catalog_active: true,
-        wholesale_catalog_active: false
+        catalog_mode: (data?.catalog_mode as 'separated' | 'hybrid' | 'toggle') || 'separated',
+        retail_catalog_active: data?.retail_catalog_active ?? true,
+        wholesale_catalog_active: data?.wholesale_catalog_active ?? false
       };
 
-      data?.forEach(setting => {
-        if (setting.setting_key === 'catalog_mode') {
-          catalogData.catalog_mode = setting.setting_value;
-        } else if (setting.setting_key === 'retail_catalog_active') {
-          catalogData.retail_catalog_active = setting.setting_value;
-        } else if (setting.setting_key === 'wholesale_catalog_active') {
-          catalogData.wholesale_catalog_active = setting.setting_value;
-        }
-      });
-
-      setCatalogSettings(catalogData);
+      setSettings(catalogData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar configurações');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateSetting = async (key: string, value: any) => {
-    if (!storeId) return;
-
-    try {
-      const { error } = await supabase
-        .from('store_settings')
-        .upsert({
-          store_id: storeId,
-          setting_key: key,
-          setting_value: value,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-      
-      await fetchSettings(storeId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar configuração');
     }
   };
 
@@ -92,10 +60,19 @@ export const useSettings = (storeId?: string) => {
     try {
       setLoading(true);
       
-      // Update each setting individually
-      for (const [key, value] of Object.entries(newSettings)) {
-        await updateSetting(key, value);
-      }
+      // Atualizar store_settings diretamente
+      const { error } = await supabase
+        .from('store_settings')
+        .upsert({
+          store_id: storeId,
+          ...newSettings,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      
+      // Refetch para atualizar o estado local
+      await fetchSettings(storeId);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar configurações');
@@ -111,11 +88,10 @@ export const useSettings = (storeId?: string) => {
   }, [storeId]);
 
   return {
-    settings: catalogSettings,
+    settings,
     loading,
     isLoading: loading,
     error,
-    updateSetting,
     updateSettings,
     refetch: () => storeId ? fetchSettings(storeId) : Promise.resolve()
   };

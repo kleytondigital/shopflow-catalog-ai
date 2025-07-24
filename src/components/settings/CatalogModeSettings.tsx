@@ -1,217 +1,153 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useSettings } from '@/hooks/useSettings';
-import { useAuth } from '@/hooks/useAuth';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { PriceModelType } from '@/types/price-models';
 
-const formSchema = z.object({
-  catalog_mode: z.enum(['separated', 'hybrid', 'toggle']),
-  retail_catalog_active: z.boolean().default(true),
-  wholesale_catalog_active: z.boolean().default(false),
-  store_id: z.string().optional(),
-});
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/hooks/useAuth';
+import { useSettings } from '@/hooks/useSettings';
+import { AlertCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const CatalogModeSettings = () => {
-  const { toast } = useToast();
   const { profile } = useAuth();
-  const { settings, updateSettings, isLoading } = useSettings(profile?.store_id);
-  const { priceModel } = useStorePriceModel(profile?.store_id);
-  const [isEditing, setIsEditing] = useState(false);
+  const { settings, loading, updateSettings } = useSettings(profile?.store_id);
 
-  const isWholesaleOnly = settings?.catalog_mode === "wholesale_only" || 
-  priceModel?.price_model === ("wholesale_only" as PriceModelType);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      catalog_mode: settings?.catalog_mode || 'separated',
-      retail_catalog_active: settings?.retail_catalog_active !== false,
-      wholesale_catalog_active: settings?.wholesale_catalog_active === true,
-      store_id: profile?.store_id,
-    },
-    mode: "onChange",
-  })
-
-  useEffect(() => {
-    form.reset({
-      catalog_mode: settings?.catalog_mode || 'separated',
-      retail_catalog_active: settings?.retail_catalog_active !== false,
-      wholesale_catalog_active: settings?.wholesale_catalog_active === true,
-      store_id: profile?.store_id,
-    });
-  }, [settings, profile?.store_id, form]);
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsEditing(false);
-    try {
-      await updateSettings(values);
-      toast({
-        title: "Configurações salvas!",
-        description: "As configurações do catálogo foram atualizadas.",
-      })
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar as configurações.",
-      })
-    }
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Configurações do Catálogo</CardTitle>
+          <CardDescription>Carregando configurações...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
-  const handleEditClick = () => {
-    setIsEditing(true);
+  const handleModeChange = (mode: 'separated' | 'hybrid' | 'toggle') => {
+    updateSettings({ catalog_mode: mode });
   };
 
-  const handleCancelClick = () => {
-    setIsEditing(false);
-    form.reset({
-      catalog_mode: settings?.catalog_mode || 'separated',
-      retail_catalog_active: settings?.retail_catalog_active !== false,
-      wholesale_catalog_active: settings?.wholesale_catalog_active === true,
-      store_id: profile?.store_id,
-    });
+  const handleCatalogToggle = (catalog: 'retail' | 'wholesale', active: boolean) => {
+    if (catalog === 'retail') {
+      updateSettings({ retail_catalog_active: active });
+    } else {
+      updateSettings({ wholesale_catalog_active: active });
+    }
   };
+
+  const canChangeMode = settings?.catalog_mode !== 'separated';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Modo de Catálogo</CardTitle>
-        <CardDescription>
-          Configure como seus produtos são exibidos para os clientes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="catalog_mode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Modo de Catálogo</FormLabel>
-                  <FormControl>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      {...field}
-                      disabled={!isEditing || isLoading}
-                    >
-                      <option value="separated">Separado (Varejo)</option>
-                      <option value="hybrid">Híbrido (Varejo/Atacado)</option>
-                      <option value="toggle">Alternável (Varejo/Atacado)</option>
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {form.getValues('catalog_mode') === 'toggle' && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="retail_catalog_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Varejo Ativo</FormLabel>
-                        <FormDescription>
-                          Mostrar catálogo de varejo.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={!isEditing || isLoading}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="wholesale_catalog_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Atacado Ativo</FormLabel>
-                        <FormDescription>
-                          Mostrar catálogo de atacado.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={!isEditing || isLoading}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-
-            <div className="flex justify-end gap-2">
-              {isEditing ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={handleCancelClick}
-                    disabled={isLoading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                  >
-                    Salvar
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={handleEditClick}
-                  disabled={isLoading}
-                >
-                  Editar
-                </Button>
-              )}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Modo do Catálogo</CardTitle>
+          <CardDescription>
+            Configure como seus catálogos de varejo e atacado serão exibidos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <RadioGroup
+            value={settings?.catalog_mode || 'separated'}
+            onValueChange={handleModeChange}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="separated" id="separated" />
+              <Label htmlFor="separated">
+                <div>
+                  <div className="font-medium">Catálogos Separados</div>
+                  <div className="text-sm text-muted-foreground">
+                    URLs diferentes para varejo e atacado
+                  </div>
+                </div>
+              </Label>
             </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+            
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="hybrid" id="hybrid" />
+              <Label htmlFor="hybrid">
+                <div>
+                  <div className="font-medium">Catálogo Híbrido</div>
+                  <div className="text-sm text-muted-foreground">
+                    Um catálogo que mostra preços conforme o tipo de cliente
+                  </div>
+                </div>
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="toggle" id="toggle" />
+              <Label htmlFor="toggle">
+                <div>
+                  <div className="font-medium">Catálogo com Toggle</div>
+                  <div className="text-sm text-muted-foreground">
+                    Permite alternar entre varejo e atacado na mesma página
+                  </div>
+                </div>
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {settings?.catalog_mode === 'separated' && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                No modo separado, você terá URLs distintas para cada tipo de catálogo.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ativação dos Catálogos</CardTitle>
+          <CardDescription>
+            Controle quais catálogos estão ativos para seus clientes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="retail-active">Catálogo de Varejo</Label>
+              <div className="text-sm text-muted-foreground">
+                Permite vendas no varejo
+              </div>
+            </div>
+            <Switch
+              id="retail-active"
+              checked={settings?.retail_catalog_active ?? true}
+              onCheckedChange={(checked) => handleCatalogToggle('retail', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="wholesale-active">Catálogo de Atacado</Label>
+              <div className="text-sm text-muted-foreground">
+                Permite vendas no atacado
+              </div>
+            </div>
+            <Switch
+              id="wholesale-active"
+              checked={settings?.wholesale_catalog_active ?? false}
+              onCheckedChange={(checked) => handleCatalogToggle('wholesale', checked)}
+            />
+          </div>
+
+          {!settings?.retail_catalog_active && !settings?.wholesale_catalog_active && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Atenção: Todos os catálogos estão desativados. Seus clientes não poderão visualizar produtos.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
 export default CatalogModeSettings;
-
-const FormDescription = ({ children }: { children?: React.ReactNode }) => {
-  return <p className="text-sm text-muted-foreground">{children}</p>
-}
