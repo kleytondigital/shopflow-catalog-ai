@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
@@ -26,7 +27,7 @@ import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 import { PriceModelType } from "@/types/price-models";
 
 interface ProductDetailsModalProps {
-  product: Product;
+  product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (product: Product, quantity: number, variation?: any) => void;
@@ -42,27 +43,29 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState<any>(null);
-  const { variations } = useProductVariations(product.id);
+  const { variations } = useProductVariations(product?.id);
   const { toast } = useToast();
-  const { priceModel, loading } = useStorePriceModel(product.store_id);
+  const { priceModel, loading } = useStorePriceModel(product?.store_id);
   const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
 
   const rating = useMemo(() => {
+    if (!product?.id) return 4.0;
     const hash = product.id.split("").reduce((a, b) => {
       a = (a << 5) - a + b.charCodeAt(0);
       return a & a;
     }, 0);
     return 3.5 + (Math.abs(hash) % 15) / 10; // Entre 3.5 e 5.0
-  }, [product.id]);
+  }, [product?.id]);
 
   const reviewCount = useMemo(() => {
+    if (!product?.name || !product?.retail_price) return 10;
     const hash = product.name.length + (product.retail_price || 0);
     return Math.floor(5 + (hash % 45)); // Entre 5 e 50 avaliações
-  }, [product.name, product.retail_price]);
+  }, [product?.name, product?.retail_price]);
 
   // Calcular desconto potencial
   const potentialSavings = useMemo(() => {
-    if (!product.wholesale_price || !product.retail_price) return null;
+    if (!product?.wholesale_price || !product?.retail_price) return null;
 
     const maxSavings = product.retail_price - product.wholesale_price;
     const maxPercent = (maxSavings / product.retail_price) * 100;
@@ -72,9 +75,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       savingsPercentage: maxPercent,
       maxDiscountPercent: Math.round(maxPercent),
     };
-  }, [product.wholesale_price, product.retail_price]);
+  }, [product?.wholesale_price, product?.retail_price]);
 
   const handleAddToCart = useCallback(() => {
+    if (!product) return;
+    
     let qty = quantity;
     let price = product.retail_price;
     let isWholesale = false;
@@ -97,15 +102,19 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   }, [product, quantity, selectedVariation, onAddToCart, onClose, modelKey]);
 
   const handleQuantityChange = useCallback((newQuantity: number) => {
+    if (!product) return;
+    
     if (modelKey === "wholesale_only") {
       const minQty = product.min_wholesale_qty || 1;
       setQuantity(Math.max(newQuantity, minQty));
     } else {
       setQuantity(Math.max(newQuantity, 1));
     }
-  }, [modelKey, product.min_wholesale_qty]);
+  }, [modelKey, product?.min_wholesale_qty, product]);
 
   const currentPrice = useMemo(() => {
+    if (!product) return 0;
+    
     if (modelKey === "wholesale_only") {
       return product.wholesale_price || product.retail_price;
     }
@@ -113,11 +122,18 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   }, [modelKey, product]);
 
   const minQuantity = useMemo(() => {
+    if (!product) return 1;
+    
     if (modelKey === "wholesale_only") {
       return product.min_wholesale_qty || 1;
     }
     return 1;
-  }, [modelKey, product.min_wholesale_qty]);
+  }, [modelKey, product?.min_wholesale_qty]);
+
+  // Se não há produto, não renderizar o modal
+  if (!product) {
+    return null;
+  }
 
   const canAddMore = product.stock > quantity || product.allow_negative_stock;
   const canDecrease = quantity > minQuantity;
