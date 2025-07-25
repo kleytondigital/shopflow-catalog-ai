@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
@@ -83,7 +82,14 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (loading) return;
-    
+
+    // Debug log para verificar store_id
+    console.log("🔍 MinimalTemplate - Debug store_id:", {
+      productStoreId: product.store_id,
+      productName: product.name,
+      modelKey,
+    });
+
     let qty = 1;
     let price = product.retail_price;
     let isWholesale = false;
@@ -94,22 +100,33 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
       isWholesale = true;
     }
 
-    addItem(
-      {
-        id: `${product.id}-default`,
-        product: { 
-          ...product, 
-          price_model: modelKey,
-          allow_negative_stock: product.allow_negative_stock ?? false
-        },
-        quantity: qty,
-        price,
-        originalPrice: price,
-        catalogType,
-        isWholesalePrice: isWholesale,
+    const cartItem = {
+      id: `${product.id}-default`,
+      product: {
+        id: product.id,
+        name: product.name,
+        retail_price: product.retail_price,
+        wholesale_price: product.wholesale_price,
+        min_wholesale_qty: product.min_wholesale_qty,
+        image_url: product.image_url,
+        store_id: product.store_id, // Garantir que store_id seja incluído
+        stock: product.stock,
+        allow_negative_stock: product.allow_negative_stock ?? false,
+        price_model: modelKey,
       },
-      modelKey
-    );
+      quantity: qty,
+      price,
+      originalPrice: price,
+      catalogType,
+      isWholesalePrice: isWholesale,
+    };
+
+    console.log("🔍 MinimalTemplate - CartItem criado:", {
+      cartItemStoreId: cartItem.product.store_id,
+      cartItemProduct: cartItem.product,
+    });
+
+    addItem(cartItem, modelKey);
   };
 
   return (
@@ -244,9 +261,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
             }}
           >
             <span
-              className={`${
-                isInWishlist ? "text-black" : "text-gray-400"
-              }`}
+              className={`${isInWishlist ? "text-black" : "text-gray-400"}`}
             >
               ♥
             </span>

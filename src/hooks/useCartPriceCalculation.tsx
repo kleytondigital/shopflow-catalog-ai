@@ -1,6 +1,5 @@
-
-import { useMemo } from 'react';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
+import { useMemo } from "react";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface CartItem {
   id: string;
@@ -38,81 +37,124 @@ interface PriceCalculationResult {
   priceModel?: string;
 }
 
-export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult => {
-  const { priceModel } = useStorePriceModel(item.product.store_id);
+export const useCartPriceCalculation = (
+  item: CartItem
+): PriceCalculationResult => {
+  // Sempre buscar o modelo da loja via store_id do produto
+  const { priceModel, loading } = useStorePriceModel(item.product.store_id);
 
   return useMemo(() => {
+    // Se ainda está carregando ou não tem modelo, não calcula nada
+    if (loading || !priceModel) {
+      return {
+        total: 0,
+        savings: 0,
+        formattedTotal: "",
+        formattedSavings: "",
+        currentTier: null,
+        nextTierHint: undefined,
+        priceModel: null,
+      };
+    }
+
     const quantity = item.quantity;
     const retailPrice = item.product.retail_price;
     const wholesalePrice = item.product.wholesale_price;
     const minWholesaleQty = item.product.min_wholesale_qty || 1;
-    
-    let finalPrice = retailPrice;
-    let currentTierName = 'Varejo';
-    let savings = 0;
-    let nextTierHint: { quantityNeeded: number; potentialSavings: number; } | undefined;
 
-    const modelType = priceModel?.price_model || 'retail_only';
+    let finalPrice = retailPrice;
+    let currentTierName = "Varejo";
+    let savings = 0;
+    let nextTierHint:
+      | { quantityNeeded: number; potentialSavings: number }
+      | undefined;
+
+    // O modelo de preço SEMPRE vem da loja
+    const modelType = priceModel.price_model;
+
+    // Debug logs para verificar o modelo sendo usado
+    console.log("🔍 useCartPriceCalculation: Debug dados:", {
+      storeId: item.product.store_id,
+      productName: item.product.name,
+      priceModel: priceModel,
+      priceModelType: priceModel?.price_model,
+      retailPrice,
+      wholesalePrice,
+      quantity,
+    });
+
+    console.log(
+      "🔍 useCartPriceCalculation: Modelo final sendo usado:",
+      modelType
+    );
 
     switch (modelType) {
-      case 'retail_only':
+      case "retail_only":
         // Apenas varejo - usar sempre o preço de varejo
         finalPrice = retailPrice;
-        currentTierName = 'Varejo';
+        currentTierName = "Varejo";
         break;
 
-      case 'wholesale_only':
+      case "wholesale_only":
         // Apenas atacado - usar sempre o preço de atacado
+        console.log("🔍 useCartPriceCalculation: Caso wholesale_only:", {
+          wholesalePrice,
+          retailPrice,
+          finalPrice: wholesalePrice || retailPrice,
+          currentTierName: "Atacado",
+        });
         finalPrice = wholesalePrice || retailPrice;
-        currentTierName = 'Atacado';
+        currentTierName = "Atacado";
         savings = 0; // Não mostrar economia para wholesale_only
         break;
 
-      case 'simple_wholesale':
+      case "simple_wholesale":
         // Varejo + Atacado simples - verificar quantidade
         if (wholesalePrice && quantity >= minWholesaleQty) {
           finalPrice = wholesalePrice;
-          currentTierName = 'Atacado';
+          currentTierName = "Atacado";
           savings = (retailPrice - wholesalePrice) * quantity;
         } else {
           finalPrice = retailPrice;
-          currentTierName = 'Varejo';
-          
+          currentTierName = "Varejo";
+
           // Dica para próximo nível
           if (wholesalePrice && quantity < minWholesaleQty) {
             const neededQty = minWholesaleQty - quantity;
-            const potentialSavings = (retailPrice - wholesalePrice) * minWholesaleQty;
+            const potentialSavings =
+              (retailPrice - wholesalePrice) * minWholesaleQty;
             nextTierHint = {
               quantityNeeded: neededQty,
-              potentialSavings
+              potentialSavings,
             };
           }
         }
         break;
 
-      case 'gradual_wholesale':
+      case "gradual_wholesale":
         // Para gradativo, usar preço exato do item calculado (já vem correto do carrinho)
         finalPrice = item.price || retailPrice;
-        
+
         // Determinar nível baseado no preço final vs preço de varejo
         if (finalPrice < retailPrice) {
           if (wholesalePrice && finalPrice <= wholesalePrice) {
-            currentTierName = priceModel?.simple_wholesale_name || 'Atacado';
+            currentTierName = priceModel?.simple_wholesale_name || "Atacado";
           } else {
-            currentTierName = 'Atacarejo';
+            currentTierName = "Atacarejo";
           }
           savings = (retailPrice - finalPrice) * quantity;
         } else {
-          currentTierName = 'Varejo';
+          currentTierName = "Varejo";
         }
 
         // Dica para próximo nível no gradativo
         if (wholesalePrice && quantity < minWholesaleQty) {
           const neededQty = minWholesaleQty - quantity;
-          const potentialSavings = (retailPrice - wholesalePrice) * minWholesaleQty;
+          const potentialSavings =
+            (retailPrice - wholesalePrice) * minWholesaleQty;
           nextTierHint = {
             quantityNeeded: neededQty,
-            potentialSavings
+            potentialSavings,
           };
         }
         break;
@@ -120,7 +162,7 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
       default:
         // Fallback para usar o preço do item se disponível, senão varejo
         finalPrice = item.price || retailPrice;
-        currentTierName = 'Varejo';
+        currentTierName = "Varejo";
     }
 
     // Validar finalPrice para evitar valores inválidos
@@ -133,20 +175,20 @@ export const useCartPriceCalculation = (item: CartItem): PriceCalculationResult 
     return {
       total,
       savings,
-      formattedTotal: new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
+      formattedTotal: new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
       }).format(total),
-      formattedSavings: new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
+      formattedSavings: new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
       }).format(savings),
       currentTier: {
         tier_name: currentTierName,
-        price: finalPrice
+        price: finalPrice,
       },
       nextTierHint,
-      priceModel: modelType // Adicionar modelo de preço para uso nos componentes
+      priceModel: modelType, // Adicionar modelo de preço para uso nos componentes
     };
-  }, [item, priceModel]);
+  }, [item, priceModel, loading]);
 };

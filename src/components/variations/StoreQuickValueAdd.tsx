@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  useStoreVariations,
-  VariationGroup,
-} from "@/hooks/useStoreVariations";
+import { useStoreVariations, VariationGroup } from "@/hooks/useStoreVariations";
 import { useToast } from "@/hooks/use-toast";
 
 interface StoreQuickValueAddProps {
@@ -191,7 +187,7 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
         const valueData = {
           store_id: group.store_id,
           group_id: group.id,
-          master_value_id: '',
+          master_value_id: "",
           value: colorValue,
           hex_color: selectedColors.length === 1 ? hexColor : null,
           is_active: true,
@@ -214,7 +210,7 @@ const StoreQuickValueAdd: React.FC<StoreQuickValueAddProps> = ({
         const valueData = {
           store_id: group.store_id,
           group_id: group.id,
-          master_value_id: '',
+          master_value_id: "",
           value: newValue.trim(),
           hex_color: group.attribute_key === "color" ? hexColor : null,
           is_active: true,

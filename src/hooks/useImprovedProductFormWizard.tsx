@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { useProductVariations } from '@/hooks/useProductVariations';
-import { ProductVariation } from '@/types/product';
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useProductVariations } from "@/hooks/useProductVariations";
+import { ProductVariation } from "@/types/product";
 
 export interface WizardFormData {
   name: string;
@@ -44,9 +44,9 @@ export const useImprovedProductFormWizard = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<WizardFormData>({
-    name: '',
-    description: '',
-    category: '',
+    name: "",
+    description: "",
+    category: "",
     retail_price: 0,
     wholesale_price: 0,
     stock: 0,
@@ -55,91 +55,113 @@ export const useImprovedProductFormWizard = () => {
     is_active: true,
     allow_negative_stock: false,
     stock_alert_threshold: 5,
-    store_id: profile?.store_id || '',
+    store_id: profile?.store_id || "",
     variations: [],
-    price_model: 'wholesale_only',
+    price_model: "wholesale_only",
     simple_wholesale_enabled: true,
     gradual_wholesale_enabled: false,
-    meta_title: '',
-    meta_description: '',
-    keywords: '',
-    seo_slug: '',
+    meta_title: "",
+    meta_description: "",
+    keywords: "",
+    seo_slug: "",
   });
 
   const steps: WizardStep[] = [
-    { id: 0, label: 'Informações Básicas', description: 'Nome, categoria e descrição' },
-    { id: 1, label: 'Preços e Estoque', description: 'Preços, estoque e configurações' },
-    { id: 2, label: 'Imagens', description: 'Imagens do produto' },
-    { id: 3, label: 'Variações', description: 'Cores, tamanhos e outras variações' },
-    { id: 4, label: 'SEO e Marketing', description: 'Otimização e configurações de marketing' },
+    {
+      id: 0,
+      label: "Informações Básicas",
+      description: "Nome, categoria e descrição",
+    },
+    {
+      id: 1,
+      label: "Preços e Estoque",
+      description: "Preços, estoque e configurações",
+    },
+    { id: 2, label: "Imagens", description: "Imagens do produto" },
+    {
+      id: 3,
+      label: "Variações",
+      description: "Cores, tamanhos e outras variações",
+    },
+    {
+      id: 4,
+      label: "SEO e Marketing",
+      description: "Otimização e configurações de marketing",
+    },
   ];
 
   const updateFormData = useCallback((updates: Partial<WizardFormData>) => {
-    console.log('📝 WIZARD - Atualizando formData:', updates);
-    setFormData(prev => ({ ...prev, ...updates }));
+    console.log("📝 WIZARD - Atualizando formData:", updates);
+    setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev) => prev + 1);
     }
   }, [currentStep, steps.length]);
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+      setCurrentStep((prev) => prev - 1);
     }
   }, [currentStep]);
 
-  const goToStep = useCallback((step: number) => {
-    if (step >= 0 && step < steps.length) {
-      setCurrentStep(step);
-    }
-  }, [steps.length]);
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step >= 0 && step < steps.length) {
+        setCurrentStep(step);
+      }
+    },
+    [steps.length]
+  );
 
   const canProceed = useCallback(() => {
-    console.log('🔍 WIZARD - Verificando canProceed para step:', currentStep, {
+    console.log("🔍 WIZARD - Verificando canProceed para step:", currentStep, {
       formData,
-      priceModel: priceModel?.price_model
+      priceModel: priceModel?.price_model,
     });
-    
+
     switch (currentStep) {
       case 0: // Informações Básicas
-        const hasName = formData.name.trim() !== '';
-        const hasCategory = formData.category.trim() !== '';
-        console.log('🔍 WIZARD - Step 0 validation:', { hasName, hasCategory });
+        const hasName = formData.name.trim() !== "";
+        const hasCategory = formData.category.trim() !== "";
+        console.log("🔍 WIZARD - Step 0 validation:", { hasName, hasCategory });
         return hasName && hasCategory;
-      
+
       case 1: // Preços e Estoque
         if (!priceModel) {
-          console.log('🔍 WIZARD - Step 1: Aguardando modelo de preços...');
+          console.log("🔍 WIZARD - Step 1: Aguardando modelo de preços...");
           return false;
         }
 
         const modelType = priceModel.price_model;
-        console.log('🔍 WIZARD - Step 1 validation:', {
+        console.log("🔍 WIZARD - Step 1 validation:", {
           modelType,
           retailPrice: formData.retail_price,
-          wholesalePrice: formData.wholesale_price
+          wholesalePrice: formData.wholesale_price,
         });
 
         switch (modelType) {
-          case 'retail_only':
+          case "retail_only":
             return formData.retail_price > 0;
-          
-          case 'wholesale_only':
+
+          case "wholesale_only":
             return formData.wholesale_price && formData.wholesale_price > 0;
-          
-          case 'simple_wholesale':
-          case 'gradual_wholesale':
+
+          case "simple_wholesale":
+          case "gradual_wholesale":
             // Precisa de pelo menos um dos dois preços
-            return (formData.retail_price > 0) || (formData.wholesale_price && formData.wholesale_price > 0);
-          
+            return (
+              formData.retail_price > 0 ||
+              (formData.wholesale_price && formData.wholesale_price > 0)
+            );
+
           default:
             // Fallback para garantir compatibilidade
             return formData.retail_price > 0;
         }
-      
+
       case 2: // Imagens
         return true; // Imagens são opcionais
       case 3: // Variações
@@ -151,214 +173,413 @@ export const useImprovedProductFormWizard = () => {
     }
   }, [currentStep, formData, priceModel]);
 
-  const loadProductForEditing = useCallback(async (product: any) => {
-    console.log('📂 WIZARD - Carregando produto para edição:', product);
-    
-    try {
-      // Carregar variações do produto
-      let variations: ProductVariation[] = [];
-      if (product.id) {
-        const { data: variationsData, error: variationsError } = await supabase
-          .from('product_variations')
-          .select('*')
-          .eq('product_id', product.id)
-          .eq('is_active', true)
-          .order('display_order');
+  const loadProductForEditing = useCallback(
+    async (product: any) => {
+      console.log("📂 WIZARD - Carregando produto para edição:", product);
 
-        if (variationsError) {
-          console.error('Erro ao carregar variações:', variationsError);
-        } else {
-          variations = variationsData?.map((v: any) => ({
-            id: v.id,
-            product_id: v.product_id,
-            color: v.color,
-            size: v.size,
-            sku: v.sku,
-            stock: v.stock,
-            price_adjustment: v.price_adjustment,
-            is_active: v.is_active,
-            image_url: v.image_url,
-            created_at: v.created_at,
-            updated_at: v.updated_at,
-            variation_type: v.variation_type,
-            name: v.name,
-            is_grade: v.is_grade,
-            grade_name: v.grade_name,
-            grade_color: v.grade_color,
-            grade_quantity: v.grade_quantity,
-            grade_sizes: v.grade_sizes,
-            grade_pairs: v.grade_pairs,
-            display_order: v.display_order,
-          })) || [];
-        }
-      }
+      try {
+        // Carregar variações do produto
+        let variations: ProductVariation[] = [];
+        if (product.id) {
+          const { data: variationsData, error: variationsError } =
+            await supabase
+              .from("product_variations")
+              .select("*")
+              .eq("product_id", product.id)
+              .eq("is_active", true)
+              .order("display_order");
 
-      console.log('📂 WIZARD - Variações carregadas:', variations.length);
-
-      // Buscar o modelo de preços da loja
-      let currentPriceModel = 'wholesale_only'; // fallback
-      if (product.store_id) {
-        const { data: priceModelData } = await supabase
-          .from('store_price_models')
-          .select('price_model')
-          .eq('store_id', product.store_id)
-          .single();
-        
-        if (priceModelData?.price_model) {
-          currentPriceModel = priceModelData.price_model;
-        }
-      }
-
-      console.log('📂 WIZARD - Modelo de preços da loja:', currentPriceModel);
-
-      // Atualizar formData com dados do produto
-      setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        category: product.category || '',
-        retail_price: product.retail_price || 0,
-        wholesale_price: product.wholesale_price || 0,
-        stock: product.stock || 0,
-        min_wholesale_qty: product.min_wholesale_qty || 1,
-        is_featured: product.is_featured || false,
-        is_active: product.is_active !== false,
-        allow_negative_stock: product.allow_negative_stock || false,
-        stock_alert_threshold: product.stock_alert_threshold || 5,
-        store_id: product.store_id || profile?.store_id || '',
-        variations: variations,
-        price_model: currentPriceModel,
-        simple_wholesale_enabled: currentPriceModel === 'simple_wholesale',
-        gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
-        meta_title: product.meta_title || '',
-        meta_description: product.meta_description || '',
-        keywords: product.keywords || '',
-        seo_slug: product.seo_slug || '',
-      });
-    } catch (error) {
-      console.error('Erro ao carregar produto para edição:', error);
-      toast({
-        title: 'Erro ao carregar produto',
-        description: 'Não foi possível carregar os dados do produto.',
-        variant: 'destructive',
-      });
-    }
-  }, [profile?.store_id, toast]);
-
-  const saveProduct = useCallback(async (editingProductId?: string, uploadAllImages?: (productId: string) => Promise<string[]>) => {
-    setLoading(true);
-    console.log('💾 WIZARD - Iniciando salvamento do produto', { editingProductId, formData });
-
-    try {
-      // Dados do produto
-      const productData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        retail_price: formData.retail_price,
-        wholesale_price: formData.wholesale_price,
-        stock: formData.stock,
-        min_wholesale_qty: formData.min_wholesale_qty,
-        is_featured: formData.is_featured,
-        is_active: formData.is_active,
-        allow_negative_stock: formData.allow_negative_stock,
-        stock_alert_threshold: formData.stock_alert_threshold,
-        store_id: formData.store_id,
-        enable_gradual_wholesale: formData.gradual_wholesale_enabled,
-        meta_title: formData.meta_title,
-        meta_description: formData.meta_description,
-        keywords: formData.keywords,
-        seo_slug: formData.seo_slug,
-      };
-
-      let productId = editingProductId;
-
-      if (editingProductId) {
-        // Atualizar produto existente
-        console.log('🔄 WIZARD - Atualizando produto existente:', editingProductId);
-        const { error: updateError } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProductId);
-
-        if (updateError) {
-          console.error('Erro ao atualizar produto:', updateError);
-          throw updateError;
-        }
-      } else {
-        // Criar novo produto
-        console.log('✨ WIZARD - Criando novo produto');
-        const { data: newProduct, error: createError } = await supabase
-          .from('products')
-          .insert(productData)
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Erro ao criar produto:', createError);
-          throw createError;
-        }
-
-        productId = newProduct.id;
-        console.log('✅ WIZARD - Produto criado com ID:', productId);
-      }
-
-      // Upload de imagens se houver função
-      if (uploadAllImages && productId) {
-        console.log('📷 WIZARD - Fazendo upload de imagens');
-        try {
-          await uploadAllImages(productId);
-        } catch (imageError) {
-          console.error('Erro no upload de imagens:', imageError);
-          // Não interromper o salvamento por erro de imagem
-        }
-      }
-
-      // Salvar variações se houver
-      if (formData.variations && formData.variations.length > 0 && productId) {
-        console.log('🎨 WIZARD - Salvando variações:', formData.variations.length);
-        try {
-          const { success, error: variationsError } = await saveVariations(productId, formData.variations);
-          if (!success) {
-            console.error('Erro ao salvar variações:', variationsError);
-            // Não interromper o salvamento por erro de variações
-            toast({
-              title: 'Aviso',
-              description: 'Produto salvo, mas houve problemas ao salvar as variações.',
-              variant: 'destructive',
-            });
+          if (variationsError) {
+            console.error("Erro ao carregar variações:", variationsError);
           } else {
-            console.log('✅ WIZARD - Variações salvas com sucesso');
+            variations =
+              variationsData?.map((v: any) => ({
+                id: v.id,
+                product_id: v.product_id,
+                color: v.color,
+                size: v.size,
+                sku: v.sku,
+                stock: v.stock,
+                price_adjustment: v.price_adjustment,
+                is_active: v.is_active,
+                image_url: v.image_url,
+                created_at: v.created_at,
+                updated_at: v.updated_at,
+                variation_type: v.variation_type,
+                name: v.name,
+                is_grade: v.is_grade,
+                grade_name: v.grade_name,
+                grade_color: v.grade_color,
+                grade_quantity: v.grade_quantity,
+                grade_sizes: v.grade_sizes,
+                grade_pairs: v.grade_pairs,
+                display_order: v.display_order,
+              })) || [];
           }
-        } catch (variationError) {
-          console.error('Erro inesperado ao salvar variações:', variationError);
         }
+
+        console.log("📂 WIZARD - Variações carregadas:", variations.length);
+
+        // Buscar o modelo de preços da loja
+        let currentPriceModel = "wholesale_only"; // fallback
+        if (product.store_id) {
+          const { data: priceModelData } = await supabase
+            .from("store_price_models")
+            .select("price_model")
+            .eq("store_id", product.store_id)
+            .single();
+
+          if (priceModelData?.price_model) {
+            currentPriceModel = priceModelData.price_model;
+          }
+        }
+
+        console.log("📂 WIZARD - Modelo de preços da loja:", currentPriceModel);
+
+        // Atualizar formData com dados do produto
+        setFormData({
+          name: product.name || "",
+          description: product.description || "",
+          category: product.category || "",
+          retail_price: product.retail_price || 0,
+          wholesale_price: product.wholesale_price || 0,
+          stock: product.stock || 0,
+          min_wholesale_qty: product.min_wholesale_qty || 1,
+          is_featured: product.is_featured || false,
+          is_active: product.is_active !== false,
+          allow_negative_stock: product.allow_negative_stock || false,
+          stock_alert_threshold: product.stock_alert_threshold || 5,
+          store_id: product.store_id || profile?.store_id || "",
+          variations: variations,
+          price_model: currentPriceModel,
+          simple_wholesale_enabled: currentPriceModel === "simple_wholesale",
+          gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
+          meta_title: product.meta_title || "",
+          meta_description: product.meta_description || "",
+          keywords: product.keywords || "",
+          seo_slug: product.seo_slug || "",
+        });
+      } catch (error) {
+        console.error("Erro ao carregar produto para edição:", error);
+        toast({
+          title: "Erro ao carregar produto",
+          description: "Não foi possível carregar os dados do produto.",
+          variant: "destructive",
+        });
       }
+    },
+    [profile?.store_id, toast]
+  );
 
-      toast({
-        title: 'Produto salvo!',
-        description: 'O produto foi salvo com sucesso.',
+  const saveProduct = useCallback(
+    async (
+      editingProductId?: string,
+      uploadAllImages?: (productId: string) => Promise<string[]>
+    ) => {
+      setLoading(true);
+      console.log("💾 WIZARD - Iniciando salvamento do produto", {
+        editingProductId,
+        formData,
       });
 
-      return productId;
-    } catch (error) {
-      console.error('💥 WIZARD - Erro no salvamento:', error);
-      toast({
-        title: 'Erro ao salvar produto',
-        description: error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive',
-      });
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [formData, saveVariations, toast]);
+      try {
+        // Dados do produto
+        const productData = {
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          retail_price: formData.retail_price,
+          wholesale_price: formData.wholesale_price,
+          stock: formData.stock,
+          min_wholesale_qty: formData.min_wholesale_qty,
+          is_featured: formData.is_featured,
+          is_active: formData.is_active,
+          allow_negative_stock: formData.allow_negative_stock,
+          stock_alert_threshold: formData.stock_alert_threshold,
+          store_id: formData.store_id,
+          enable_gradual_wholesale: formData.gradual_wholesale_enabled,
+          meta_title: formData.meta_title,
+          meta_description: formData.meta_description,
+          keywords: formData.keywords,
+          seo_slug: formData.seo_slug,
+        };
+
+        let productId = editingProductId;
+
+        if (editingProductId) {
+          // Atualizar produto existente
+          console.log(
+            "🔄 WIZARD - Atualizando produto existente:",
+            editingProductId
+          );
+          const { error: updateError } = await supabase
+            .from("products")
+            .update(productData)
+            .eq("id", editingProductId);
+
+          if (updateError) {
+            console.error("Erro ao atualizar produto:", updateError);
+            throw updateError;
+          }
+        } else {
+          // Criar novo produto
+          console.log("✨ WIZARD - Criando novo produto");
+          const { data: newProduct, error: createError } = await supabase
+            .from("products")
+            .insert(productData)
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Erro ao criar produto:", createError);
+            throw createError;
+          }
+
+          productId = newProduct.id;
+          console.log("✅ WIZARD - Produto criado com ID:", productId);
+        }
+
+        // Upload de imagens se houver função
+        if (uploadAllImages && productId) {
+          console.log("📷 WIZARD - Fazendo upload de imagens");
+          try {
+            await uploadAllImages(productId);
+          } catch (imageError) {
+            console.error("Erro no upload de imagens:", imageError);
+            // Não interromper o salvamento por erro de imagem
+          }
+        }
+
+        // Salvar price tiers automaticamente baseado no modelo de preços
+        if (productId && priceModel) {
+          console.log(
+            "💰 WIZARD - Criando price tiers baseado no modelo:",
+            priceModel.price_model
+          );
+          try {
+            // Primeiro, desativar tiers existentes
+            await supabase
+              .from("product_price_tiers")
+              .update({ is_active: false })
+              .eq("product_id", productId);
+
+            const tiersToInsert = [];
+
+            // Criar tier baseado no modelo de preços
+            switch (priceModel.price_model) {
+              case "wholesale_only":
+                if (formData.wholesale_price && formData.wholesale_price > 0) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: "Atacado",
+                    tier_order: 1,
+                    tier_type: "wholesale_only",
+                    price: formData.wholesale_price,
+                    min_quantity: formData.min_wholesale_qty || 1,
+                    is_active: true,
+                  });
+                  console.log(
+                    "✅ WIZARD - Criado tier wholesale_only:",
+                    tiersToInsert[0]
+                  );
+                }
+                break;
+
+              case "simple_wholesale":
+                // Tier de varejo
+                if (formData.retail_price > 0) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: "Varejo",
+                    tier_order: 1,
+                    tier_type: "retail",
+                    price: formData.retail_price,
+                    min_quantity: 1,
+                    is_active: true,
+                  });
+                }
+                // Tier de atacado
+                if (formData.wholesale_price && formData.wholesale_price > 0) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: priceModel.simple_wholesale_name || "Atacado",
+                    tier_order: 2,
+                    tier_type: "simple_wholesale",
+                    price: formData.wholesale_price,
+                    min_quantity:
+                      formData.min_wholesale_qty ||
+                      priceModel.simple_wholesale_min_qty ||
+                      1,
+                    is_active: true,
+                  });
+                }
+                break;
+
+              case "gradual_wholesale":
+                // Tier de varejo
+                if (formData.retail_price > 0) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: "Varejo",
+                    tier_order: 1,
+                    tier_type: "retail",
+                    price: formData.retail_price,
+                    min_quantity: 1,
+                    is_active: true,
+                  });
+                }
+                // Tiers graduais baseados no modelo
+                if (priceModel.tier_1_enabled && priceModel.tier_1_name) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: priceModel.tier_1_name,
+                    tier_order: 2,
+                    tier_type: "gradual_wholesale",
+                    price:
+                      formData.wholesale_price || formData.retail_price * 0.9,
+                    min_quantity: 10,
+                    is_active: true,
+                  });
+                }
+                if (priceModel.tier_2_enabled && priceModel.tier_2_name) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: priceModel.tier_2_name,
+                    tier_order: 3,
+                    tier_type: "gradual_wholesale",
+                    price:
+                      formData.wholesale_price || formData.retail_price * 0.8,
+                    min_quantity: 50,
+                    is_active: true,
+                  });
+                }
+                if (priceModel.tier_3_enabled && priceModel.tier_3_name) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: priceModel.tier_3_name,
+                    tier_order: 4,
+                    tier_type: "gradual_wholesale",
+                    price:
+                      formData.wholesale_price || formData.retail_price * 0.7,
+                    min_quantity: 100,
+                    is_active: true,
+                  });
+                }
+                break;
+
+              case "retail_only":
+              default:
+                // Apenas tier de varejo
+                if (formData.retail_price > 0) {
+                  tiersToInsert.push({
+                    product_id: productId,
+                    tier_name: "Varejo",
+                    tier_order: 1,
+                    tier_type: "retail",
+                    price: formData.retail_price,
+                    min_quantity: 1,
+                    is_active: true,
+                  });
+                }
+                break;
+            }
+
+            // Inserir os tiers criados
+            if (tiersToInsert.length > 0) {
+              const { error: tiersError } = await supabase
+                .from("product_price_tiers")
+                .insert(tiersToInsert);
+
+              if (tiersError) {
+                console.error(
+                  "❌ WIZARD - Erro ao criar price tiers:",
+                  tiersError
+                );
+                toast({
+                  title: "Aviso",
+                  description:
+                    "Produto salvo, mas houve problemas ao configurar os níveis de preço.",
+                  variant: "destructive",
+                });
+              } else {
+                console.log(
+                  "✅ WIZARD - Price tiers criados com sucesso:",
+                  tiersToInsert.length
+                );
+              }
+            }
+          } catch (tiersError) {
+            console.error(
+              "❌ WIZARD - Erro inesperado ao criar price tiers:",
+              tiersError
+            );
+            // Não interromper o salvamento por erro de tiers
+          }
+        }
+
+        // Salvar variações se houver
+        if (
+          formData.variations &&
+          formData.variations.length > 0 &&
+          productId
+        ) {
+          console.log(
+            "🎨 WIZARD - Salvando variações:",
+            formData.variations.length
+          );
+          try {
+            const { success, error: variationsError } = await saveVariations(
+              productId,
+              formData.variations
+            );
+            if (!success) {
+              console.error("Erro ao salvar variações:", variationsError);
+              // Não interromper o salvamento por erro de variações
+              toast({
+                title: "Aviso",
+                description:
+                  "Produto salvo, mas houve problemas ao salvar as variações.",
+                variant: "destructive",
+              });
+            } else {
+              console.log("✅ WIZARD - Variações salvas com sucesso");
+            }
+          } catch (variationError) {
+            console.error(
+              "Erro inesperado ao salvar variações:",
+              variationError
+            );
+          }
+        }
+
+        toast({
+          title: "Produto salvo!",
+          description: "O produto foi salvo com sucesso.",
+        });
+
+        return productId;
+      } catch (error) {
+        console.error("💥 WIZARD - Erro no salvamento:", error);
+        toast({
+          title: "Erro ao salvar produto",
+          description:
+            error instanceof Error ? error.message : "Erro desconhecido",
+          variant: "destructive",
+        });
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [formData, saveVariations, toast, priceModel]
+  );
 
   const resetForm = useCallback(() => {
-    console.log('🧹 WIZARD - Resetando formulário');
+    console.log("🧹 WIZARD - Resetando formulário");
     setFormData({
-      name: '',
-      description: '',
-      category: '',
+      name: "",
+      description: "",
+      category: "",
       retail_price: 0,
       wholesale_price: 0,
       stock: 0,
@@ -367,15 +588,15 @@ export const useImprovedProductFormWizard = () => {
       is_active: true,
       allow_negative_stock: false,
       stock_alert_threshold: 5,
-      store_id: profile?.store_id || '',
+      store_id: profile?.store_id || "",
       variations: [],
-      price_model: 'wholesale_only',
+      price_model: "wholesale_only",
       simple_wholesale_enabled: true,
       gradual_wholesale_enabled: false,
-      meta_title: '',
-      meta_description: '',
-      keywords: '',
-      seo_slug: '',
+      meta_title: "",
+      meta_description: "",
+      keywords: "",
+      seo_slug: "",
     });
     setCurrentStep(0);
   }, [profile?.store_id]);

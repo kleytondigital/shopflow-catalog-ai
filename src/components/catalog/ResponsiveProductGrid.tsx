@@ -252,11 +252,18 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
   const handleAddToCart = useCallback(
     (product: Product, quantity: number = 1, variation?: any) => {
       console.log(
-        "🛒 Adicionando ao carrinho:",
+        "🛒 ResponsiveProductGrid - Adicionando ao carrinho:",
         product.name,
         quantity,
         variation
       );
+
+      // Debug log para verificar store_id
+      console.log("🔍 ResponsiveProductGrid - Debug store_id:", {
+        productStoreId: product.store_id,
+        productName: product.name,
+        productId: product.id,
+      });
 
       // Criar item do carrinho
       const cartItem = {
@@ -279,6 +286,11 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
         isWholesalePrice: false,
         variation: variation,
       };
+
+      console.log("🔍 ResponsiveProductGrid - CartItem criado:", {
+        cartItemStoreId: cartItem.product.store_id,
+        cartItemProduct: cartItem.product,
+      });
 
       addItem(cartItem);
     },

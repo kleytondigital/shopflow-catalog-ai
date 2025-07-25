@@ -1,16 +1,17 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useStorePriceModel } from '@/hooks/useStorePriceModel';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useAuth } from "@/hooks/useAuth";
 
 const PriceModelSettings: React.FC = () => {
   const { profile } = useAuth();
-  const { priceModel, loading, updatePriceModel } = useStorePriceModel(profile?.store_id);
+  const { priceModel, loading, updatePriceModel } = useStorePriceModel(
+    profile?.store_id
+  );
   const [localSettings, setLocalSettings] = useState(priceModel);
 
   useEffect(() => {
@@ -23,7 +24,10 @@ const PriceModelSettings: React.FC = () => {
     updatePriceModel({ price_model: value as any });
   };
 
-  const handleSettingChange = (field: keyof typeof localSettings, value: any) => {
+  const handleSettingChange = (
+    field: keyof typeof localSettings,
+    value: any
+  ) => {
     const newSettings = { ...localSettings, [field]: value };
     setLocalSettings(newSettings);
     updatePriceModel({ [field]: value });
@@ -45,8 +49,8 @@ const PriceModelSettings: React.FC = () => {
       <CardContent className="space-y-6">
         <div>
           <Label className="text-base font-semibold">Modelo de Preços</Label>
-          <RadioGroup 
-            value={localSettings.price_model} 
+          <RadioGroup
+            value={localSettings.price_model}
             onValueChange={handleModelChange}
             className="mt-2"
           >
@@ -59,7 +63,10 @@ const PriceModelSettings: React.FC = () => {
               <Label htmlFor="simple_wholesale">Varejo + Atacado</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="gradual_wholesale" id="gradual_wholesale" />
+              <RadioGroupItem
+                value="gradual_wholesale"
+                id="gradual_wholesale"
+              />
               <Label htmlFor="gradual_wholesale">Níveis Graduais</Label>
             </div>
           </RadioGroup>
@@ -73,7 +80,9 @@ const PriceModelSettings: React.FC = () => {
             </div>
             <Switch
               checked={localSettings.show_price_tiers}
-              onCheckedChange={(checked) => handleSettingChange('show_price_tiers', checked)}
+              onCheckedChange={(checked) =>
+                handleSettingChange("show_price_tiers", checked)
+              }
             />
           </div>
 
@@ -84,7 +93,9 @@ const PriceModelSettings: React.FC = () => {
             </div>
             <Switch
               checked={localSettings.show_savings_indicators}
-              onCheckedChange={(checked) => handleSettingChange('show_savings_indicators', checked)}
+              onCheckedChange={(checked) =>
+                handleSettingChange("show_savings_indicators", checked)
+              }
             />
           </div>
 
@@ -95,7 +106,9 @@ const PriceModelSettings: React.FC = () => {
             </div>
             <Switch
               checked={localSettings.show_next_tier_hint}
-              onCheckedChange={(checked) => handleSettingChange('show_next_tier_hint', checked)}
+              onCheckedChange={(checked) =>
+                handleSettingChange("show_next_tier_hint", checked)
+              }
             />
           </div>
         </div>

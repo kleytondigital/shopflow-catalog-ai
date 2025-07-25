@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
@@ -83,7 +82,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (loading) return;
-    
+
     let qty = 1;
     let price = product.retail_price;
     let isWholesale = false;
@@ -97,10 +96,17 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
     addItem(
       {
         id: `${product.id}-default`,
-        product: { 
-          ...product, 
+        product: {
+          id: product.id,
+          name: product.name,
+          retail_price: product.retail_price,
+          wholesale_price: product.wholesale_price,
+          min_wholesale_qty: product.min_wholesale_qty,
+          image_url: product.image_url,
+          store_id: product.store_id, // Garantir que store_id seja incluído
+          stock: product.stock,
+          allow_negative_stock: product.allow_negative_stock ?? false,
           price_model: modelKey,
-          allow_negative_stock: product.allow_negative_stock ?? false
         },
         quantity: qty,
         price,

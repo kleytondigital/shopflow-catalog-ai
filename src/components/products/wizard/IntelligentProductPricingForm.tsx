@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -18,10 +13,9 @@ interface IntelligentProductPricingFormProps {
   onFormDataChange: (data: any) => void;
 }
 
-const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps> = ({
-  formData,
-  onFormDataChange,
-}) => {
+const IntelligentProductPricingForm: React.FC<
+  IntelligentProductPricingFormProps
+> = ({ formData, onFormDataChange }) => {
   const { profile } = useAuth();
   const { priceModel, loading: modelLoading } = useStorePriceModel(
     formData.store_id || profile?.store_id || ""
@@ -35,7 +29,10 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
       setValue("simple_wholesale_enabled", priceModel.simple_wholesale_enabled);
       setValue("simple_wholesale_name", priceModel.simple_wholesale_name);
       setValue("simple_wholesale_min_qty", priceModel.simple_wholesale_min_qty);
-      setValue("gradual_wholesale_enabled", priceModel.gradual_wholesale_enabled);
+      setValue(
+        "gradual_wholesale_enabled",
+        priceModel.gradual_wholesale_enabled
+      );
       setValue("gradual_tiers_count", priceModel.gradual_tiers_count);
       setValue("tier_1_name", priceModel.tier_1_name);
       setValue("tier_2_name", priceModel.tier_2_name);
@@ -57,13 +54,17 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
     onFormDataChange({ ...formData, simple_wholesale_enabled: checked });
   };
 
-  const handleSimpleWholesaleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSimpleWholesaleNameChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const name = e.target.value;
     setValue("simple_wholesale_name", name);
     onFormDataChange({ ...formData, simple_wholesale_name: name });
   };
 
-  const handleSimpleWholesaleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSimpleWholesaleQtyChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const qty = parseInt(e.target.value);
     setValue("simple_wholesale_min_qty", qty);
     onFormDataChange({ ...formData, simple_wholesale_min_qty: qty });
@@ -107,7 +108,8 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
 
   // Função para renderizar campos de tier
   const renderTierFields = () => {
-    if (!priceModel || priceModel.price_model !== "gradual_wholesale") return null;
+    if (!priceModel || priceModel.price_model !== "gradual_wholesale")
+      return null;
 
     const tiersCount = priceModel.gradual_tiers_count || 2;
     const tiers = [];
@@ -115,7 +117,7 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
     for (let i = 1; i <= Math.min(tiersCount, 4); i++) {
       const tierName = `tier_${i}_name` as keyof StorePriceModel;
       const tierEnabled = `tier_${i}_enabled` as keyof StorePriceModel;
-      
+
       tiers.push(
         <div key={i} className="space-y-2">
           <div className="flex items-center gap-2">
@@ -125,7 +127,7 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
             />
             <Label>Nível {i} Ativo</Label>
           </div>
-          
+
           {watch(tierEnabled) && (
             <Input
               {...register(tierName)}
@@ -158,7 +160,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   checked={watch("simple_wholesale_enabled")}
                   onCheckedChange={handleSimpleWholesaleToggle}
                 />
-                <Label htmlFor="simple_wholesale_enabled">Atacado Simples</Label>
+                <Label htmlFor="simple_wholesale_enabled">
+                  Atacado Simples
+                </Label>
               </div>
 
               {watch("simple_wholesale_enabled") && (
@@ -174,7 +178,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                     />
                   </div>
                   <div>
-                    <Label htmlFor="simple_wholesale_min_qty">Quantidade Mínima</Label>
+                    <Label htmlFor="simple_wholesale_min_qty">
+                      Quantidade Mínima
+                    </Label>
                     <Input
                       id="simple_wholesale_min_qty"
                       type="number"
@@ -195,13 +201,17 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   checked={watch("gradual_wholesale_enabled")}
                   onCheckedChange={handleGradualWholesaleToggle}
                 />
-                <Label htmlFor="gradual_wholesale_enabled">Atacado Gradual</Label>
+                <Label htmlFor="gradual_wholesale_enabled">
+                  Atacado Gradual
+                </Label>
               </div>
 
               {watch("gradual_wholesale_enabled") && (
                 <div className="space-y-2 pl-4">
                   <div>
-                    <Label htmlFor="gradual_tiers_count">Número de Níveis</Label>
+                    <Label htmlFor="gradual_tiers_count">
+                      Número de Níveis
+                    </Label>
                     <Input
                       id="gradual_tiers_count"
                       type="number"
@@ -224,7 +234,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   checked={watch("show_price_tiers")}
                   onCheckedChange={handleShowPriceTiersToggle}
                 />
-                <Label htmlFor="show_price_tiers">Mostrar Níveis de Preço</Label>
+                <Label htmlFor="show_price_tiers">
+                  Mostrar Níveis de Preço
+                </Label>
               </div>
 
               <div className="flex items-center gap-2">
@@ -233,7 +245,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   checked={watch("show_savings_indicators")}
                   onCheckedChange={handleShowSavingsIndicatorsToggle}
                 />
-                <Label htmlFor="show_savings_indicators">Mostrar Indicadores de Economia</Label>
+                <Label htmlFor="show_savings_indicators">
+                  Mostrar Indicadores de Economia
+                </Label>
               </div>
 
               <div className="flex items-center gap-2">
@@ -242,7 +256,9 @@ const IntelligentProductPricingForm: React.FC<IntelligentProductPricingFormProps
                   checked={watch("show_next_tier_hint")}
                   onCheckedChange={handleShowNextTierHintToggle}
                 />
-                <Label htmlFor="show_next_tier_hint">Mostrar Dica do Próximo Nível</Label>
+                <Label htmlFor="show_next_tier_hint">
+                  Mostrar Dica do Próximo Nível
+                </Label>
               </div>
             </div>
           </>

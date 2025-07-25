@@ -1,8 +1,8 @@
-
 import React from "react";
 import { Badge } from "../ui/badge";
 import { TrendingDown, ArrowUp, Info } from "lucide-react";
 import { useCartPriceCalculation } from "@/hooks/useCartPriceCalculation";
+import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 
 interface CartItemPriceDisplayProps {
   item: any;
@@ -17,33 +17,33 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
   const product = item.product;
   const quantity = item.quantity;
 
+  // Debug logs para entender o que está acontecendo
+  console.log("🔍 CartItemPriceDisplay - Debug completo:", {
+    product: {
+      id: product.id,
+      name: product.name,
+      store_id: product.store_id,
+      retail_price: product.retail_price,
+      wholesale_price: product.wholesale_price,
+      min_wholesale_qty: product.min_wholesale_qty,
+    },
+    quantity,
+    priceCalculation: {
+      priceModel: priceCalculation.priceModel,
+      total: priceCalculation.total,
+      currentTier: priceCalculation.currentTier,
+      formattedTotal: priceCalculation.formattedTotal,
+    },
+  });
+
   const {
     total,
     savings,
     formattedTotal,
     formattedSavings,
     currentTier,
-    nextTierHint
+    nextTierHint,
   } = priceCalculation;
-
-  const showSavings = savings > 0;
-  const showIncentive = nextTierHint && nextTierHint.quantityNeeded > 0;
-  
-  // Determinar se deve mostrar badge baseado no modelo de preço da loja
-  const showTierBadge = (() => {
-    // Para wholesale_only, sempre mostrar badge "Atacado"
-    if (priceCalculation.priceModel === 'wholesale_only') {
-      return true;
-    }
-    
-    // Para retail_only, nunca mostrar badge
-    if (priceCalculation.priceModel === 'retail_only') {
-      return false;
-    }
-    
-    // Para outros modelos, mostrar se não for Varejo
-    return currentTier.tier_name !== 'Varejo';
-  })();
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -51,72 +51,57 @@ const CartItemPriceDisplay: React.FC<CartItemPriceDisplayProps> = ({
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-600">Preço unitário:</span>
         <div className="flex items-center gap-2">
-          {showSavings && (
-            <span className="text-xs text-gray-400 line-through">
-              R$ {product.retail_price.toFixed(2).replace(".", ",")}
+          {priceCalculation.priceModel === "wholesale_only" ? (
+            product.wholesale_price && product.wholesale_price > 0 ? (
+              <span className="font-semibold text-green-700">
+                R$ {product.wholesale_price.toFixed(2).replace(".", ",")}
+              </span>
+            ) : (
+              <span className="text-red-500 text-xs">
+                Preço não configurado
+              </span>
+            )
+          ) : (
+            <span className="font-semibold text-gray-900">
+              R${" "}
+              {currentTier
+                ? currentTier.price.toFixed(2).replace(".", ",")
+                : (total / quantity).toFixed(2).replace(".", ",")}
             </span>
           )}
-          <span className="font-semibold text-green-700">
-            R$ {currentTier.price.toFixed(2).replace(".", ",")}
-          </span>
+
+          {/* Indicador de tier atual */}
+          {currentTier && (
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              {currentTier.tier_name}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Total */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-600">Total ({quantity} un):</span>
-        <span className="font-bold text-green-700 text-lg">
+      <div className="flex items-center justify-between text-sm font-medium">
+        <span>Total:</span>
+        <span className="text-lg font-bold text-gray-900">
           {formattedTotal}
         </span>
       </div>
 
       {/* Economia */}
-      {showSavings && (
-        <div className="flex items-center justify-between text-xs bg-green-50 p-2 rounded">
-          <span className="text-green-700 font-medium flex items-center gap-1">
-            <TrendingDown className="h-3 w-3" />
-            Economia:
-          </span>
-          <span className="text-green-700 font-bold">
+      {savings > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-600">Economia:</span>
+          <span className="text-green-600 font-semibold">
             {formattedSavings}
           </span>
         </div>
       )}
 
-      {/* Incentivo para próximo nível */}
-      {showIncentive && (
-        <div className="flex items-start gap-2 text-xs text-blue-700 bg-blue-50 p-3 rounded border border-blue-200">
-          <ArrowUp className="h-3 w-3 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <div className="font-medium mb-1">
-              💡 Adicione mais {nextTierHint.quantityNeeded} unidade{nextTierHint.quantityNeeded > 1 ? 's' : ''} para preço de atacado!
-            </div>
-            {nextTierHint.potentialSavings > 0 && (
-              <div className="text-green-600 font-bold">
-                Economize R$ {nextTierHint.potentialSavings.toFixed(2).replace(".", ",")} no total!
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Identificador do nível atual */}
-      {showTierBadge && (
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1 text-gray-500">
-            <Info className="h-3 w-3" />
-            <span>Nível:</span>
-          </div>
-          <Badge 
-            variant={currentTier.tier_name === "Atacado" ? "default" : "outline"} 
-            className={`text-xs font-medium ${
-              currentTier.tier_name === "Atacado" 
-                ? "bg-green-600 hover:bg-green-700" 
-                : ""
-            }`}
-          >
-            {currentTier.tier_name}
-          </Badge>
+      {/* Dica do próximo tier */}
+      {nextTierHint && (
+        <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+          Adicione mais {nextTierHint.quantityNeeded} unidade(s) para economizar
+          R$ {nextTierHint.potentialSavings.toFixed(2).replace(".", ",")}
         </div>
       )}
     </div>

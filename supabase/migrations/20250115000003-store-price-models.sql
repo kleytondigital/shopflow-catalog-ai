@@ -117,4 +117,78 @@ COMMENT ON TABLE store_price_models IS 'Configuração do modelo de preço por l
 COMMENT ON TABLE product_price_tiers IS 'Níveis de preço configurados por produto';
 COMMENT ON COLUMN store_price_models.price_model IS 'Modelo de preço: retail_only, simple_wholesale, gradual_wholesale';
 COMMENT ON COLUMN store_price_models.gradual_tiers_count IS 'Número de níveis no atacado gradativo (2, 3 ou 4)';
-COMMENT ON COLUMN product_price_tiers.tier_type IS 'Tipo do nível: retail, simple_wholesale, gradual_wholesale'; 
+COMMENT ON COLUMN product_price_tiers.tier_type IS 'Tipo do nível: retail, simple_wholesale, gradual_wholesale';
+
+-- 8. Função para criar modelo de preço padrão
+CREATE OR REPLACE FUNCTION create_store_price_model(
+  p_store_id UUID,
+  p_price_model VARCHAR(50) DEFAULT 'wholesale_only'
+)
+RETURNS JSON AS $$
+DECLARE
+  new_model_id UUID;
+  result JSON;
+BEGIN
+  -- Verificar se já existe um modelo para esta loja
+  IF EXISTS (SELECT 1 FROM store_price_models WHERE store_id = p_store_id) THEN
+    RETURN json_build_object('message', 'Modelo já existe para esta loja');
+  END IF;
+
+  -- Inserir novo modelo
+  INSERT INTO store_price_models (
+    store_id,
+    price_model,
+    tier_1_enabled,
+    tier_1_name,
+    tier_2_enabled,
+    tier_2_name,
+    tier_3_enabled,
+    tier_3_name,
+    tier_4_enabled,
+    tier_4_name,
+    simple_wholesale_enabled,
+    simple_wholesale_name,
+    simple_wholesale_min_qty,
+    gradual_wholesale_enabled,
+    gradual_tiers_count,
+    show_price_tiers,
+    show_savings_indicators,
+    show_next_tier_hint
+  ) VALUES (
+    p_store_id,
+    p_price_model,
+    true,
+    CASE WHEN p_price_model = 'wholesale_only' THEN 'Atacado' ELSE 'Varejo' END,
+    false,
+    'Atacarejo',
+    false,
+    'Atacado Pequeno',
+    false,
+    'Atacado Grande',
+    false,
+    'Atacado',
+    1,
+    false,
+    2,
+    true,
+    true,
+    true
+  ) RETURNING id INTO new_model_id;
+
+  -- Retornar resultado
+  SELECT json_build_object(
+    'success', true,
+    'id', new_model_id,
+    'store_id', p_store_id,
+    'price_model', p_price_model
+  ) INTO result;
+
+  RETURN result;
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER; 

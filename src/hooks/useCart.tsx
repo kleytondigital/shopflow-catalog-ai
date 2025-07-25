@@ -94,6 +94,13 @@ const validateCartItem = (item: any): CartItem | null => {
   try {
     if (!item || typeof item !== "object") return null;
 
+    // Debug log para verificar store_id
+    console.log("🔍 validateCartItem - Debug store_id:", {
+      inputStoreId: item.product?.store_id,
+      productName: item.product?.name,
+      productId: item.product?.id,
+    });
+
     // Verificar propriedades obrigatórias
     if (!item.id || !item.product || typeof item.quantity !== "number")
       return null;
@@ -110,7 +117,7 @@ const validateCartItem = (item: any): CartItem | null => {
       item.originalPrice || item.product.retail_price || item.price;
     if (typeof originalPrice !== "number" || isNaN(originalPrice)) return null;
 
-    return {
+    const validatedItem = {
       id: item.id,
       product: {
         id: item.product.id,
@@ -119,6 +126,7 @@ const validateCartItem = (item: any): CartItem | null => {
         wholesale_price: item.product.wholesale_price,
         min_wholesale_qty: item.product.min_wholesale_qty,
         image_url: item.product.image_url,
+        store_id: item.product.store_id, // Adicionar store_id
         stock: item.product.stock ?? 0,
         allow_negative_stock: item.product.allow_negative_stock ?? false,
         enable_gradual_wholesale:
@@ -140,6 +148,13 @@ const validateCartItem = (item: any): CartItem | null => {
           }
         : undefined,
     };
+
+    console.log("🔍 validateCartItem - Item validado:", {
+      outputStoreId: validatedItem.product.store_id,
+      productName: validatedItem.product.name,
+    });
+
+    return validatedItem;
   } catch (error) {
     console.error("❌ Erro ao validar item do carrinho:", error, item);
     return null;
