@@ -120,28 +120,29 @@ const ProductList: React.FC<ProductListProps> = ({
         {selectedCategory && ` na categoria "${selectedCategory}"`}
       </div>
 
-      {/* Products Grid/List */}
+      {/* Enhanced Products Grid/List */}
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <div className="text-gray-500">
-            <div className="text-lg font-medium">Nenhum produto encontrado</div>
+            <div className="text-xl font-semibold mb-2">Nenhum produto encontrado</div>
             <div className="text-sm">Tente ajustar os filtros de busca.</div>
           </div>
         </div>
       ) : (
-        <div className={`grid gap-4 ${
+        <div className={`grid gap-6 ${
           viewMode === 'grid' 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-            : 'grid-cols-1'
+            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+            : 'grid-cols-1 max-w-none'
         }`}>
           {filteredProducts.map((product) => (
-            <ProductInfoCard
-              key={product.id}
-              product={product}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onView={handleView}
-            />
+            <div key={product.id} className={`${viewMode === 'list' ? 'max-w-full' : ''}`}>
+              <ProductInfoCard
+                product={product}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onView={handleView}
+              />
+            </div>
           ))}
         </div>
       )}

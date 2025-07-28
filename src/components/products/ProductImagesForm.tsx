@@ -117,6 +117,11 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({ productId }) => {
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      if (!productId) {
+        console.error('ProductId é obrigatório para upload');
+        return;
+      }
+      
       setIsUploading(true);
       try {
         for (const file of acceptedFiles) {
@@ -129,7 +134,7 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({ productId }) => {
         setIsUploading(false);
       }
     },
-    [images, uploadImage]
+    [productId, images, uploadImage]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
