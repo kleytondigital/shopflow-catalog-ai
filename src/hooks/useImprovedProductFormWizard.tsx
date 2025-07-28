@@ -379,10 +379,10 @@ export const useImprovedProductFormWizard = () => {
             priceModel.price_model
           );
           try {
-            // Primeiro, desativar tiers existentes
+            // Primeiro, deletar tiers existentes para evitar conflitos de constraint única
             await supabase
               .from("product_price_tiers")
-              .update({ is_active: false })
+              .delete()
               .eq("product_id", productId);
 
             const tiersToInsert = [];
