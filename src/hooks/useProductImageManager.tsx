@@ -7,6 +7,49 @@ export const useProductImageManager = (productId: string) => {
   const { images, loading, error, refetchImages } = useProductImages(productId);
   const [uploading, setUploading] = useState(false);
 
+  const uploadImage = useCallback(async (file: File, altText: string = '', isPrimary: boolean = false) => {
+    try {
+      setUploading(true);
+      
+      // Upload para Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `products/${productId}/${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Obter URL pública
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+        
+      const imageUrl = urlData.publicUrl;
+      
+      // Inserir no banco
+      const { error } = await supabase
+        .from('product_images')
+        .insert({
+          product_id: productId,
+          image_url: imageUrl,
+          alt_text: altText,
+          is_primary: isPrimary,
+          image_order: images.length + 1
+        });
+
+      if (error) throw error;
+      await refetchImages();
+      return imageUrl;
+    } catch (err) {
+      console.error('Erro ao fazer upload da imagem:', err);
+      throw err;
+    } finally {
+      setUploading(false);
+    }
+  }, [productId, images.length, refetchImages]);
+
   const addImage = useCallback(async (imageUrl: string, altText: string = '', isPrimary: boolean = false) => {
     try {
       const { error } = await supabase
@@ -91,6 +134,7 @@ export const useProductImageManager = (productId: string) => {
     error,
     uploading,
     addImage,
+    uploadImage,
     updateImageOrder,
     deleteImage
   };

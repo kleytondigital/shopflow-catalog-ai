@@ -12,6 +12,7 @@ import { usePriceCalculation } from '@/hooks/usePriceCalculation';
 import { useProductPriceTiers } from '@/hooks/useProductPriceTiers';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import ProductCardImageGallery from './ProductCardImageGallery';
 
 type CatalogType = 'retail' | 'wholesale';
 
@@ -99,23 +100,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div className="relative flex flex-col rounded-lg border bg-white text-card-foreground shadow-sm hover:shadow-lg transition-shadow">
-      <div className="relative aspect-video overflow-hidden rounded-t-lg">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="h-full w-full object-cover transition-all hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="relative flex h-full w-full items-center justify-center bg-muted">
-            <Package className="h-6 w-6 text-muted-foreground" />
-          </div>
-        )}
+      <div className="relative">
+        <ProductCardImageGallery
+          productId={product.id}
+          productName={product.name}
+          maxImages={3}
+        />
         
         {/* Price Model Badge */}
         {modelKey === "wholesale_only" && (
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-2 left-2 z-10">
             <Badge className="bg-orange-500 text-white text-xs">
               Atacado
             </Badge>
@@ -124,7 +118,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
         {/* Discount Badge */}
         {priceCalculation.percentage > 0 && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 right-2 z-10">
             <Badge className="bg-green-500 text-white text-xs flex items-center gap-1">
               <TrendingDown className="h-3 w-3" />
               -{priceCalculation.percentage.toFixed(0)}%
@@ -132,9 +126,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
 
-        {/* Variation Required Indicator - Posicionado fora da imagem */}
+        {/* Variation Required Indicator */}
         {hasVariations && (
-          <div className="absolute top-2 left-2">
+          <div className="absolute bottom-2 left-2 z-10">
             <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
               Variações

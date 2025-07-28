@@ -34,6 +34,7 @@ import MultipleVariationSelector from "./MultipleVariationSelector";
 import VariationModeSelector from "./VariationModeSelector";
 import VariationSelectionAlert from "./VariationSelectionAlert";
 import { formatCurrency } from "@/lib/utils";
+import ProductImageGallery from "@/components/products/ProductImageGallery";
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -236,20 +237,13 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Image */}
-          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-            {(selectedVariation?.image_url || product.image_url) ? (
-              <img
-                src={selectedVariation?.image_url || product.image_url}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <span>Sem imagem</span>
-              </div>
-            )}
-          </div>
+          {/* Product Image Gallery */}
+          <ProductImageGallery
+            productId={product.id}
+            productName={product.name}
+            selectedVariationImage={selectedVariation?.image_url}
+            className="aspect-square"
+          />
 
           {/* Product Details */}
           <div className="space-y-4">

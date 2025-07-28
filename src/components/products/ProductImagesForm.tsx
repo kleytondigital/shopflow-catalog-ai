@@ -108,6 +108,7 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({ productId }) => {
     loading,
     error,
     addImage,
+    uploadImage,
     updateImageOrder,
     deleteImage,
   } = useProductImageManager(productId);
@@ -119,19 +120,16 @@ const ProductImagesForm: React.FC<ProductImagesFormProps> = ({ productId }) => {
       setIsUploading(true);
       try {
         for (const file of acceptedFiles) {
-          const formData = new FormData();
-          formData.append('file', file);
-          
-          // Simular upload - na implementação real, use seu serviço de upload
-          const imageUrl = URL.createObjectURL(file);
-          await addImage(imageUrl, file.name, images.length === 0);
+          // Upload real para Supabase Storage
+          await uploadImage(file, file.name, images.length === 0);
         }
-        refetchImages();
+      } catch (error) {
+        console.error('Erro no upload:', error);
       } finally {
         setIsUploading(false);
       }
     },
-    [images, addImage, refetchImages]
+    [images, uploadImage]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
