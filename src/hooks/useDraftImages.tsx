@@ -249,16 +249,21 @@ export const useDraftImages = () => {
           .delete()
           .eq("product_id", productId);
 
-        // Obter o estado atualizado das imagens e filtrar apenas as que têm URL
-        const finalImages = draftImages
-          .map(img => {
-            // Se era uma nova imagem que acabamos de fazer upload
-            if (!img.isExisting && uploadedUrls.includes(img.url || '')) {
-              return { ...img, uploaded: true, isExisting: false };
-            }
-            return img;
-          })
-          .filter(img => img.url); // Filtrar apenas imagens com URL
+        // Obter o estado mais atual das imagens e filtrar apenas as que têm URL
+        const currentDraftImages = draftImages.map(img => {
+          // Se era uma nova imagem que acabamos de fazer upload, usar a URL do upload
+          const uploadedUrl = uploadedUrls.find(url => 
+            !img.isExisting && img.file && url.includes(img.file.name.split('.')[0])
+          );
+          
+          if (uploadedUrl) {
+            return { ...img, url: uploadedUrl, uploaded: true };
+          }
+          
+          return img;
+        });
+
+        const finalImages = currentDraftImages.filter(img => img.url); // Filtrar apenas imagens com URL
 
         const allImagesOrdered = finalImages.sort((a, b) => a.displayOrder - b.displayOrder);
 
