@@ -1,14 +1,33 @@
-
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wand2, Package, Save, ArrowLeft } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Wand2,
+  Settings,
+  Zap,
+  ArrowLeft,
+  Sparkles,
+  Info,
+  Target,
+  Package,
+  Brain,
+  CheckCircle,
+} from "lucide-react";
 import { ProductVariation } from "@/types/product";
-import { generateUniqueVariationSKU, validateSKUUniqueness } from "@/utils/skuGenerator";
+
+// Importar todos os assistentes criados
+import VariationTypeSelector from "./VariationTypeSelector";
+import ColorOnlyWizard from "./ColorOnlyWizard";
+import SizeOnlyWizard from "./SizeOnlyWizard";
+import MaterialOnlyWizard from "./MaterialOnlyWizard";
+import ColorSizeWizard from "./ColorSizeWizard";
+import QuickVariationSetup from "./QuickVariationSetup";
+import EnhancedProductTypeDetector from "./EnhancedProductTypeDetector";
+import IntelligentVariationsForm from "./IntelligentVariationsForm";
+import GradeConfigurationForm from "./GradeConfigurationForm";
 
 interface UnifiedVariationWizardProps {
   variations: ProductVariation[];
@@ -17,7 +36,29 @@ interface UnifiedVariationWizardProps {
   storeId?: string;
   category?: string;
   productName?: string;
-  onComplete?: () => void;
+}
+
+type WizardMode =
+  | "welcome"
+  | "detector"
+  | "quick"
+  | "type_selector"
+  | "color_only"
+  | "size_only"
+  | "material_only"
+  | "color_size"
+  | "grade_system"
+  | "advanced";
+
+interface VariationType {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  fields: ("color" | "size" | "material")[];
+  examples: string[];
+  difficulty: "easy" | "medium" | "advanced";
+  recommended: boolean;
 }
 
 const UnifiedVariationWizard: React.FC<UnifiedVariationWizardProps> = ({
@@ -25,339 +66,410 @@ const UnifiedVariationWizard: React.FC<UnifiedVariationWizardProps> = ({
   onVariationsChange,
   productId,
   storeId,
-  category,
-  productName = "Produto",
-  onComplete,
+  category = "",
+  productName = "",
 }) => {
-  const [currentView, setCurrentView] = useState<'selector' | 'simple' | 'colors' | 'sizes' | 'complete'>('selector');
-  const [localVariations, setLocalVariations] = useState<ProductVariation[]>(variations);
-  const [bulkStock, setBulkStock] = useState<number>(0);
-  const [isGeneratingSKU, setIsGeneratingSKU] = useState(false);
-  const { toast } = useToast();
+  const [currentMode, setCurrentMode] = useState<WizardMode>("welcome");
+  const [previousMode, setPreviousMode] = useState<WizardMode>("welcome");
+  const [selectedType, setSelectedType] = useState<VariationType | null>(null);
+  const [showDetector, setShowDetector] = useState(false);
 
-  // Sincronizar com props apenas quando necessário
+  // Detectar se já existem variações
+  const hasExistingVariations = variations.length > 0;
+
   useEffect(() => {
-    if (variations.length > 0 && localVariations.length === 0) {
-      setLocalVariations(variations);
-      if (variations.length > 0) {
-        setCurrentView('complete');
-      }
+    // Se já tem variações, pular welcome e ir direto para seleção
+    if (hasExistingVariations) {
+      setCurrentMode("type_selector");
+    } else if (category || productName) {
+      // Se tem informações do produto, mostrar detector
+      setShowDetector(true);
     }
-  }, [variations.length, localVariations.length]);
+  }, [hasExistingVariations, category, productName]);
 
-  // Debounce para evitar muitas atualizações
-  const debouncedUpdate = useCallback(
-    debounce((newVariations: ProductVariation[]) => {
-      onVariationsChange(newVariations);
-    }, 500),
-    [onVariationsChange]
-  );
+  const navigateTo = (mode: WizardMode) => {
+    setPreviousMode(currentMode);
+    setCurrentMode(mode);
+  };
 
-  const updateLocalVariations = useCallback((newVariations: ProductVariation[]) => {
-    setLocalVariations(newVariations);
-    debouncedUpdate(newVariations);
-  }, [debouncedUpdate]);
+  const goBack = () => {
+    setCurrentMode(previousMode);
+  };
 
-  const generateAllSKUs = useCallback(async () => {
-    if (localVariations.length === 0) return;
+  const handleTypeSelection = (type: VariationType) => {
+    setSelectedType(type);
 
-    setIsGeneratingSKU(true);
-    
-    try {
-      const newSKUs: string[] = [];
-      
-      // Gerar SKUs um por um para garantir unicidade
-      for (const variation of localVariations) {
-        const newSKU = await generateUniqueVariationSKU(
-          productName,
-          {
-            color: variation.color,
-            size: variation.size,
-          },
-          variation.id
-        );
-        newSKUs.push(newSKU);
-      }
-      
-      if (!validateSKUUniqueness(newSKUs)) {
-        throw new Error("Erro na geração de SKUs únicos");
-      }
-
-      const updatedVariations = localVariations.map((variation, index) => ({
-        ...variation,
-        sku: newSKUs[index],
-      }));
-
-      updateLocalVariations(updatedVariations);
-      
-      toast({
-        title: "SKUs gerados!",
-        description: `${newSKUs.length} SKUs únicos foram gerados com sucesso.`,
-      });
-    } catch (error) {
-      console.error("Erro ao gerar SKUs:", error);
-      toast({
-        title: "Erro ao gerar SKUs",
-        description: "Não foi possível gerar SKUs únicos. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingSKU(false);
+    // Navegar para o assistente específico
+    switch (type.id) {
+      case "color_only":
+        navigateTo("color_only");
+        break;
+      case "size_only":
+        navigateTo("size_only");
+        break;
+      case "material_only":
+        navigateTo("material_only");
+        break;
+      case "color_size":
+        navigateTo("color_size");
+        break;
+      case "grade_system":
+        navigateTo("grade_system");
+        break;
+      case "advanced":
+        navigateTo("advanced");
+        break;
+      default:
+        navigateTo("type_selector");
     }
-  }, [localVariations, productName, updateLocalVariations, toast]);
+  };
 
-  const applyBulkStock = useCallback(() => {
-    if (bulkStock <= 0) {
-      toast({
-        title: "Estoque inválido",
-        description: "Insira um valor de estoque válido (maior que 0)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const updatedVariations = localVariations.map(variation => ({
-      ...variation,
-      stock: bulkStock,
-    }));
-
-    updateLocalVariations(updatedVariations);
-    setBulkStock(0);
-    
-    toast({
-      title: "Estoque aplicado!",
-      description: `Estoque de ${bulkStock} unidades aplicado a todas as variações.`,
-    });
-  }, [bulkStock, localVariations, updateLocalVariations, toast]);
-
-  const addSimpleVariation = useCallback(() => {
-    const newVariation: ProductVariation = {
-      id: `temp-${Date.now()}-${Math.random()}`,
-      product_id: productId || "",
-      name: `Variação ${localVariations.length + 1}`,
-      color: "",
-      size: "",
-      sku: "",
-      stock: 0,
-      price_adjustment: 0,
-      is_active: true,
-      image_url: "",
-      variation_type: "simple",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+  const handleDetectionResult = (type: string, result: any) => {
+    // Simular seleção baseada na detecção
+    const detectedType: VariationType = {
+      id: type,
+      name: result.recommendedAction || "Tipo Detectado",
+      description: result.reasons[0] || "Baseado na análise",
+      icon: result.icon,
+      fields:
+        type === "color_only"
+          ? ["color"]
+          : type === "size_only"
+          ? ["size"]
+          : type === "material_only"
+          ? ["material"]
+          : type === "color_size"
+          ? ["color", "size"]
+          : type === "grade_system"
+          ? ["color", "size"]
+          : ["color"],
+      examples: result.suggestions || [],
+      difficulty: "easy",
+      recommended: true,
     };
-    
-    updateLocalVariations([...localVariations, newVariation]);
-  }, [localVariations, productId, updateLocalVariations]);
 
-  const updateVariation = useCallback((index: number, updates: Partial<ProductVariation>) => {
-    const updated = localVariations.map((variation, i) => 
-      i === index ? { ...variation, ...updates } : variation
-    );
-    updateLocalVariations(updated);
-  }, [localVariations, updateLocalVariations]);
+    handleTypeSelection(detectedType);
+  };
 
-  const removeVariation = useCallback((index: number) => {
-    const updated = localVariations.filter((_, i) => i !== index);
-    updateLocalVariations(updated);
-  }, [localVariations, updateLocalVariations]);
+  const handleQuickVariationsGenerated = (
+    newVariations: ProductVariation[]
+  ) => {
+    onVariationsChange(newVariations);
+    // Pode navegar para uma visualização ou fechar o wizard
+  };
 
-  // Render do seletor inicial
-  if (currentView === 'selector' && localVariations.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Configurar Variações do Produto
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button
-              onClick={() => setCurrentView('simple')}
-              variant="outline"
-              className="h-24 flex flex-col gap-2"
-            >
-              <Package className="h-6 w-6" />
-              <span>Variações Simples</span>
-              <span className="text-xs text-muted-foreground">
-                Criar variações básicas manualmente
-              </span>
-            </Button>
-            
-            <Button
-              onClick={() => setCurrentView('colors')}
-              variant="outline"
-              className="h-24 flex flex-col gap-2"
-            >
-              <div className="flex gap-1">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <div className="w-3 h-3 rounded-full bg-green-500" />
+  const renderContent = () => {
+    switch (currentMode) {
+      case "welcome":
+        return (
+          <div className="max-w-4xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Sparkles className="w-8 h-8 text-blue-600" />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Assistente de Variações
+                </h1>
               </div>
-              <span>Por Cores</span>
-              <span className="text-xs text-muted-foreground">
-                Criar variações baseadas em cores
-              </span>
-            </Button>
-          </div>
-          
-          <div className="text-center text-sm text-muted-foreground">
-            Escolha como deseja configurar as variações do seu produto.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Vamos configurar as variações do seu produto de forma simples e
+                intuitiva. Escolha como você prefere começar:
+              </p>
+            </div>
 
-  // Render das variações existentes ou configuração
+            {/* Detector automático se tiver informações */}
+            {showDetector && (category || productName) && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-6">
+                  <EnhancedProductTypeDetector
+                    productName={productName}
+                    productCategory={category}
+                    onTypeSelected={handleDetectionResult}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Opções principais */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Configuração Rápida */}
+              <Card
+                className="cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border-yellow-300 bg-yellow-50"
+                onClick={() => navigateTo("quick")}
+              >
+                <CardHeader className="text-center pb-3">
+                  <div className="mx-auto p-3 bg-yellow-100 rounded-full w-fit mb-3">
+                    <Zap className="w-8 h-8 text-yellow-600" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    ⚡ Configuração Rápida
+                  </CardTitle>
+                  <Badge className="mx-auto bg-yellow-200 text-yellow-800">
+                    Recomendado
+                  </Badge>
+                </CardHeader>
+                <CardContent className="text-center space-y-3">
+                  <p className="text-gray-600">
+                    Templates prontos para configurar em segundos
+                  </p>
+                  <div className="text-sm text-gray-500">
+                    ✨ Ideal para quem quer rapidez
+                    <br />
+                    ⏱️ Configure em menos de 1 minuto
+                    <br />
+                    🎯 Templates testados e otimizados
+                  </div>
+                  <Button className="w-full bg-yellow-600 hover:bg-yellow-700">
+                    Começar Agora
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Assistente Inteligente */}
+              <Card
+                className="cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border-blue-300 bg-blue-50"
+                onClick={() => navigateTo("detector")}
+              >
+                <CardHeader className="text-center pb-3">
+                  <div className="mx-auto p-3 bg-blue-100 rounded-full w-fit mb-3">
+                    <Brain className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    🧠 Assistente Inteligente
+                  </CardTitle>
+                  <Badge className="mx-auto bg-blue-200 text-blue-800">
+                    Iniciantes
+                  </Badge>
+                </CardHeader>
+                <CardContent className="text-center space-y-3">
+                  <p className="text-gray-600">
+                    Deixe a IA analisar e sugerir o melhor tipo
+                  </p>
+                  <div className="text-sm text-gray-500">
+                    🤖 Análise automática do produto
+                    <br />
+                    💡 Sugestões personalizadas
+                    <br />
+                    📋 Guiado passo a passo
+                  </div>
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    Analisar Produto
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Configuração Manual */}
+              <Card
+                className="cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border-gray-300 bg-gray-50"
+                onClick={() => navigateTo("type_selector")}
+              >
+                <CardHeader className="text-center pb-3">
+                  <div className="mx-auto p-3 bg-gray-100 rounded-full w-fit mb-3">
+                    <Target className="w-8 h-8 text-gray-600" />
+                  </div>
+                  <CardTitle className="text-lg">🎯 Escolha Manual</CardTitle>
+                  <Badge className="mx-auto bg-gray-200 text-gray-800">
+                    Personalizado
+                  </Badge>
+                </CardHeader>
+                <CardContent className="text-center space-y-3">
+                  <p className="text-gray-600">
+                    Escolha exatamente o tipo de variação
+                  </p>
+                  <div className="text-sm text-gray-500">
+                    ⚙️ Controle total sobre opções
+                    <br />
+                    🔧 Configuração personalizada
+                    <br />
+                    🎨 Máxima flexibilidade
+                  </div>
+                  <Button className="w-full bg-gray-600 hover:bg-gray-700">
+                    Escolher Tipo
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Informações adicionais */}
+            {hasExistingVariations && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Produto já possui variações.</strong> Você pode
+                  editá-las ou recriar do zero. As variações atuais:{" "}
+                  {variations.length} configuradas.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Link para modo avançado */}
+            <div className="text-center">
+              <Button
+                variant="outline"
+                onClick={() => navigateTo("advanced")}
+                className="flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Modo Avançado (Sistema Completo)
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "detector":
+        return (
+          <div className="max-w-4xl mx-auto">
+            <EnhancedProductTypeDetector
+              productName={productName}
+              productCategory={category}
+              onTypeSelected={handleDetectionResult}
+            />
+          </div>
+        );
+
+      case "quick":
+        return (
+          <QuickVariationSetup
+            onVariationsGenerated={handleQuickVariationsGenerated}
+            onAdvancedMode={() => navigateTo("advanced")}
+            productName={productName}
+          />
+        );
+
+      case "type_selector":
+        return (
+          <VariationTypeSelector
+            onTypeSelect={handleTypeSelection}
+            productCategory={category}
+            productName={productName}
+            variations={variations}
+            onVariationsChange={onVariationsChange}
+          />
+        );
+
+      case "color_only":
+        return (
+          <ColorOnlyWizard
+            variations={variations}
+            onVariationsChange={onVariationsChange}
+            onBack={goBack}
+            productName={productName}
+          />
+        );
+
+      case "size_only":
+        return (
+          <SizeOnlyWizard
+            variations={variations}
+            onVariationsChange={onVariationsChange}
+            onBack={goBack}
+            productName={productName}
+          />
+        );
+
+      case "material_only":
+        return (
+          <MaterialOnlyWizard
+            variations={variations}
+            onVariationsChange={onVariationsChange}
+            onBack={goBack}
+            productName={productName}
+          />
+        );
+
+      case "color_size":
+        return (
+          <ColorSizeWizard
+            variations={variations}
+            onVariationsChange={onVariationsChange}
+            onBack={goBack}
+            productName={productName}
+          />
+        );
+
+      case "grade_system":
+        return (
+          <GradeConfigurationForm
+            variations={variations}
+            onVariationsGenerated={onVariationsChange}
+            productId={productId}
+            storeId={storeId}
+            productName={productName}
+          />
+        );
+
+      case "advanced":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="outline" onClick={goBack} size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+              <div>
+                <h2 className="text-xl font-bold">
+                  Sistema Avançado de Variações
+                </h2>
+                <p className="text-gray-600 text-sm">
+                  Acesso completo a todas as funcionalidades
+                </p>
+              </div>
+            </div>
+
+            <IntelligentVariationsForm
+              variations={variations}
+              onVariationsChange={onVariationsChange}
+              productId={productId}
+              storeId={storeId}
+              initialViewMode="wizard"
+            />
+          </div>
+        );
+
+      default:
+        return <div>Modo não encontrado</div>;
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header com ações */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Variações do Produto
-              {localVariations.length > 0 && (
-                <Badge variant="secondary">{localVariations.length}</Badge>
-              )}
-            </CardTitle>
-            
-            <div className="flex gap-2">
-              {currentView !== 'selector' && localVariations.length === 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentView('selector')}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-              )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addSimpleVariation}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Variação
-              </Button>
-            </div>
+    <div className="min-h-[600px] space-y-6">
+      {/* Header com navegação (apenas se não for welcome) */}
+      {currentMode !== "welcome" && currentMode !== "advanced" && (
+        <div className="flex items-center justify-between border-b pb-4">
+          <Button
+            variant="outline"
+            onClick={goBack}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+
+          <div className="text-center">
+            <h2 className="text-lg font-semibold">
+              {selectedType?.name || "Configurando Variações"}
+            </h2>
+            {productName && (
+              <p className="text-sm text-gray-600">Produto: {productName}</p>
+            )}
           </div>
-        </CardHeader>
-        
-        {localVariations.length > 0 && (
-          <CardContent className="space-y-4">
-            {/* Ações em lote */}
-            <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="bulk-stock">Estoque em lote:</Label>
-                <Input
-                  id="bulk-stock"
-                  type="number"
-                  value={bulkStock}
-                  onChange={(e) => setBulkStock(Number(e.target.value))}
-                  className="w-24"
-                  min="0"
-                />
-                <Button
-                  size="sm"
-                  onClick={applyBulkStock}
-                  disabled={bulkStock <= 0}
-                >
-                  Aplicar a Todas
-                </Button>
-              </div>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={generateAllSKUs}
-                disabled={isGeneratingSKU || localVariations.length === 0}
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                {isGeneratingSKU ? "Gerando..." : "Gerar SKUs"}
-              </Button>
-            </div>
-            
-            {/* Lista de variações */}
-            <div className="space-y-4">
-              {localVariations.map((variation, index) => (
-                <Card key={variation.id || index} className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nome da Variação</Label>
-                      <Input
-                        value={variation.name || ""}
-                        onChange={(e) => updateVariation(index, { name: e.target.value })}
-                        placeholder="Ex: Azul Claro P"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>SKU</Label>
-                      <Input
-                        value={variation.sku || ""}
-                        onChange={(e) => updateVariation(index, { sku: e.target.value })}
-                        placeholder="Código único"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Estoque</Label>
-                      <Input
-                        type="number"
-                        value={variation.stock || 0}
-                        onChange={(e) => updateVariation(index, { stock: Number(e.target.value) })}
-                        min="0"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Ajuste de Preço (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={variation.price_adjustment || 0}
-                        onChange={(e) => updateVariation(index, { price_adjustment: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeVariation(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        )}
-      </Card>
+
+          <Button
+            variant="outline"
+            onClick={() => navigateTo("welcome")}
+            size="sm"
+          >
+            🏠 Início
+          </Button>
+        </div>
+      )}
+
+      {/* Conteúdo principal */}
+      {renderContent()}
     </div>
   );
 };
-
-// Utility function for debouncing
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
 
 export default UnifiedVariationWizard;

@@ -212,11 +212,6 @@ const UnifiedVariationWizardExample: React.FC = () => {
                         storeId="example-store"
                         category={product.category}
                         productName={product.name}
-                        onComplete={() => {
-                          console.log(
-                            `✅ Variações configuradas para ${product.name}`
-                          );
-                        }}
                       />
                     </CardContent>
                   </Card>

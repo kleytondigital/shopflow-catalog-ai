@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ interface VariationWizardSelectorProps {
 }
 
 type WizardMode = "selector" | "simple" | "advanced" | "intelligent";
-type IntelligentViewMode = "wizard" | "matrix" | "list" | "grade";
+type IntelligentViewMode = "wizard" | "matrix" | "list" | "grade" | "unified";
 
 const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   variations,
@@ -53,7 +52,8 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   productName,
 }) => {
   const [wizardMode, setWizardMode] = useState<WizardMode>("selector");
-  const [intelligentViewMode, setIntelligentViewMode] = useState<IntelligentViewMode>("wizard");
+  const [intelligentViewMode, setIntelligentViewMode] =
+    useState<IntelligentViewMode>("wizard");
   const [showHelp, setShowHelp] = useState(false);
 
   // Detectar se já existem variações para sugerir modo apropriado
@@ -63,13 +63,13 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
   );
 
   const handleNavigateToGrade = () => {
-    console.log('🎯 Navegando para tab Grade');
+    console.log("🎯 Navegando para tab Grade");
     setWizardMode("intelligent");
     setIntelligentViewMode("grade");
   };
 
   const handleVariationsGenerated = (newVariations: ProductVariation[]) => {
-    console.log('✅ Variações geradas, navegando para Lista');
+    console.log("✅ Variações geradas, navegando para Lista");
     onVariationsChange(newVariations);
     setIntelligentViewMode("list");
   };
@@ -124,7 +124,8 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
-              Ideal para produtos com kits de tamanhos como calçados, chinelos e produtos para revenda.
+              Ideal para produtos com kits de tamanhos como calçados, chinelos e
+              produtos para revenda.
             </p>
 
             <div className="space-y-2">
@@ -230,8 +231,8 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
                 Não sabe qual escolher?
               </h3>
               <p className="text-sm text-yellow-800 mb-3">
-                Para a maioria dos produtos, recomendamos começar com o Sistema de Grades. 
-                É mais simples e atende a maioria dos casos de uso.
+                Para a maioria dos produtos, recomendamos começar com o Sistema
+                de Grades. É mais simples e atende a maioria dos casos de uso.
               </p>
               <div className="flex gap-2">
                 <Dialog open={showHelp} onOpenChange={setShowHelp}>

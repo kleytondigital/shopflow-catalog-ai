@@ -1,11 +1,18 @@
-
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useImprovedProductFormWizard } from '@/hooks/useImprovedProductFormWizard';
-import { DraftImagesProvider, useDraftImagesContext } from '@/contexts/DraftImagesContext';
-import ImprovedWizardStepNavigation from './wizard/ImprovedWizardStepNavigation';
-import WizardStepContent from './wizard/WizardStepContent';
-import ImprovedWizardActionButtons from './wizard/ImprovedWizardActionButtons';
+import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useImprovedProductFormWizard } from "@/hooks/useImprovedProductFormWizard";
+import {
+  DraftImagesProvider,
+  useDraftImagesContext,
+} from "@/contexts/DraftImagesContext";
+import ImprovedWizardStepNavigation from "./wizard/ImprovedWizardStepNavigation";
+import WizardStepContent from "./wizard/WizardStepContent";
+import ImprovedWizardActionButtons from "./wizard/ImprovedWizardActionButtons";
 
 interface ImprovedProductFormWizardProps {
   isOpen: boolean;
@@ -14,12 +21,9 @@ interface ImprovedProductFormWizardProps {
   editingProduct?: any;
 }
 
-const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  editingProduct
-}) => {
+const ImprovedProductFormWizardContent: React.FC<
+  ImprovedProductFormWizardProps
+> = ({ isOpen, onClose, onSuccess, editingProduct }) => {
   const {
     formData,
     updateFormData,
@@ -32,17 +36,24 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
     resetForm,
     steps,
     saveProduct,
-    loadProductForEditing
+    loadProductForEditing,
   } = useImprovedProductFormWizard();
 
-  const { uploadAllImages, clearDraftImages, loadExistingImages } = useDraftImagesContext();
+  const { uploadAllImages, clearDraftImages, loadExistingImages } =
+    useDraftImagesContext();
 
   React.useEffect(() => {
-    console.log("🧙 WIZARD - useEffect triggered:", { editingProduct: !!editingProduct, isOpen });
-    
+    console.log("🧙 WIZARD - useEffect triggered:", {
+      editingProduct: !!editingProduct,
+      isOpen,
+    });
+
     if (editingProduct && isOpen) {
-      console.log("🧙 WIZARD - Carregando dados do produto para edição:", editingProduct.id);
-      
+      console.log(
+        "🧙 WIZARD - Carregando dados do produto para edição:",
+        editingProduct.id
+      );
+
       // **NOVA ABORDAGEM**: Carregar produto com callback para imagens
       loadProductForEditing(editingProduct, loadExistingImages);
     }
@@ -50,11 +61,11 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
 
   const handleSave = async () => {
     try {
-      console.log('🔄 WIZARD - Iniciando salvamento do produto');
+      console.log("🔄 WIZARD - Iniciando salvamento do produto");
       const productId = await saveProduct(editingProduct?.id, uploadAllImages);
-      
+
       if (productId) {
-        console.log('✅ WIZARD - Produto salvo com sucesso:', productId);
+        console.log("✅ WIZARD - Produto salvo com sucesso:", productId);
         clearDraftImages();
         resetForm();
         onClose();
@@ -63,7 +74,7 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
         }
       }
     } catch (error) {
-      console.error('❌ WIZARD - Erro ao salvar produto:', error);
+      console.error("❌ WIZARD - Erro ao salvar produto:", error);
     }
   };
 
@@ -76,10 +87,10 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
   const isLastStep = currentStep === steps.length - 1;
 
   // Convert steps to match expected interface
-  const navigationSteps = steps.map(step => ({
+  const navigationSteps = steps.map((step) => ({
     id: step.id.toString(),
     title: step.label,
-    description: step.description
+    description: step.description,
   }));
 
   return (
@@ -87,7 +98,7 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+            {editingProduct ? "Editar Produto" : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
@@ -106,6 +117,7 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
               formData={formData}
               updateFormData={updateFormData}
               productId={editingProduct?.id}
+              isEditing={!!editingProduct}
             />
           </div>
 
@@ -127,7 +139,9 @@ const ImprovedProductFormWizardContent: React.FC<ImprovedProductFormWizardProps>
   );
 };
 
-const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = (props) => {
+const ImprovedProductFormWizard: React.FC<ImprovedProductFormWizardProps> = (
+  props
+) => {
   return (
     <DraftImagesProvider>
       <ImprovedProductFormWizardContent {...props} />

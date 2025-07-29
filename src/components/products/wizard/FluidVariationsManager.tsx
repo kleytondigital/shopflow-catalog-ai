@@ -34,19 +34,15 @@ const FluidVariationsManager: React.FC<FluidVariationsManagerProps> = ({
 
   // Se useNewWizard for true, usar o UnifiedVariationWizard
   if (useNewWizard) {
+    console.log("🚀 FLUID MANAGER - Ativando UnifiedVariationWizard");
     return (
       <UnifiedVariationWizard
         variations={variations}
         onVariationsChange={onChange}
         productId={productId}
         storeId={storeId}
-        category={category}
-        productName={productName}
-        onComplete={() => {
-          console.log(
-            "✅ FLUID MANAGER - Variações configuradas via UnifiedWizard"
-          );
-        }}
+        category={category || ""}
+        productName={productName || ""}
       />
     );
   }

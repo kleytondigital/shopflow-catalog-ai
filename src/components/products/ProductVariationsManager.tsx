@@ -111,13 +111,8 @@ const ProductVariationsManager: React.FC<ProductVariationsManagerProps> = ({
             onVariationsChange={onChange}
             productId={productId}
             storeId={storeId}
-            category={category}
-            productName={productName}
-            onComplete={() => {
-              console.log(
-                "✅ VARIATIONS MANAGER - Configuração concluída via wizard"
-              );
-            }}
+            category={category || ""}
+            productName={productName || ""}
           />
         </CardContent>
       </Card>

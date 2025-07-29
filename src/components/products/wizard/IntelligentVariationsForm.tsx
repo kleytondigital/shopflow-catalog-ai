@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,17 +21,20 @@ import VariationWizardPanel from "./VariationWizardPanel";
 import VariationMatrixForm from "./VariationMatrixForm";
 import VariationListView from "./VariationListView";
 import GradeConfigurationForm from "./GradeConfigurationForm";
+import UnifiedVariationWizard from "./UnifiedVariationWizard";
 
 interface IntelligentVariationsFormProps {
   variations: ProductVariation[];
   onVariationsChange: (variations: ProductVariation[]) => void;
   productId?: string;
   storeId?: string;
-  initialViewMode?: "wizard" | "matrix" | "list" | "grade";
-  onViewModeChange?: (mode: "wizard" | "matrix" | "list" | "grade") => void;
+  initialViewMode?: "wizard" | "matrix" | "list" | "grade" | "unified";
+  onViewModeChange?: (
+    mode: "wizard" | "matrix" | "list" | "grade" | "unified"
+  ) => void;
 }
 
-type ViewMode = "wizard" | "matrix" | "list" | "grade";
+type ViewMode = "wizard" | "matrix" | "list" | "grade" | "unified";
 
 const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
   variations,
@@ -68,15 +70,18 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
   };
 
   const handleNavigateToGrade = () => {
-    console.log('🎯 Navegando para Grade via handleNavigateToGrade');
+    console.log("🎯 Navegando para Grade via handleNavigateToGrade");
     handleViewModeChange("grade");
   };
 
   const handleGradeGenerated = (gradeVariations: ProductVariation[]) => {
-    console.log('✅ Grade gerada, navegando para Lista:', gradeVariations.length);
+    console.log(
+      "✅ Grade gerada, navegando para Lista:",
+      gradeVariations.length
+    );
     onVariationsChange(gradeVariations);
     handleViewModeChange("list");
-    
+
     toast({
       title: "Grade criada com sucesso!",
       description: `${gradeVariations.length} variações foram geradas.`,
@@ -85,9 +90,14 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
 
   const stats = getStatistics();
 
-  const renderTabTrigger = (value: ViewMode, icon: React.ReactNode, label: string, count?: number) => (
-    <TabsTrigger 
-      value={value} 
+  const renderTabTrigger = (
+    value: ViewMode,
+    icon: React.ReactNode,
+    label: string,
+    count?: number
+  ) => (
+    <TabsTrigger
+      value={value}
       className="flex items-center gap-2"
       onClick={() => handleViewModeChange(value)}
     >
@@ -116,11 +126,15 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
         {stats.total > 0 && (
           <div className="flex items-center gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.total}
+              </div>
               <div className="text-xs text-gray-500">Variações</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.withStock}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.withStock}
+              </div>
               <div className="text-xs text-gray-500">Com Estoque</div>
             </div>
           </div>
@@ -136,12 +150,38 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={viewMode} onValueChange={handleViewModeChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              {renderTabTrigger("wizard", <Sparkles className="w-4 h-4" />, "Assistente")}
-              {renderTabTrigger("matrix", <Grid3X3 className="w-4 h-4" />, "Matriz")}
-              {renderTabTrigger("list", <List className="w-4 h-4" />, "Lista", stats.total)}
-              {renderTabTrigger("grade", <Package className="w-4 h-4" />, "Grade")}
+          <Tabs
+            value={viewMode}
+            onValueChange={handleViewModeChange}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-5">
+              {renderTabTrigger(
+                "wizard",
+                <Sparkles className="w-4 h-4" />,
+                "Assistente"
+              )}
+              {renderTabTrigger(
+                "matrix",
+                <Grid3X3 className="w-4 h-4" />,
+                "Matriz"
+              )}
+              {renderTabTrigger(
+                "list",
+                <List className="w-4 h-4" />,
+                "Lista",
+                stats.total
+              )}
+              {renderTabTrigger(
+                "grade",
+                <Package className="w-4 h-4" />,
+                "Grade"
+              )}
+              {renderTabTrigger(
+                "unified",
+                <Palette className="w-4 h-4" />,
+                "Novo Sistema"
+              )}
             </TabsList>
 
             <div className="mt-6">
@@ -149,8 +189,9 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                 <Alert>
                   <Sparkles className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Assistente Inteligente:</strong> Deixe que nós guiemos você 
-                    na criação das variações do seu produto de forma simples e intuitiva.
+                    <strong>Assistente Inteligente:</strong> Deixe que nós
+                    guiemos você na criação das variações do seu produto de
+                    forma simples e intuitiva.
                   </AlertDescription>
                 </Alert>
                 <VariationWizardPanel
@@ -167,8 +208,8 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                 <Alert>
                   <Grid3X3 className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Matriz de Variações:</strong> Visualize e configure todas as 
-                    combinações possíveis em uma matriz intuitiva.
+                    <strong>Matriz de Variações:</strong> Visualize e configure
+                    todas as combinações possíveis em uma matriz intuitiva.
                   </AlertDescription>
                 </Alert>
                 <VariationMatrixForm
@@ -184,16 +225,17 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>Lista de Variações:</strong> Gerencie individualmente cada 
-                      variação com controle total sobre estoque, preços e imagens.
+                      <strong>Lista de Variações:</strong> Gerencie
+                      individualmente cada variação com controle total sobre
+                      estoque, preços e imagens.
                     </AlertDescription>
                   </Alert>
                 ) : (
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>Nenhuma variação criada:</strong> Use o Assistente ou a 
-                      Matriz para criar variações primeiro.
+                      <strong>Nenhuma variação criada:</strong> Use o Assistente
+                      ou a Matriz para criar variações primeiro.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -207,8 +249,9 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                 <Alert>
                   <Package className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Sistema de Grades:</strong> Configure grades de tamanhos 
-                    para produtos como calçados, ideais para vendas por atacado.
+                    <strong>Sistema de Grades:</strong> Configure grades de
+                    tamanhos para produtos como calçados, ideais para vendas por
+                    atacado.
                   </AlertDescription>
                 </Alert>
                 <GradeConfigurationForm
@@ -216,6 +259,26 @@ const IntelligentVariationsForm: React.FC<IntelligentVariationsFormProps> = ({
                   onVariationsGenerated={handleGradeGenerated}
                   productId={productId}
                   storeId={storeId}
+                />
+              </TabsContent>
+
+              <TabsContent value="unified" className="space-y-4">
+                <Alert>
+                  <Sparkles className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>🚀 Novo Sistema Unificado:</strong> Experiência
+                    completamente reformulada com assistentes específicos,
+                    configuração rápida e detecção automática. Ideal para todos
+                    os tipos de usuários.
+                  </AlertDescription>
+                </Alert>
+                <UnifiedVariationWizard
+                  variations={managedVariations}
+                  onVariationsChange={onVariationsChange}
+                  productId={productId}
+                  storeId={storeId}
+                  category=""
+                  productName=""
                 />
               </TabsContent>
             </div>
