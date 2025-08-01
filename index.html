@@ -1,54 +1,50 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="version" content="2.0.1" />
-    <meta
-      http-equiv="Cache-Control"
-      content="no-cache, no-store, must-revalidate"
-    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>VendMais - Catálogos Online</title>
-    <meta name="description" content="Lovable Generated Project" />
+    <title>B2X - Catálogos Online</title>
+    <meta name="description" content="Catálogos online personalizados para sua empresa" />
     <meta name="author" content="B2X Tecnologia" />
 
-    <meta property="og:title" content="shopflow-catalog-ai" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="B2X - Catálogos Online" />
+    <meta property="og:description" content="Catálogos online personalizados para sua empresa" />
     <meta property="og:type" content="website" />
-    <meta
-      property="og:image"
-      content="https://lovable.dev/opengraph-image-p98pqg.png"
-    />
+    <meta property="og:image" content="public/b2x-logo.png" />
+    <meta property="og:url" content="" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta
-      name="twitter:image"
-      content="https://lovable.dev/opengraph-image-p98pqg.png"
-    />
+    <meta name="twitter:site" content="@b2xmarketing" />
+    <meta name="twitter:image" content="public/b2x-logo.png" />
+    <meta name="twitter:title" content="B2X - Catálogos Online" />
+    <meta name="twitter:description" content="Catálogos online personalizados para sua empresa" />
 
     <script>
-      // Cache buster inline
-      (function () {
-        const version = "2.0.1";
-        const stored = localStorage.getItem("vendemais-app-version");
-        if (stored !== version) {
-          console.log("🔄 Atualizando cache da aplicação...");
-          // Limpar apenas cache de dados temporários
-          ["cart-items", "temp-data"].forEach((key) =>
-            localStorage.removeItem(key)
-          );
-          localStorage.setItem("vendemais-app-version", version);
-        }
-      })();
+        // Cache buster inline
+        (function() {
+            const version = "2.0.1";
+            const stored = localStorage.getItem("vendemais-app-version");
+            if (stored !== version) {
+                console.log("🔄 Atualizando cache da aplicação...");
+                // Limpar apenas cache de dados temporários
+                ["cart-items", "temp-data"].forEach((key) =>
+                    localStorage.removeItem(key)
+                );
+                localStorage.setItem("vendemais-app-version", version);
+            }
+        })();
     </script>
-  </head>
+</head>
 
-  <body>
+<body>
     <div id="root"></div>
 
     <script type="module" src="/src/main.tsx"></script>
-  </body>
+</body>
+
 </html>

@@ -36,7 +36,8 @@ const ProductGridCard: React.FC<ProductGridCardProps> = ({
   onListUpdate, // 🎯 NOVO: Receber callback
 }) => {
   const { images } = useProductImages(product.id || "");
-  const { totalStock, variations } = useVariationStats(product.id || "");
+  const { stats } = useVariationStats(product.id || "");
+  const { totalStock, totalVariations } = stats;
   const [showImageManager, setShowImageManager] = useState(false);
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -195,9 +196,9 @@ const ProductGridCard: React.FC<ProductGridCardProps> = ({
               <span className="text-lg font-bold text-foreground">
                 {formatCurrency(product.retail_price)}
               </span>
-              {variations.length > 0 && (
+              {totalVariations > 0 && (
                 <Badge variant="outline" className="text-xs">
-                  {variations.length} variações
+                  {totalVariations} variações
                 </Badge>
               )}
             </div>

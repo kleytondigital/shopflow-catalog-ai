@@ -1,75 +1,157 @@
-import { useMemo } from "react";
-import { useProductVariations } from "@/hooks/useProductVariations";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface VariationStats {
   totalStock: number;
-  variations: Array<{
-    id: string;
-    stock: number;
-    color?: string;
-    size?: string;
-    material?: string;
-    is_grade?: boolean;
-    grade_name?: string;
-  }>;
-  hasColors: boolean;
-  hasGrades: boolean;
-  colorCount: number;
-  gradeCount: number;
   totalVariations: number;
+  colors: string[];
+  sizes: string[];
+  materials: string[];
+  grades: string[];
+  lowStockVariations: number;
+  outOfStockVariations: number;
+  hasGradeVariations: boolean;
 }
 
-export const useVariationStats = (productId: string): VariationStats => {
-  const { variations, loading } = useProductVariations(productId);
+export const useVariationStats = (productId: string) => {
+  const [stats, setStats] = useState<VariationStats>({
+    totalStock: 0,
+    totalVariations: 0,
+    colors: [],
+    sizes: [],
+    materials: [],
+    grades: [],
+    lowStockVariations: 0,
+    outOfStockVariations: 0,
+    hasGradeVariations: false,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = useMemo(() => {
-    if (loading || !variations || variations.length === 0) {
-      return {
-        totalStock: 0,
-        variations: [],
-        hasColors: false,
-        hasGrades: false,
-        colorCount: 0,
-        gradeCount: 0,
-        totalVariations: 0,
-      };
-    }
+  useEffect(() => {
+    const fetchVariationStats = async () => {
+      if (!productId) {
+        setLoading(false);
+        return;
+      }
 
-    // Calcular estoque total
-    const totalStock = variations.reduce((sum, variation) => {
-      return sum + (variation.stock || 0);
-    }, 0);
+      try {
+        setLoading(true);
+        setError(null);
 
-    // Verificar tipos de variações
-    const colors = new Set(
-      variations
-        .filter((v) => v.color && v.color.trim() !== "")
-        .map((v) => v.color)
-    );
+        const { data: variations, error: variationsError } = await supabase
+          .from("product_variations")
+          .select("*")
+          .eq("product_id", productId);
 
-    const grades = variations.filter((v) => v.is_grade || v.grade_name);
+        if (variationsError) {
+          throw variationsError;
+        }
 
-    // Mapear variações para formato simplificado
-    const mappedVariations = variations.map((v) => ({
-      id: v.id,
-      stock: v.stock || 0,
-      color: v.color,
-      size: v.size,
-      material: v.material,
-      is_grade: v.is_grade,
-      grade_name: v.grade_name,
-    }));
+        if (!variations || variations.length === 0) {
+          setStats({
+            totalStock: 0,
+            totalVariations: 0,
+            colors: [],
+            sizes: [],
+            materials: [],
+            grades: [],
+            lowStockVariations: 0,
+            outOfStockVariations: 0,
+            hasGradeVariations: false,
+          });
+          return;
+        }
 
-    return {
-      totalStock,
-      variations: mappedVariations,
-      hasColors: colors.size > 0,
-      hasGrades: grades.length > 0,
-      colorCount: colors.size,
-      gradeCount: grades.length,
-      totalVariations: variations.length,
+        // Calcular estatísticas
+        const totalStock = variations.reduce((sum, variation) => {
+          return sum + (variation.stock || 0);
+        }, 0);
+
+        const totalVariations = variations.length;
+
+        // Extrair valores únicos
+        const colors = Array.from(
+          new Set(
+            variations
+              .map((v) => v.color || (v as any).grade_color)
+              .filter(Boolean)
+              .map((c) => c.toLowerCase())
+          )
+        );
+
+        const sizes = Array.from(
+          new Set(
+            variations
+              .flatMap((v) => {
+                if (
+                  (v as any).grade_sizes &&
+                  Array.isArray((v as any).grade_sizes)
+                ) {
+                  return (v as any).grade_sizes;
+                }
+                return v.size ? [v.size] : [];
+              })
+              .filter(Boolean)
+              .map((s) => s.toLowerCase())
+          )
+        );
+
+        const materials = Array.from(
+          new Set(
+            variations
+              .map((v) => (v as any).material)
+              .filter(Boolean)
+              .map((m) => m.toLowerCase())
+          )
+        );
+
+        const grades = Array.from(
+          new Set(
+            variations
+              .map((v) => (v as any).grade_name)
+              .filter(Boolean)
+              .map((g) => g.toLowerCase())
+          )
+        );
+
+        // Contar variações com problemas de estoque
+        const lowStockVariations = variations.filter(
+          (v) => (v.stock || 0) > 0 && (v.stock || 0) <= 5
+        ).length;
+
+        const outOfStockVariations = variations.filter(
+          (v) => (v.stock || 0) === 0
+        ).length;
+
+        // Verificar se tem variações de grade
+        const hasGradeVariations = variations.some(
+          (v) => (v as any).is_grade === true
+        );
+
+        setStats({
+          totalStock,
+          totalVariations,
+          colors,
+          sizes,
+          materials,
+          grades,
+          lowStockVariations,
+          outOfStockVariations,
+          hasGradeVariations,
+        });
+      } catch (err) {
+        console.error("Erro ao buscar estatísticas de variações:", err);
+        setError(err instanceof Error ? err.message : "Erro desconhecido");
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [variations, loading]);
 
-  return stats;
+    fetchVariationStats();
+  }, [productId]);
+
+  return { stats, loading, error };
 };
+
+export default useVariationStats;

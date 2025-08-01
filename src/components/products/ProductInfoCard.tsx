@@ -37,7 +37,8 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   onListUpdate, // 🎯 NOVO: Receber callback
 }) => {
   const { images } = useProductImages(product.id || "");
-  const { totalStock, variations } = useVariationStats(product.id || "");
+  const { stats } = useVariationStats(product.id || "");
+  const { totalStock, totalVariations } = stats;
   const [showImageManager, setShowImageManager] = useState(false);
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -131,12 +132,12 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                       }`}
                     />
 
-                    {variations.length > 0 && (
+                    {totalVariations > 0 && (
                       <Badge
                         variant="secondary"
                         className="text-xs bg-white/90 shadow-sm"
                       >
-                        {variations.length} variações
+                        {totalVariations} variações
                       </Badge>
                     )}
                   </div>

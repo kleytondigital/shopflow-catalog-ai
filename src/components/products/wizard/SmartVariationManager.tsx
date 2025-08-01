@@ -19,10 +19,13 @@ import {
   Ruler,
   Package2,
   RefreshCw,
+  Edit,
 } from "lucide-react";
 import { ProductVariation } from "@/types/product";
 import UnifiedVariationWizard from "./UnifiedVariationWizard";
+import VariationEditDialog from "./VariationEditDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useProductVariations } from "@/hooks/useProductVariations";
 
 interface SmartVariationManagerProps {
   variations: ProductVariation[];
@@ -46,7 +49,11 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
   isEditing = false,
 }) => {
   const { toast } = useToast();
+  const { deleteVariationById } = useProductVariations(productId);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [editingVariation, setEditingVariation] =
+    useState<ProductVariation | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newVariation, setNewVariation] = useState({
     color: "",
     size: "",
@@ -124,14 +131,46 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
     });
   };
 
-  const removeVariation = (index: number) => {
-    const updatedVariations = variations.filter((_, i) => i !== index);
-    onVariationsChange(updatedVariations);
+  const removeVariation = async (index: number) => {
+    const variation = variations[index];
 
-    toast({
-      title: "Variação removida",
-      description: "A variação foi removida da lista.",
-    });
+    if (!variation) return;
+
+    try {
+      // Se a variação tem ID real (não é temporária), excluir do banco
+      if (
+        variation.id &&
+        !variation.id.startsWith("new-") &&
+        !variation.id.startsWith("variation-")
+      ) {
+        const success = await deleteVariationById(variation.id);
+        if (!success) {
+          toast({
+            title: "❌ Erro ao excluir",
+            description:
+              "Não foi possível excluir a variação do banco de dados.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Remover da lista local
+      const updatedVariations = variations.filter((_, i) => i !== index);
+      onVariationsChange(updatedVariations);
+
+      toast({
+        title: "✅ Variação excluída!",
+        description: "A variação foi removida com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir variação:", error);
+      toast({
+        title: "❌ Erro ao excluir",
+        description: "Ocorreu um erro ao excluir a variação.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateVariation = (
@@ -143,6 +182,21 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
       i === index ? { ...variation, [field]: value } : variation
     );
     onVariationsChange(updatedVariations);
+  };
+
+  const openEditDialog = (variation: ProductVariation) => {
+    setEditingVariation(variation);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveVariation = (updatedVariation: ProductVariation) => {
+    const index = variations.findIndex((v) => v.id === updatedVariation.id);
+    if (index !== -1) {
+      const updatedVariations = variations.map((v, i) =>
+        i === index ? updatedVariation : v
+      );
+      onVariationsChange(updatedVariations);
+    }
   };
 
   const getVariationIcon = (variation: ProductVariation) => {
@@ -405,6 +459,14 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => openEditDialog(variation)}
+                          title="Editar variação"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() =>
                             updateVariation(
                               index,
@@ -412,14 +474,20 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
                               !variation.is_active
                             )
                           }
+                          title={variation.is_active ? "Desativar" : "Ativar"}
                         >
-                          <Settings className="w-4 h-4" />
+                          {variation.is_active ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removeVariation(index)}
                           className="text-red-500 hover:text-red-700"
+                          title="Excluir variação"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -469,6 +537,25 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
         </div>
       );
   }
+
+  return (
+    <>
+      {/* Renderizar o conteúdo baseado no viewMode */}
+      {renderContent()}
+
+      {/* Diálogo de edição */}
+      <VariationEditDialog
+        variation={editingVariation}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingVariation(null);
+        }}
+        onSave={handleSaveVariation}
+        productId={productId}
+      />
+    </>
+  );
 };
 
 export default SmartVariationManager;

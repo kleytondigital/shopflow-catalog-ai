@@ -23,6 +23,7 @@ import IntelligentVariationsForm from "./IntelligentVariationsForm";
 import EnhancedIntelligentVariationsForm from "./EnhancedIntelligentVariationsForm";
 import GradeExplanationCard from "./GradeExplanationCard";
 import ProductTypeDetector from "./ProductTypeDetector";
+import UnifiedGradeManager from "./UnifiedGradeManager";
 import {
   Dialog,
   DialogContent,
@@ -285,14 +286,14 @@ const VariationWizardSelector: React.FC<VariationWizardSelectorProps> = ({
               </Button>
               <Badge variant="secondary">Sistema de Grades</Badge>
             </div>
-            <SimpleGradeWizard
+            <UnifiedGradeManager
               variations={variations}
               onVariationsChange={onVariationsChange}
               productId={productId}
               storeId={storeId}
-              category={category}
               productName={productName}
-              onNavigateToGrade={handleNavigateToGrade}
+              onComplete={() => setWizardMode("selector")}
+              showPreview={true}
             />
           </div>
         );

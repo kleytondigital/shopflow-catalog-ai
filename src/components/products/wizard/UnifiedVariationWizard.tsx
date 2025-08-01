@@ -28,6 +28,7 @@ import QuickVariationSetup from "./QuickVariationSetup";
 import EnhancedProductTypeDetector from "./EnhancedProductTypeDetector";
 import IntelligentVariationsForm from "./IntelligentVariationsForm";
 import GradeConfigurationForm from "./GradeConfigurationForm";
+import UnifiedGradeManager from "./UnifiedGradeManager";
 
 interface UnifiedVariationWizardProps {
   variations: ProductVariation[];
@@ -391,12 +392,19 @@ const UnifiedVariationWizard: React.FC<UnifiedVariationWizardProps> = ({
 
       case "grade_system":
         return (
-          <GradeConfigurationForm
+          <UnifiedGradeManager
             variations={variations}
-            onVariationsGenerated={onVariationsChange}
+            onVariationsChange={onVariationsChange}
             productId={productId}
             storeId={storeId}
             productName={productName}
+            onComplete={() => {
+              // Não navegar automaticamente, deixar o usuário decidir
+              console.log(
+                "✅ Grades configuradas com sucesso no UnifiedVariationWizard"
+              );
+            }}
+            showPreview={true}
           />
         );
 

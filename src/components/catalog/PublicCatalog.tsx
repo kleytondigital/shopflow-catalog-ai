@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useCatalog, CatalogType } from "@/hooks/useCatalog";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import { useGlobalTemplateStyles } from "@/hooks/useGlobalTemplateStyles";
+import { useDynamicMetaTags } from "@/hooks/useDynamicMetaTags";
 import ResponsiveProductGrid from "./ResponsiveProductGrid";
 import AdvancedFilterSidebar, {
   AdvancedFilterState,
@@ -35,6 +35,12 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const { isReady, templateName } = useGlobalTemplateStyles(storeIdentifier);
   const { totalItems, toggleCart } = useCart();
 
+  // Hook para meta tags dinâmicas
+  const { isLoaded: metaTagsLoaded } = useDynamicMetaTags({
+    storeIdentifier,
+    catalogType,
+  });
+
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -61,9 +67,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
           product.description,
           product.category,
           ...(
-            product.variations?.map((v) =>
-              [v.color, v.size].filter(Boolean)
-            ) || []
+            product.variations?.map((v) => [v.color, v.size].filter(Boolean)) ||
+            []
           ).flat(),
         ]
           .join(" ")
