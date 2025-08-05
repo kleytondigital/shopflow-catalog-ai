@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { ArrowUpDown, Eye, Filter } from "lucide-react";
+import { ArrowUpDown, Eye, Filter, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCart } from "@/hooks/useCart";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ProductCard from "./ProductCard";
 import ProductDetailsModal from "./ProductDetailsModal";
 import AdvancedFilterSidebar, {
@@ -197,6 +198,26 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
         return sorted;
     }
   }, [filteredProducts, sortBy]);
+
+  // 🎯 NOVO: Hook para paginação infinita
+  const {
+    visibleItems: visibleProducts,
+    isLoading: isLoadingMore,
+    hasMore,
+    loadMore: handleLoadMore,
+    loadMoreRef,
+    resetPagination,
+  } = useInfiniteScroll<Product>({
+    items: sortedProducts,
+    itemsPerPage: 24,
+    threshold: 0.1,
+    autoLoad: true,
+  });
+
+  // 🎯 NOVO: Resetar paginação quando filtros mudarem
+  useEffect(() => {
+    resetPagination();
+  }, [filters, sortBy, resetPagination]);
 
   // Contar filtros ativos
   const activeFiltersCount = useMemo(() => {
@@ -489,17 +510,54 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
             ))}
           </div>
         ) : sortedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                catalogType={catalogType}
-                onViewDetails={handleViewDetails}
-                onAddToCart={handleAddToCart}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  catalogType={catalogType}
+                  onViewDetails={handleViewDetails}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+
+            {/* 🎯 NOVO: Botão "Carregar Mais" */}
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  variant="outline"
+                  className="flex items-center gap-2 px-6 py-3"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Carregar Mais Produtos
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* 🎯 NOVO: Elemento de referência para auto-loading */}
+            {hasMore && <div ref={loadMoreRef} className="h-4 w-full" />}
+
+            {/* 🎯 NOVO: Indicador de produtos carregados */}
+            {sortedProducts.length > 0 && (
+              <div className="text-center mt-4 text-sm text-muted-foreground">
+                Mostrando {visibleProducts.length} de {sortedProducts.length}{" "}
+                produtos
+              </div>
+            )}
+          </>
         ) : (
           // Estado Vazio
           <div className="flex flex-col items-center justify-center py-16 text-gray-500">

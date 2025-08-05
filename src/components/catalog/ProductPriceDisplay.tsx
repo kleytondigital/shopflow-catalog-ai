@@ -107,6 +107,43 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
         </div>
       </div>
 
+      {/* Preços Varejo e Atacado (quando ambos estão disponíveis) */}
+      {wholesalePrice && wholesalePrice !== retailPrice && (
+        <div className="space-y-1 pt-2 border-t border-border/20">
+          {/* Preço Varejo */}
+          <div className="flex items-center justify-between">
+            <span className={`text-muted-foreground ${classes.secondaryPrice}`}>
+              Varejo:
+            </span>
+            <span className={`font-medium ${classes.secondaryPrice}`}>
+              {formatCurrency(retailPrice)}
+            </span>
+          </div>
+
+          {/* Preço Atacado */}
+          <div className="flex items-center justify-between">
+            <span className={`text-muted-foreground ${classes.secondaryPrice}`}>
+              Atacado:
+            </span>
+            <div className="flex items-center gap-1">
+              <span
+                className={`font-medium text-green-600 ${classes.secondaryPrice}`}
+              >
+                {formatCurrency(wholesalePrice)}
+              </span>
+              {minWholesaleQty && (
+                <Badge
+                  variant="secondary"
+                  className={`bg-orange-100 text-orange-700 ${classes.badge}`}
+                >
+                  mín. {minWholesaleQty}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dica para Próximo Nível */}
       {showNextTierHint && priceCalculation.nextTierHint && (
         <div className={`text-blue-600 ${classes.hint}`}>

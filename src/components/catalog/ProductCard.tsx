@@ -188,6 +188,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Price Section */}
         <div className="space-y-2">
+          {/* Preço Principal */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-lg font-bold text-foreground">
@@ -211,12 +212,46 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
           </div>
 
-          {/* Wholesale Minimum */}
-          {modelKey === "wholesale_only" && product.min_wholesale_qty && (
-            <p className="text-xs text-muted-foreground">
-              Mínimo: {product.min_wholesale_qty} unidades
-            </p>
-          )}
+          {/* Preços Varejo e Atacado */}
+          {product.wholesale_price &&
+            product.wholesale_price !== product.retail_price && (
+              <div className="space-y-1 pt-1 border-t border-border/20">
+                {/* Preço Varejo */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Varejo:</span>
+                  <span className="font-medium">
+                    {formatCurrency(product.retail_price || 0)}
+                  </span>
+                </div>
+
+                {/* Preço Atacado */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Atacado:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-green-600">
+                      {formatCurrency(product.wholesale_price)}
+                    </span>
+                    {product.min_wholesale_qty && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-orange-100 text-orange-700"
+                      >
+                        mín. {product.min_wholesale_qty}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+          {/* Wholesale Minimum (quando não há preço atacado separado) */}
+          {modelKey === "wholesale_only" &&
+            product.min_wholesale_qty &&
+            !product.wholesale_price && (
+              <p className="text-xs text-muted-foreground">
+                Mínimo: {product.min_wholesale_qty} unidades
+              </p>
+            )}
 
           {/* Variation Info */}
           {hasVariations && (
