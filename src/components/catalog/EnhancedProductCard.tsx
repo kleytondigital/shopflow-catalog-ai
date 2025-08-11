@@ -8,6 +8,7 @@ import { useStorePriceModel } from "@/hooks/useStorePriceModel";
 import { usePriceCalculation } from "@/hooks/usePriceCalculation";
 import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
 import { useProductVariations } from "@/hooks/useProductVariations";
+import GradePriceDisplay from "./GradePriceDisplay";
 import {
   ShoppingCart,
   Eye,
@@ -197,29 +198,45 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
 
         {/* Price Section */}
         <div className="space-y-2">
-          {/* Preço Principal */}
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-foreground">
-                {priceCalculation?.price
-                  ? formatCurrency(priceCalculation.price)
-                  : formatCurrency(product.retail_price || 0)}
-              </span>
-              {priceCalculation?.percentage > 0 && product.retail_price && (
-                <span className="text-sm text-muted-foreground line-through">
-                  {formatCurrency(product.retail_price)}
+          {/* Price Display */}
+          {variationInfo?.hasGrades ? (
+            // 🎯 Produto com Grade - Usar GradePriceDisplay compacto
+            <GradePriceDisplay
+              retailPrice={product.retail_price}
+              wholesalePrice={product.wholesale_price}
+              minWholesaleQty={product.min_wholesale_qty}
+              gradeSizes={variations[0]?.grade_sizes || []}
+              gradePairs={variations[0]?.grade_pairs || []}
+              gradeQuantity={variations[0]?.grade_quantity || 0}
+              size="sm"
+              showGradeBreakdown={false}
+              className="p-0"
+            />
+          ) : (
+            // 🎯 Produto Normal - Preço padrão
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-foreground">
+                  {priceCalculation?.price
+                    ? formatCurrency(priceCalculation.price)
+                    : formatCurrency(product.retail_price || 0)}
                 </span>
-              )}
-            </div>
+                {priceCalculation?.percentage > 0 && product.retail_price && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    {formatCurrency(product.retail_price)}
+                  </span>
+                )}
+              </div>
 
-            {/* Tier Info */}
-            {priceCalculation?.currentTier &&
-              priceCalculation.currentTier.tier_name !== "Varejo" && (
-                <Badge variant="outline" className="text-xs">
-                  {priceCalculation.currentTier.tier_name}
-                </Badge>
-              )}
-          </div>
+              {/* Tier Info */}
+              {priceCalculation?.currentTier &&
+                priceCalculation.currentTier.tier_name !== "Varejo" && (
+                  <Badge variant="outline" className="text-xs">
+                    {priceCalculation.currentTier.tier_name}
+                  </Badge>
+                )}
+            </div>
+          )}
 
           {/* Preços Varejo e Atacado */}
           {product.wholesale_price &&

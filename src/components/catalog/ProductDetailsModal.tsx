@@ -35,6 +35,7 @@ import VariationModeSelector from "./VariationModeSelector";
 import VariationSelectionAlert from "./VariationSelectionAlert";
 import { formatCurrency } from "@/lib/utils";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
+import GradePriceDisplay from "./GradePriceDisplay";
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -346,7 +347,20 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             {/* Price Display */}
             {loading ? (
               <div className="text-gray-500">Carregando preços...</div>
+            ) : hasVariations && variationInfo?.hasGrades ? (
+              // 🎯 Produto com Grade - Usar GradePriceDisplay
+              <GradePriceDisplay
+                retailPrice={product.retail_price}
+                wholesalePrice={product.wholesale_price}
+                minWholesaleQty={product.min_wholesale_qty}
+                gradeSizes={variations[0]?.grade_sizes || []}
+                gradePairs={variations[0]?.grade_pairs || []}
+                gradeQuantity={variations[0]?.grade_quantity || 0}
+                size="lg"
+                showGradeBreakdown={true}
+              />
             ) : (
+              // 🎯 Produto Normal - Usar ProductPriceDisplay
               <ProductPriceDisplay
                 storeId={product.store_id}
                 productId={product.id}

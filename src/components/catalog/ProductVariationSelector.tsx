@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +48,15 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   );
 
   // Calcular informações sobre tipos de variação
-  const colors = [...new Set(variations.filter((v) => v.color).map((v) => v.color))];
-  const sizes = [...new Set(variations.filter((v) => v.size).map((v) => v.size))];
-  const grades = variations.filter(v => v.is_grade || v.variation_type === 'grade');
+  const colors = [
+    ...new Set(variations.filter((v) => v.color).map((v) => v.color)),
+  ];
+  const sizes = [
+    ...new Set(variations.filter((v) => v.size).map((v) => v.size)),
+  ];
+  const grades = variations.filter(
+    (v) => v.is_grade || v.variation_type === "grade"
+  );
 
   const variationInfo = {
     hasColors: colors.length > 0,
@@ -65,14 +70,17 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   if (hasGradeVariations) {
     // Renderizar seletor para variações de grade
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-lg flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+          <h4 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+            <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Selecione a Grade
           </h4>
-          <Badge variant="outline" className="text-sm">
+          <Badge
+            variant="outline"
+            className="text-xs sm:text-sm self-start sm:self-center"
+          >
             {variations.length} opções
           </Badge>
         </div>
@@ -89,7 +97,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
         )}
 
         {/* Grade Cards */}
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {variations.map((variation) => (
             <GradeVariationCard
               key={variation.id}
@@ -191,8 +199,12 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                     )
                   }
                   disabled={!isAvailable}
-                  className={`relative h-12 ${!isAvailable ? "opacity-50" : ""} ${
-                    isSelected ? "border-primary shadow-md" : "hover:border-primary/50"
+                  className={`relative h-12 ${
+                    !isAvailable ? "opacity-50" : ""
+                  } ${
+                    isSelected
+                      ? "border-primary shadow-md"
+                      : "hover:border-primary/50"
                   }`}
                 >
                   <div className="flex flex-col items-center">
@@ -241,8 +253,12 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                     )
                   }
                   disabled={!isAvailable}
-                  className={`relative h-12 ${!isAvailable ? "opacity-50" : ""} ${
-                    isSelected ? "border-primary shadow-md" : "hover:border-primary/50"
+                  className={`relative h-12 ${
+                    !isAvailable ? "opacity-50" : ""
+                  } ${
+                    isSelected
+                      ? "border-primary shadow-md"
+                      : "hover:border-primary/50"
                   }`}
                 >
                   <div className="flex flex-col items-center">
