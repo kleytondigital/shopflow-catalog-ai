@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ShoppingCart,
   Heart,
   Plus,
@@ -19,6 +24,7 @@ import {
   TrendingDown,
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
@@ -170,20 +176,46 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       finalQuantity = Math.max(quantity, minQuantity);
     }
 
-    // Produto com configurações de modelo de preço
-    const productWithModel = {
+    // 🎯 CORRIGIDO: Para produtos com grade, ajustar o preço
+    let productWithModel = {
       ...product,
       allow_negative_stock: product.allow_negative_stock || false,
       price_model: modelKey,
       enable_gradual_wholesale: product.enable_gradual_wholesale || false,
     };
 
+    // Se for produto com grade, calcular o preço total da grade
+    if (hasVariations && variationInfo?.hasGrades && selectedVariation) {
+      const gradeTotalPrice =
+        (selectedVariation.grade_quantity || 0) *
+        (product.wholesale_price || product.retail_price);
+
+      productWithModel = {
+        ...productWithModel,
+        // 🎯 IMPORTANTE: Sobrescrever o preço para o preço total da grade
+        retail_price: gradeTotalPrice,
+        wholesale_price: gradeTotalPrice,
+      };
+
+      console.log("🎯 GRADE - Preço ajustado para carrinho:", {
+        originalPrice: product.retail_price,
+        gradeTotalPrice,
+        gradeQuantity: selectedVariation.grade_quantity,
+        pricePerPair: product.wholesale_price || product.retail_price,
+      });
+    }
+
     onAddToCart(productWithModel, finalQuantity, selectedVariation);
     onClose();
 
     toast({
       title: "Produto adicionado!",
-      description: `${finalQuantity} unidade(s) adicionada(s) ao carrinho.`,
+      description:
+        hasVariations && variationInfo?.hasGrades
+          ? `Grade de ${
+              selectedVariation?.grade_quantity || 0
+            } pares adicionada ao carrinho.`
+          : `${finalQuantity} unidade(s) adicionada(s) ao carrinho.`,
     });
   }, [
     product,
@@ -203,12 +235,26 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
       // Adicionar cada seleção ao carrinho
       selections.forEach((selection) => {
-        const productWithModel = {
+        let productWithModel = {
           ...product,
           allow_negative_stock: product.allow_negative_stock || false,
           price_model: modelKey,
           enable_gradual_wholesale: product.enable_gradual_wholesale || false,
         };
+
+        // 🎯 CORRIGIDO: Para produtos com grade, ajustar o preço
+        if (hasVariations && variationInfo?.hasGrades && selection.variation) {
+          const gradeTotalPrice =
+            (selection.variation.grade_quantity || 0) *
+            (product.wholesale_price || product.retail_price);
+
+          productWithModel = {
+            ...productWithModel,
+            // 🎯 IMPORTANTE: Sobrescrever o preço para o preço total da grade
+            retail_price: gradeTotalPrice,
+            wholesale_price: gradeTotalPrice,
+          };
+        }
 
         onAddToCart(productWithModel, selection.quantity, selection.variation);
       });
@@ -219,9 +265,16 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         (total, sel) => total + sel.quantity,
         0
       );
+
+      // 🎯 Melhorar descrição para produtos com grade
+      const hasGrades = selections.some((sel) => sel.variation?.is_grade);
+      const description = hasGrades
+        ? `${selections.length} grade(s) adicionada(s) ao carrinho.`
+        : `${totalItems} itens de ${selections.length} variações adicionados ao carrinho.`;
+
       toast({
         title: "Produtos adicionados!",
-        description: `${totalItems} itens de ${selections.length} variações adicionados ao carrinho.`,
+        description,
       });
     },
     [product, modelKey, onAddToCart, onClose, toast]
@@ -341,7 +394,39 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
             {/* Description */}
             {product.description && (
-              <p className="text-gray-600 text-sm">{product.description}</p>
+              <div className="space-y-2">
+                {/* Desktop: Descrição completa */}
+                <div className="hidden md:block">
+                  <p className="text-gray-600 text-sm">{product.description}</p>
+                </div>
+
+                {/* Mobile: Acordeão com descrição resumida */}
+                <div className="md:hidden">
+                  <Collapsible className="w-full">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-between p-0 h-auto text-left font-normal"
+                      >
+                        <div className="text-left">
+                          <p className="text-gray-600 text-sm line-clamp-2">
+                            {product.description}
+                          </p>
+                          <span className="text-primary text-xs font-medium">
+                            Ver mais detalhes
+                          </span>
+                        </div>
+                        <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <p className="text-gray-600 text-sm">
+                        {product.description}
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </div>
             )}
 
             {/* Price Display */}
@@ -530,7 +615,15 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                         <>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Adicionar ao Carrinho -{" "}
-                          {formatCurrency(priceCalculation.price * quantity)}
+                          {hasVariations && variationInfo?.hasGrades
+                            ? // 🎯 Para produtos com grade, mostrar preço total da grade
+                              formatCurrency(
+                                (selectedVariation?.grade_quantity || 0) *
+                                  (product.wholesale_price ||
+                                    product.retail_price)
+                              )
+                            : // 🎯 Para produtos normais, usar cálculo padrão
+                              formatCurrency(priceCalculation.price * quantity)}
                         </>
                       )}
                     </Button>

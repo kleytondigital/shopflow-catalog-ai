@@ -124,8 +124,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
           : "border-border bg-white hover:border-primary/30"
       }`}
     >
-      {/* 🎯 MELHORADO: Image Container com aspect ratio 1:1 */}
-      <div className="relative">
+      {/* 🎯 MELHORADO: Image Container com aspect ratio 1:1 e click */}
+      <div className="relative cursor-pointer" onClick={handleViewDetails}>
         <ProductCardImageGallery
           productId={product.id}
           productName={product.name}

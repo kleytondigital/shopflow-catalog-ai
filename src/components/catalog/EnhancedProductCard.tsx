@@ -105,8 +105,11 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
       }`}
       onClick={onClick}
     >
-      {/* 🎯 MELHORADO: Image Container com aspect ratio 1:1 */}
-      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+      {/* 🎯 MELHORADO: Image Container com aspect ratio 1:1 e click */}
+      <div
+        className="relative aspect-square bg-gray-100 overflow-hidden cursor-pointer"
+        onClick={onClick}
+      >
         {product.image_url ? (
           <img
             src={product.image_url}

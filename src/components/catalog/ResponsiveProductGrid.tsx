@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCart } from "@/hooks/useCart";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import ProductCard from "./ProductCard";
 import ProductDetailsModal from "./ProductDetailsModal";
 import AdvancedFilterSidebar, {
@@ -66,6 +67,26 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
     },
     discount: false,
   });
+
+  // 🎯 NOVO: Configurações de colunas do catálogo
+  const { settings } = useCatalogSettings(storeIdentifier);
+  const mobileColumns = settings?.mobile_columns || 2;
+
+  // 🎯 NOVO: Classes CSS dinâmicas baseadas na configuração
+  const getGridClasses = useMemo(() => {
+    const baseClasses = "grid gap-4";
+
+    // Mobile: usar configuração do dashboard (1 ou 2 colunas)
+    const mobileGrid = mobileColumns === 1 ? "grid-cols-1" : "grid-cols-2";
+
+    // Tablet: sempre 2 colunas para melhor visualização
+    const tabletGrid = "sm:grid-cols-2";
+
+    // Desktop: sempre 3 colunas para melhor aproveitamento do espaço
+    const desktopGrid = "lg:grid-cols-3";
+
+    return `${baseClasses} ${mobileGrid} ${tabletGrid} ${desktopGrid}`;
+  }, [mobileColumns]);
 
   // Atualizar filtros quando a busca mudar
   useEffect(() => {
@@ -494,7 +515,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
       <div className="min-h-96">
         {loading ? (
           // Loading Skeleton
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={getGridClasses}>
             {Array.from({ length: 12 }).map((_, index) => (
               <div
                 key={index}
@@ -511,7 +532,7 @@ const ResponsiveProductGrid: React.FC<ResponsiveProductGridProps> = ({
           </div>
         ) : sortedProducts.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={getGridClasses}>
               {visibleProducts.map((product) => (
                 <ProductCard
                   key={product.id}

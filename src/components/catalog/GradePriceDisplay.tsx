@@ -178,10 +178,6 @@ const GradePriceDisplay: React.FC<GradePriceDisplayProps> = ({
 
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-orange-700">Preço varejo por par:</span>
-              <span className="font-medium">{formatCurrency(retailPrice)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
               <span className="text-orange-700">Preço atacado por par:</span>
               <span className="font-bold text-green-600">
                 {formatCurrency(wholesalePrice)}
