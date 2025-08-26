@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
@@ -31,10 +32,34 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const { addItem } = useShoppingCart();
   const { toast } = useToast();
   
-  const { store, products, filteredProducts, loading, storeError } = useCatalog(storeIdentifier, catalogType);
+  // Só inicializa os hooks se houver storeIdentifier
+  const { store, products, filteredProducts, loading, storeError } = useCatalog(
+    storeIdentifier, 
+    catalogType
+  );
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
   
   useEditorSync(storeIdentifier || '');
+
+  // Verificar se não há identificador da loja
+  if (!storeIdentifier) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto p-6">
+          <h1 className="text-2xl font-bold text-foreground mb-4">URL Inválida</h1>
+          <p className="text-muted-foreground mb-4">
+            O identificador da loja não foi fornecido na URL. 
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Para acessar um catálogo, use uma URL no formato: <br />
+            <code className="bg-muted px-2 py-1 rounded text-xs">
+              /catalog/[identificador-da-loja]
+            </code>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (store?.id && !loading) {
@@ -68,19 +93,28 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
   if (loading || settingsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando loja...</p>
+        </div>
       </div>
     );
   }
 
   if (storeError || !store) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loja não encontrada</h1>
-          <p className="text-muted-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto p-6">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Loja não encontrada</h1>
+          <p className="text-muted-foreground mb-4">
             {storeError || "A loja que você está procurando não existe ou foi removida."}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Verifique se o identificador da loja está correto: <br />
+            <code className="bg-muted px-2 py-1 rounded text-xs">
+              {storeIdentifier}
+            </code>
           </p>
         </div>
       </div>
@@ -97,7 +131,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       />
 
       {/* Header do Catálogo */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+      <header className="bg-card shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -117,7 +151,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
             <div className="flex-1 max-w-lg mx-8">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
+                  <Search className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <Input
                   type="text"
