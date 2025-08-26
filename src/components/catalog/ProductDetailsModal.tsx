@@ -18,19 +18,25 @@ import {
   Truck,
   Shield,
   X,
-  Minus,
-  Plus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Product, ProductVariation } from "@/types/product";
 import { useProductVariations } from "@/hooks/useProductVariations";
-import HierarchicalVariationSelector from "./HierarchicalVariationSelector";
+import MultipleVariationSelector from "./MultipleVariationSelector";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { usePriceCalculation } from "@/hooks/usePriceCalculation";
+
+interface VariationSelection {
+  variation: ProductVariation;
+  quantity: number;
+}
 
 interface ProductDetailsModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
+  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   catalogType: "retail" | "wholesale";
 }
 
@@ -38,56 +44,48 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   product,
   isOpen,
   onClose,
+  onAddToCart,
   catalogType,
 }) => {
-  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   
   const { 
     variations, 
     loading: variationsLoading 
   } = useProductVariations(product?.id);
 
+  const priceCalculation = usePriceCalculation(
+    product?.store_id || "",
+    {
+      product_id: product?.id || "",
+      retail_price: product?.retail_price || 0,
+      wholesale_price: product?.wholesale_price,
+      min_wholesale_qty: product?.min_wholesale_qty,
+      quantity: 1,
+      price_tiers: product?.price_tiers,
+      enable_gradual_wholesale: product?.enable_gradual_wholesale,
+    }
+  );
+
   if (!product) return null;
-
-  // Calcular preço baseado no tipo de catálogo e variação
-  const basePrice = catalogType === "wholesale" 
-    ? (product.wholesale_price || product.retail_price) 
-    : product.retail_price;
-
-  const finalPrice = selectedVariation 
-    ? basePrice + (selectedVariation.price_adjustment || 0)
-    : basePrice;
-
-  // Verificar disponibilidade
-  const maxStock = selectedVariation 
-    ? selectedVariation.stock 
-    : product.stock;
-
-  const isAvailable = maxStock > 0;
 
   // URLs para WhatsApp
   const whatsappUrl = `https://wa.me/${product.whatsapp_number || "5511999999999"}?text=${encodeURIComponent(
-    `Olá! Tenho interesse no produto: *${product.name}*${
-      selectedVariation 
-        ? `\n📦 Variação: ${selectedVariation.color || ''} ${selectedVariation.size || ''}`.trim()
-        : ''
-    }\n💰 Preço: R$ ${finalPrice.toFixed(2)}\n📞 Quantidade: ${quantity}`
+    `Olá! Tenho interesse no produto: *${product.name}*\n💰 Preço: R$ ${priceCalculation.formattedUnitPrice}\n📞 Gostaria de mais informações.`
   )}`;
 
-  const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1 && newQuantity <= maxStock) {
-      setQuantity(newQuantity);
-    }
+  const handleMultipleAddToCart = (selections: VariationSelection[]) => {
+    selections.forEach(({ variation, quantity }) => {
+      onAddToCart(product, quantity, variation);
+    });
   };
 
-  const handleVariationChange = (variation: ProductVariation | null) => {
-    setSelectedVariation(variation);
-    // Ajustar quantidade se necessário
-    if (variation && quantity > variation.stock) {
-      setQuantity(Math.max(1, variation.stock));
-    }
+  const truncateDescription = (text: string, maxLength: number = 150) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
+
+  const shouldShowReadMore = product.description && product.description.length > 150;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -144,26 +142,48 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 )}
               </div>
 
-              {/* Descrição */}
+              {/* Descrição - Layout Otimizado */}
               {product.description && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <h4 className="font-semibold mb-3">Descrição do Produto</h4>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {product.description}
-                    </p>
+                  <CardContent className="pt-4 pb-4">
+                    <h4 className="font-semibold mb-2">Descrição do Produto</h4>
+                    <div className="text-muted-foreground leading-relaxed text-sm">
+                      {showFullDescription ? (
+                        <p>{product.description}</p>
+                      ) : (
+                        <p>{truncateDescription(product.description)}</p>
+                      )}
+                      {shouldShowReadMore && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-0 h-auto mt-2 text-primary"
+                          onClick={() => setShowFullDescription(!showFullDescription)}
+                        >
+                          {showFullDescription ? (
+                            <>
+                              Ver menos <ChevronUp className="h-4 w-4 ml-1" />
+                            </>
+                          ) : (
+                            <>
+                              Ver mais <ChevronDown className="h-4 w-4 ml-1" />
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Informações Adicionais */}
+              {/* Informações Adicionais - Layout Compacto */}
               <Card>
-                <CardContent className="pt-6">
-                  <h4 className="font-semibold mb-3">Informações</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <CardContent className="pt-4 pb-4">
+                  <h4 className="font-semibold mb-2">Informações</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      <span>Estoque: {maxStock} unidades</span>
+                      <span>Estoque: {product.stock} un.</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Truck className="h-4 w-4 text-muted-foreground" />
@@ -173,40 +193,36 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       <Shield className="h-4 w-4 text-muted-foreground" />
                       <span>Produto garantido</span>
                     </div>
-                    {selectedVariation?.sku && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">SKU:</span>
-                        <span className="font-mono">{selectedVariation.sku}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-muted-foreground" />
+                      <span>Qualidade premium</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Coluna Direita - Compra */}
-            <div className="space-y-6">
-              {/* Preço */}
+            <div className="space-y-4">
+              {/* Preço - Integrado com Sistema de Pricing */}
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 pb-4">
                   <div className="text-center space-y-2">
-                    <div className="text-3xl font-bold text-primary">
-                      R$ {finalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    <div className="text-2xl font-bold text-primary">
+                      {priceCalculation.formattedUnitPrice}
                     </div>
-                    {selectedVariation?.price_adjustment !== 0 && selectedVariation && (
-                      <div className="text-sm text-muted-foreground">
-                        Preço base: R$ {basePrice.toFixed(2)} 
-                        <Badge 
-                          variant={selectedVariation.price_adjustment > 0 ? "destructive" : "default"}
-                          className="ml-2"
-                        >
-                          {selectedVariation.price_adjustment > 0 ? "+" : ""}
-                          R$ {selectedVariation.price_adjustment.toFixed(2)}
+                    {priceCalculation.savings > 0 && (
+                      <div className="text-sm">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          Economia: {priceCalculation.formattedSavings}
                         </Badge>
                       </div>
                     )}
+                    <div className="text-sm text-muted-foreground">
+                      Nível: {priceCalculation.currentTier.tier_name}
+                    </div>
                     {catalogType === "wholesale" && product.min_wholesale_qty && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Quantidade mínima: {product.min_wholesale_qty} unidades
                       </p>
                     )}
@@ -214,109 +230,75 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Seleção de Variações */}
+              {/* Seleção de Variações - Sistema Múltiplo */}
               {variations && variations.length > 0 && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <HierarchicalVariationSelector
+                  <CardContent className="pt-4 pb-4">
+                    <h4 className="font-semibold mb-3">Selecionar Variações</h4>
+                    <MultipleVariationSelector
+                      product={product}
                       variations={variations}
-                      selectedVariation={selectedVariation}
-                      onVariationChange={handleVariationChange}
-                      loading={variationsLoading}
+                      onAddToCart={handleMultipleAddToCart}
+                      catalogType={catalogType}
                     />
                   </CardContent>
                 </Card>
               )}
 
-              {/* Seleção de Quantidade */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Quantidade</h4>
-                    <div className="flex items-center justify-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(quantity - 1)}
-                        disabled={quantity <= 1}
-                        className="h-10 w-10 p-0"
+              {/* Botões de Ação - Produtos sem Variações */}
+              {(!variations || variations.length === 0) && (
+                <div className="space-y-3">
+                  {product.stock > 0 ? (
+                    <>
+                      <Button 
+                        size="lg" 
+                        className="w-full"
+                        onClick={() => onAddToCart(product, 1)}
                       >
-                        <Minus className="h-4 w-4" />
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                        Adicionar ao Carrinho
                       </Button>
-                      <Input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                        className="w-20 text-center"
-                        min="1"
-                        max={maxStock}
-                      />
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(quantity + 1)}
-                        disabled={quantity >= maxStock}
-                        className="h-10 w-10 p-0"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => window.open(whatsappUrl, "_blank")}
                       >
-                        <Plus className="h-4 w-4" />
+                        <MessageCircle className="h-5 w-5 mr-2" />
+                        Pedir via WhatsApp
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground mb-3">Produto Esgotado</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(whatsappUrl, "_blank")}
+                      >
+                        <MessageCircle className="h-5 w-5 mr-2" />
+                        Consultar Disponibilidade
                       </Button>
                     </div>
-                    <p className="text-xs text-center text-muted-foreground">
-                      Máximo disponível: {maxStock} unidades
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Botões de Ação */}
-              <div className="space-y-3">
-                {isAvailable ? (
-                  <>
-                    <Button size="lg" className="w-full" disabled={!selectedVariation && variations.length > 0}>
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      Adicionar ao Carrinho
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                      onClick={() => window.open(whatsappUrl, "_blank")}
-                      disabled={!selectedVariation && variations.length > 0}
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Pedir via WhatsApp
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground mb-3">Produto Esgotado</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(whatsappUrl, "_blank")}
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Consultar Disponibilidade
-                    </Button>
-                  </div>
-                )}
-
-                {!selectedVariation && variations.length > 0 && (
-                  <p className="text-sm text-center text-muted-foreground">
-                    ⚠️ Selecione uma variação para continuar
-                  </p>
-                )}
-              </div>
-
-              {/* Total */}
-              <Separator />
-              <div className="text-center">
-                <div className="text-lg font-semibold">
-                  Total: R$ {(finalPrice * quantity).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {quantity} {quantity === 1 ? "unidade" : "unidades"}
-                </p>
-              </div>
+              )}
+
+              {/* Dica para Próximo Nível de Preço */}
+              {priceCalculation.nextTierHint && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="text-center text-sm">
+                      <p className="text-blue-800 font-medium">
+                        💡 Dica de Economia
+                      </p>
+                      <p className="text-blue-700 mt-1">
+                        Adicione mais {priceCalculation.nextTierHint.quantityNeeded} unidades 
+                        e economize até R$ {priceCalculation.nextTierHint.potentialSavings.toFixed(2)} por item!
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </ScrollArea>
