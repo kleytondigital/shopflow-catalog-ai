@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
@@ -8,10 +9,16 @@ import { useShoppingCart } from "@/hooks/useShoppingCart";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useAuth } from "@/hooks/useAuth";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
-import { useEditorSync } from "@/hooks/useEditorSync";
+import { useTemplateColors } from "@/hooks/useTemplateColors";
+import { useGlobalTemplateStyles } from "@/hooks/useGlobalTemplateStyles";
+import { useMobileLayout } from "@/hooks/useMobileLayout";
+import { useFloatingCart } from "@/hooks/useFloatingCart";
 import { useToast } from "@/hooks/use-toast";
+import TemplateWrapper from "./TemplateWrapper";
 import ProductCard from "./ProductCard";
+import EnhancedProductCard from "./EnhancedProductCard";
 import ProductDetailsModal from "@/components/catalog/ProductDetailsModal";
+import FloatingCart from "./FloatingCart";
 import DynamicMetaTags from "@/components/seo/DynamicMetaTags";
 
 interface PublicCatalogProps {
@@ -26,10 +33,17 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [wishlistCount] = useState(0);
   
   const { user } = useAuth();
-  const { addItem } = useShoppingCart();
+  const { addItem, totalItems } = useShoppingCart();
   const { toast } = useToast();
+  const { 
+    isVisible: isCartVisible, 
+    showCart, 
+    hideCart, 
+    toggleCart 
+  } = useFloatingCart();
 
   console.log('🔍 PublicCatalog: storeIdentifier recebido:', storeIdentifier);
 
@@ -59,14 +73,24 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     );
   }
 
-  // Inicializar hooks diretamente
-  const { store, products, filteredProducts, loading, storeError } = useCatalog(
+  // Inicializar hooks
+  const { store, products, filteredProducts, loading, storeError, searchProducts } = useCatalog(
     storeIdentifier, 
     catalogType
   );
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
+  const { colorScheme, applyColorsToDocument, templateName } = useTemplateColors(storeIdentifier);
+  const { getMobileGridClasses } = useMobileLayout(storeIdentifier);
   
-  useEditorSync(storeIdentifier);
+  // Aplicar estilos globais do template
+  useGlobalTemplateStyles(storeIdentifier);
+
+  // Aplicar cores ao documento quando carregadas
+  useEffect(() => {
+    if (colorScheme && !loading && !settingsLoading) {
+      applyColorsToDocument();
+    }
+  }, [colorScheme, loading, settingsLoading, applyColorsToDocument]);
 
   useEffect(() => {
     if (store?.id && !loading) {
@@ -74,25 +98,50 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     }
   }, [store, loading]);
 
-  const handleAddToCart = (product: any, quantity: number = 1) => {
+  const handleAddToCart = (product: any, quantity: number = 1, selectedVariation?: any) => {
     addItem(product, quantity);
     
     toast({
       title: "Produto adicionado!",
       description: `${product.name} foi adicionado ao carrinho.`,
     });
+
+    // Mostrar carrinho brevemente após adicionar item
+    setTimeout(() => {
+      if (!isCartVisible) {
+        showCart();
+        setTimeout(() => hideCart(), 3000); // Auto-hide após 3s
+      }
+    }, 500);
   };
 
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
   };
 
-  const filteredProductsDisplay = products?.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  const handleSearch = (query: string) => {
+    setSearchTerm(query);
+    if (searchProducts) {
+      searchProducts(query);
+    }
+  };
+
+  const handleToggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  const handleCartClick = () => {
+    toggleCart();
+  };
+
+  const filteredProductsDisplay = searchTerm 
+    ? products?.filter((product) => {
+        const matchesSearch = product.name
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        return matchesSearch;
+      })
+    : products;
 
   if (loading || settingsLoading) {
     return (
@@ -135,7 +184,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="template-container">
       <DynamicMetaTags
         storeIdentifier={storeIdentifier}
         catalogType={catalogType}
@@ -143,49 +192,21 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
         customDescription={store.description}
       />
 
-      {/* Header do Catálogo */}
-      <header className="bg-card shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex-shrink-0">
-                {store.logo_url ? (
-                  <img
-                    src={store.logo_url}
-                    alt={store.name}
-                    className="h-8 w-auto"
-                  />
-                ) : (
-                  <h1 className="text-xl font-bold text-primary">{store.name}</h1>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 max-w-lg mx-8">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <Input
-                  type="text"
-                  placeholder="Buscar produtos..."
-                  className="pl-10 pr-4"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filtros
-              </Button>
-
+      <TemplateWrapper
+        templateName={templateName}
+        store={store}
+        catalogType={catalogType}
+        cartItemsCount={totalItems}
+        wishlistCount={wishlistCount}
+        whatsappNumber={settings?.whatsapp_number}
+        onSearch={handleSearch}
+        onToggleFilters={handleToggleFilters}
+        onCartClick={handleCartClick}
+      >
+        {/* Barra de Filtros */}
+        {showFilters && (
+          <div className="bg-card p-4 rounded-lg shadow-sm border mb-6">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center space-x-2">
                 <Button
                   variant={viewMode === "grid" ? "default" : "outline"}
@@ -202,28 +223,35 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
                   <List className="h-4 w-4" />
                 </Button>
               </div>
+              
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Buscar produtos..."
+                    className="pl-10 pr-4"
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        )}
 
-      {/* Conteúdo Principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Grid de Produtos */}
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
-          }
-        >
+        <div className={getMobileGridClasses()}>
           {filteredProductsDisplay?.map((product) => (
-            <ProductCard
+            <EnhancedProductCard
               key={product.id}
               product={product}
-              onAddToCart={handleAddToCart}
-              onViewDetails={handleProductClick}
               catalogType={catalogType}
+              onClick={() => handleProductClick(product)}
+              onAddToCart={handleAddToCart}
+              storeIdentifier={storeIdentifier}
             />
           ))}
         </div>
@@ -231,11 +259,27 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
         {filteredProductsDisplay?.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              Nenhum produto encontrado.
+              {searchTerm ? `Nenhum produto encontrado para "${searchTerm}".` : "Nenhum produto encontrado."}
             </p>
+            {searchTerm && (
+              <Button
+                variant="outline"
+                onClick={() => handleSearch("")}
+                className="mt-4"
+              >
+                Limpar busca
+              </Button>
+            )}
           </div>
         )}
-      </main>
+      </TemplateWrapper>
+
+      {/* Carrinho Flutuante */}
+      <FloatingCart
+        isVisible={isCartVisible}
+        onClose={hideCart}
+        onToggle={toggleCart}
+      />
 
       {/* Modal de Detalhes do Produto */}
       {selectedProduct && (
