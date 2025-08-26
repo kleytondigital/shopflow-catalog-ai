@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ShoppingCart, Heart, Eye, Star, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Product } from '@/hooks/useProducts';
+import { Product } from '@/types/product';
 import { CatalogType } from '@/hooks/useCatalog';
 
 interface ModernProductCardProps {
@@ -105,7 +105,7 @@ const ModernProductCard: React.FC<ModernProductCardProps> = ({
       {/* Product Image */}
       <div className="relative aspect-square overflow-hidden">
         <img
-          src={product.images?.[0] || '/placeholder.png'}
+          src={product.image_url || '/placeholder.png'}
           alt={product.name}
           className={`w-full h-full object-cover transition-all duration-700 ${
             isHovered ? 'scale-110' : 'scale-100'
