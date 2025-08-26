@@ -9,6 +9,7 @@ import { ShoppingCart, Heart, Minus, Plus, Package, Truck, Shield } from 'lucide
 import { Product, ProductVariation } from '@/types/product';
 import { CatalogType } from '@/hooks/useCatalog';
 import ProductImageGallery from '@/components/products/ProductImageGallery';
+import HierarchicalVariationSelector from './HierarchicalVariationSelector';
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -40,7 +41,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   const handleQuantityChange = (newQuantity: number) => {
     const min = Math.max(minQuantity, 1);
-    const max = product.stock || 999;
+    const max = selectedVariation ? selectedVariation.stock : product.stock || 999;
     setQuantity(Math.max(min, Math.min(max, newQuantity)));
   };
 
@@ -50,7 +51,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   };
 
   const hasVariations = product.variations && product.variations.length > 0;
-  const isAvailable = product.stock > 0;
+  const currentStock = selectedVariation ? selectedVariation.stock : product.stock;
+  const isAvailable = currentStock > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -100,29 +102,16 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               </div>
             )}
 
-            {/* Variations */}
+            {/* Hierarchical Variation Selector - restaurado */}
             {hasVariations && (
               <div className="space-y-3">
-                <h3 className="font-semibold">Variações</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {product.variations?.map((variation) => (
-                    <Button
-                      key={variation.id}
-                      variant={selectedVariation?.id === variation.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedVariation(variation)}
-                      className="justify-start text-sm"
-                    >
-                      {variation.color && (
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2 border border-gray-300" 
-                          style={{ backgroundColor: variation.hex_color || variation.color }}
-                        />
-                      )}
-                      {variation.color} {variation.size && `- ${variation.size}`}
-                    </Button>
-                  ))}
-                </div>
+                <h3 className="font-semibold">Selecione as Opções</h3>
+                <HierarchicalVariationSelector
+                  variations={product.variations || []}
+                  selectedVariation={selectedVariation}
+                  onVariationChange={setSelectedVariation}
+                  loading={false}
+                />
               </div>
             )}
 
@@ -131,7 +120,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <Package className="h-4 w-4" />
               <span className={isAvailable ? "text-green-600" : "text-red-600"}>
                 {isAvailable 
-                  ? `${product.stock} em estoque`
+                  ? `${currentStock} em estoque`
                   : 'Produto esgotado'
                 }
               </span>
@@ -157,13 +146,13 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     onChange={(e) => handleQuantityChange(parseInt(e.target.value) || minQuantity)}
                     className="w-20 text-center"
                     min={minQuantity}
-                    max={product.stock}
+                    max={currentStock}
                   />
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleQuantityChange(quantity + 1)}
-                    disabled={quantity >= product.stock}
+                    disabled={quantity >= currentStock}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>

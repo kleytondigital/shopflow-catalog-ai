@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useCatalog, CatalogType } from '@/hooks/useCatalog';
@@ -5,10 +6,10 @@ import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useToast } from '@/hooks/use-toast';
 import CatalogHeader from './CatalogHeader';
-import BannerHero from './BannerHero';
+import HeroBanner from './banners/HeroBanner';
 import ResponsiveProductGrid from './ResponsiveProductGrid';
 import ProductDetailsModal from './ProductDetailsModal';
-import SimpleFloatingCart from './SimpleFloatingCart';
+import FloatingCart from './FloatingCart';
 import { Product } from '@/types/product';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -190,12 +191,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Banner Hero */}
-      <BannerHero
-        store={store}
-        catalogType={catalogType}
-        onScrollToCatalog={handleScrollToCatalog}
-      />
+      {/* Banner Hero - usando componente existente que funciona com banners cadastrados */}
+      <HeroBanner storeId={store.id} className="mb-8" />
 
       {/* Header do Catálogo */}
       <CatalogHeader
@@ -319,8 +316,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
         catalogType={catalogType}
       />
 
-      {/* Carrinho Flutuante */}
-      <SimpleFloatingCart
+      {/* Carrinho Flutuante - restaurado ao original */}
+      <FloatingCart
         onCheckout={() => {
           console.log('Ir para checkout');
         }}
