@@ -27,14 +27,16 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({
     products,
     loading: storeLoading,
     storeError,
+    initializeCatalog,
   } = useCatalog();
 
   // Inicializar catálogo quando componente montar
   useEffect(() => {
     if (storeIdentifier) {
       console.log('🚀 CATALOG EXAMPLE - Inicializando catálogo:', { storeIdentifier, catalogType });
+      initializeCatalog(storeIdentifier, catalogType);
     }
-  }, [storeIdentifier, catalogType]);
+  }, [storeIdentifier, catalogType, initializeCatalog]);
 
   const { addItem } = useCart();
 

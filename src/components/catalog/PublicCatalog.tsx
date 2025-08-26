@@ -36,7 +36,16 @@ const PublicCatalog: React.FC = () => {
     products: allProducts,
     loading: storeLoading,
     storeError,
+    initializeCatalog,
   } = useCatalog();
+
+  // Inicializar catálogo quando componente montar
+  useEffect(() => {
+    if (storeSlug) {
+      console.log('🚀 PUBLIC CATALOG - Inicializando catálogo:', { storeSlug, catalogType });
+      initializeCatalog(storeSlug, catalogType);
+    }
+  }, [storeSlug, catalogType, initializeCatalog]);
 
   // Simular categorias a partir dos produtos (pode ser melhorado)
   const categories = React.useMemo(() => {
@@ -193,6 +202,8 @@ const PublicCatalog: React.FC = () => {
         store={store}
         catalogType={catalogType}
         templateName="modern"
+        cartItemsCount={totalCartItems}
+        wishlistCount={wishlist.length}
       />
 
       {/* Barra de Ações Mobile */}
