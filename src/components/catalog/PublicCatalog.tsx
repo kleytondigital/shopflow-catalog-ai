@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
@@ -44,16 +43,11 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   }, [store, loading]);
 
   const handleAddToCart = (product: any, quantity: number = 1) => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: catalogType === "wholesale" && product.wholesale_price 
-        ? product.wholesale_price 
-        : product.retail_price,
-      image: product.images?.[0] || "/placeholder.svg",
-      quantity: quantity,
-      storeId: store?.id || "",
-    });
+    const price = catalogType === "wholesale" && product.wholesale_price 
+      ? product.wholesale_price 
+      : product.retail_price;
+
+    addItem(product, quantity);
     
     toast({
       title: "Produto adicionado!",
