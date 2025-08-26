@@ -8,12 +8,22 @@ export interface CatalogHeaderProps {
   store: Store;
   catalogType: CatalogType;
   templateName?: string;
+  cartItemsCount?: number;
+  wishlistCount?: number;
+  onSearch?: (query: string) => void;
+  onToggleFilters?: () => void;
+  onCartClick?: () => void;
 }
 
 const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   store,
   catalogType,
-  templateName = 'modern'
+  templateName = 'modern',
+  cartItemsCount = 0,
+  wishlistCount = 0,
+  onSearch,
+  onToggleFilters,
+  onCartClick
 }) => {
   return (
     <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
@@ -35,7 +45,23 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
             </div>
           </div>
           
-          <div className="text-right">
+          <div className="flex items-center gap-4">
+            {/* Cart and Wishlist counters */}
+            {(cartItemsCount > 0 || wishlistCount > 0) && (
+              <div className="flex items-center gap-2">
+                {cartItemsCount > 0 && (
+                  <Badge variant="secondary" className="bg-white/10 text-primary-foreground border-white/20">
+                    Carrinho: {cartItemsCount}
+                  </Badge>
+                )}
+                {wishlistCount > 0 && (
+                  <Badge variant="secondary" className="bg-white/10 text-primary-foreground border-white/20">
+                    Favoritos: {wishlistCount}
+                  </Badge>
+                )}
+              </div>
+            )}
+            
             <Badge 
               variant="secondary" 
               className="bg-white/10 text-primary-foreground border-white/20"
