@@ -191,7 +191,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Banner Hero - usando componente existente que funciona com banners cadastrados */}
+      {/* Banner Hero - usando componente correto que funciona com banners cadastrados */}
       <HeroBanner storeId={store.id} className="mb-8" />
 
       {/* Header do Catálogo */}
