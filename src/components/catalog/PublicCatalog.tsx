@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
@@ -41,15 +40,20 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto p-6">
           <h1 className="text-2xl font-bold text-foreground mb-4">URL Inválida</h1>
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground mb-6">
             O identificador da loja não foi fornecido na URL.
           </p>
-          <p className="text-sm text-muted-foreground">
-            Use uma URL como: <br />
-            <code className="bg-muted px-2 py-1 rounded text-xs">
-              /catalog/nome-da-loja
-            </code>
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Use uma URL como: <br />
+              <code className="bg-muted px-2 py-1 rounded text-xs">
+                /catalog/nome-da-loja
+              </code>
+            </p>
+            <Button asChild>
+              <a href="/catalog">Ver Catálogos Disponíveis</a>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -106,18 +110,25 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto p-6">
           <h1 className="text-2xl font-bold text-foreground mb-4">Loja não encontrada</h1>
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground mb-6">
             {storeError || "A loja que você está procurando não existe ou foi removida."}
           </p>
-          <p className="text-sm text-muted-foreground mb-4">
-            Identificador buscado: <br />
-            <code className="bg-muted px-2 py-1 rounded text-xs">
+          <div className="bg-muted p-4 rounded-lg mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              Identificador buscado:
+            </p>
+            <code className="bg-background px-2 py-1 rounded text-xs">
               {storeIdentifier}
             </code>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Lojas disponíveis: cactus-branco, cheio-de-desejo, viver-melhor, atlanz
-          </p>
+          </div>
+          <div className="space-y-4">
+            <Button asChild>
+              <a href="/catalog">Ver Catálogos Disponíveis</a>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Lojas disponíveis: cactus-branco, cheio-de-desejo, viver-melhor, atlanz
+            </p>
+          </div>
         </div>
       </div>
     );
