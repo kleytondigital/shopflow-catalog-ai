@@ -5,6 +5,7 @@ import ResponsiveProductGrid from "./ResponsiveProductGrid";
 import { useProducts } from "@/hooks/useProducts";
 import { useStoreData } from "@/hooks/useStoreData";
 import { useCart } from "@/hooks/useCart";
+import { Product } from "@/types/product";
 
 export type CatalogType = "retail" | "wholesale";
 
@@ -15,14 +16,33 @@ interface CatalogExampleProps {
 const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
   const { store, loading: storeLoading } = useStoreData(storeSlug);
   const { products, loading: productsLoading } = useProducts();
-  const { totalItems, toggleCart } = useCart();
+  const { totalItems, toggleCart, addItem } = useCart();
   
   const [catalogType, setCatalogType] = useState<CatalogType>("retail");
   const [searchQuery, setSearchQuery] = useState("");
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [wishlist, setWishlist] = useState<Product[]>([]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+  };
+
+  const handleAddToWishlist = (product: Product) => {
+    setWishlist(prev => {
+      const exists = prev.find(item => item.id === product.id);
+      if (exists) {
+        return prev.filter(item => item.id !== product.id);
+      }
+      return [...prev, product];
+    });
+  };
+
+  const handleQuickView = (product: Product) => {
+    console.log('Quick view product:', product);
+  };
+
+  const handleAddToCart = (product: Product, quantity: number = 1, variation?: any) => {
+    console.log('Adding to cart:', { product, quantity, variation });
+    addItem(product, quantity, variation);
   };
 
   if (storeLoading) {
@@ -61,7 +81,7 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
         catalogType={catalogType}
         onCatalogTypeChange={setCatalogType}
         cartItemsCount={totalItems}
-        wishlistCount={wishlistCount}
+        wishlistCount={wishlist.length}
         whatsappNumber={store.phone || ""}
         onSearch={handleSearch}
         onCartClick={toggleCart}
@@ -69,13 +89,21 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({ storeSlug }) => {
 
       {/* Conteúdo Principal */}
       <main className="pt-4">
-        <ResponsiveProductGrid
-          products={products}
-          catalogType={catalogType}
-          storeIdentifier={storeSlug}
-          loading={productsLoading}
-          className="container mx-auto px-4"
-        />
+        <div className="container mx-auto px-4">
+          <ResponsiveProductGrid
+            products={products}
+            catalogType={catalogType}
+            storeIdentifier={storeSlug}
+            loading={productsLoading}
+            onAddToWishlist={handleAddToWishlist}
+            onQuickView={handleQuickView}
+            onAddToCart={handleAddToCart}
+            wishlist={wishlist}
+            templateName="modern"
+            showPrices={true}
+            showStock={true}
+          />
+        </div>
       </main>
 
       {/* Footer (opcional) */}

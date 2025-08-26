@@ -10,7 +10,7 @@ import AdvancedFilterSidebar, {
 import TemplateWrapper from "./TemplateWrapper";
 import CheckoutModal from "./CheckoutModal";
 import FloatingCart from "./FloatingCart";
-import CartTest from "./CartTest";
+import ProductDetailsModal from "./ProductDetailsModal";
 import CatalogBannerSection from "./banners/CatalogBannerSection";
 import { Product } from "@/types/product";
 import { useCart } from "@/hooks/useCart";
@@ -33,7 +33,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const { settings, loading: settingsLoading } =
     useCatalogSettings(storeIdentifier);
   const { isReady, templateName } = useGlobalTemplateStyles(storeIdentifier);
-  const { totalItems, toggleCart } = useCart();
+  const { totalItems, toggleCart, addItem } = useCart();
 
   // Hook para meta tags dinâmicas
   const { isLoaded: metaTagsLoaded } = useDynamicMetaTags({
@@ -156,6 +156,11 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     setSelectedProduct(product);
   };
 
+  const handleAddToCart = (product: Product, quantity: number = 1, variation?: any) => {
+    console.log('🛒 PUBLIC CATALOG - Adicionando ao carrinho:', { product, quantity, variation });
+    addItem(product, quantity, variation);
+  };
+
   const handleCartClick = () => {
     console.log("🛒 PUBLIC CATALOG - Abrindo carrinho flutuante");
     toggleCart();
@@ -259,6 +264,13 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
                   catalogType={catalogType}
                   storeIdentifier={storeIdentifier}
                   loading={loading}
+                  onAddToWishlist={handleAddToWishlist}
+                  onQuickView={handleQuickView}
+                  onAddToCart={handleAddToCart}
+                  wishlist={wishlist}
+                  templateName={templateName}
+                  showPrices={settings?.show_prices ?? true}
+                  showStock={settings?.show_stock ?? true}
                 />
               </div>
             </div>
@@ -280,7 +292,14 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       {/* Floating Cart */}
       <FloatingCart onCheckout={handleCheckoutFromCart} storeId={store?.id} />
 
-      {/* BOTÃO DE TESTE TEMPORÁRIO */}
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAddToCart={handleAddToCart}
+        catalogType={catalogType}
+      />
 
       {/* Checkout Modal */}
       <CheckoutModal
