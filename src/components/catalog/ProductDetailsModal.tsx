@@ -173,10 +173,10 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       <Shield className="h-4 w-4 text-muted-foreground" />
                       <span>Produto garantido</span>
                     </div>
-                    {product.sku && (
+                    {selectedVariation?.sku && (
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">SKU:</span>
-                        <span className="font-mono">{product.sku}</span>
+                        <span className="font-mono">{selectedVariation.sku}</span>
                       </div>
                     )}
                   </div>
