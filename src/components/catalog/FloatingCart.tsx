@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useFloatingCart } from '@/hooks/useFloatingCart';
 import { useShoppingCart } from '@/hooks/useShoppingCart';
 
-export const FloatingCart: React.FC = () => {
+const FloatingCart: React.FC = () => {
   const { isVisible, hideCart, totalItems, totalPrice } = useFloatingCart();
   const { items, updateQuantity, removeItem } = useShoppingCart();
 
@@ -51,7 +51,7 @@ export const FloatingCart: React.FC = () => {
                   </p>
                 )}
                 <p className="text-sm font-semibold">
-                  R$ {item.price.toFixed(2)}
+                  R$ {(item.quantity * (item.product.retail_price || 0)).toFixed(2)}
                 </p>
               </div>
               <div className="flex items-center space-x-1">
@@ -93,3 +93,5 @@ export const FloatingCart: React.FC = () => {
     </div>
   );
 };
+
+export default FloatingCart;

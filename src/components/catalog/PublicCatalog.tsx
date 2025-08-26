@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
@@ -275,11 +274,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
       </TemplateWrapper>
 
       {/* Carrinho Flutuante */}
-      <FloatingCart
-        isVisible={isCartVisible}
-        onClose={hideCart}
-        onToggle={toggleCart}
-      />
+      <FloatingCart />
 
       {/* Modal de Detalhes do Produto */}
       {selectedProduct && (
