@@ -1,19 +1,18 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProducts } from "@/hooks/useProducts";
-import { useCart } from "@/hooks/useCart";
-import { useStore } from "@/hooks/useStore";
+import { useShoppingCart } from "@/hooks/useShoppingCart";
+import { useCatalog } from "@/hooks/useCatalog";
 import { useAuth } from "@/hooks/useAuth";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import { useEditorSync } from "@/hooks/useEditorSync";
 import { useToast } from "@/hooks/use-toast";
-import ProductCard from "@/components/products/ProductCard";
+import ProductCard from "./ProductCard";
 import ProductDetailsModal from "@/components/catalog/ProductDetailsModal";
-import FloatingCart from "@/components/cart/FloatingCart";
-import HeroBanner from "@/components/banners/HeroBanner";
 import DynamicMetaTags from "@/components/seo/DynamicMetaTags";
 
 interface PublicCatalogProps {
@@ -30,30 +29,25 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addItem } = useShoppingCart();
   const { toast } = useToast();
   
-  const { store, loading: storeLoading } = useStore(storeIdentifier);
-  const { products, loading: productsLoading, categories } = useProducts(
-    store?.id,
-    catalogType
-  );
-  
+  const { store, products, filteredProducts, loading, storeError } = useCatalog(storeIdentifier, catalogType);
   const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
   
   useEditorSync(storeIdentifier || '');
 
   useEffect(() => {
-    if (store?.id && !storeLoading) {
+    if (store?.id && !loading) {
       console.log("Loja carregada:", store.name, "ID:", store.id);
     }
-  }, [store, storeLoading]);
+  }, [store, loading]);
 
   const handleAddToCart = (product: any, quantity: number = 1) => {
-    addToCart({
+    addItem({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: product.price || product.retail_price,
       image: product.images?.[0] || "/placeholder.svg",
       quantity: quantity,
       storeId: store?.id || "",
@@ -69,14 +63,14 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     setSelectedProduct(product);
   };
 
-  const filteredProducts = products?.filter((product) => {
+  const filteredProductsDisplay = products?.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
-  if (storeLoading || productsLoading || settingsLoading) {
+  if (loading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -84,13 +78,13 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     );
   }
 
-  if (!store) {
+  if (storeError || !store) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Loja não encontrada</h1>
           <p className="text-muted-foreground">
-            A loja que você está procurando não existe ou foi removida.
+            {storeError || "A loja que você está procurando não existe ou foi removida."}
           </p>
         </div>
       </div>
@@ -105,9 +99,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
         customTitle={`${store.name} - Catálogo ${catalogType === "wholesale" ? "Atacado" : "Varejo"}`}
         customDescription={store.description}
       />
-
-      {/* Banner Hero - usando componente correto que funciona com banners cadastrados */}
-      <HeroBanner storeId={store.id} className="mb-8" />
 
       {/* Header do Catálogo */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-40">
@@ -183,19 +174,18 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
               : "space-y-4"
           }
         >
-          {filteredProducts?.map((product) => (
+          {filteredProductsDisplay?.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
               onAddToCart={handleAddToCart}
-              onProductClick={handleProductClick}
-              viewMode={viewMode}
+              onViewDetails={handleProductClick}
               catalogType={catalogType}
             />
           ))}
         </div>
 
-        {filteredProducts?.length === 0 && (
+        {filteredProductsDisplay?.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
               Nenhum produto encontrado.
@@ -214,9 +204,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
           catalogType={catalogType}
         />
       )}
-
-      {/* Carrinho Flutuante */}
-      <FloatingCart />
     </div>
   );
 };

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/use-toast';
-import HierarchicalVariationSelector from '@/components/products/HierarchicalVariationSelector';
+import HierarchicalVariationSelector from './HierarchicalVariationSelector';
 
 interface ProductDetailsModalProps {
   product: any;
@@ -142,7 +142,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 <h3 className="font-semibold">Escolha suas opções:</h3>
                 <HierarchicalVariationSelector
                   variations={product.variations}
-                  onSelectionChange={setSelectedVariation}
+                  selectedVariation={selectedVariation}
+                  onVariationChange={setSelectedVariation}
                 />
               </div>
             )}
