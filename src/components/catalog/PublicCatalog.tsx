@@ -1,188 +1,96 @@
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Heart, ShoppingCart, Search, Filter, Grid, List } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useProducts } from "@/hooks/useProducts";
+import { useCart } from "@/hooks/useCart";
+import { useStore } from "@/hooks/useStore";
+import { useAuth } from "@/hooks/useAuth";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { useEditorSync } from "@/hooks/useEditorSync";
+import { useToast } from "@/hooks/use-toast";
+import ProductCard from "@/components/products/ProductCard";
+import ProductDetailsModal from "@/components/catalog/ProductDetailsModal";
+import FloatingCart from "@/components/cart/FloatingCart";
+import HeroBanner from "@/components/banners/HeroBanner";
+import DynamicMetaTags from "@/components/seo/DynamicMetaTags";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { useCatalog, CatalogType } from '@/hooks/useCatalog';
-import { useCart } from '@/hooks/useCart';
-import { useWishlist } from '@/hooks/useWishlist';
-import { useToast } from '@/hooks/use-toast';
-import CatalogHeader from './CatalogHeader';
-import HeroBanner from './banners/HeroBanner';
-import ResponsiveProductGrid from './ResponsiveProductGrid';
-import ProductDetailsModal from './ProductDetailsModal';
-import FloatingCart from './FloatingCart';
-import { Product } from '@/types/product';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  ShoppingCart, 
-  Heart, 
-  Package, 
-  Loader2, 
-  AlertTriangle 
-} from 'lucide-react';
+interface PublicCatalogProps {
+  catalogType?: "retail" | "wholesale";
+}
 
-interface PublicCatalogProps {}
-
-const PublicCatalog: React.FC<PublicCatalogProps> = () => {
-  const { storeSlug } = useParams<{ storeSlug: string }>();
-  const [searchParams] = useSearchParams();
-  const catalogType = (searchParams.get('type') as CatalogType) || 'retail';
-  
-  const [searchQuery, setSearchQuery] = useState('');
+const PublicCatalog: React.FC<PublicCatalogProps> = ({
+  catalogType = "retail",
+}) => {
+  const { storeIdentifier } = useParams<{ storeIdentifier: string }>();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
-  const catalogRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { addToCart } = useCart();
   const { toast } = useToast();
+  
+  const { store, loading: storeLoading } = useStore(storeIdentifier);
+  const { products, loading: productsLoading, categories } = useProducts(
+    store?.id,
+    catalogType
+  );
+  
+  const { settings, loading: settingsLoading } = useCatalogSettings(storeIdentifier);
+  
+  useEditorSync(storeIdentifier || '');
 
-  const {
-    store,
-    products: allProducts,
-    filteredProducts,
-    loading: storeLoading,
-    storeError,
-    initializeCatalog,
-    searchProducts,
-    filterProducts
-  } = useCatalog();
-
-  // Inicializar catálogo quando componente montar
   useEffect(() => {
-    if (storeSlug) {
-      console.log('🚀 PUBLIC CATALOG - Inicializando catálogo:', { storeSlug, catalogType });
-      initializeCatalog(storeSlug, catalogType);
+    if (store?.id && !storeLoading) {
+      console.log("Loja carregada:", store.name, "ID:", store.id);
     }
-  }, [storeSlug, catalogType, initializeCatalog]);
+  }, [store, storeLoading]);
 
-  // Simular categorias a partir dos produtos
-  const categories = React.useMemo(() => {
-    const uniqueCategories = new Set(
-      allProducts
-        .map(p => p.category)
-        .filter(Boolean)
-    );
-    return Array.from(uniqueCategories);
-  }, [allProducts]);
-
-  const { addItem, totalItems: totalCartItems } = useCart();
-  const { 
-    wishlist, 
-    addToWishlist, 
-    removeFromWishlist, 
-    isInWishlist 
-  } = useWishlist();
-
-  // Busca em tempo real
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      searchProducts(searchQuery);
-    } else {
-      filterProducts();
-    }
-  }, [searchQuery, searchProducts, filterProducts]);
-
-  const handleAddToCart = (product: Product, quantity = 1, variation?: any) => {
-    try {
-      // Corrigir o objeto de variação para incluir todas as propriedades obrigatórias
-      const completeVariation = variation ? {
-        id: variation.id || `${product.id}-var-${Date.now()}`,
-        product_id: product.id,
-        color: variation.color || null,
-        size: variation.size || null,
-        sku: variation.sku || null,
-        stock: variation.stock || 0,
-        price_adjustment: variation.price_adjustment || 0,
-        is_active: variation.is_active !== undefined ? variation.is_active : true,
-        created_at: variation.created_at || new Date().toISOString(),
-        updated_at: variation.updated_at || new Date().toISOString(),
-      } : undefined;
-
-      addItem({
-        id: completeVariation ? `${product.id}-${completeVariation.id}` : product.id || '',
-        product: {
-          id: product.id || '',
-          name: product.name,
-          retail_price: product.retail_price,
-          wholesale_price: product.wholesale_price,
-          min_wholesale_qty: product.min_wholesale_qty,
-          image_url: product.image_url,
-          store_id: product.store_id,
-          stock: product.stock,
-          allow_negative_stock: product.allow_negative_stock || false,
-          enable_gradual_wholesale: product.enable_gradual_wholesale,
-          price_model: product.price_model,
-        },
-        quantity,
-        price: catalogType === 'wholesale' && product.wholesale_price 
-          ? product.wholesale_price 
-          : product.retail_price,
-        originalPrice: product.retail_price,
-        variation: completeVariation,
-        catalogType,
-      });
-
-      toast({
-        title: "Produto adicionado!",
-        description: `${product.name} foi adicionado ao carrinho.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o produto ao carrinho.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAddToWishlist = (product: Product) => {
-    if (isInWishlist(product.id || '')) {
-      removeFromWishlist(product.id || '');
-      toast({
-        title: "Removido dos favoritos",
-        description: `${product.name} foi removido da lista de desejos.`,
-      });
-    } else {
-      addToWishlist(product);
-      toast({
-        title: "Adicionado aos favoritos!",
-        description: `${product.name} foi adicionado à lista de desejos.`,
-      });
-    }
-  };
-
-  const handleScrollToCatalog = () => {
-    catalogRef.current?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start' 
+  const handleAddToCart = (product: any, quantity: number = 1) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0] || "/placeholder.svg",
+      quantity: quantity,
+      storeId: store?.id || "",
+    });
+    
+    toast({
+      title: "Produto adicionado!",
+      description: `${product.name} foi adicionado ao carrinho.`,
     });
   };
 
-  if (storeLoading) {
+  const handleProductClick = (product: any) => {
+    setSelectedProduct(product);
+  };
+
+  const filteredProducts = products?.filter((product) => {
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  if (storeLoading || productsLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-          <h2 className="text-xl font-semibold">Carregando catálogo...</h2>
-          <p className="text-muted-foreground">Aguarde enquanto buscamos os produtos.</p>
-        </div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (storeError || !store) {
+  if (!store) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <AlertTriangle className="h-16 w-16 text-destructive mx-auto" />
-          <h2 className="text-2xl font-bold">Loja não encontrada</h2>
-          <p className="text-muted-foreground max-w-md">
-            {storeError || 'A loja que você está procurando não existe ou está inativa.'}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loja não encontrada</h1>
+          <p className="text-muted-foreground">
+            A loja que você está procurando não existe ou foi removida.
           </p>
         </div>
       </div>
@@ -191,138 +99,124 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <DynamicMetaTags
+        storeIdentifier={storeIdentifier}
+        catalogType={catalogType}
+        customTitle={`${store.name} - Catálogo ${catalogType === "wholesale" ? "Atacado" : "Varejo"}`}
+        customDescription={store.description}
+      />
+
       {/* Banner Hero - usando componente correto que funciona com banners cadastrados */}
       <HeroBanner storeId={store.id} className="mb-8" />
 
       {/* Header do Catálogo */}
-      <CatalogHeader
-        store={store}
-        catalogType={catalogType}
-        templateName="modern"
-        cartItemsCount={totalCartItems}
-        wishlistCount={wishlist.length}
-        onSearch={setSearchQuery}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-        onCartClick={() => {}}
-      />
-
-      {/* Seção do Catálogo */}
-      <div ref={catalogRef} className="container mx-auto px-4 py-8">
-        {/* Barra de Busca e Filtros */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Campo de Busca */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar produtos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                {store.logo_url ? (
+                  <img
+                    src={store.logo_url}
+                    alt={store.name}
+                    className="h-8 w-auto"
+                  />
+                ) : (
+                  <h1 className="text-xl font-bold text-primary">{store.name}</h1>
+                )}
+              </div>
             </div>
 
-            {/* Botões de Controle */}
-            <div className="flex gap-2">
+            <div className="flex-1 max-w-lg mx-8">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Buscar produtos..."
+                  className="pl-10 pr-4"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className="h-4 w-4 mr-2" />
                 Filtros
               </Button>
 
-              <div className="flex border rounded-md">
+              <div className="flex items-center space-x-2">
                 <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  variant={viewMode === "grid" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
+                  onClick={() => setViewMode("grid")}
                 >
-                  <Grid3X3 className="h-4 w-4" />
+                  <Grid className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  variant={viewMode === "list" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
+                  onClick={() => setViewMode("list")}
                 >
                   <List className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
+        </div>
+      </header>
 
-          {/* Informações de Resultados */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <span>
-                {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
-              </span>
-              {searchQuery && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  Busca: "{searchQuery}"
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="ml-1 hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              {totalCartItems > 0 && (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <ShoppingCart className="h-3 w-3" />
-                  {totalCartItems} no carrinho
-                </Badge>
-              )}
-              {wishlist.length > 0 && (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Heart className="h-3 w-3" />
-                  {wishlist.length} favorito{wishlist.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </div>
-          </div>
+      {/* Conteúdo Principal */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Grid de Produtos */}
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              : "space-y-4"
+          }
+        >
+          {filteredProducts?.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddToCart={handleAddToCart}
+              onProductClick={handleProductClick}
+              viewMode={viewMode}
+              catalogType={catalogType}
+            />
+          ))}
         </div>
 
-        {/* Grid de Produtos */}
-        <ResponsiveProductGrid
-          products={filteredProducts}
-          catalogType={catalogType}
-          loading={storeLoading}
-          onAddToWishlist={handleAddToWishlist}
-          onQuickView={setSelectedProduct}
-          onAddToCart={handleAddToCart}
-          wishlist={wishlist}
-          storeIdentifier={storeSlug || ''}
-          templateName="modern"
-          showPrices={true}
-          showStock={true}
-        />
-      </div>
+        {filteredProducts?.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              Nenhum produto encontrado.
+            </p>
+          </div>
+        )}
+      </main>
 
       {/* Modal de Detalhes do Produto */}
-      <ProductDetailsModal
-        product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={handleAddToCart}
-        catalogType={catalogType}
-      />
+      {selectedProduct && (
+        <ProductDetailsModal
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleAddToCart}
+          catalogType={catalogType}
+        />
+      )}
 
-      {/* Carrinho Flutuante - restaurado ao original */}
-      <FloatingCart
-        onCheckout={() => {
-          console.log('Ir para checkout');
-        }}
-        storeId={store.id}
-      />
+      {/* Carrinho Flutuante */}
+      <FloatingCart />
     </div>
   );
 };

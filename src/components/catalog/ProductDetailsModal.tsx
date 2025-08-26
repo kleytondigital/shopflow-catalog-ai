@@ -3,20 +3,17 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ShoppingCart, Heart, Minus, Plus, Package, Truck, Shield } from 'lucide-react';
-import { Product, ProductVariation } from '@/types/product';
-import { CatalogType } from '@/hooks/useCatalog';
-import ProductImageGallery from '@/components/products/ProductImageGallery';
-import HierarchicalVariationSelector from './HierarchicalVariationSelector';
+import { Heart, ShoppingCart, X } from 'lucide-react';
+import { useCart } from '@/hooks/useCart';
+import { useToast } from '@/hooks/use-toast';
+import HierarchicalVariationSelector from '@/components/products/HierarchicalVariationSelector';
 
 interface ProductDetailsModalProps {
-  product: Product | null;
+  product: any;
   isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
-  catalogType: CatalogType;
+  onAddToCart: (product: any, quantity: number, selectedVariation?: any) => void;
+  catalogType?: 'retail' | 'wholesale';
 }
 
 const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
@@ -24,171 +21,180 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   isOpen,
   onClose,
   onAddToCart,
-  catalogType
+  catalogType = 'retail'
 }) => {
+  const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
+  const [selectedVariation, setSelectedVariation] = useState<any>(null);
+  const { toast } = useToast();
 
   if (!product) return null;
 
-  const price = catalogType === 'wholesale' && product.wholesale_price 
-    ? product.wholesale_price 
-    : product.retail_price;
-
-  const minQuantity = catalogType === 'wholesale' && product.min_wholesale_qty 
-    ? product.min_wholesale_qty 
-    : 1;
-
-  const handleQuantityChange = (newQuantity: number) => {
-    const min = Math.max(minQuantity, 1);
-    const max = selectedVariation ? selectedVariation.stock : product.stock || 999;
-    setQuantity(Math.max(min, Math.min(max, newQuantity)));
-  };
+  const productImages = product.images || ['/placeholder.svg'];
+  const hasVariations = product.variations && product.variations.length > 0;
 
   const handleAddToCart = () => {
+    if (hasVariations && !selectedVariation) {
+      toast({
+        title: 'Selecione uma variação',
+        description: 'Você precisa selecionar uma variação antes de adicionar ao carrinho.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     onAddToCart(product, quantity, selectedVariation);
+    
+    toast({
+      title: 'Produto adicionado!',
+      description: `${product.name} foi adicionado ao carrinho.`,
+    });
+    
     onClose();
   };
 
-  const hasVariations = product.variations && product.variations.length > 0;
-  const currentStock = selectedVariation ? selectedVariation.stock : product.stock;
-  const isAvailable = currentStock > 0;
+  const currentPrice = catalogType === 'wholesale' ? product.wholesale_price : product.price;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{product.name}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Image Gallery */}
-          <div>
-            <ProductImageGallery
-              productId={product.id || ''}
-              productName={product.name}
-              selectedVariationImage={selectedVariation?.image_url}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+          {/* Galeria de Imagens */}
+          <div className="space-y-4">
+            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={productImages[selectedImage]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
+              />
+            </div>
+            
+            {productImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto">
+                {productImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                      selectedImage === index ? 'border-primary' : 'border-gray-200'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Product Information */}
+          {/* Informações do Produto */}
           <div className="space-y-6">
-            {/* Price */}
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">
-                R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div>
+              <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-3xl font-bold text-primary">
+                  R$ {currentPrice?.toFixed(2)}
+                </span>
+                {catalogType === 'wholesale' && (
+                  <Badge variant="secondary">Preço Atacado</Badge>
+                )}
               </div>
-              {catalogType === 'wholesale' && product.min_wholesale_qty && (
-                <p className="text-sm text-muted-foreground">
-                  Quantidade mínima: {product.min_wholesale_qty} unidades
-                </p>
+              
+              {product.category && (
+                <Badge variant="outline" className="mb-4">
+                  {product.category.name}
+                </Badge>
               )}
             </div>
 
-            {/* Category */}
-            {product.category && (
-              <Badge variant="secondary" className="w-fit">
-                {product.category}
-              </Badge>
-            )}
-
-            {/* Description */}
+            {/* Descrição */}
             {product.description && (
-              <div className="space-y-2">
-                <h3 className="font-semibold">Descrição</h3>
-                <p className="text-muted-foreground leading-relaxed">
+              <div>
+                <h3 className="font-semibold mb-2">Descrição</h3>
+                <p className="text-gray-600 leading-relaxed">
                   {product.description}
                 </p>
               </div>
             )}
 
-            {/* Hierarchical Variation Selector - restaurado */}
+            {/* Seletor de Variações Hierárquico */}
             {hasVariations && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Selecione as Opções</h3>
+              <div className="space-y-4">
+                <h3 className="font-semibold">Escolha suas opções:</h3>
                 <HierarchicalVariationSelector
-                  variations={product.variations || []}
-                  selectedVariation={selectedVariation}
-                  onVariationChange={setSelectedVariation}
-                  loading={false}
+                  variations={product.variations}
+                  onSelectionChange={setSelectedVariation}
                 />
               </div>
             )}
 
-            {/* Stock */}
-            <div className="flex items-center gap-2 text-sm">
-              <Package className="h-4 w-4" />
-              <span className={isAvailable ? "text-green-600" : "text-red-600"}>
-                {isAvailable 
-                  ? `${currentStock} em estoque`
-                  : 'Produto esgotado'
-                }
-              </span>
+            {/* Controles de Quantidade e Compra */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <label className="font-semibold">Quantidade:</label>
+                <div className="flex items-center border rounded-lg">
+                  <button
+                    onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+                    className="px-3 py-2 hover:bg-gray-100"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="px-4 py-2 border-x">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="px-3 py-2 hover:bg-gray-100"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleAddToCart}
+                  className="flex-1 gap-2"
+                  size="lg"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  Adicionar ao Carrinho
+                </Button>
+                
+                <Button variant="outline" size="lg" className="gap-2">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
-            {/* Quantity Selector */}
-            {isAvailable && (
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuantityChange(quantity - 1)}
-                    disabled={quantity <= minQuantity}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => handleQuantityChange(parseInt(e.target.value) || minQuantity)}
-                    className="w-20 text-center"
-                    min={minQuantity}
-                    max={currentStock}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuantityChange(quantity + 1)}
-                    disabled={quantity >= currentStock}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+            {/* Informações Adicionais */}
+            {(product.weight || product.dimensions) && (
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Informações do Produto</h3>
+                <div className="space-y-1 text-sm text-gray-600">
+                  {product.weight && <p>Peso: {product.weight}g</p>}
+                  {product.dimensions && <p>Dimensões: {product.dimensions}</p>}
                 </div>
               </div>
             )}
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Button 
-                size="lg" 
-                className="w-full"
-                onClick={handleAddToCart}
-                disabled={!isAvailable || (hasVariations && !selectedVariation)}
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {isAvailable ? 'Adicionar ao Carrinho' : 'Produto Esgotado'}
-              </Button>
-
-              <Button variant="outline" size="lg" className="w-full">
-                <Heart className="h-5 w-5 mr-2" />
-                Adicionar aos Favoritos
-              </Button>
-            </div>
-
-            {/* Additional Info */}
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4" />
-                <span>Entrega rápida disponível</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span>Compra protegida</span>
-              </div>
-            </div>
           </div>
         </div>
       </DialogContent>
