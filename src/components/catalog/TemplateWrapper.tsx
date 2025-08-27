@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useEditorSync } from '@/hooks/useEditorSync';
+import ProfessionalCatalogTemplate from './templates/layouts/ProfessionalCatalogTemplate';
 import ModernCatalogTemplate from './templates/layouts/ModernCatalogTemplate';
 import IndustrialCatalogTemplate from './templates/layouts/IndustrialCatalogTemplate';
 import MinimalCatalogTemplate from './templates/layouts/MinimalCatalogTemplate';
@@ -75,6 +76,8 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
   };
 
   switch (templateName) {
+    case 'professional':
+      return <ProfessionalCatalogTemplate {...templateProps} />;
     case 'luxury':
       return <LuxuryCatalogTemplate {...templateProps} />;
     case 'tech':
@@ -93,7 +96,7 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
       return <ElegantCatalogTemplate {...templateProps} />;
     case 'modern':
     default:
-      return <ModernCatalogTemplate {...templateProps} />;
+      return <ProfessionalCatalogTemplate {...templateProps} />;
   }
 };
 

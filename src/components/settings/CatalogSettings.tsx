@@ -51,7 +51,7 @@ const CatalogSettings = () => {
   const { resetToTemplateDefaults } = useTemplateColors();
 
   const [localSettings, setLocalSettings] = useState({
-    template_name: "modern",
+    template_name: "professional",
     show_prices: true,
     show_stock: true,
     show_categories: true,
@@ -74,7 +74,7 @@ const CatalogSettings = () => {
   useEffect(() => {
     if (settings) {
       setLocalSettings({
-        template_name: settings.template_name || "modern",
+        template_name: settings.template_name || "professional",
         show_prices: settings.show_prices !== false,
         show_stock: settings.show_stock !== false,
         show_categories: settings.allow_categories_filter !== false,
@@ -180,6 +180,14 @@ const CatalogSettings = () => {
   };
 
   const templates = [
+    {
+      value: "professional",
+      label: "Profissional",
+      description: "Design limpo com alto contraste e organização",
+      icon: Monitor,
+      colors: ["#2563EB", "#059669", "#DC2626"],
+      features: ["Alto contraste", "Layout limpo", "Sidebar de filtros"],
+    },
     {
       value: "modern",
       label: "Moderno",

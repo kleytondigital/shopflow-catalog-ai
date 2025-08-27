@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useCatalogSettings } from './useCatalogSettings';
 
@@ -16,6 +15,18 @@ export interface TemplateColorScheme {
 }
 
 const defaultColorSchemes: Record<string, TemplateColorScheme> = {
+  professional: {
+    primary: '#2563EB',
+    secondary: '#059669',
+    accent: '#DC2626',
+    background: '#F9FAFB',
+    surface: '#FFFFFF',
+    text: '#111827',
+    textMuted: '#6B7280',
+    border: '#E5E7EB',
+    gradientFrom: '#2563EB',
+    gradientTo: '#059669'
+  },
   luxury: {
     primary: '#D97706',
     secondary: '#F59E0B',
@@ -130,19 +141,18 @@ export const useTemplateColors = (storeIdentifier?: string) => {
   const { settings } = useCatalogSettings(storeIdentifier);
   
   const colorScheme = useMemo(() => {
-    const templateName = settings?.template_name || 'modern';
-    const baseColors = defaultColorSchemes[templateName] || defaultColorSchemes.modern;
+    const templateName = settings?.template_name || 'professional';
+    const baseColors = defaultColorSchemes[templateName] || defaultColorSchemes.professional;
     
-    // Usar cores personalizadas do banco se disponíveis
     if (settings) {
       return {
         primary: settings.primary_color || baseColors.primary,
         secondary: settings.secondary_color || baseColors.secondary,
         accent: settings.accent_color || baseColors.accent,
         background: settings.background_color || baseColors.background,
-        surface: '#FFFFFF', // Sempre branco para cards
+        surface: '#FFFFFF',
         text: settings.text_color || baseColors.text,
-        textMuted: baseColors.textMuted, // Manter padrão
+        textMuted: baseColors.textMuted,
         border: settings.border_color || baseColors.border,
         gradientFrom: settings.primary_color || baseColors.gradientFrom,
         gradientTo: settings.secondary_color || baseColors.gradientTo,
@@ -187,6 +197,6 @@ export const useTemplateColors = (storeIdentifier?: string) => {
     colorScheme,
     applyColorsToDocument,
     resetToTemplateDefaults,
-    templateName: settings?.template_name || 'modern'
+    templateName: settings?.template_name || 'professional'
   };
 };
