@@ -8,9 +8,11 @@ import ProductGrid from './ProductGrid';
 import FloatingCart from './FloatingCart';
 import AdvancedFilterSidebar from './AdvancedFilterSidebar';
 import TemplateWrapper from './TemplateWrapper';
+import ProductDetailsModal from './ProductDetailsModal';
 import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Product } from '@/types/product';
 
 interface PublicCatalogProps {
   storeSlug: string;
@@ -43,6 +45,10 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
+  // Estados para a modal de detalhes
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleFilteredProducts = useMemo(() => {
     return products.filter(product => {
       const matchesSearch = searchQuery === '' || 
@@ -72,7 +78,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
     });
   }, [products, searchQuery, selectedCategory, priceRange, selectedColors, selectedSizes, showInStock, currentCatalogType]);
 
-  const handleAddToCart = (product: any, variation?: any, quantity: number = 1) => {
+  const handleAddToCart = (product: any, quantity: number = 1, variation?: any) => {
     const cartItem = {
       id: `${product.id}-${variation?.id || 'default'}`,
       product,
@@ -127,6 +133,18 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
     setSelectedColors([]);
     setSelectedSizes([]);
     setShowInStock(false);
+  };
+
+  // Função para abrir a modal de detalhes
+  const handleQuickView = (product: Product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  // Função para fechar a modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
   };
 
   if (catalogLoading) {
@@ -285,8 +303,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
               products={handleFilteredProducts}
               catalogType={currentCatalogType}
               loading={false}
-              onAddToWishlist={() => {}}
-              onQuickView={() => {}}
+              onAddToWishlist={handleAddToWishlist}
+              onQuickView={handleQuickView}
               wishlist={wishlistItems}
               storeIdentifier={storeSlug}
               templateName={settings?.template_name || 'modern'}
@@ -300,6 +318,15 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
       <FloatingCart
         onCheckout={() => {}}
         storeId={store.id}
+      />
+
+      {/* Modal de Detalhes do Produto */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddToCart={handleAddToCart}
+        catalogType={currentCatalogType}
       />
     </div>
   );

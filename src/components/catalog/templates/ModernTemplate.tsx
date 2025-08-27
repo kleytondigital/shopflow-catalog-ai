@@ -224,6 +224,11 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
     onQuickView(product);
   };
 
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onQuickView(product);
+  };
+
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => 
@@ -252,7 +257,8 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
             <img
               src={allImages[currentImageIndex]?.image_url}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={handleImageClick}
             />
             
             {/* Image Navigation Controls */}
@@ -286,7 +292,10 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
             )}
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div 
+            className="w-full h-full flex items-center justify-center text-gray-400 cursor-pointer"
+            onClick={handleImageClick}
+          >
             <Package className="h-12 w-12" />
           </div>
         )}
@@ -296,7 +305,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           {/* Top Left - Badge de Destaque */}
           {product.is_featured && (
             <div className="absolute top-0 left-0">
-              <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-medium shadow-lg border-2 border-white/20">
+              <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-medium shadow-lg border-2 border-white/30">
                 ✨ Destaque
               </Badge>
             </div>
@@ -308,12 +317,12 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
             style={{ marginTop: product.is_featured ? "32px" : "0" }}
           >
             {modelKey === "wholesale_only" && (
-              <Badge className="bg-orange-500 text-white text-xs font-medium shadow-lg border-2 border-white/20">
+              <Badge className="bg-orange-500 text-white text-xs font-medium shadow-lg border-2 border-white/30">
                 Atacado
               </Badge>
             )}
             {priceCalculation?.percentage > 0 && (
-              <Badge className="bg-green-500 text-white text-xs flex items-center gap-1 shadow-lg border-2 border-white/20">
+              <Badge className="bg-green-500 text-white text-xs flex items-center gap-1 shadow-lg border-2 border-white/30">
                 <TrendingDown className="h-3 w-3" />-
                 {priceCalculation.percentage.toFixed(0)}%
               </Badge>
@@ -326,7 +335,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
               {variationInfo.hasColors && (
                 <Badge
                   variant="secondary"
-                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm"
+                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-300/90 backdrop-blur-sm"
                 >
                   <Palette className="h-3 w-3" />
                   {variationInfo.colorCount}
@@ -335,7 +344,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
               {variationInfo.hasSizes && (
                 <Badge
                   variant="secondary"
-                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm"
+                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-300/90 backdrop-blur-sm"
                 >
                   <Layers className="h-3 w-3" />
                   {variationInfo.sizeCount}
@@ -344,7 +353,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
               {variationInfo.hasGrades && (
                 <Badge
                   variant="secondary"
-                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm"
+                  className="text-xs flex items-center gap-1 bg-white/95 text-gray-800 shadow-lg border-2 border-gray-300/90 backdrop-blur-sm"
                 >
                   <Layers className="h-3 w-3" />
                   {variationInfo.gradeCount}G
@@ -356,7 +365,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           {/* Bottom Left - Badge de Variações */}
           {hasVariations && (
             <div className="absolute bottom-0 left-0">
-              <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1 shadow-lg border-2 border-white/20">
+              <Badge className="bg-blue-500 text-white text-xs flex items-center gap-1 shadow-lg border-2 border-white/30">
                 <AlertCircle className="h-3 w-3" />
                 Variações
               </Badge>
@@ -463,14 +472,14 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           </p>
         )}
 
-        {/* Action Buttons - Reorganizados */}
-        <div className="flex gap-2">
+        {/* Action Buttons - Layout vertical otimizado */}
+        <div className="space-y-2">
           {/* Botão Ver Detalhes - SEMPRE PRESENTE */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleViewDetails}
-            className="flex-1 flex items-center gap-2 hover:bg-gray-50"
+            className="w-full flex items-center gap-2 hover:bg-gray-50"
             style={{
               borderRadius: `${settings.global.borderRadius - 2}px`,
               fontSize: settings.global.fontSize.small,
@@ -480,50 +489,57 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
             Ver Detalhes
           </Button>
 
-          {/* Botão Adicionar - SOMENTE SEM VARIAÇÕES */}
-          {!hasVariations && settings.productCard.showAddToCart && (
-            <Button
-              onClick={handleAddToCart}
-              disabled={product.stock <= 0 || loading}
-              size="sm"
-              className="flex items-center gap-2 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+          {/* Linha com Botão Adicionar e Wishlist */}
+          <div className="flex gap-2">
+            {/* Botão Adicionar - SOMENTE SEM VARIAÇÕES */}
+            {!hasVariations && settings.productCard.showAddToCart && (
+              <Button
+                onClick={handleAddToCart}
+                disabled={product.stock <= 0 || loading}
+                size="sm"
+                className="flex-1 flex items-center gap-2 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background:
+                    product.stock > 0 && !loading
+                      ? `linear-gradient(135deg, ${settings.colors.primary}, ${settings.colors.secondary})`
+                      : "#9CA3AF",
+                  borderRadius: `${settings.global.borderRadius - 2}px`,
+                  fontSize: settings.global.fontSize.small,
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                {loading
+                  ? "Carregando..."
+                  : product.stock > 0
+                  ? "Adicionar"
+                  : "Sem estoque"}
+              </Button>
+            )}
+
+            {/* Botão Wishlist */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToWishlist(product);
+              }}
+              className={`p-3 rounded-lg border-2 hover:border-red-300 hover:bg-red-50 transition-all duration-200 flex items-center justify-center ${
+                !hasVariations && settings.productCard.showAddToCart 
+                  ? 'flex-shrink-0' 
+                  : 'w-full border-gray-200'
+              }`}
               style={{
-                background:
-                  product.stock > 0 && !loading
-                    ? `linear-gradient(135deg, ${settings.colors.primary}, ${settings.colors.secondary})`
-                    : "#9CA3AF",
                 borderRadius: `${settings.global.borderRadius - 2}px`,
-                fontSize: settings.global.fontSize.small,
               }}
             >
-              <ShoppingCart className="h-4 w-4" />
-              {loading
-                ? "Carregando..."
-                : product.stock > 0
-                ? "Adicionar"
-                : "Sem estoque"}
-            </Button>
-          )}
-
-          {/* Botão Wishlist */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToWishlist(product);
-            }}
-            className="p-3 rounded-lg border-2 border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all duration-200 flex items-center justify-center"
-            style={{
-              borderRadius: `${settings.global.borderRadius - 2}px`,
-            }}
-          >
-            <span
-              className={`text-lg ${
-                isInWishlist ? "text-red-500" : "text-gray-400"
-              }`}
-            >
-              ♥
-            </span>
-          </button>
+              <span
+                className={`text-lg ${
+                  isInWishlist ? "text-red-500" : "text-gray-400"
+                }`}
+              >
+                ♥
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
