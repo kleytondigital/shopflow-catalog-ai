@@ -5,11 +5,12 @@ import { useCatalog, CatalogType } from '@/hooks/useCatalog';
 import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useToast } from '@/hooks/use-toast';
-import CatalogHeader from './CatalogHeader';
+import TemplateWrapper from './TemplateWrapper';
 import HeroBanner from './banners/HeroBanner';
 import ResponsiveProductGrid from './ResponsiveProductGrid';
 import ProductDetailsModal from './ProductDetailsModal';
 import FloatingCart from './FloatingCart';
+import AdvancedFilterSidebar from './AdvancedFilterSidebar';
 import { Product } from '@/types/product';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,8 @@ import {
   Heart, 
   Package, 
   Loader2, 
-  AlertTriangle 
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 interface PublicCatalogProps {}
@@ -37,6 +39,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [appliedFilters, setAppliedFilters] = useState<any>({});
   
   const catalogRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -70,6 +73,36 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
     return Array.from(uniqueCategories);
   }, [allProducts]);
 
+  // Extrair cores e tamanhos únicos dos produtos
+  const availableOptions = React.useMemo(() => {
+    const colors = new Set<string>();
+    const sizes = new Set<string>();
+    let minPrice = Infinity;
+    let maxPrice = -Infinity;
+
+    allProducts.forEach(product => {
+      const price = catalogType === 'wholesale' && product.wholesale_price 
+        ? product.wholesale_price 
+        : product.retail_price;
+      
+      minPrice = Math.min(minPrice, price);
+      maxPrice = Math.max(maxPrice, price);
+
+      if (product.variations) {
+        product.variations.forEach(variation => {
+          if (variation.color) colors.add(variation.color);
+          if (variation.size) sizes.add(variation.size);
+        });
+      }
+    });
+
+    return {
+      colors: Array.from(colors),
+      sizes: Array.from(sizes),
+      priceRange: [Math.max(0, minPrice), maxPrice] as [number, number]
+    };
+  }, [allProducts, catalogType]);
+
   const { addItem, totalItems: totalCartItems } = useCart();
   const { 
     wishlist, 
@@ -83,9 +116,23 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
     if (searchQuery.trim()) {
       searchProducts(searchQuery);
     } else {
-      filterProducts();
+      // Aplicar filtros quando não há busca
+      filterProducts({
+        category: appliedFilters.categories?.[0],
+        minPrice: appliedFilters.priceRange?.[0],
+        maxPrice: appliedFilters.priceRange?.[1], 
+        inStock: appliedFilters.inStock,
+        variations: {
+          colors: appliedFilters.colors,
+          sizes: appliedFilters.sizes
+        }
+      });
     }
-  }, [searchQuery, searchProducts, filterProducts]);
+  }, [searchQuery, appliedFilters, searchProducts, filterProducts]);
+
+  const handleFilterChange = (newFilters: any) => {
+    setAppliedFilters(prev => ({ ...prev, ...newFilters }));
+  };
 
   const handleAddToCart = (product: Product, quantity = 1, variation?: any) => {
     try {
@@ -156,11 +203,19 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
     }
   };
 
-  const handleScrollToCatalog = () => {
-    catalogRef.current?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start' 
-    });
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (appliedFilters.categories?.length) count += appliedFilters.categories.length;
+    if (appliedFilters.colors?.length) count += appliedFilters.colors.length;
+    if (appliedFilters.sizes?.length) count += appliedFilters.sizes.length;
+    if (appliedFilters.inStock) count += 1;
+    if (searchQuery.trim()) count += 1;
+    return count;
+  };
+
+  const clearAllFilters = () => {
+    setAppliedFilters({});
+    setSearchQuery('');
   };
 
   if (storeLoading) {
@@ -190,121 +245,159 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Banner Hero - usando componente existente que funciona com banners cadastrados */}
-      <HeroBanner storeId={store.id} className="mb-8" />
-
-      {/* Header do Catálogo */}
-      <CatalogHeader
-        store={store}
-        catalogType={catalogType}
-        templateName="modern"
-        cartItemsCount={totalCartItems}
-        wishlistCount={wishlist.length}
-        onSearch={setSearchQuery}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-        onCartClick={() => {}}
-      />
-
-      {/* Seção do Catálogo */}
-      <div ref={catalogRef} className="container mx-auto px-4 py-8">
-        {/* Barra de Busca e Filtros */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Campo de Busca */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar produtos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Botões de Controle */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filtros
-              </Button>
-
-              <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Informações de Resultados */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <span>
-                {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
-              </span>
-              {searchQuery && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  Busca: "{searchQuery}"
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="ml-1 hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              {totalCartItems > 0 && (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <ShoppingCart className="h-3 w-3" />
-                  {totalCartItems} no carrinho
-                </Badge>
-              )}
-              {wishlist.length > 0 && (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Heart className="h-3 w-3" />
-                  {wishlist.length} favorito{wishlist.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </div>
+    <TemplateWrapper
+      templateName="modern"
+      store={store}
+      catalogType={catalogType}
+      cartItemsCount={totalCartItems}
+      wishlistCount={wishlist.length}
+      onSearch={setSearchQuery}
+      onToggleFilters={() => setShowFilters(!showFilters)}
+      onCartClick={() => {}}
+    >
+      <div className="flex gap-6">
+        {/* Sidebar de Filtros */}
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          <div className="sticky top-4">
+            <AdvancedFilterSidebar
+              isOpen={true}
+              onClose={() => {}}
+              availableCategories={categories}
+              availableColors={availableOptions.colors}
+              availableSizes={availableOptions.sizes}
+              priceRange={availableOptions.priceRange}
+              onFilterChange={handleFilterChange}
+              activeFilters={appliedFilters}
+            />
           </div>
         </div>
 
-        {/* Grid de Produtos */}
-        <ResponsiveProductGrid
-          products={filteredProducts}
-          catalogType={catalogType}
-          loading={storeLoading}
-          onAddToWishlist={handleAddToWishlist}
-          onQuickView={setSelectedProduct}
-          onAddToCart={handleAddToCart}
-          wishlist={wishlist}
-          storeIdentifier={storeSlug || ''}
-          templateName="modern"
-          showPrices={true}
-          showStock={true}
-        />
+        {/* Conteúdo Principal */}
+        <div className="flex-1 min-w-0">
+          {/* Banner Hero */}
+          <HeroBanner storeId={store.id} className="mb-8" />
+
+          {/* Seção do Catálogo */}
+          <div ref={catalogRef} className="space-y-6">
+            {/* Barra de Busca e Controles */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Campo de Busca */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar produtos..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Botões de Controle */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 lg:hidden"
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filtros
+                    {getActiveFilterCount() > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {getActiveFilterCount()}
+                      </Badge>
+                    )}
+                  </Button>
+
+                  <div className="flex border rounded-md">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-r-none border-r"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-l-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações de Resultados e Filtros Ativos */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground">
+                    {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+                  </span>
+                  
+                  {/* Filtros Ativos */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {searchQuery && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        Busca: "{searchQuery}"
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="ml-1 hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    
+                    {getActiveFilterCount() > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearAllFilters}
+                        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Limpar filtros
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {totalCartItems > 0 && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <ShoppingCart className="h-3 w-3" />
+                      {totalCartItems} no carrinho
+                    </Badge>
+                  )}
+                  {wishlist.length > 0 && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Heart className="h-3 w-3" />
+                      {wishlist.length} favorito{wishlist.length !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Grid de Produtos */}
+            <ResponsiveProductGrid
+              products={filteredProducts}
+              catalogType={catalogType}
+              loading={storeLoading}
+              onAddToWishlist={handleAddToWishlist}
+              onQuickView={setSelectedProduct}
+              onAddToCart={handleAddToCart}
+              wishlist={wishlist}
+              storeIdentifier={storeSlug || ''}
+              templateName="modern"
+              showPrices={true}
+              showStock={true}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Modal de Detalhes do Produto */}
@@ -316,14 +409,26 @@ const PublicCatalog: React.FC<PublicCatalogProps> = () => {
         catalogType={catalogType}
       />
 
-      {/* Carrinho Flutuante - restaurado ao original */}
+      {/* Sidebar de Filtros Mobile */}
+      <AdvancedFilterSidebar
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        availableCategories={categories}
+        availableColors={availableOptions.colors}
+        availableSizes={availableOptions.sizes}
+        priceRange={availableOptions.priceRange}
+        onFilterChange={handleFilterChange}
+        activeFilters={appliedFilters}
+      />
+
+      {/* Carrinho Flutuante */}
       <FloatingCart
         onCheckout={() => {
           console.log('Ir para checkout');
         }}
         storeId={store.id}
       />
-    </div>
+    </TemplateWrapper>
   );
 };
 

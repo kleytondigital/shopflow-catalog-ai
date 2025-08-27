@@ -1,569 +1,302 @@
-import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
-import {
-  X,
-  Filter,
-  DollarSign,
-  Star,
-  Package,
-  Palette,
-  Shirt,
-  Search,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Card, CardContent } from "@/components/ui/card";
 
-export interface AdvancedFilterState {
-  searchQuery: string;
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Filter, 
+  X, 
+  Package, 
+  DollarSign, 
+  Tag, 
+  Palette, 
+  Ruler,
+  RotateCcw 
+} from 'lucide-react';
+
+interface FilterOptions {
   categories: string[];
   priceRange: [number, number];
   inStock: boolean;
-  featured: boolean;
-  rating: number;
-  variations: {
-    colors: string[];
-    sizes: string[];
-    materials: string[];
-  };
-  discount: boolean;
+  colors: string[];
+  sizes: string[];
 }
 
 interface AdvancedFilterSidebarProps {
-  onFilter: (filters: AdvancedFilterState) => void;
   isOpen: boolean;
   onClose: () => void;
-  products?: any[];
-  isMobile?: boolean;
-  activeFiltersCount?: number;
+  availableCategories: string[];
+  availableColors: string[];
+  availableSizes: string[];
+  priceRange: [number, number];
+  onFilterChange: (filters: Partial<FilterOptions>) => void;
+  activeFilters: Partial<FilterOptions>;
 }
 
-const AdvancedFilterSidebar: React.FC<AdvancedFilterSidebarProps> = memo(
-  ({
-    onFilter,
-    isOpen,
-    onClose,
-    products = [],
-    isMobile = false,
-    activeFiltersCount = 0,
-  }) => {
-    const [filters, setFilters] = useState<AdvancedFilterState>({
-      searchQuery: "",
+const AdvancedFilterSidebar: React.FC<AdvancedFilterSidebarProps> = ({
+  isOpen,
+  onClose,
+  availableCategories,
+  availableColors,
+  availableSizes,
+  priceRange,
+  onFilterChange,
+  activeFilters,
+}) => {
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(
+    activeFilters.priceRange || priceRange
+  );
+
+  const handleCategoryToggle = (category: string) => {
+    const currentCategories = activeFilters.categories || [];
+    const newCategories = currentCategories.includes(category)
+      ? currentCategories.filter(c => c !== category)
+      : [...currentCategories, category];
+    
+    onFilterChange({ categories: newCategories });
+  };
+
+  const handleColorToggle = (color: string) => {
+    const currentColors = activeFilters.colors || [];
+    const newColors = currentColors.includes(color)
+      ? currentColors.filter(c => c !== color)
+      : [...currentColors, color];
+    
+    onFilterChange({ colors: newColors });
+  };
+
+  const handleSizeToggle = (size: string) => {
+    const currentSizes = activeFilters.sizes || [];
+    const newSizes = currentSizes.includes(size)
+      ? currentSizes.filter(s => s !== size)
+      : [...currentSizes, size];
+    
+    onFilterChange({ sizes: newSizes });
+  };
+
+  const handlePriceRangeChange = (values: number[]) => {
+    const newRange: [number, number] = [values[0], values[1]];
+    setLocalPriceRange(newRange);
+    onFilterChange({ priceRange: newRange });
+  };
+
+  const clearAllFilters = () => {
+    setLocalPriceRange(priceRange);
+    onFilterChange({
       categories: [],
-      priceRange: [0, 1000],
-      inStock: false,
-      featured: false,
-      rating: 0,
-      variations: {
-        colors: [],
-        sizes: [],
-        materials: [],
-      },
-      discount: false,
+      colors: [],
+      sizes: [],
+      priceRange: priceRange,
+      inStock: false
     });
+  };
 
-    const [openSections, setOpenSections] = useState({
-      categories: true,
-      price: true,
-      availability: true,
-      variations: true,
-      rating: false,
-      features: false,
-    });
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (activeFilters.categories?.length) count += activeFilters.categories.length;
+    if (activeFilters.colors?.length) count += activeFilters.colors.length;  
+    if (activeFilters.sizes?.length) count += activeFilters.sizes.length;
+    if (activeFilters.inStock) count += 1;
+    if (activeFilters.priceRange && 
+        (activeFilters.priceRange[0] !== priceRange[0] || activeFilters.priceRange[1] !== priceRange[1])) {
+      count += 1;
+    }
+    return count;
+  };
 
-    // Extrair dados inteligentes dos produtos
-    const filterData = useMemo(() => {
-      if (products.length === 0)
-        return {
-          categories: [],
-          priceRange: [0, 1000],
-          colors: [],
-          sizes: [],
-          materials: [],
-          maxRating: 5,
-        };
+  if (!isOpen) return null;
 
-      // Categorias com contagem
-      const categoryCount = new Map<string, number>();
-      const colorSet = new Set<string>();
-      const sizeSet = new Set<string>();
-      const materialSet = new Set<string>();
-
-      const prices = products
-        .map((p) => p.retail_price || 0)
-        .filter((p) => p > 0);
-
-      products.forEach((product) => {
-        // Categorias
-        if (product.category) {
-          categoryCount.set(
-            product.category,
-            (categoryCount.get(product.category) || 0) + 1
-          );
-        }
-
-        // Variações
-        if (product.variations && Array.isArray(product.variations)) {
-          product.variations.forEach((variation: any) => {
-            if (variation.color) colorSet.add(variation.color);
-            if (variation.size) sizeSet.add(variation.size);
-            if (variation.material) materialSet.add(variation.material);
-          });
-        }
-      });
-
-      const categories = Array.from(categoryCount.entries())
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
-
-      return {
-        categories,
-        priceRange:
-          prices.length > 0
-            ? [Math.min(...prices), Math.max(...prices)]
-            : [0, 1000],
-        colors: Array.from(colorSet).sort(),
-        sizes: Array.from(sizeSet).sort(),
-        materials: Array.from(materialSet).sort(),
-        maxRating: 5,
-      };
-    }, [products]);
-
-    // Aplicar filtros em tempo real
-    const applyFilters = useCallback(
-      (newFilters: AdvancedFilterState) => {
-        setFilters(newFilters);
-        onFilter(newFilters);
-      },
-      [onFilter]
-    );
-
-    // Handlers para diferentes tipos de filtros
-    const handleSearchChange = useCallback(
-      (value: string) => {
-        const newFilters = { ...filters, searchQuery: value };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const handleCategoryToggle = useCallback(
-      (category: string) => {
-        const newCategories = filters.categories.includes(category)
-          ? filters.categories.filter((c) => c !== category)
-          : [...filters.categories, category];
-
-        const newFilters = { ...filters, categories: newCategories };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const handleVariationToggle = useCallback(
-      (type: "colors" | "sizes" | "materials", value: string) => {
-        const currentValues = filters.variations[type];
-        const newValues = currentValues.includes(value)
-          ? currentValues.filter((v) => v !== value)
-          : [...currentValues, value];
-
-        const newFilters = {
-          ...filters,
-          variations: { ...filters.variations, [type]: newValues },
-        };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const handlePriceRangeChange = useCallback(
-      (values: number[]) => {
-        const newFilters = {
-          ...filters,
-          priceRange: values as [number, number],
-        };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const handleToggleChange = useCallback(
-      (key: keyof AdvancedFilterState, value: boolean) => {
-        const newFilters = { ...filters, [key]: value };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const handleRatingChange = useCallback(
-      (rating: number) => {
-        const newFilters = { ...filters, rating };
-        applyFilters(newFilters);
-      },
-      [filters, applyFilters]
-    );
-
-    const clearAllFilters = useCallback(() => {
-      const clearedFilters: AdvancedFilterState = {
-        searchQuery: "",
-        categories: [],
-        priceRange: filterData.priceRange as [number, number],
-        inStock: false,
-        featured: false,
-        rating: 0,
-        variations: {
-          colors: [],
-          sizes: [],
-          materials: [],
-        },
-        discount: false,
-      };
-      applyFilters(clearedFilters);
-    }, [filterData.priceRange, applyFilters]);
-
-    const toggleSection = useCallback((section: keyof typeof openSections) => {
-      setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-    }, []);
-
-    // Contar filtros ativos
-    const activeFilters = useMemo(() => {
-      let count = 0;
-      if (filters.searchQuery) count++;
-      if (filters.categories.length > 0) count++;
-      if (
-        filters.priceRange[0] > filterData.priceRange[0] ||
-        filters.priceRange[1] < filterData.priceRange[1]
-      )
-        count++;
-      if (filters.inStock) count++;
-      if (filters.featured) count++;
-      if (filters.rating > 0) count++;
-      if (filters.variations.colors.length > 0) count++;
-      if (filters.variations.sizes.length > 0) count++;
-      if (filters.variations.materials.length > 0) count++;
-      if (filters.discount) count++;
-      return count;
-    }, [filters, filterData.priceRange]);
-
-    // Componente de seção colapsável
-    const FilterSection = memo(
-      ({
-        title,
-        icon: Icon,
-        isOpen,
-        onToggle,
-        children,
-        count,
-      }: {
-        title: string;
-        icon: any;
-        isOpen: boolean;
-        onToggle: () => void;
-        children: React.ReactNode;
-        count?: number;
-      }) => (
-        <Collapsible open={isOpen} onOpenChange={onToggle}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-between p-3 h-auto"
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <span className="font-medium">{title}</span>
-                {count !== undefined && count > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {count}
-                  </Badge>
-                )}
-              </div>
-              {isOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-3 pb-3">
-            {children}
-          </CollapsibleContent>
-        </Collapsible>
-      )
-    );
-
-    const FilterContent = memo(() => (
-      <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+  return (
+    <div className="fixed inset-0 z-50 lg:relative lg:inset-auto">
+      {/* Overlay para mobile */}
+      <div 
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden"
+        onClick={onClose}
+      />
+      
+      {/* Sidebar */}
+      <div className="fixed right-0 top-0 h-full w-80 bg-background border-l shadow-lg lg:relative lg:w-full lg:h-auto lg:shadow-none">
+        <Card className="h-full rounded-none border-0 lg:rounded-lg lg:border">
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Filter className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Filtros Avançados</h2>
-              {activeFilters > 0 && (
-                <Badge variant="default">{activeFilters}</Badge>
+              Filtros
+              {getActiveFilterCount() > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {getActiveFilterCount()}
+                </Badge>
               )}
+            </CardTitle>
+            <div className="flex gap-2">
+              {getActiveFilterCount() > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-8 px-2"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="h-8 w-8 p-0 lg:hidden"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              className="text-sm"
-              disabled={activeFilters === 0}
-            >
-              Limpar Tudo
-            </Button>
-          </div>
-
-          {/* Busca Rápida */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={filters.searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Filtros */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="space-y-1">
-            {/* Categorias */}
-            {filterData.categories.length > 0 && (
-              <FilterSection
-                title="Categorias"
-                icon={Package}
-                isOpen={openSections.categories}
-                onToggle={() => toggleSection("categories")}
-                count={filters.categories.length}
-              >
-                <div className="space-y-2">
-                  {filterData.categories.map(({ name, count }) => (
-                    <label
-                      key={name}
-                      className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={filters.categories.includes(name)}
-                          onCheckedChange={() => handleCategoryToggle(name)}
-                        />
-                        <span className="text-sm">{name}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {count}
-                      </Badge>
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            {/* Faixa de Preço */}
-            <FilterSection
-              title="Faixa de Preço"
-              icon={DollarSign}
-              isOpen={openSections.price}
-              onToggle={() => toggleSection("price")}
-            >
-              <div className="space-y-4">
-                <Slider
-                  value={filters.priceRange}
-                  onValueChange={handlePriceRangeChange}
-                  max={filterData.priceRange[1]}
-                  min={filterData.priceRange[0]}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>R$ {filters.priceRange[0]}</span>
-                  <span>R$ {filters.priceRange[1]}</span>
-                </div>
-              </div>
-            </FilterSection>
-
-            {/* Cores */}
-            {filterData.colors.length > 0 && (
-              <FilterSection
-                title="Cores"
-                icon={Palette}
-                isOpen={openSections.variations}
-                onToggle={() => toggleSection("variations")}
-                count={filters.variations.colors.length}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {filterData.colors.map((color) => (
-                    <label
-                      key={color}
-                      className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={filters.variations.colors.includes(color)}
-                        onCheckedChange={() =>
-                          handleVariationToggle("colors", color)
-                        }
-                      />
-                      <span className="text-sm truncate">{color}</span>
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            {/* Tamanhos */}
-            {filterData.sizes.length > 0 && (
-              <FilterSection
-                title="Tamanhos"
-                icon={Shirt}
-                isOpen={openSections.variations}
-                onToggle={() => toggleSection("variations")}
-                count={filters.variations.sizes.length}
-              >
-                <div className="grid grid-cols-3 gap-2">
-                  {filterData.sizes.map((size) => (
-                    <label
-                      key={size}
-                      className="flex items-center justify-center p-2 border rounded hover:bg-gray-50 cursor-pointer text-sm"
-                    >
-                      <Checkbox
-                        checked={filters.variations.sizes.includes(size)}
-                        onCheckedChange={() =>
-                          handleVariationToggle("sizes", size)
-                        }
-                        className="sr-only"
-                      />
-                      <span
-                        className={`${
-                          filters.variations.sizes.includes(size)
-                            ? "font-bold text-blue-600"
-                            : ""
-                        }`}
-                      >
-                        {size}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            {/* Avaliação */}
-            <FilterSection
-              title="Avaliação"
-              icon={Star}
-              isOpen={openSections.rating}
-              onToggle={() => toggleSection("rating")}
-            >
-              <div className="space-y-2">
-                {[5, 4, 3, 2, 1].map((rating) => (
-                  <label
-                    key={rating}
-                    className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
-                  >
+          </CardHeader>
+          
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-120px)] lg:h-[60vh] px-6">
+              <div className="space-y-6 pb-6">
+                
+                {/* Filtro de Estoque */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    Disponibilidade
+                  </h4>
+                  <div className="flex items-center space-x-2">
                     <Checkbox
-                      checked={filters.rating === rating}
-                      onCheckedChange={(checked) =>
-                        handleRatingChange(checked ? rating : 0)
+                      id="inStock"
+                      checked={activeFilters.inStock || false}
+                      onCheckedChange={(checked) => 
+                        onFilterChange({ inStock: checked as boolean })
                       }
                     />
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-3 w-3 ${
-                            i < rating
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                      <span className="text-sm ml-1">& acima</span>
+                    <label htmlFor="inStock" className="text-sm cursor-pointer">
+                      Apenas produtos em estoque
+                    </label>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Filtro de Faixa de Preço */}
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    Faixa de Preço
+                  </h4>
+                  <div className="px-2">
+                    <Slider
+                      value={localPriceRange}
+                      onValueChange={handlePriceRangeChange}
+                      max={priceRange[1]}
+                      min={priceRange[0]}
+                      step={1}
+                      className="mb-3"
+                    />
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>R$ {localPriceRange[0]}</span>
+                      <span>R$ {localPriceRange[1]}</span>
                     </div>
-                  </label>
-                ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Filtro de Categorias */}
+                {availableCategories.length > 0 && (
+                  <>
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-primary" />
+                        Categorias
+                      </h4>
+                      <div className="space-y-2">
+                        {availableCategories.map((category) => (
+                          <div key={category} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`category-${category}`}
+                              checked={activeFilters.categories?.includes(category) || false}
+                              onCheckedChange={() => handleCategoryToggle(category)}
+                            />
+                            <label 
+                              htmlFor={`category-${category}`} 
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {category}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Filtro de Cores */}
+                {availableColors.length > 0 && (
+                  <>
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Palette className="h-4 w-4 text-primary" />
+                        Cores
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableColors.map((color) => (
+                          <div 
+                            key={color} 
+                            className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors ${
+                              activeFilters.colors?.includes(color) 
+                                ? 'bg-primary/10 border border-primary' 
+                                : 'hover:bg-muted'
+                            }`}
+                            onClick={() => handleColorToggle(color)}
+                          >
+                            <div 
+                              className="w-4 h-4 rounded-full border border-border shadow-sm"
+                              style={{ backgroundColor: color.toLowerCase() }}
+                            />
+                            <span className="text-sm flex-1">{color}</span>
+                            {activeFilters.colors?.includes(color) && (
+                              <Badge variant="secondary" className="w-2 h-2 p-0 rounded-full" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Filtro de Tamanhos */}
+                {availableSizes.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Ruler className="h-4 w-4 text-primary" />
+                      Tamanhos
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {availableSizes.map((size) => (
+                        <Button
+                          key={size}
+                          variant={activeFilters.sizes?.includes(size) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleSizeToggle(size)}
+                          className="h-10"
+                        >
+                          {size}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </FilterSection>
-
-            {/* Disponibilidade e Recursos */}
-            <FilterSection
-              title="Disponibilidade"
-              icon={Package}
-              isOpen={openSections.availability}
-              onToggle={() => toggleSection("availability")}
-            >
-              <div className="space-y-3">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.inStock}
-                    onCheckedChange={(checked) =>
-                      handleToggleChange("inStock", checked as boolean)
-                    }
-                  />
-                  <span className="text-sm">Apenas em estoque</span>
-                </label>
-
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.featured}
-                    onCheckedChange={(checked) =>
-                      handleToggleChange("featured", checked as boolean)
-                    }
-                  />
-                  <span className="text-sm">Produtos em destaque</span>
-                </label>
-
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.discount}
-                    onCheckedChange={(checked) =>
-                      handleToggleChange("discount", checked as boolean)
-                    }
-                  />
-                  <span className="text-sm">Em promoção</span>
-                </label>
-              </div>
-            </FilterSection>
-          </div>
-        </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
-    ));
-
-    if (isMobile) {
-      return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-          <SheetContent side="left" className="w-80 p-0">
-            <FilterContent />
-          </SheetContent>
-        </Sheet>
-      );
-    }
-
-    return (
-      <Card className="h-full">
-        <CardContent className="p-0 h-full">
-          <FilterContent />
-        </CardContent>
-      </Card>
-    );
-  }
-);
-
-AdvancedFilterSidebar.displayName = "AdvancedFilterSidebar";
+    </div>
+  );
+};
 
 export default AdvancedFilterSidebar;

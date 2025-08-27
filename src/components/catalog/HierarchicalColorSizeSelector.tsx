@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, ShoppingCart, Package, Palette } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Package, Palette, CheckCircle } from "lucide-react";
 import { ProductVariation } from "@/types/variation";
 import { Product } from "@/types/product";
 
@@ -99,6 +99,7 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
     if (selections.length > 0) {
       onAddToCart(selections);
       setSelections([]);
+      setSelectedColor(null);
     }
   };
 
@@ -115,14 +116,20 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
   }, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Seleção de Cores */}
-      <div className="space-y-2">
-        <h4 className="font-medium text-sm flex items-center gap-2">
-          <Palette className="h-4 w-4" />
-          Escolha a Cor:
-        </h4>
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-lg flex items-center gap-2">
+            <Palette className="h-5 w-5 text-primary" />
+            Escolha a Cor
+          </h4>
+          <Badge variant="outline" className="text-sm">
+            {colorGroups.length} cores disponíveis
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {colorGroups.map((colorGroup) => {
             const isSelected = selectedColor === colorGroup.color;
             const isAvailable = colorGroup.totalStock > 0;
@@ -133,22 +140,37 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
                 variant={isSelected ? "default" : "outline"}
                 disabled={!isAvailable}
                 onClick={() => setSelectedColor(colorGroup.color)}
-                className="h-auto flex-col gap-1 p-2 relative"
+                className={`h-auto flex-col gap-2 p-4 relative transition-all ${
+                  isSelected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'
+                }`}
               >
+                {/* Indicador visual da cor */}
                 {colorGroup.color !== 'Único' && (
                   <div
-                    className="w-4 h-4 rounded-full border border-gray-300 mx-auto"
+                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm mx-auto"
                     style={{ 
                       backgroundColor: colorGroup.hex_color?.toLowerCase() || colorGroup.color.toLowerCase()
                     }}
                   />
                 )}
-                <span className="text-xs font-medium">
-                  {colorGroup.color}
-                </span>
-                <span className="text-xs text-gray-500">
-                  ({colorGroup.totalStock} un.)
-                </span>
+                
+                {/* Nome da cor */}
+                <div className="text-center">
+                  <span className="font-medium text-sm">
+                    {colorGroup.color}
+                  </span>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {colorGroup.variations.length} tamanhos
+                  </div>
+                  <div className="text-xs font-medium text-green-600">
+                    {colorGroup.totalStock} em estoque
+                  </div>
+                </div>
+
+                {/* Checkmark para cor selecionada */}
+                {isSelected && (
+                  <CheckCircle className="absolute -top-1 -right-1 h-5 w-5 text-primary bg-background rounded-full" />
+                )}
               </Button>
             );
           })}
@@ -157,161 +179,218 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
 
       {/* Seleção de Tamanhos da Cor Escolhida */}
       {selectedColorGroup && (
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Tamanhos em {selectedColorGroup.color}:
-          </h4>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {selectedColorGroup.variations.map((variation) => {
-              const isSelected = selections.some(
-                (s) => getVariationKey(s.variation) === getVariationKey(variation)
-              );
-              const selectedQty = selections.find(
-                (s) => getVariationKey(s.variation) === getVariationKey(variation)
-              )?.quantity || 0;
-              const isAvailable = variation.stock > 0;
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Tamanhos em {selectedColorGroup.color}
+                </h4>
+                <Badge variant="secondary">
+                  {selectedColorGroup.variations.length} opções
+                </Badge>
+              </div>
 
-              return (
-                <Button
-                  key={getVariationKey(variation)}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  disabled={!isAvailable}
-                  onClick={() => addVariationSelection(variation)}
-                  className="h-auto flex-col gap-1 p-2 relative text-xs"
-                >
-                  <span className="font-medium">
-                    {variation.size || "Único"}
-                  </span>
-                  <span className="text-gray-500">
-                    {variation.stock} un.
-                  </span>
-                  {selectedQty > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs"
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {selectedColorGroup.variations.map((variation) => {
+                  const selectedQty = selections.find(
+                    (s) => getVariationKey(s.variation) === getVariationKey(variation)
+                  )?.quantity || 0;
+                  const isAvailable = variation.stock > 0;
+
+                  return (
+                    <Card
+                      key={getVariationKey(variation)}
+                      className={`transition-all cursor-pointer ${
+                        selectedQty > 0 
+                          ? 'ring-2 ring-primary bg-primary/10 shadow-md' 
+                          : isAvailable 
+                            ? 'hover:shadow-md hover:bg-muted/50' 
+                            : 'opacity-50'
+                      }`}
                     >
-                      {selectedQty}
-                    </Badge>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                      <CardContent className="p-4">
+                        <div className="text-center space-y-2">
+                          {/* Tamanho */}
+                          <div className="font-semibold text-lg">
+                            {variation.size || "Único"}
+                          </div>
+                          
+                          {/* Informações de estoque e preço */}
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div className="flex items-center justify-center gap-1">
+                              <Package className="h-3 w-3" />
+                              <span>{variation.stock} disponível</span>
+                            </div>
+                            {variation.price_adjustment !== 0 && (
+                              <div className="text-primary font-medium">
+                                {variation.price_adjustment > 0 ? '+' : ''}
+                                R$ {variation.price_adjustment.toFixed(2)}
+                              </div>
+                            )}
+                          </div>
 
-      {/* Resumo de Seleções */}
-      {selections.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-blue-800">
-                {totalItems} {totalItems === 1 ? 'item selecionado' : 'itens selecionados'}
-              </span>
-              <div className="text-sm font-semibold text-blue-800">
-                Total: R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {/* Controles de Quantidade */}
+                          {isAvailable && (
+                            <div className="space-y-2">
+                              {selectedQty === 0 ? (
+                                <Button
+                                  size="sm"
+                                  onClick={() => addVariationSelection(variation)}
+                                  className="w-full"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Adicionar
+                                </Button>
+                              ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() =>
+                                      updateQuantity(getVariationKey(variation), selectedQty - 1)
+                                    }
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+
+                                  <Input
+                                    type="number"
+                                    value={selectedQty}
+                                    onChange={(e) =>
+                                      updateQuantity(
+                                        getVariationKey(variation),
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="w-16 h-8 text-center text-sm"
+                                    min={0}
+                                    max={variation.stock}
+                                  />
+
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() =>
+                                      updateQuantity(getVariationKey(variation), selectedQty + 1)
+                                    }
+                                    disabled={selectedQty >= variation.stock}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+
+                              {/* Badge com quantidade selecionada */}
+                              {selectedQty > 0 && (
+                                <Badge className="w-full justify-center">
+                                  {selectedQty} selecionado{selectedQty > 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {!isAvailable && (
+                            <Badge variant="destructive" className="w-full justify-center">
+                              Indisponível
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
-
-            {/* Lista de Seleções */}
-            <div className="space-y-1 mb-3 max-h-32 overflow-y-auto">
-              {selections.map((selection) => {
-                const variationKey = getVariationKey(selection.variation);
-                const basePrice = catalogType === "wholesale" && product.wholesale_price
-                  ? product.wholesale_price
-                  : product.retail_price;
-                const itemPrice = basePrice + (selection.variation.price_adjustment || 0);
-
-                return (
-                  <div
-                    key={variationKey}
-                    className="flex items-center justify-between text-xs bg-white rounded p-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {selection.variation.color && (
-                          <Badge variant="outline" className="text-xs px-1 py-0">
-                            {selection.variation.color}
-                          </Badge>
-                        )}
-                        {selection.variation.size && (
-                          <Badge variant="outline" className="text-xs px-1 py-0">
-                            {selection.variation.size}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-gray-600">
-                        R$ {itemPrice.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-6 h-6 p-0"
-                        onClick={() =>
-                          updateQuantity(variationKey, selection.quantity - 1)
-                        }
-                      >
-                        <Minus className="w-3 h-3" />
-                      </Button>
-
-                      <Input
-                        type="number"
-                        value={selection.quantity}
-                        onChange={(e) =>
-                          updateQuantity(
-                            variationKey,
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        className="w-12 h-6 text-center text-xs"
-                        min={0}
-                        max={selection.variation.stock}
-                      />
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-6 h-6 p-0"
-                        onClick={() =>
-                          updateQuantity(variationKey, selection.quantity + 1)
-                        }
-                        disabled={selection.quantity >= selection.variation.stock}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Botão de Adicionar ao Carrinho */}
-            <Button
-              onClick={handleAddAllToCart}
-              size="sm"
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              <ShoppingCart className="w-4 h-4 mr-1" />
-              Adicionar ao Carrinho ({totalItems})
-            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Estado Vazio */}
-      {selections.length === 0 && (
-        <div className="text-center py-4 text-gray-500">
-          <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+      {/* Resumo de Seleções e Botão de Adicionar ao Carrinho */}
+      {selections.length > 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-lg text-green-800">
+                  Resumo da Seleção
+                </h4>
+                <div className="text-right">
+                  <div className="text-sm text-green-700">
+                    {totalItems} {totalItems === 1 ? 'item selecionado' : 'itens selecionados'}
+                  </div>
+                  <div className="text-xl font-bold text-green-800">
+                    R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista resumida de seleções */}
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {selections.map((selection) => {
+                  const basePrice = catalogType === "wholesale" && product.wholesale_price
+                    ? product.wholesale_price
+                    : product.retail_price;
+                  const itemPrice = basePrice + (selection.variation.price_adjustment || 0);
+
+                  return (
+                    <div
+                      key={getVariationKey(selection.variation)}
+                      className="flex items-center justify-between text-sm bg-white rounded-lg p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {selection.variation.color}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {selection.variation.size}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          × {selection.quantity}
+                        </span>
+                      </div>
+                      <span className="font-medium text-green-700">
+                        R$ {(itemPrice * selection.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Botão de Adicionar ao Carrinho */}
+              <Button
+                onClick={handleAddAllToCart}
+                size="lg"
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                Adicionar ao Carrinho ({totalItems})
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado Vazio - Escolha de Cor */}
+      {!selectedColor && (
+        <div className="text-center py-8 text-muted-foreground">
+          <Palette className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <h3 className="font-medium text-lg mb-2">Escolha uma cor</h3>
           <p className="text-sm">
-            {!selectedColor 
-              ? "Escolha uma cor para ver os tamanhos disponíveis"
-              : "Selecione os tamanhos desejados"
-            }
+            Selecione uma cor acima para ver os tamanhos disponíveis
+          </p>
+        </div>
+      )}
+
+      {/* Estado Vazio - Seleção de Tamanhos */}
+      {selectedColor && selections.length === 0 && (
+        <div className="text-center py-6 text-muted-foreground">
+          <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">
+            Selecione os tamanhos desejados em <strong>{selectedColor}</strong>
           </p>
         </div>
       )}
