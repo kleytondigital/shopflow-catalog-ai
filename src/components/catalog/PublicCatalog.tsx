@@ -327,6 +327,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
         onClose={handleCloseModal}
         onAddToCart={handleAddToCart}
         catalogType={currentCatalogType}
+        showStock={settings?.show_stock ?? true}
       />
     </div>
   );

@@ -15,6 +15,7 @@ interface ProductDetailsModalProps {
   onClose: () => void;
   onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   catalogType: CatalogType;
+  showStock?: boolean;
 }
 
 interface VariationSelection {
@@ -27,7 +28,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   isOpen,
   onClose,
   onAddToCart,
-  catalogType
+  catalogType,
+  showStock = true
 }) => {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -154,6 +156,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       variations={product.variations || []}
                       onAddToCart={handleMultipleAddToCart}
                       catalogType={catalogType}
+                      showStock={showStock}
                     />
                   </div>
                 ) : (
@@ -188,10 +191,12 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       <Shield className="h-4 w-4 flex-shrink-0" />
                       <span>Compra 100% protegida</span>
                     </div>
-                    <div className="flex items-center gap-3 text-purple-600">
-                      <Package className="h-4 w-4 flex-shrink-0" />
-                      <span>Estoque disponível</span>
-                    </div>
+                    {showStock && (
+                      <div className="flex items-center gap-3 text-purple-600">
+                        <Package className="h-4 w-4 flex-shrink-0" />
+                        <span>Estoque disponível</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
