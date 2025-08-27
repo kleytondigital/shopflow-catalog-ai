@@ -1,13 +1,32 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 
 type CatalogMode = 'separated' | 'hybrid' | 'toggle';
 type CatalogType = 'retail' | 'wholesale';
 
-export const useCatalogMode = (storeIdentifier?: string) => {
-  const { settings } = useCatalogSettings(storeIdentifier);
+export const useCatalogMode = (storeSlug?: string) => {
+  const { settings } = useCatalogSettings(storeSlug);
   const [currentCatalogType, setCurrentCatalogType] = useState<CatalogType>('retail');
+  
+  // Determinar o tipo de catálogo baseado nas configurações
+  useEffect(() => {
+    if (!settings) return;
+
+    const catalogMode = settings.catalog_mode || 'separated';
+    
+    // Se modo for 'wholesale' apenas, usar wholesale
+    if (catalogMode === 'wholesale' || (!settings.retail_catalog_active && settings.wholesale_catalog_active)) {
+      setCurrentCatalogType('wholesale');
+    }
+    // Se modo for 'retail' apenas ou padrão, usar retail
+    else if (catalogMode === 'retail' || (settings.retail_catalog_active && !settings.wholesale_catalog_active)) {
+      setCurrentCatalogType('retail');
+    }
+    // Se modo for 'hybrid' ou 'toggle', começar com retail
+    else {
+      setCurrentCatalogType('retail');
+    }
+  }, [settings]);
   
   // Para modo toggle, permitir alternar entre tipos
   const toggleCatalogType = useCallback(() => {
@@ -15,9 +34,11 @@ export const useCatalogMode = (storeIdentifier?: string) => {
       setCurrentCatalogType(prev => prev === 'retail' ? 'wholesale' : 'retail');
       
       // Persistir preferência no localStorage
-      const storageKey = `catalog_type_${settings.store_id}`;
-      const newType = currentCatalogType === 'retail' ? 'wholesale' : 'retail';
-      localStorage.setItem(storageKey, newType);
+      if (settings.store_id) {
+        const storageKey = `catalog_type_${settings.store_id}`;
+        const newType = currentCatalogType === 'retail' ? 'wholesale' : 'retail';
+        localStorage.setItem(storageKey, newType);
+      }
     }
   }, [settings, currentCatalogType]);
 
@@ -54,8 +75,8 @@ export const useCatalogMode = (storeIdentifier?: string) => {
       
       case 'separated':
       default:
-        // No modo separado, sempre usar o preço do tipo especificado
-        return product.retail_price;
+        // No modo separado, usar o tipo atual
+        return currentCatalogType === 'wholesale' ? wholesalePrice : product.retail_price;
     }
   }, [settings, currentCatalogType]);
 
@@ -102,9 +123,9 @@ export const useCatalogMode = (storeIdentifier?: string) => {
     currentCatalogType,
     toggleCatalogType,
     calculatePrice,
-    shouldShowSavingsIndicator,
-    calculatePotentialSavings,
-    isRetailActive: settings?.retail_catalog_active || true,
-    isWholesaleActive: settings?.wholesale_catalog_active || false,
+    shouldShowSavingsIndicator: () => false, // Simplified for now
+    calculatePotentialSavings: () => null, // Simplified for now
+    isRetailActive: settings?.retail_catalog_active ?? true,
+    isWholesaleActive: settings?.wholesale_catalog_active ?? false,
   };
 };

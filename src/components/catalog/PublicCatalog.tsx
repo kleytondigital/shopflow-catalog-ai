@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useCategories } from '@/hooks/useCategories';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useGlobalTemplateStyles } from '@/hooks/useGlobalTemplateStyles';
-import { CatalogType } from '@/hooks/useCatalog';
+import { useCatalogMode } from '@/hooks/useCatalogMode';
 import ProductGrid from './ProductGrid';
 import FloatingCart from './FloatingCart';
 import AdvancedFilterSidebar from './AdvancedFilterSidebar';
@@ -13,14 +12,14 @@ import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
-const PublicCatalog = () => {
-  const { storeIdentifier, catalogType = 'retail' } = useParams<{
-    storeIdentifier: string;
-    catalogType?: string;
-  }>();
+interface PublicCatalogProps {
+  storeSlug: string;
+}
 
-  const { settings } = useCatalogSettings(storeIdentifier);
-  useGlobalTemplateStyles(storeIdentifier);
+const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
+  const { settings } = useCatalogSettings(storeSlug);
+  const { catalogMode, currentCatalogType } = useCatalogMode(storeSlug);
+  useGlobalTemplateStyles(storeSlug);
 
   const {
     store,
@@ -30,7 +29,7 @@ const PublicCatalog = () => {
     storeError,
     searchProducts,
     filterProducts
-  } = useCatalog(storeIdentifier!, catalogType as CatalogType);
+  } = useCatalog(storeSlug, currentCatalogType);
 
   const { categories } = useCategories(store?.id);
 
@@ -52,7 +51,7 @@ const PublicCatalog = () => {
 
       const matchesCategory = selectedCategory === '' || product.category === selectedCategory;
 
-      const price = catalogType === 'wholesale' && product.wholesale_price 
+      const price = currentCatalogType === 'wholesale' && product.wholesale_price 
         ? product.wholesale_price 
         : product.retail_price || 0;
       const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
@@ -71,7 +70,7 @@ const PublicCatalog = () => {
 
       return matchesSearch && matchesCategory && matchesPrice && matchesColors && matchesSizes && matchesStock;
     });
-  }, [products, searchQuery, selectedCategory, priceRange, selectedColors, selectedSizes, showInStock, catalogType]);
+  }, [products, searchQuery, selectedCategory, priceRange, selectedColors, selectedSizes, showInStock, currentCatalogType]);
 
   const handleAddToCart = (product: any, variation?: any, quantity: number = 1) => {
     const cartItem = {
@@ -150,7 +149,7 @@ const PublicCatalog = () => {
             {storeError || 'Loja não encontrada'}
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Identificador: {storeIdentifier}
+            Slug: {storeSlug}
           </p>
         </div>
       </div>
@@ -162,7 +161,8 @@ const PublicCatalog = () => {
       <TemplateWrapper
         templateName={settings?.template_name || 'modern'}
         store={store}
-        catalogType={catalogType as CatalogType}
+        catalogType={currentCatalogType}
+        catalogMode={catalogMode}
         cartItemsCount={cartItems.length}
         wishlistCount={wishlistItems.length}
         whatsappNumber={settings?.whatsapp_number}
@@ -246,6 +246,7 @@ const PublicCatalog = () => {
                 </div>
               </div>
 
+              {/* Active Filters Display */}
               {(searchQuery || selectedCategory || selectedColors.length > 0 || selectedSizes.length > 0 || showInStock) && (
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-sm text-muted-foreground">Filtros ativos:</span>
@@ -283,12 +284,13 @@ const PublicCatalog = () => {
 
             <ProductGrid
               products={handleFilteredProducts}
-              catalogType={catalogType as CatalogType}
+              catalogType={currentCatalogType}
+              catalogMode={catalogMode}
               loading={false}
-              onAddToWishlist={handleAddToWishlist}
+              onAddToWishlist={() => {}}
               onQuickView={() => {}}
               wishlist={wishlistItems}
-              storeIdentifier={storeIdentifier!}
+              storeSlug={storeSlug}
               templateName={settings?.template_name || 'modern'}
               showPrices={settings?.show_prices ?? true}
               showStock={settings?.show_stock ?? true}

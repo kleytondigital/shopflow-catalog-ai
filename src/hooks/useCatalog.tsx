@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, ProductVariation } from '@/types/product';
+import { useStoreResolver } from '@/hooks/useStoreResolver';
 
 export type CatalogType = 'retail' | 'wholesale';
 
@@ -24,41 +24,31 @@ export interface Store {
   monthly_fee: number;
 }
 
-export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 'retail') => {
+export const useCatalog = (storeSlug?: string, catalogType: CatalogType = 'retail') => {
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   
+  const { resolveStoreId } = useStoreResolver();
+  
   // Use refs to avoid recreating functions on every render
   const loadedStoreRef = useRef<string | null>(null);
   const loadedCatalogTypeRef = useRef<CatalogType | null>(null);
 
-  const loadStore = useCallback(async (identifier: string) => {
-    console.log('🏪 CATÁLOGO - Iniciando carregamento da loja:', identifier);
+  const loadStore = useCallback(async (slug: string) => {
+    console.log('🏪 CATÁLOGO - Iniciando carregamento da loja:', slug);
     setLoading(true);
     setStoreError(null);
     
     try {
-      // Verificar se é UUID válido
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const isUUID = uuidRegex.test(identifier);
-
-      let query = supabase
+      const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
-        .eq('is_active', true);
-
-      if (isUUID) {
-        console.log('🔍 CATÁLOGO - Buscando por UUID:', identifier);
-        query = query.eq('id', identifier);
-      } else {
-        console.log('🔍 CATÁLOGO - Buscando por URL slug:', identifier);
-        query = query.eq('url_slug', identifier);
-      }
-
-      const { data: storeData, error: storeError } = await query.maybeSingle();
+        .eq('url_slug', slug)
+        .eq('is_active', true)
+        .maybeSingle();
 
       if (storeError) {
         console.error('❌ Erro ao buscar loja:', storeError);
@@ -68,7 +58,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
       }
 
       if (!storeData) {
-        console.warn('⚠️ Loja não encontrada:', identifier);
+        console.warn('⚠️ Loja não encontrada:', slug);
         setStoreError('Loja não encontrada ou inativa');
         setStore(null);
         return false;
@@ -175,11 +165,11 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     }
   }, []);
 
-  const initializeCatalog = useCallback(async (identifier: string, type: CatalogType) => {
-    console.log('🚀 CATÁLOGO - Inicializando:', { identifier, type });
+  const initializeCatalog = useCallback(async (slug: string, type: CatalogType) => {
+    console.log('🚀 CATÁLOGO - Inicializando:', { slug, type });
 
     // Avoid reloading if same store and catalog type
-    if (loadedStoreRef.current === identifier && loadedCatalogTypeRef.current === type && store) {
+    if (loadedStoreRef.current === slug && loadedCatalogTypeRef.current === type && store) {
       console.log('ℹ️ CATÁLOGO - Cache hit, não recarregando');
       return true;
     }
@@ -187,7 +177,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     setLoading(true);
     setStoreError(null);
   
-    const storeData = await loadStore(identifier);
+    const storeData = await loadStore(slug);
     if (!storeData) {
       setLoading(false);
       return false;
@@ -196,7 +186,7 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     const productsLoaded = await loadProducts(storeData.id, type);
     
     if (productsLoaded) {
-      loadedStoreRef.current = identifier;
+      loadedStoreRef.current = slug;
       loadedCatalogTypeRef.current = type;
       console.log('✅ CATÁLOGO - Inicialização concluída com sucesso');
     }
@@ -205,14 +195,14 @@ export const useCatalog = (storeIdentifier?: string, catalogType: CatalogType = 
     return productsLoaded;
   }, [loadStore, loadProducts, store]);
 
-  // Only initialize when store identifier or catalog type actually changes
+  // Only initialize when store slug or catalog type actually changes
   useEffect(() => {
-    if (storeIdentifier && 
-        (loadedStoreRef.current !== storeIdentifier || loadedCatalogTypeRef.current !== catalogType)) {
-      console.log('🔄 CATÁLOGO - Mudança detectada, reinicializando:', { storeIdentifier, catalogType });
-      initializeCatalog(storeIdentifier, catalogType);
+    if (storeSlug && 
+        (loadedStoreRef.current !== storeSlug || loadedCatalogTypeRef.current !== catalogType)) {
+      console.log('🔄 CATÁLOGO - Mudança detectada, reinicializando:', { storeSlug, catalogType });
+      initializeCatalog(storeSlug, catalogType);
     }
-  }, [storeIdentifier, catalogType, initializeCatalog]);
+  }, [storeSlug, catalogType, initializeCatalog]);
 
   const searchProducts = useCallback((query: string) => {
     const searchTerm = query.toLowerCase();
