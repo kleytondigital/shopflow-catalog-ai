@@ -1,9 +1,12 @@
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { usePriceCalculation } from "@/hooks/usePriceCalculation";
+import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 import { ProductPriceTier } from "@/types/product";
+import { Product } from "@/types/product";
 
 interface ProductPriceDisplayProps {
   storeId: string;
@@ -19,6 +22,8 @@ interface ProductPriceDisplayProps {
   showTierName?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
+  // Adicionar produto completo para usar o novo hook de preços
+  product?: Pick<Product, 'retail_price' | 'wholesale_price' | 'min_wholesale_qty' | 'store_id'>;
 }
 
 const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
@@ -35,7 +40,22 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
   showTierName = true,
   size = "md",
   className = "",
+  product,
 }) => {
+  // Criar objeto produto para o hook se não fornecido
+  const productForHook = product || {
+    retail_price: retailPrice,
+    wholesale_price: wholesalePrice,
+    min_wholesale_qty: minWholesaleQty,
+    store_id: storeId,
+  };
+
+  const priceInfo = useProductDisplayPrice({
+    product: productForHook,
+    catalogType,
+    quantity,
+  });
+
   const priceCalculation = usePriceCalculation(storeId, {
     product_id: productId,
     retail_price: retailPrice,
@@ -45,10 +65,8 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
     price_tiers: priceTiers,
   });
 
-  const displayPrice =
-    catalogType === "wholesale" && wholesalePrice
-      ? wholesalePrice
-      : priceCalculation.price;
+  // Usar o preço correto baseado no modelo
+  const displayPrice = priceInfo.displayPrice;
 
   const sizeClasses = {
     sm: {
@@ -107,8 +125,11 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
         </div>
       </div>
 
-      {/* Preços Varejo e Atacado (quando ambos estão disponíveis) */}
-      {wholesalePrice && wholesalePrice !== retailPrice && (
+      {/* Preços Varejo e Atacado (quando ambos estão disponíveis e diferentes) */}
+      {priceInfo.shouldShowWholesaleInfo && 
+       priceInfo.shouldShowRetailPrice && 
+       !priceInfo.isWholesaleOnly && 
+       priceInfo.retailPrice !== priceInfo.wholesalePrice && (
         <div className="space-y-1 pt-2 border-t border-border/20">
           {/* Preço Varejo */}
           <div className="flex items-center justify-between">
@@ -116,7 +137,7 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
               Varejo:
             </span>
             <span className={`font-medium ${classes.secondaryPrice}`}>
-              {formatCurrency(retailPrice)}
+              {formatCurrency(priceInfo.retailPrice || 0)}
             </span>
           </div>
 
@@ -129,18 +150,25 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
               <span
                 className={`font-medium text-green-600 ${classes.secondaryPrice}`}
               >
-                {formatCurrency(wholesalePrice)}
+                {formatCurrency(priceInfo.wholesalePrice || 0)}
               </span>
-              {minWholesaleQty && (
+              {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && (
                 <Badge
                   variant="secondary"
                   className={`bg-orange-100 text-orange-700 ${classes.badge}`}
                 >
-                  mín. {minWholesaleQty}
+                  mín. {priceInfo.minWholesaleQty}
                 </Badge>
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Informação de quantidade mínima para wholesale_only */}
+      {priceInfo.isWholesaleOnly && priceInfo.minQuantity > 1 && (
+        <div className={`text-orange-600 ${classes.secondaryPrice}`}>
+          <span>Quantidade mínima: {priceInfo.minQuantity} unidades</span>
         </div>
       )}
 

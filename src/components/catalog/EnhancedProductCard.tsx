@@ -1,10 +1,11 @@
+
 import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { Product } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 import { usePriceCalculation } from "@/hooks/usePriceCalculation";
 import { useProductPriceTiers } from "@/hooks/useProductPriceTiers";
 import { useProductVariations } from "@/hooks/useProductVariations";
@@ -35,7 +36,6 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
   storeIdentifier,
 }) => {
   const [quantity] = useState(1);
-  const { priceModel } = useStorePriceModel(product.store_id);
   const { variations } = useProductVariations(product.id);
   const { tiers } = useProductPriceTiers(product.id, {
     wholesale_price: product.wholesale_price,
@@ -43,16 +43,20 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
     retail_price: product.retail_price,
   });
 
-  const modelKey = priceModel?.price_model || "retail_only";
+  // Usar o novo hook para cálculo de preços
+  const priceInfo = useProductDisplayPrice({
+    product,
+    catalogType,
+    quantity,
+  });
 
-  // Calcular preço usando o hook de cálculo
+  // Calcular preço usando o hook de cálculo para obter informações de tier
   const priceCalculation = usePriceCalculation(product.store_id, {
     product_id: product.id,
     retail_price: product.retail_price,
     wholesale_price: product.wholesale_price,
     min_wholesale_qty: product.min_wholesale_qty,
-    quantity:
-      modelKey === "wholesale_only" ? product.min_wholesale_qty || 1 : quantity,
+    quantity: priceInfo.minQuantity,
     price_tiers: product.enable_gradual_wholesale ? tiers : [],
     enable_gradual_wholesale: product.enable_gradual_wholesale,
   });
@@ -85,9 +89,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onAddToCart) {
-      const minQty =
-        modelKey === "wholesale_only" ? product.min_wholesale_qty || 1 : 1;
-      onAddToCart(product, minQty);
+      onAddToCart(product, priceInfo.minQuantity);
     }
   };
 
@@ -105,7 +107,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
       }`}
       onClick={onClick}
     >
-      {/* 🎯 MELHORADO: Image Container com aspect ratio 1:1 e click */}
+      {/* Image Container */}
       <div
         className="relative aspect-square bg-gray-100 overflow-hidden cursor-pointer"
         onClick={onClick}
@@ -122,7 +124,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
           </div>
         )}
 
-        {/* 🎯 REORGANIZADOS: Badges sem sobreposição */}
+        {/* Badges */}
         <div className="absolute inset-2 pointer-events-none">
           {/* Top Left - Badge de Destaque */}
           {product.is_featured && (
@@ -138,7 +140,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
             className="absolute top-0 left-0 flex flex-col gap-1"
             style={{ marginTop: product.is_featured ? "28px" : "0" }}
           >
-            {modelKey === "wholesale_only" && (
+            {priceInfo.isWholesaleOnly && (
               <Badge className="bg-orange-500 text-white text-xs font-medium shadow-sm">
                 Atacado
               </Badge>
@@ -203,7 +205,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
         <div className="space-y-2">
           {/* Price Display */}
           {variationInfo?.hasGrades ? (
-            // 🎯 Produto com Grade - Usar GradePriceDisplay compacto
+            // Produto com Grade - Usar GradePriceDisplay compacto
             <GradePriceDisplay
               retailPrice={product.retail_price}
               wholesalePrice={product.wholesale_price}
@@ -216,17 +218,19 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
               className="p-0"
             />
           ) : (
-            // 🎯 Produto Normal - Preço padrão
+            // Produto Normal - Preço baseado no modelo
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-foreground">
-                  {priceCalculation?.price
-                    ? formatCurrency(priceCalculation.price)
-                    : formatCurrency(product.retail_price || 0)}
+                  {formatCurrency(priceInfo.displayPrice)}
                 </span>
-                {priceCalculation?.percentage > 0 && product.retail_price && (
+                {/* Mostrar preço original apenas se aplicável */}
+                {priceCalculation?.percentage > 0 && 
+                 priceInfo.shouldShowRetailPrice && 
+                 priceInfo.originalPrice > 0 && 
+                 priceInfo.originalPrice !== priceInfo.displayPrice && (
                   <span className="text-sm text-muted-foreground line-through">
-                    {formatCurrency(product.retail_price)}
+                    {formatCurrency(priceInfo.originalPrice)}
                   </span>
                 )}
               </div>
@@ -241,46 +245,45 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({
             </div>
           )}
 
-          {/* Preços Varejo e Atacado */}
-          {product.wholesale_price &&
-            product.wholesale_price !== product.retail_price && (
-              <div className="space-y-1 pt-1 border-t border-border/20">
-                {/* Preço Varejo */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Varejo:</span>
-                  <span className="font-medium">
-                    {formatCurrency(product.retail_price || 0)}
-                  </span>
-                </div>
+          {/* Preços Varejo e Atacado - apenas se ambos existem e são diferentes */}
+          {priceInfo.shouldShowWholesaleInfo && 
+           priceInfo.shouldShowRetailPrice && 
+           !priceInfo.isWholesaleOnly && (
+            <div className="space-y-1 pt-1 border-t border-border/20">
+              {/* Preço Varejo */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Varejo:</span>
+                <span className="font-medium">
+                  {formatCurrency(priceInfo.retailPrice || 0)}
+                </span>
+              </div>
 
-                {/* Preço Atacado */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Atacado:</span>
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium text-green-600">
-                      {formatCurrency(product.wholesale_price)}
-                    </span>
-                    {product.min_wholesale_qty && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-orange-100 text-orange-700"
-                      >
-                        mín. {product.min_wholesale_qty}
-                      </Badge>
-                    )}
-                  </div>
+              {/* Preço Atacado */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Atacado:</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-green-600">
+                    {formatCurrency(priceInfo.wholesalePrice || 0)}
+                  </span>
+                  {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-orange-100 text-orange-700"
+                    >
+                      mín. {priceInfo.minWholesaleQty}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-          {/* Wholesale Minimum (quando não há preço atacado separado) */}
-          {modelKey === "wholesale_only" &&
-            product.min_wholesale_qty &&
-            !product.wholesale_price && (
-              <p className="text-xs text-muted-foreground">
-                Mínimo: {product.min_wholesale_qty} unidades
-              </p>
-            )}
+          {/* Wholesale Minimum (quando é wholesale only) */}
+          {priceInfo.isWholesaleOnly && priceInfo.minQuantity > 1 && (
+            <p className="text-xs text-muted-foreground">
+              Mínimo: {priceInfo.minQuantity} unidades
+            </p>
+          )}
         </div>
 
         {/* Action Buttons */}

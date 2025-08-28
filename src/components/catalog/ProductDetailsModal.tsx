@@ -8,6 +8,9 @@ import { Product, ProductVariation } from '@/types/product';
 import { CatalogType } from '@/hooks/useCatalog';
 import ProductImageGallery from '@/components/products/ProductImageGallery';
 import HierarchicalColorSizeSelector from './HierarchicalColorSizeSelector';
+import ProductVariationSelector from '@/components/products/ProductVariationSelector';
+import { useProductDisplayPrice } from '@/hooks/useProductDisplayPrice';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -32,25 +35,37 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   showStock = true
 }) => {
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
 
   if (!product) return null;
 
-  const price = catalogType === 'wholesale' && product.wholesale_price 
-    ? product.wholesale_price 
-    : product.retail_price;
+  const priceInfo = useProductDisplayPrice({
+    product,
+    catalogType,
+    quantity: 1,
+  });
 
-  const minQuantity = catalogType === 'wholesale' && product.min_wholesale_qty 
-    ? product.min_wholesale_qty 
-    : 1;
+  const price = priceInfo.displayPrice;
+  const minQuantity = priceInfo.minQuantity;
+
+  // Detectar se há variações de grade
+  const hasVariations = product.variations && product.variations.length > 0;
+  const hasGradeVariations = hasVariations && product.variations?.some(v => 
+    v.is_grade || v.variation_type === 'grade'
+  );
 
   const handleMultipleAddToCart = (selections: VariationSelection[]) => {
     if (selections.length === 0) return;
     
-    // Adicionar cada seleção ao carrinho
     selections.forEach(({ variation, quantity }) => {
       onAddToCart(product, quantity, variation);
     });
     
+    onClose();
+  };
+
+  const handleSingleVariationAddToCart = (variation: ProductVariation) => {
+    onAddToCart(product, minQuantity, variation);
     onClose();
   };
 
@@ -59,7 +74,6 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     onClose();
   };
 
-  const hasVariations = product.variations && product.variations.length > 0;
   const isDescriptionLong = product.description && product.description.length > 120;
 
   return (
@@ -93,11 +107,15 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   <div className="flex items-start justify-between flex-wrap gap-3">
                     <div className="space-y-1">
                       <div className="text-3xl md:text-4xl font-bold text-primary">
-                        R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {formatCurrency(price)}
                       </div>
-                      {catalogType === 'wholesale' && product.retail_price && (
+                      
+                      {/* Mostrar preço original apenas se for diferente e maior que zero */}
+                      {priceInfo.shouldShowRetailPrice && 
+                       priceInfo.originalPrice !== price && 
+                       priceInfo.originalPrice > 0 && (
                         <div className="text-sm text-muted-foreground line-through">
-                          Varejo: R$ {product.retail_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          Varejo: {formatCurrency(priceInfo.originalPrice)}
                         </div>
                       )}
                     </div>
@@ -108,10 +126,18 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     )}
                   </div>
                   
-                  {catalogType === 'wholesale' && product.min_wholesale_qty && (
+                  {/* Informações de atacado */}
+                  {priceInfo.isWholesaleOnly && minQuantity > 1 && (
                     <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
                       <Package className="h-4 w-4" />
-                      <span>Quantidade mínima para atacado: {product.min_wholesale_qty} unidades</span>
+                      <span>Quantidade mínima: {minQuantity} unidades</span>
+                    </div>
+                  )}
+                  
+                  {!priceInfo.isWholesaleOnly && catalogType === 'wholesale' && minQuantity > 1 && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
+                      <Package className="h-4 w-4" />
+                      <span>Quantidade mínima para atacado: {minQuantity} unidades</span>
                     </div>
                   )}
                 </div>
@@ -148,16 +174,51 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   </div>
                 )}
 
-                {/* Seletor de Variações Hierárquico */}
+                {/* Seletor de Variações */}
                 {hasVariations ? (
                   <div className="space-y-4">
-                    <HierarchicalColorSizeSelector
-                      product={product}
-                      variations={product.variations || []}
-                      onAddToCart={handleMultipleAddToCart}
-                      catalogType={catalogType}
-                      showStock={showStock}
-                    />
+                    {hasGradeVariations ? (
+                      // Usar ProductVariationSelector para variações de grade
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-base">Selecione a grade:</h4>
+                        <ProductVariationSelector
+                          variations={product.variations || []}
+                          selectedVariation={selectedVariation}
+                          onVariationChange={setSelectedVariation}
+                          basePrice={price}
+                          showPriceInCards={false}
+                          showStock={showStock}
+                        />
+                        
+                        {/* Botões para variação de grade */}
+                        <div className="space-y-3 pt-4">
+                          <Button 
+                            size="lg" 
+                            className="w-full h-12 text-base"
+                            onClick={() => selectedVariation && handleSingleVariationAddToCart(selectedVariation)}
+                            disabled={!selectedVariation}
+                          >
+                            <ShoppingCart className="h-5 w-5 mr-2" />
+                            Adicionar ao Carrinho
+                            {minQuantity > 1 && ` (${minQuantity} un.)`}
+                          </Button>
+
+                          <Button variant="outline" size="lg" className="w-full h-12">
+                            <Heart className="h-5 w-5 mr-2" />
+                            Adicionar aos Favoritos
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Usar HierarchicalColorSizeSelector para variações tradicionais
+                      <HierarchicalColorSizeSelector
+                        product={product}
+                        variations={product.variations || []}
+                        onAddToCart={handleMultipleAddToCart}
+                        catalogType={catalogType}
+                        showStock={showStock}
+                      />
+                    )}
                   </div>
                 ) : (
                   /* Botões de Ação para Produto Simples */
