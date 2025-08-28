@@ -34,10 +34,10 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
   onCartClick,
   children
 }) => {
-  const { settings } = useEditorSync(store.url_slug || store.id);
-  const storeId = store.url_slug || store.id;
+  const storeId = store?.url_slug || store?.id;
+  const { settings } = useEditorSync(storeId);
   
-  // Aplicar cores do header e botões
+  // Aplicar cores do header e botões apenas se storeId existir
   useTemplateHeaderColors(storeId);
 
   // Aplicar configurações globais do editor ao documento
@@ -62,19 +62,6 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
     }
   }, [settings]);
 
-  // Aplicar classe para estilos de botões
-  useEffect(() => {
-    // Importar estilos de botões
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = '/src/styles/template-buttons.css';
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
   const templateProps = {
     store,
     catalogType,
@@ -87,6 +74,11 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
     children,
     editorSettings: settings
   };
+
+  // Verificação de segurança para evitar renderização com dados inválidos
+  if (!store || !storeId) {
+    return <div>Carregando template...</div>;
+  }
 
   switch (templateName) {
     case 'industrial':
