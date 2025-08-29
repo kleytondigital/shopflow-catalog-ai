@@ -10,7 +10,7 @@ import { CatalogType } from '@/hooks/useCatalog';
 import { useToast } from '@/hooks/use-toast';
 import ProductDetailsModal from './ProductDetailsModal';
 import FloatingCart from './FloatingCart';
-import TemplateWrapper from './templates/TemplateWrapper';
+import TemplateWrapper from './TemplateWrapper';
 
 interface PublicCatalogProps {
   storeIdentifier: string;
@@ -25,7 +25,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Usar hook global do carrinho em vez de estado local
+  // Usar hook global do carrinho
   const { 
     items: cartItems, 
     addItem, 
@@ -38,9 +38,9 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const { 
     store, 
     products, 
-    categories, 
+    filteredProducts,
     loading, 
-    error 
+    storeError 
   } = useCatalog(storeIdentifier, catalogType);
   
   const { settings } = useCatalogSettings(storeIdentifier);
@@ -152,12 +152,12 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     );
   }
 
-  if (error) {
+  if (storeError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">Erro ao carregar o catálogo</p>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-gray-600">{storeError}</p>
         </div>
       </div>
     );
@@ -176,18 +176,58 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   return (
     <div className="min-h-screen bg-gray-50">
       <TemplateWrapper
+        templateName={settings?.template || 'modern'}
         store={store}
-        products={products}
-        categories={categories}
         catalogType={catalogType}
-        settings={settings}
-        cartItems={cartItems}
-        onAddToCart={handleAddToCart}
-        onRemoveFromCart={handleRemoveFromCart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onProductClick={handleProductClick}
-        cartItemsCount={totalItems} // Usar totalItems do hook global
-      />
+        cartItemsCount={totalItems}
+        wishlistCount={0}
+        whatsappNumber={store.phone || undefined}
+        onSearch={(query) => console.log('Search:', query)}
+        onToggleFilters={() => console.log('Toggle filters')}
+        onCartClick={() => console.log('Cart clicked')}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+          {filteredProducts.map((product) => (
+            <div
+              key={product.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleProductClick(product)}
+            >
+              <div className="aspect-square bg-gray-200 flex items-center justify-center">
+                {product.images && product.images.length > 0 ? (
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-gray-400">Sem imagem</span>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  {product.description}
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-xl font-bold text-blue-600">
+                    R$ {catalogType === 'wholesale' ? product.wholesale_price?.toFixed(2) : product.retail_price.toFixed(2)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(product);
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </TemplateWrapper>
 
       {/* Modal de Detalhes do Produto */}
       {selectedProduct && (
