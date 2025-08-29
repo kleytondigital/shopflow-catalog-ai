@@ -132,7 +132,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           )}
 
           {/* Badge de Destaque */}
-          {product.featured && (
+          {product.is_featured && (
             <Badge className="text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm">
               <Star className="h-3 w-3 mr-1" />
               Destaque

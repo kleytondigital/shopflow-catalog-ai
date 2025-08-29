@@ -111,7 +111,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
           )}
 
           {/* Badge de Destaque */}
-          {product.featured && (
+          {product.is_featured && (
             <Badge className="text-xs font-bold bg-red-600 text-white uppercase tracking-wide">
               <Star className="h-3 w-3 mr-1" />
               DESTAQUE

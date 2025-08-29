@@ -111,7 +111,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
           )}
 
           {/* Badge de Destaque */}
-          {product.featured && (
+          {product.is_featured && (
             <Badge className="text-xs bg-purple-500 text-white">
               <Star className="h-3 w-3 mr-1" />
               Destaque
