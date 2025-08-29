@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ interface HierarchicalColorSizeSelectorProps {
   onAddToCart: (selections: VariationSelection[]) => void;
   catalogType: CatalogType;
   showStock?: boolean;
+  onQuickAdd?: (variation: ProductVariation, quantity: number) => void;
 }
 
 interface VariationSelection {
@@ -41,7 +43,8 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
   variations,
   onAddToCart,
   catalogType,
-  showStock = true
+  showStock = true,
+  onQuickAdd
 }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<'color' | 'size' | 'quantity'>('color');
@@ -129,11 +132,17 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
     setStep('quantity');
   };
 
+  const handleQuickAddVariation = (variation: ProductVariation) => {
+    if (onQuickAdd) {
+      onQuickAdd(variation, minQuantity);
+    }
+  };
+
   const handleAddToSelection = () => {
     if (!selectedVariation) return;
 
     const maxStock = selectedVariation.stock || 0;
-    if (quantity > maxStock) {
+    if (showStock && quantity > maxStock) {
       toast({
         title: "Quantidade indisponível",
         description: `Estoque máximo disponível: ${maxStock} unidades`,
@@ -221,6 +230,7 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
             selectedColor={selectedColor}
             onColorSelect={handleColorSelect}
             showStock={showStock}
+            onQuickAdd={onQuickAdd ? handleQuickAddVariation : undefined}
           />
         )}
 
@@ -232,6 +242,7 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
             onBack={() => setStep('color')}
             selectedColor={selectedColor}
             showStock={showStock}
+            onQuickAdd={onQuickAdd ? handleQuickAddVariation : undefined}
           />
         )}
 
@@ -292,22 +303,22 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
                   value={quantity}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || minQuantity;
-                    const maxStock = selectedVariation.stock || 0;
+                    const maxStock = showStock ? (selectedVariation.stock || 0) : 999999;
                     setQuantity(Math.min(maxStock, Math.max(minQuantity, val)));
                   }}
                   className="w-20 text-center"
                   min={minQuantity}
-                  max={selectedVariation.stock || 0}
+                  max={showStock ? (selectedVariation.stock || 0) : undefined}
                 />
                 
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const maxStock = selectedVariation.stock || 0;
+                    const maxStock = showStock ? (selectedVariation.stock || 0) : 999999;
                     setQuantity(Math.min(maxStock, quantity + 1));
                   }}
-                  disabled={quantity >= (selectedVariation.stock || 0)}
+                  disabled={showStock && quantity >= (selectedVariation.stock || 0)}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -320,15 +331,28 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
               )}
             </div>
 
-            {/* Add to Selection Button */}
-            <Button 
-              size="lg" 
-              className="w-full"
-              onClick={handleAddToSelection}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Adicionar à Seleção
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button 
+                size="lg" 
+                className="flex-1"
+                onClick={handleAddToSelection}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Adicionar à Seleção
+              </Button>
+
+              {onQuickAdd && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleQuickAddVariation(selectedVariation)}
+                  title="Adicionar direto ao carrinho"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -370,7 +394,7 @@ const HierarchicalColorSizeSelector: React.FC<HierarchicalColorSizeSelectorProps
               <span className="font-semibold">Total: R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               <Button onClick={handleFinalize} size="lg">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Adicionar ao Carrinho
+                Finalizar Seleção
               </Button>
             </div>
           </div>

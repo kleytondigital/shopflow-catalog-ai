@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Heart, Package, Truck, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Heart, Package, Truck, Shield, ChevronDown, ChevronUp, X, Plus } from 'lucide-react';
 import { Product, ProductVariation } from '@/types/product';
 import { CatalogType } from '@/hooks/useCatalog';
 import ProductImageGallery from '@/components/products/ProductImageGallery';
@@ -11,6 +11,7 @@ import HierarchicalColorSizeSelector from './HierarchicalColorSizeSelector';
 import ProductVariationSelector from '@/components/catalog/ProductVariationSelector';
 import { useProductDisplayPrice } from '@/hooks/useProductDisplayPrice';
 import { formatCurrency } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductDetailsModalProps {
   product: Product | null;
@@ -34,9 +35,10 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   catalogType,
   showStock = true
 }) => {
-  // Sempre chamar hooks na mesma ordem, independente das condições
+  const { toast } = useToast();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
+  const [quickAddItems, setQuickAddItems] = useState<VariationSelection[]>([]);
 
   // Usar um produto "vazio" para manter consistência dos hooks
   const safeProduct = product || {
@@ -68,6 +70,26 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     v.is_grade || v.variation_type === 'grade'
   );
 
+  const handleQuickAdd = (variation: ProductVariation, quantity: number = minQuantity) => {
+    onAddToCart(product, quantity, variation);
+    
+    toast({
+      title: "Adicionado ao carrinho!",
+      description: `${quantity}x ${variation.color || ''} ${variation.size || ''} adicionado.`,
+    });
+
+    // Adicionar ao preview local
+    setQuickAddItems(prev => {
+      const existingIndex = prev.findIndex(item => item.variation.id === variation.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity += quantity;
+        return updated;
+      }
+      return [...prev, { variation, quantity }];
+    });
+  };
+
   const handleMultipleAddToCart = (selections: VariationSelection[]) => {
     if (selections.length === 0) return;
     
@@ -75,30 +97,59 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       onAddToCart(product, quantity, variation);
     });
     
+    toast({
+      title: "Produtos adicionados!",
+      description: `${selections.length} variações adicionadas ao carrinho.`,
+    });
+    
     onClose();
   };
 
   const handleSingleVariationAddToCart = (variation: ProductVariation) => {
     onAddToCart(product, minQuantity, variation);
+    
+    toast({
+      title: "Produto adicionado!",
+      description: `${minQuantity}x ${variation.color || ''} ${variation.size || ''} adicionado.`,
+    });
+    
     onClose();
   };
 
   const handleSimpleAddToCart = () => {
     onAddToCart(product, minQuantity);
+    
+    toast({
+      title: "Produto adicionado!",
+      description: `${minQuantity}x ${product.name} adicionado ao carrinho.`,
+    });
+    
     onClose();
   };
 
   const isDescriptionLong = product.description && product.description.length > 120;
+  const totalQuickAddItems = quickAddItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
-        {/* Header Fixo */}
+        {/* Header Fixo com botão de fechar */}
         <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b z-10 p-6 pb-4">
           <DialogHeader>
-            <DialogTitle className="text-xl md:text-2xl font-bold text-left pr-8 line-clamp-2">
-              {product.name}
-            </DialogTitle>
+            <div className="flex items-start justify-between gap-4">
+              <DialogTitle className="text-xl md:text-2xl font-bold text-left line-clamp-2 flex-1">
+                {product.name}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="flex-shrink-0 h-8 w-8 p-0 hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Fechar</span>
+              </Button>
+            </div>
           </DialogHeader>
         </div>
 
@@ -156,6 +207,26 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   )}
                 </div>
 
+                {/* Preview do Carrinho Rápido */}
+                {totalQuickAddItems > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-green-700">
+                        <ShoppingCart className="inline h-4 w-4 mr-1" />
+                        {totalQuickAddItems} itens adicionados
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickAddItems([])}
+                        className="text-xs"
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Descrição Compacta */}
                 {product.description && (
                   <div className="space-y-2">
@@ -201,20 +272,33 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                           onVariationChange={setSelectedVariation}
                           basePrice={price}
                           showPriceInCards={false}
+                          showStock={showStock}
                         />
                         
-                        {/* Botões para variação de grade */}
+                        {/* Botões para variação de grade com adição rápida */}
                         <div className="space-y-3 pt-4">
-                          <Button 
-                            size="lg" 
-                            className="w-full h-12 text-base"
-                            onClick={() => selectedVariation && handleSingleVariationAddToCart(selectedVariation)}
-                            disabled={!selectedVariation}
-                          >
-                            <ShoppingCart className="h-5 w-5 mr-2" />
-                            Adicionar ao Carrinho
-                            {minQuantity > 1 && ` (${minQuantity} un.)`}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="lg" 
+                              className="flex-1 h-12 text-base"
+                              onClick={() => selectedVariation && handleSingleVariationAddToCart(selectedVariation)}
+                              disabled={!selectedVariation}
+                            >
+                              <ShoppingCart className="h-5 w-5 mr-2" />
+                              Adicionar e Fechar
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              className="h-12 px-4"
+                              onClick={() => selectedVariation && handleQuickAdd(selectedVariation)}
+                              disabled={!selectedVariation}
+                              title="Adicionar sem fechar modal"
+                            >
+                              <Plus className="h-5 w-5" />
+                            </Button>
+                          </div>
 
                           <Button variant="outline" size="lg" className="w-full h-12">
                             <Heart className="h-5 w-5 mr-2" />
@@ -230,6 +314,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                         onAddToCart={handleMultipleAddToCart}
                         catalogType={catalogType}
                         showStock={showStock}
+                        onQuickAdd={handleQuickAdd}
                       />
                     )}
                   </div>

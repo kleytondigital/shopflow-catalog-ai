@@ -16,7 +16,7 @@ interface ProductVariationSelectorProps {
   loading?: boolean;
   basePrice?: number;
   showPriceInCards?: boolean;
-  showStock?: boolean; // Adicionar prop showStock
+  showStock?: boolean;
 }
 
 const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
@@ -26,7 +26,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   loading = false,
   basePrice = 0,
   showPriceInCards = false,
-  showStock = false, // Valor padrão false
+  showStock = false,
 }) => {
   if (loading) {
     return (
@@ -109,7 +109,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
               onSelect={() => onVariationChange(variation)}
               showPrice={showPriceInCards}
               basePrice={basePrice}
-              showStock={showStock} // Passar showStock para o componente
+              showStock={showStock}
             />
           ))}
         </div>
@@ -120,7 +120,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
             variation={selectedVariation}
             basePrice={basePrice}
             showAdvancedInfo={true}
-            showStock={showStock} // Passar showStock para o componente
+            showStock={showStock}
           />
         )}
       </div>
@@ -136,7 +136,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
 
   const getAvailableStock = (color?: string, size?: string) => {
     const matchingVariations = getVariationsForAttributes(color, size);
-    return matchingVariations.reduce((total, v) => total + v.stock, 0);
+    return matchingVariations.reduce((total, v) => total + (v.stock || 0), 0);
   };
 
   const handleAttributeSelection = (color?: string, size?: string) => {
@@ -146,7 +146,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
       onVariationChange(matchingVariations[0]);
     } else if (matchingVariations.length > 1) {
       // Se há múltiplas variações, escolher a primeira disponível
-      const availableVariation = matchingVariations.find((v) => v.stock > 0);
+      const availableVariation = matchingVariations.find((v) => (v.stock || 0) > 0);
       onVariationChange(availableVariation || matchingVariations[0]);
     } else {
       onVariationChange(null);
@@ -203,9 +203,9 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                       selectedVariation?.size || undefined
                     )
                   }
-                  disabled={!isAvailable}
+                  disabled={showStock && !isAvailable}
                   className={`relative h-12 ${
-                    !isAvailable ? "opacity-50" : ""
+                    showStock && !isAvailable ? "opacity-50" : ""
                   } ${
                     isSelected
                       ? "border-primary shadow-md"
@@ -214,14 +214,13 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                 >
                   <div className="flex flex-col items-center">
                     <span className="font-medium">{color}</span>
-                    {/* Mostrar disponibilidade apenas se showStock for true */}
                     {showStock && (
                       <span className="text-xs text-muted-foreground">
-                        Disponível
+                        {isAvailable ? "Disponível" : "Indisponível"}
                       </span>
                     )}
                   </div>
-                  {!isAvailable && (
+                  {showStock && !isAvailable && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-full h-px bg-destructive transform rotate-45" />
                     </div>
@@ -238,7 +237,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
         <div className="space-y-3">
           <h5 className="font-medium text-base flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Pares
+            Tamanho
           </h5>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {sizes.map((size) => {
@@ -260,9 +259,9 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                       size as string
                     )
                   }
-                  disabled={!isAvailable}
+                  disabled={showStock && !isAvailable}
                   className={`relative h-12 ${
-                    !isAvailable ? "opacity-50" : ""
+                    showStock && !isAvailable ? "opacity-50" : ""
                   } ${
                     isSelected
                       ? "border-primary shadow-md"
@@ -271,14 +270,13 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
                 >
                   <div className="flex flex-col items-center">
                     <span className="font-medium">{size}</span>
-                    {/* Mostrar disponibilidade apenas se showStock for true */}
                     {showStock && (
                       <span className="text-xs text-muted-foreground">
-                        Disponível
+                        {isAvailable ? "Disponível" : "Indisponível"}
                       </span>
                     )}
                   </div>
-                  {!isAvailable && (
+                  {showStock && !isAvailable && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-full h-px bg-destructive transform rotate-45" />
                     </div>
@@ -296,7 +294,7 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
           variation={selectedVariation}
           basePrice={basePrice}
           showAdvancedInfo={false}
-          showStock={showStock} // Passar showStock para o componente
+          showStock={showStock}
         />
       )}
     </div>

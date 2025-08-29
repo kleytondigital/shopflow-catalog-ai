@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Navigate } from "react-router-dom";
 import Header from "./Header";
@@ -82,7 +83,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       <AppSidebar />
 
       {/* Conteúdo principal com margem para não sobrepor a sidebar */}
-      <main className="pt-16 lg:pl-64 min-h-screen flex flex-col">
+      <main className="pt-16 lg:ml-64 min-h-screen flex flex-col">
         <div className="flex-1 p-4 lg:p-6 space-y-6">
           {/* Breadcrumbs */}
           {breadcrumbs.length > 0 && (

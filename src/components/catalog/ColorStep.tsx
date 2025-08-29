@@ -2,11 +2,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Plus } from 'lucide-react';
+import { ProductVariation } from '@/types/product';
 
 interface ColorGroup {
   color: string;
   totalStock: number;
-  variations: any[];
+  variations: ProductVariation[];
   isAvailable: boolean;
 }
 
@@ -15,7 +17,7 @@ interface ColorStepProps {
   selectedColor: string | null;
   onColorSelect: (color: string) => void;
   showStock?: boolean;
-  loading?: boolean;
+  onQuickAdd?: (variation: ProductVariation) => void;
 }
 
 const ColorStep: React.FC<ColorStepProps> = ({
@@ -23,65 +25,74 @@ const ColorStep: React.FC<ColorStepProps> = ({
   selectedColor,
   onColorSelect,
   showStock = true,
-  loading = false
+  onQuickAdd
 }) => {
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            Escolha a cor
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex flex-col items-center p-4 h-auto border rounded animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-gray-200 mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-16 mb-1" />
-                <div className="h-3 bg-gray-200 rounded w-12" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleQuickAdd = (e: React.MouseEvent, colorGroup: ColorGroup) => {
+    e.stopPropagation();
+    if (onQuickAdd && colorGroup.variations.length === 1) {
+      onQuickAdd(colorGroup.variations[0]);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          Escolha a cor
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {colorGroups.map((colorGroup) => (
-            <Button
-              key={colorGroup.color}
-              variant={selectedColor === colorGroup.color ? "default" : "outline"}
-              className="flex flex-col items-center p-4 h-auto"
-              onClick={() => colorGroup.isAvailable && onColorSelect(colorGroup.color)}
-              disabled={!colorGroup.isAvailable}
-            >
-              <div 
-                className="w-8 h-8 rounded-full border-2 border-background shadow-sm mb-2"
-                style={{ 
-                  backgroundColor: colorGroup.variations[0]?.hex_color || '#666',
-                  opacity: colorGroup.isAvailable ? 1 : 0.5 
-                }}
-              />
-              <span className="text-sm font-medium">{colorGroup.color}</span>
-              {showStock && (
-                <Badge variant="secondary" className="text-xs mt-1">
-                  {colorGroup.totalStock} em estoque
+      <h4 className="font-semibold text-lg">Escolha a Cor</h4>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {colorGroups.map((colorGroup) => (
+          <div
+            key={colorGroup.color}
+            className={`relative border rounded-lg p-4 cursor-pointer transition-all ${
+              selectedColor === colorGroup.color
+                ? 'border-primary bg-primary/5'
+                : colorGroup.isAvailable
+                ? 'border-border hover:border-primary/50'
+                : 'border-border opacity-50 cursor-not-allowed'
+            }`}
+            onClick={() => colorGroup.isAvailable && onColorSelect(colorGroup.color)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-full border-2 border-background shadow-sm"
+                  style={{ backgroundColor: colorGroup.variations[0]?.hex_color || '#666' }}
+                />
+                <div>
+                  <div className="font-medium">{colorGroup.color}</div>
+                  {showStock && (
+                    <div className="text-sm text-muted-foreground">
+                      {colorGroup.totalStock} disponível
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {colorGroup.variations.length} opções
                 </Badge>
-              )}
-              {!colorGroup.isAvailable && (
-                <Badge variant="destructive" className="text-xs mt-1">
-                  Indisponível
-                </Badge>
-              )}
-            </Button>
-          ))}
-        </div>
+                
+                {onQuickAdd && colorGroup.variations.length === 1 && colorGroup.isAvailable && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleQuickAdd(e, colorGroup)}
+                    className="h-8 w-8 p-0"
+                    title="Adicionar rapidamente"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {!colorGroup.isAvailable && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                <span className="text-sm font-medium text-muted-foreground">Indisponível</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

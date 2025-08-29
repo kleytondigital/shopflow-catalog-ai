@@ -2,180 +2,94 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { ProductVariation } from '@/types/product';
 
 interface SizeGroup {
   size: string;
-  variation: any;
+  variation: ProductVariation;
   isAvailable: boolean;
 }
 
-// Tipo condicional para as props
-type SizeStepProps = 
-  | {
-      // Uso com sizeGroups (HierarchicalColorSizeSelector)
-      sizeGroups: SizeGroup[];
-      selectedSize: string | null;
-      onSizeSelect: (size: string) => void;
-      onBack: () => void;
-      selectedColor: string;
-      showStock?: boolean;
-      loading?: boolean;
-      // Props alternativas não usadas neste modo
-      availableVariations?: never;
-      selectedVariation?: never;
-      onVariationSelect?: never;
-      onBackToColors?: never;
+interface SizeStepProps {
+  sizeGroups: SizeGroup[];
+  selectedSize: string | null;
+  onSizeSelect: (size: string) => void;
+  onBack: () => void;
+  selectedColor: string;
+  showStock?: boolean;
+  onQuickAdd?: (variation: ProductVariation) => void;
+}
+
+const SizeStep: React.FC<SizeStepProps> = ({
+  sizeGroups,
+  selectedSize,
+  onSizeSelect,
+  onBack,
+  selectedColor,
+  showStock = true,
+  onQuickAdd
+}) => {
+  const handleQuickAdd = (e: React.MouseEvent, sizeGroup: SizeGroup) => {
+    e.stopPropagation();
+    if (onQuickAdd && sizeGroup.isAvailable) {
+      onQuickAdd(sizeGroup.variation);
     }
-  | {
-      // Uso com availableVariations (HierarchicalVariationSelector)
-      availableVariations: ProductVariation[];
-      selectedVariation: ProductVariation | null;
-      onVariationSelect: (variation: ProductVariation) => void;
-      selectedColor: string;
-      showStock?: boolean;
-      loading?: boolean;
-      onBackToColors?: () => void;
-      // Props do outro modo não usadas
-      sizeGroups?: never;
-      selectedSize?: never;
-      onSizeSelect?: never;
-      onBack?: never;
-    };
-
-const SizeStep: React.FC<SizeStepProps> = (props) => {
-  const { selectedColor, showStock = true, loading = false } = props;
-
-  // Se estamos usando availableVariations (HierarchicalVariationSelector)
-  if ('availableVariations' in props && props.availableVariations) {
-    const { availableVariations, selectedVariation, onVariationSelect, onBackToColors } = props;
-    const backHandler = onBackToColors || (() => {});
-    
-    if (loading) {
-      return (
-        <div className="space-y-4">
-          <Button variant="ghost" size="sm" onClick={backHandler} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar às cores
-          </Button>
-          <div>
-            <h3 className="text-lg font-semibold mb-4">
-              Escolha o tamanho para {selectedColor}
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="flex flex-col items-center p-4 h-auto border rounded animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-8 mb-1" />
-                  <div className="h-3 bg-gray-200 rounded w-12" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={backHandler} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar às cores
-        </Button>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4">
-            Escolha o tamanho para {selectedColor}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {availableVariations.map((variation) => (
-              <Button
-                key={variation.id}
-                variant={selectedVariation?.id === variation.id ? "default" : "outline"}
-                className="flex flex-col items-center p-4 h-auto"
-                onClick={() => (variation.stock || 0) > 0 && onVariationSelect(variation)}
-                disabled={(variation.stock || 0) === 0}
-              >
-                <span className="text-lg font-bold mb-1">{variation.size || 'Único'}</span>
-                {showStock && (variation.stock || 0) > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {variation.stock} disponível
-                  </Badge>
-                )}
-                {(variation.stock || 0) === 0 && (
-                  <Badge variant="destructive" className="text-xs">
-                    Esgotado
-                  </Badge>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Uso normal com sizeGroups (HierarchicalColorSizeSelector)
-  const { sizeGroups, selectedSize, onSizeSelect, onBack } = props as Extract<SizeStepProps, { sizeGroups: SizeGroup[] }>;
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar às cores
-        </Button>
-        <div>
-          <h3 className="text-lg font-semibold mb-4">
-            Escolha o tamanho para {selectedColor}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex flex-col items-center p-4 h-auto border rounded animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-8 mb-1" />
-                <div className="h-3 bg-gray-200 rounded w-12" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  };
 
   return (
     <div className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Voltar às cores
-      </Button>
-
-      <div>
-        <h3 className="text-lg font-semibold mb-4">
-          Escolha o tamanho para {selectedColor}
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {(sizeGroups || []).map((sizeGroup) => (
-            <Button
-              key={sizeGroup.size}
-              variant={selectedSize === sizeGroup.size ? "default" : "outline"}
-              className="flex flex-col items-center p-4 h-auto"
-              onClick={() => sizeGroup.isAvailable && onSizeSelect(sizeGroup.size)}
-              disabled={!sizeGroup.isAvailable}
-            >
-              <span className="text-lg font-bold mb-1">{sizeGroup.size}</span>
-              {showStock && sizeGroup.isAvailable && (
-                <Badge variant="secondary" className="text-xs">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+        <h4 className="font-semibold text-lg">
+          Escolha o Tamanho - {selectedColor}
+        </h4>
+      </div>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {sizeGroups.map((sizeGroup) => (
+          <div
+            key={sizeGroup.size}
+            className={`relative border rounded-lg p-4 cursor-pointer transition-all ${
+              selectedSize === sizeGroup.size
+                ? 'border-primary bg-primary/5'
+                : sizeGroup.isAvailable
+                ? 'border-border hover:border-primary/50'
+                : 'border-border opacity-50 cursor-not-allowed'
+            }`}
+            onClick={() => sizeGroup.isAvailable && onSizeSelect(sizeGroup.size)}
+          >
+            <div className="text-center">
+              <div className="font-medium text-lg">{sizeGroup.size}</div>
+              {showStock && (
+                <div className="text-sm text-muted-foreground mt-1">
                   {sizeGroup.variation.stock} disponível
-                </Badge>
+                </div>
               )}
-              {!sizeGroup.isAvailable && (
-                <Badge variant="destructive" className="text-xs">
-                  Esgotado
-                </Badge>
+              
+              {onQuickAdd && sizeGroup.isAvailable && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => handleQuickAdd(e, sizeGroup)}
+                  className="mt-2 h-6 w-6 p-0"
+                  title="Adicionar rapidamente"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               )}
-            </Button>
-          ))}
-        </div>
+            </div>
+
+            {!sizeGroup.isAvailable && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
+                <span className="text-xs font-medium text-muted-foreground">Indisponível</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
