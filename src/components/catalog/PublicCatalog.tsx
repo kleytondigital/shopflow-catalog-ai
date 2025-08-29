@@ -1,9 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useCategories } from '@/hooks/useCategories';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useGlobalTemplateStyles } from '@/hooks/useGlobalTemplateStyles';
 import { useCatalogMode } from '@/hooks/useCatalogMode';
+import { useCart } from '@/hooks/useCart';
+import { createCartItem } from '@/utils/cartHelpers';
 import ProductGrid from './ProductGrid';
 import FloatingCart from './FloatingCart';
 import AdvancedFilterSidebar from './AdvancedFilterSidebar';
@@ -12,7 +15,7 @@ import ProductDetailsModal from './ProductDetailsModal';
 import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Product } from '@/types/product';
+import { Product, ProductVariation } from '@/types/product';
 
 interface PublicCatalogProps {
   storeSlug: string;
@@ -34,6 +37,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
   } = useCatalog(storeSlug, currentCatalogType);
 
   const { categories } = useCategories(store?.id);
+  const { addItem, totalItems } = useCart();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -41,7 +45,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [showInStock, setShowInStock] = useState(false);
-  const [cartItems, setCartItems] = useState<any[]>([]);
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -78,23 +81,35 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
     });
   }, [products, searchQuery, selectedCategory, priceRange, selectedColors, selectedSizes, showInStock, currentCatalogType]);
 
-  const handleAddToCart = (product: any, quantity: number = 1, variation?: any) => {
-    const cartItem = {
-      id: `${product.id}-${variation?.id || 'default'}`,
-      product,
-      variation,
-      quantity
-    };
-    
-    setCartItems(prev => {
-      const existingIndex = prev.findIndex(item => item.id === cartItem.id);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
-        return updated;
-      }
-      return [...prev, cartItem];
+  const handleAddToCart = (product: Product, quantity: number = 1, variation?: ProductVariation) => {
+    console.log('🛒 PUBLIC CATALOG - Adicionando ao carrinho:', {
+      productName: product.name,
+      quantity,
+      catalogType: currentCatalogType,
+      variation: variation ? {
+        color: variation.color,
+        size: variation.size,
+        id: variation.id
+      } : null
     });
+
+    try {
+      // Criar item do carrinho usando o helper
+      const cartItem = createCartItem(product, currentCatalogType, quantity, variation);
+      
+      console.log('✅ PUBLIC CATALOG - Item do carrinho criado:', {
+        id: cartItem.id,
+        price: cartItem.price,
+        quantity: cartItem.quantity
+      });
+
+      // Adicionar ao carrinho global
+      addItem(cartItem);
+      
+      console.log('🎉 PUBLIC CATALOG - Produto adicionado ao carrinho com sucesso');
+    } catch (error) {
+      console.error('❌ PUBLIC CATALOG - Erro ao adicionar produto ao carrinho:', error);
+    }
   };
 
   const handleAddToWishlist = (product: any) => {
@@ -105,25 +120,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
       }
       return [...prev, product];
     });
-  };
-
-  const handleRemoveFromCart = (itemId: string) => {
-    setCartItems(prev => prev.filter(item => item.id !== itemId));
-  };
-
-  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      handleRemoveFromCart(itemId);
-      return;
-    }
-    
-    setCartItems(prev => 
-      prev.map(item => 
-        item.id === itemId 
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
   };
 
   const clearFilters = () => {
@@ -180,7 +176,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeSlug }) => {
         templateName={settings?.template_name || 'modern'}
         store={store}
         catalogType={currentCatalogType}
-        cartItemsCount={cartItems.length}
+        cartItemsCount={totalItems}
         wishlistCount={wishlistItems.length}
         whatsappNumber={settings?.whatsapp_number}
         onSearch={setSearchQuery}
