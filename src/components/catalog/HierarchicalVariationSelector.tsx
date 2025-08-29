@@ -11,6 +11,12 @@ interface ColorGroup {
   isAvailable: boolean;
 }
 
+interface SizeGroup {
+  size: string;
+  variation: ProductVariation;
+  isAvailable: boolean;
+}
+
 interface HierarchicalVariationSelectorProps {
   variations: ProductVariation[];
   selectedVariation: ProductVariation | null;
@@ -69,16 +75,21 @@ const HierarchicalVariationSelector: React.FC<HierarchicalVariationSelectorProps
     });
   }, [variations]);
 
-  // Obter variações disponíveis para a cor selecionada
-  const availableVariationsForColor = useMemo(() => {
+  // Obter variações disponíveis para a cor selecionada como SizeGroups
+  const availableSizeGroups = useMemo<SizeGroup[]>(() => {
     if (!selectedColor || !variations) return [];
     
     return variations
       .filter(v => v.color === selectedColor)
+      .map(variation => ({
+        size: variation.size || 'Único',
+        variation,
+        isAvailable: (variation.stock || 0) > 0,
+      }))
       .sort((a, b) => {
         // Ordenar por disponibilidade primeiro, depois por tamanho
-        if (a.stock > 0 && b.stock === 0) return -1;
-        if (a.stock === 0 && b.stock > 0) return 1;
+        if (a.isAvailable && !b.isAvailable) return -1;
+        if (!a.isAvailable && b.isAvailable) return 1;
         
         // Ordenação numérica de tamanhos se possível
         const sizeA = parseFloat(a.size || '0') || 999;
@@ -97,8 +108,11 @@ const HierarchicalVariationSelector: React.FC<HierarchicalVariationSelectorProps
     }
   };
 
-  const handleVariationSelect = (variation: ProductVariation) => {
-    onVariationChange(variation);
+  const handleSizeSelect = (size: string) => {
+    const sizeGroup = availableSizeGroups.find(sg => sg.size === size);
+    if (sizeGroup) {
+      onVariationChange(sizeGroup.variation);
+    }
   };
 
   const handleBackToColors = () => {
@@ -114,7 +128,6 @@ const HierarchicalVariationSelector: React.FC<HierarchicalVariationSelectorProps
         colorGroups={[]}
         selectedColor={null}
         onColorSelect={() => {}}
-        loading={loading}
       />
     );
   }
@@ -126,15 +139,20 @@ const HierarchicalVariationSelector: React.FC<HierarchicalVariationSelectorProps
     // Se há apenas uma cor ou nenhuma cor, pular para seleção de tamanho
     const singleColor = uniqueColors[0] || 'Padrão';
     
+    const singleColorSizeGroups: SizeGroup[] = variations.map(variation => ({
+      size: variation.size || 'Único',
+      variation,
+      isAvailable: (variation.stock || 0) > 0,
+    }));
+
     return (
       <div className="space-y-4">
         <SizeStep
+          sizeGroups={singleColorSizeGroups}
+          selectedSize={selectedVariation?.size || null}
+          onSizeSelect={handleSizeSelect}
+          onBack={() => {}} // Não há volta se só tem uma cor
           selectedColor={singleColor}
-          availableVariations={variations}
-          selectedVariation={selectedVariation}
-          onVariationSelect={handleVariationSelect}
-          onBackToColors={() => {}} // Não há volta se só tem uma cor
-          loading={loading}
         />
       </div>
     );
@@ -147,19 +165,17 @@ const HierarchicalVariationSelector: React.FC<HierarchicalVariationSelectorProps
         colorGroups={colorGroups}
         selectedColor={selectedColor}
         onColorSelect={handleColorSelect}
-        loading={loading}
       />
     );
   }
 
   return (
     <SizeStep
+      sizeGroups={availableSizeGroups}
+      selectedSize={selectedVariation?.size || null}
+      onSizeSelect={handleSizeSelect}
+      onBack={handleBackToColors}
       selectedColor={selectedColor}
-      availableVariations={availableVariationsForColor}
-      selectedVariation={selectedVariation}
-      onVariationSelect={handleVariationSelect}
-      onBackToColors={handleBackToColors}
-      loading={loading}
     />
   );
 };
