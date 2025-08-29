@@ -1,9 +1,12 @@
+
 import React from "react";
 import { Product } from "@/types/product";
+import { ProductVariation } from "@/types/variation";
 import { CatalogType } from "@/hooks/useCatalog";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { useCart } from "@/hooks/useCart";
 import { PriceModelType } from "@/types/price-models";
+import { Badge } from "@/components/ui/badge";
+import ProductCardCarousel from "../ProductCardCarousel";
 
 export interface CatalogSettingsData {
   colors?: {
@@ -30,7 +33,7 @@ export interface CatalogSettingsData {
 interface MinimalTemplateProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
@@ -75,59 +78,38 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
     },
   };
 
-  const { addItem } = useCart();
   const { priceModel, loading } = useStorePriceModel(product.store_id);
   const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  // Verificar se produto tem variações
+  const hasVariations = product.variations && product.variations.length > 0;
+  const isAvailable = product.stock > 0;
+
+  // Função para lidar com clique no botão de adicionar
+  const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (loading) return;
-
-    // Debug log para verificar store_id
-    console.log("🔍 MinimalTemplate - Debug store_id:", {
-      productStoreId: product.store_id,
-      productName: product.name,
-      modelKey,
-    });
-
-    let qty = 1;
-    let price = product.retail_price;
-    let isWholesale = false;
-
-    if (modelKey === "wholesale_only") {
-      qty = product.min_wholesale_qty || 1;
-      price = product.wholesale_price || product.retail_price;
-      isWholesale = true;
+    
+    if (hasVariations) {
+      onQuickView(product);
+    } else {
+      let qty = 1;
+      if (modelKey === "wholesale_only" && product.min_wholesale_qty) {
+        qty = product.min_wholesale_qty;
+      }
+      onAddToCart(product, qty);
     }
-
-    const cartItem = {
-      id: `${product.id}-default`,
-      product: {
-        id: product.id,
-        name: product.name,
-        retail_price: product.retail_price,
-        wholesale_price: product.wholesale_price,
-        min_wholesale_qty: product.min_wholesale_qty,
-        image_url: product.image_url,
-        store_id: product.store_id, // Garantir que store_id seja incluído
-        stock: product.stock,
-        allow_negative_stock: product.allow_negative_stock ?? false,
-        price_model: modelKey,
-      },
-      quantity: qty,
-      price,
-      originalPrice: price,
-      catalogType,
-      isWholesalePrice: isWholesale,
-    };
-
-    console.log("🔍 MinimalTemplate - CartItem criado:", {
-      cartItemStoreId: cartItem.product.store_id,
-      cartItemProduct: cartItem.product,
-    });
-
-    addItem(cartItem, modelKey);
   };
+
+  // Obter preço baseado no catalogType
+  const getPrice = () => {
+    if (catalogType === 'wholesale' && product.wholesale_price) {
+      return product.wholesale_price;
+    }
+    return product.retail_price;
+  };
+
+  const price = getPrice();
 
   return (
     <div
@@ -137,18 +119,33 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
       }}
     >
       {/* Product Image */}
-      <div className="relative aspect-square bg-gray-100">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <span>Sem imagem</span>
-          </div>
-        )}
+      <div className="relative">
+        <ProductCardCarousel
+          productId={product.id || ''}
+          productName={product.name}
+          onImageClick={() => onQuickView(product)}
+          autoPlay={true}
+          autoPlayInterval={4000}
+        />
+
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.is_featured && (
+            <Badge className="bg-black text-white text-xs">
+              Destaque
+            </Badge>
+          )}
+          {!isAvailable && (
+            <Badge className="bg-gray-500 text-white text-xs">
+              Esgotado
+            </Badge>
+          )}
+          {hasVariations && (
+            <Badge className="bg-gray-700 text-white text-xs">
+              Variações
+            </Badge>
+          )}
+        </div>
 
         {/* Minimal overlay */}
         {settings.productCard.showQuickView && (
@@ -184,7 +181,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
           <div className="mb-3">
             {loading ? (
               <div className="text-gray-500">Carregando preço...</div>
-            ) : modelKey === "wholesale_only" ? (
+            ) : (
               <>
                 <span
                   className="font-light"
@@ -193,9 +190,9 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
                     fontSize: settings.global.fontSize.large,
                   }}
                 >
-                  R$ {product.wholesale_price?.toFixed(2)}
+                  R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
-                {product.min_wholesale_qty && (
+                {catalogType === 'wholesale' && product.min_wholesale_qty && (
                   <div
                     className="text-xs text-gray-500 mt-1"
                     style={{ fontSize: settings.global.fontSize.small }}
@@ -204,16 +201,6 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
                   </div>
                 )}
               </>
-            ) : (
-              <span
-                className="font-light"
-                style={{
-                  color: settings.colors.text,
-                  fontSize: settings.global.fontSize.large,
-                }}
-              >
-                R$ {product.retail_price?.toFixed(2)}
-              </span>
             )}
           </div>
         )}
@@ -234,20 +221,19 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
         <div className="flex gap-3 items-center">
           {settings.productCard.showAddToCart && (
             <button
-              onClick={handleAddToCart}
-              disabled={product.stock <= 0 || loading}
+              onClick={handleAddToCartClick}
+              disabled={!isAvailable || loading}
               className="text-xs uppercase tracking-wider underline hover:no-underline transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                color:
-                  product.stock > 0 && !loading
-                    ? settings.colors.text
-                    : "#9CA3AF",
+                color: isAvailable && !loading ? settings.colors.text : "#9CA3AF",
                 fontSize: settings.global.fontSize.small,
               }}
             >
               {loading
                 ? "Carregando..."
-                : product.stock > 0
+                : hasVariations
+                ? "Ver Opções"
+                : isAvailable
                 ? "Adicionar"
                 : "Indisponível"}
             </button>

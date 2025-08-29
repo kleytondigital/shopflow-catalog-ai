@@ -1,10 +1,12 @@
 
 import React from "react";
 import { Product } from "@/types/product";
+import { ProductVariation } from "@/types/variation";
 import { CatalogType } from "@/hooks/useCatalog";
 import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { useCart } from "@/hooks/useCart";
 import { PriceModelType } from "@/types/price-models";
+import { Badge } from "@/components/ui/badge";
+import ProductCardCarousel from "../ProductCardCarousel";
 
 export interface CatalogSettingsData {
   colors?: {
@@ -31,7 +33,7 @@ export interface CatalogSettingsData {
 interface IndustrialTemplateProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
@@ -76,41 +78,38 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
     },
   };
 
-  const { addItem } = useCart();
   const { priceModel, loading } = useStorePriceModel(product.store_id);
   const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  // Verificar se produto tem variações
+  const hasVariations = product.variations && product.variations.length > 0;
+  const isAvailable = product.stock > 0;
+
+  // Função para lidar com clique no botão de adicionar
+  const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (loading) return;
     
-    let qty = 1;
-    let price = product.retail_price;
-    let isWholesale = false;
-
-    if (modelKey === "wholesale_only") {
-      qty = product.min_wholesale_qty || 1;
-      price = product.wholesale_price || product.retail_price;
-      isWholesale = true;
+    if (hasVariations) {
+      onQuickView(product);
+    } else {
+      let qty = 1;
+      if (modelKey === "wholesale_only" && product.min_wholesale_qty) {
+        qty = product.min_wholesale_qty;
+      }
+      onAddToCart(product, qty);
     }
-
-    addItem(
-      {
-        id: `${product.id}-default`,
-        product: { 
-          ...product, 
-          price_model: modelKey,
-          allow_negative_stock: product.allow_negative_stock ?? false
-        },
-        quantity: qty,
-        price,
-        originalPrice: price,
-        catalogType,
-        isWholesalePrice: isWholesale,
-      },
-      modelKey
-    );
   };
+
+  // Obter preço baseado no catalogType
+  const getPrice = () => {
+    if (catalogType === 'wholesale' && product.wholesale_price) {
+      return product.wholesale_price;
+    }
+    return product.retail_price;
+  };
+
+  const price = getPrice();
 
   return (
     <div
@@ -120,18 +119,33 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
       }}
     >
       {/* Product Image */}
-      <div className="relative aspect-square bg-gray-800">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500">
-            <span>Sem imagem</span>
-          </div>
-        )}
+      <div className="relative">
+        <ProductCardCarousel
+          productId={product.id || ''}
+          productName={product.name}
+          onImageClick={() => onQuickView(product)}
+          autoPlay={true}
+          autoPlayInterval={4000}
+        />
+
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.is_featured && (
+            <Badge className="bg-yellow-500 text-white text-xs">
+              DESTAQUE
+            </Badge>
+          )}
+          {!isAvailable && (
+            <Badge className="bg-red-600 text-white text-xs">
+              ESGOTADO
+            </Badge>
+          )}
+          {hasVariations && (
+            <Badge className="bg-gray-600 text-white text-xs">
+              VARIAÇÕES
+            </Badge>
+          )}
+        </div>
 
         {/* Industrial overlay */}
         {settings.productCard.showQuickView && (
@@ -167,7 +181,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
           <div className="mb-3">
             {loading ? (
               <div className="text-gray-400">Carregando preço...</div>
-            ) : modelKey === "wholesale_only" ? (
+            ) : (
               <>
                 <span
                   className="text-orange-400 font-bold"
@@ -175,9 +189,9 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
                     fontSize: settings.global.fontSize.large,
                   }}
                 >
-                  R$ {product.wholesale_price?.toFixed(2)}
+                  R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
-                {product.min_wholesale_qty && (
+                {catalogType === 'wholesale' && product.min_wholesale_qty && (
                   <div
                     className="text-xs text-gray-500 mt-1"
                     style={{ fontSize: settings.global.fontSize.small }}
@@ -186,15 +200,6 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
                   </div>
                 )}
               </>
-            ) : (
-              <span
-                className="text-orange-400 font-bold"
-                style={{
-                  fontSize: settings.global.fontSize.large,
-                }}
-              >
-                R$ {product.retail_price?.toFixed(2)}
-              </span>
             )}
           </div>
         )}
@@ -215,14 +220,11 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         <div className="flex gap-2">
           {settings.productCard.showAddToCart && (
             <button
-              onClick={handleAddToCart}
-              disabled={product.stock <= 0 || loading}
+              onClick={handleAddToCartClick}
+              disabled={!isAvailable || loading}
               className="flex-1 px-3 py-2 text-white text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed border"
               style={{
-                backgroundColor:
-                  product.stock > 0 && !loading
-                    ? settings.colors.secondary
-                    : "#4B5563",
+                backgroundColor: isAvailable && !loading ? settings.colors.secondary : "#4B5563",
                 borderColor: settings.colors.secondary,
                 borderRadius: `${settings.global.borderRadius}px`,
                 fontSize: settings.global.fontSize.small,
@@ -230,7 +232,9 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
             >
               {loading
                 ? "CARREGANDO..."
-                : product.stock > 0
+                : hasVariations
+                ? "VER OPÇÕES"
+                : isAvailable
                 ? "ADICIONAR"
                 : "SEM ESTOQUE"}
             </button>

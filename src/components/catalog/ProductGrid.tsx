@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Product } from '@/hooks/useProducts';
+import { ProductVariation } from '@/types/variation';
 import { CatalogType } from '@/hooks/useCatalog';
 import { useMobileLayout } from '@/hooks/useMobileLayout';
 import TemplateSelector from './TemplateSelector';
@@ -11,6 +12,7 @@ interface ProductGridProps {
   loading: boolean;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   wishlist: Product[];
   storeIdentifier: string;
   templateName: string;
@@ -24,6 +26,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   loading,
   onAddToWishlist,
   onQuickView,
+  onAddToCart,
   wishlist,
   storeIdentifier,
   templateName,
@@ -31,10 +34,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   showStock
 }) => {
   const { getMobileGridClasses } = useMobileLayout(storeIdentifier);
-
-  const handleAddToCart = (product: Product) => {
-    console.log('🛒 PRODUCT GRID - Produto adicionado ao carrinho:', product);
-  };
 
   if (loading) {
     return (
@@ -70,7 +69,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
           product={product}
           catalogType={catalogType}
           templateName={templateName}
-          onAddToCart={handleAddToCart}
+          onAddToCart={onAddToCart}
           onAddToWishlist={onAddToWishlist}
           onQuickView={onQuickView}
           isInWishlist={wishlist.some(item => item.id === product.id)}

@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/hooks/useProducts';
+import { ProductVariation } from '@/types/variation';
 import { CatalogType } from '@/hooks/useCatalog';
 import { useEditorSync } from '@/hooks/useEditorSync';
 import ModernTemplate from './templates/ModernTemplate';
@@ -14,7 +15,7 @@ interface TemplateSelectorProps {
   product: Product;
   catalogType: CatalogType;
   templateName: string;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
