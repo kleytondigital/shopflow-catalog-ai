@@ -104,7 +104,7 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
       }
     }
 
-    return "Seg - Sex: 9h às 18h (Almoço: 12h - 13h)";
+    return "Seg - Sex: 9h às 18h ";
   };
 
   // Gerar horários detalhados da semana
