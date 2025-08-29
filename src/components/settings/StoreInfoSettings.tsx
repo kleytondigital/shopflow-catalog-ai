@@ -176,6 +176,9 @@ const StoreInfoSettings: React.FC = () => {
 
   useEffect(() => {
     if (currentStore && catalogSettings) {
+      // Carregar horários salvos do banco de dados se existirem
+      const savedBusinessHours = catalogSettings.business_hours || defaultBusinessHours;
+      
       form.reset({
         storeName: currentStore.name || "",
         description: currentStore.description || "",
@@ -183,7 +186,7 @@ const StoreInfoSettings: React.FC = () => {
         phone: currentStore.phone || "",
         email: currentStore.email || "",
         cnpj: currentStore.cnpj || "",
-        businessHours: defaultBusinessHours,
+        businessHours: savedBusinessHours,
       });
     }
   }, [currentStore, catalogSettings, form]);
@@ -191,6 +194,7 @@ const StoreInfoSettings: React.FC = () => {
   const onSubmit = async (data: StoreInfoFormData) => {
     try {
       setSaving(true);
+      
       // Atualização dos dados da loja
       const storeUpdates = {
         name: data.storeName,
@@ -200,27 +204,33 @@ const StoreInfoSettings: React.FC = () => {
         email: data.email,
         cnpj: data.cnpj,
       };
+      
       const { error: updateError } = await updateCurrentStore(storeUpdates);
       if (updateError) throw new Error(updateError);
 
-      // Atualização das redes sociais
+      // NOVO: Salvar horários de funcionamento nas configurações do catálogo
       if (catalogSettings) {
         const catalogUpdates = {
-          facebook_url: null,
-          instagram_url: null,
-          twitter_url: null,
+          business_hours: data.businessHours,
+          // Manter outras configurações existentes
+          facebook_url: catalogSettings.facebook_url || null,
+          instagram_url: catalogSettings.instagram_url || null,
+          twitter_url: catalogSettings.twitter_url || null,
         };
-        const { error: catalogError } = await updateCatalogSettings(
-          catalogUpdates
-        );
-        if (catalogError) throw new Error("Erro ao atualizar redes sociais");
+        
+        const { error: catalogError } = await updateCatalogSettings(catalogUpdates);
+        if (catalogError) {
+          console.error("Erro ao salvar horários:", catalogError);
+          throw new Error("Erro ao salvar horários de funcionamento");
+        }
       }
 
       toast({
         title: "✅ Dados salvos!",
-        description: "As informações da loja foram atualizadas com sucesso.",
+        description: "As informações da loja e horários de funcionamento foram atualizados com sucesso.",
       });
     } catch (error: any) {
+      console.error("Erro ao salvar configurações:", error);
       toast({
         title: "Erro ao salvar",
         description:
