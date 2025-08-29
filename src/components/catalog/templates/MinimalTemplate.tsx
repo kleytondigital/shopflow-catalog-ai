@@ -1,34 +1,14 @@
 
-import React from "react";
-import { Product } from "@/types/product";
-import { ProductVariation } from "@/types/variation";
-import { CatalogType } from "@/hooks/useCatalog";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { PriceModelType } from "@/types/price-models";
-import { Badge } from "@/components/ui/badge";
-import ProductCardCarousel from "../ProductCardCarousel";
-
-export interface CatalogSettingsData {
-  colors?: {
-    primary: string;
-    secondary: string;
-    surface: string;
-    text: string;
-  };
-  global?: {
-    borderRadius: number;
-    fontSize: {
-      small: string;
-      medium: string;
-      large: string;
-    };
-  };
-  productCard?: {
-    showQuickView: boolean;
-    showAddToCart: boolean;
-    productCardStyle: string;
-  };
-}
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Heart, ShoppingCart, Eye, Zap } from 'lucide-react';
+import { Product } from '@/hooks/useProducts';
+import { ProductVariation } from '@/types/variation';
+import { CatalogType } from '@/hooks/useCatalog';
+import { formatPrice } from '@/utils/formatPrice';
+import { CatalogSettingsData } from './ModernTemplate';
 
 interface MinimalTemplateProps {
   product: Product;
@@ -51,210 +31,175 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings = {},
+  editorSettings
 }) => {
-  const settings = {
-    colors: {
-      primary: "#000000",
-      secondary: "#FFFFFF",
-      surface: "#F9FAFB",
-      text: "#111827",
-      ...editorSettings.colors,
-    },
-    global: {
-      borderRadius: 0,
-      fontSize: {
-        small: "12px",
-        medium: "14px",
-        large: "16px",
-      },
-      ...editorSettings.global,
-    },
-    productCard: {
-      showQuickView: true,
-      showAddToCart: true,
-      productCardStyle: "minimal",
-      ...editorSettings.productCard,
-    },
-  };
+  const [imageError, setImageError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const { priceModel, loading } = useStorePriceModel(product.store_id);
-  const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
-
-  // Verificar se produto tem variações
   const hasVariations = product.variations && product.variations.length > 0;
-  const isAvailable = product.stock > 0;
+  const currentPrice = catalogType === 'wholesale' && product.wholesale_price 
+    ? product.wholesale_price 
+    : product.retail_price;
 
-  // Função para lidar com clique no botão de adicionar
-  const handleAddToCartClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (loading) return;
-    
+  // Verificar estoque disponível
+  const totalStock = hasVariations 
+    ? (product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0)
+    : (product.stock || 0);
+
+  const isOutOfStock = totalStock === 0 && !product.allow_negative_stock;
+
+  const handleAddToCart = () => {
+    console.log('🛒 MINIMAL TEMPLATE - Tentativa de adicionar ao carrinho:', {
+      productId: product.id,
+      hasVariations,
+      stock: totalStock
+    });
+
     if (hasVariations) {
       onQuickView(product);
     } else {
-      let qty = 1;
-      if (modelKey === "wholesale_only" && product.min_wholesale_qty) {
-        qty = product.min_wholesale_qty;
-      }
-      onAddToCart(product, qty);
+      onAddToCart(product, 1);
     }
   };
-
-  // Obter preço baseado no catalogType
-  const getPrice = () => {
-    if (catalogType === 'wholesale' && product.wholesale_price) {
-      return product.wholesale_price;
-    }
-    return product.retail_price;
-  };
-
-  const price = getPrice();
 
   return (
-    <div
-      className="bg-white hover:bg-gray-50 transition-colors duration-200 overflow-hidden border-b border-gray-200"
-      style={{
-        borderRadius: `${settings.global.borderRadius}px`,
-      }}
+    <Card 
+      className="group overflow-hidden border border-gray-200 hover:border-gray-300 transition-all duration-200 bg-white"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Product Image */}
-      <div className="relative">
-        <ProductCardCarousel
-          productId={product.id || ''}
-          productName={product.name}
-          onImageClick={() => onQuickView(product)}
-          autoPlay={true}
-          autoPlayInterval={4000}
+      <div className="relative aspect-square overflow-hidden">
+        {/* Imagem do Produto */}
+        <img
+          src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
+          alt={product.name}
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
         />
 
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {product.is_featured && (
-            <Badge className="bg-black text-white text-xs">
-              Destaque
-            </Badge>
-          )}
-          {!isAvailable && (
-            <Badge className="bg-gray-500 text-white text-xs">
+        {/* Badges Informativos - Top */}
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1 z-10">
+          {isOutOfStock && (
+            <Badge variant="destructive" className="text-xs">
               Esgotado
             </Badge>
           )}
-          {hasVariations && (
-            <Badge className="bg-gray-700 text-white text-xs">
-              Variações
+          {catalogType === 'wholesale' && (
+            <Badge className="text-xs bg-gray-800 text-white">
+              Atacado
+            </Badge>
+          )}
+          {product.wholesale_price && catalogType === 'retail' && (
+            <Badge variant="outline" className="text-xs bg-white/90 border-gray-300">
+              <Zap className="h-3 w-3 mr-1" />
+              Atacado
             </Badge>
           )}
         </div>
 
-        {/* Minimal overlay */}
-        {settings.productCard.showQuickView && (
-          <div className="absolute inset-0 bg-white bg-opacity-0 hover:bg-opacity-80 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-            <button
-              onClick={() => onQuickView(product)}
-              className="text-black text-xs uppercase tracking-wider underline hover:no-underline transition-all"
-              style={{
-                fontSize: settings.global.fontSize.small,
-              }}
-            >
-              Ver detalhes
-            </button>
-          </div>
-        )}
+        {/* Badges de Ação - Bottom Right */}
+        <div className={`absolute bottom-3 right-3 flex gap-1 transition-opacity duration-200 ${
+          isHovered ? 'opacity-100' : 'opacity-0'
+        }`}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-sm backdrop-blur-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToWishlist(product);
+            }}
+          >
+            <Heart 
+              className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+            />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-sm backdrop-blur-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickView(product);
+            }}
+          >
+            <Eye className="h-4 w-4 text-gray-600" />
+          </Button>
+        </div>
       </div>
 
-      {/* Product Info */}
-      <div className="p-4">
-        {/* Product Name */}
-        <h3
-          className="font-light text-gray-900 mb-2 line-clamp-2"
-          style={{
-            color: settings.colors.text,
-            fontSize: settings.global.fontSize.medium,
-          }}
-        >
-          {product.name}
-        </h3>
+      <CardContent className="p-4 space-y-3">
+        {/* Nome e Categoria */}
+        <div>
+          <h3 className="font-medium text-gray-900 line-clamp-1">
+            {product.name}
+          </h3>
+          {product.category && (
+            <p className="text-sm text-gray-500 mt-1">{product.category}</p>
+          )}
+        </div>
 
-        {/* Price */}
+        {/* Preços */}
         {showPrices && (
-          <div className="mb-3">
-            {loading ? (
-              <div className="text-gray-500">Carregando preço...</div>
-            ) : (
-              <>
-                <span
-                  className="font-light"
-                  style={{
-                    color: settings.colors.text,
-                    fontSize: settings.global.fontSize.large,
-                  }}
-                >
-                  R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-                {catalogType === 'wholesale' && product.min_wholesale_qty && (
-                  <div
-                    className="text-xs text-gray-500 mt-1"
-                    style={{ fontSize: settings.global.fontSize.small }}
-                  >
-                    Mín. {product.min_wholesale_qty} unidades
-                  </div>
-                )}
-              </>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-gray-900">
+                {formatPrice(currentPrice)}
+              </span>
+            </div>
+            
+            {catalogType === 'retail' && product.wholesale_price && (
+              <p className="text-sm text-green-600 mt-1">
+                Atacado: {formatPrice(product.wholesale_price)}
+              </p>
             )}
           </div>
         )}
 
-        {/* Stock */}
+        {/* Estoque */}
         {showStock && (
-          <div
-            className="text-xs text-gray-500 mb-3"
-            style={{ fontSize: settings.global.fontSize.small }}
-          >
-            {product.stock > 0
-              ? `${product.stock} disponíveis`
-              : "Indisponível"}
+          <div className="text-sm text-gray-600">
+            Estoque: <span className={`font-medium ${
+              totalStock > 10 ? 'text-green-600' : 
+              totalStock > 0 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {totalStock}
+            </span>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex gap-3 items-center">
-          {settings.productCard.showAddToCart && (
-            <button
-              onClick={handleAddToCartClick}
-              disabled={!isAvailable || loading}
-              className="text-xs uppercase tracking-wider underline hover:no-underline transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                color: isAvailable && !loading ? settings.colors.text : "#9CA3AF",
-                fontSize: settings.global.fontSize.small,
-              }}
-            >
-              {loading
-                ? "Carregando..."
-                : hasVariations
-                ? "Ver Opções"
-                : isAvailable
-                ? "Adicionar"
-                : "Indisponível"}
-            </button>
-          )}
+        {/* Variações */}
+        {hasVariations && (
+          <div className="flex flex-wrap gap-1">
+            {product.variations?.slice(0, 3).map((variation, index) => (
+              <span
+                key={variation.id || index}
+                className="text-xs px-2 py-1 bg-gray-50 border rounded text-gray-700"
+              >
+                {variation.color || variation.size || 'Variação'}
+              </span>
+            ))}
+            {product.variations && product.variations.length > 3 && (
+              <span className="text-xs text-gray-500">
+                +{product.variations.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
-          <button
-            onClick={() => onAddToWishlist(product)}
-            className="text-xs uppercase tracking-wider underline hover:no-underline transition-all"
-            style={{
-              fontSize: settings.global.fontSize.small,
-            }}
-          >
-            <span
-              className={`${isInWishlist ? "text-black" : "text-gray-400"}`}
-            >
-              ♥
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
+        {/* Botão */}
+        <Button
+          className="w-full"
+          variant={isOutOfStock ? "outline" : "default"}
+          onClick={handleAddToCart}
+          disabled={isOutOfStock}
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          {hasVariations ? 'Ver Opções' : isOutOfStock ? 'Esgotado' : 'Adicionar'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

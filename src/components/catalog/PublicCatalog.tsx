@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useCatalogSettings } from '@/hooks/useCatalogSettings';
 import { useCart } from '@/hooks/useCart';
@@ -8,10 +8,14 @@ import { Product } from '@/hooks/useProducts';
 import { ProductVariation } from '@/types/variation';
 import { CatalogType } from '@/hooks/useCatalog';
 import { useToast } from '@/hooks/use-toast';
+import { useMobileLayout } from '@/hooks/useMobileLayout';
 import ProductDetailsModal from './ProductDetailsModal';
 import FloatingCart from './FloatingCart';
 import TemplateWrapper from './TemplateWrapper';
 import ProductGrid from './ProductGrid';
+import FilterSidebar, { FilterState } from './FilterSidebar';
+import { Button } from '@/components/ui/button';
+import { Filter, Search } from 'lucide-react';
 
 interface PublicCatalogProps {
   storeIdentifier: string;
@@ -23,9 +27,22 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   catalogType 
 }) => {
   const { toast } = useToast();
+  const { isMobile } = useMobileLayout(storeIdentifier);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    categories: [],
+    priceRange: [0, 1000],
+    inStock: false,
+    variations: {
+      sizes: [],
+      colors: [],
+      materials: []
+    }
+  });
   
   // Usar hook global do carrinho
   const { 
@@ -42,10 +59,52 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     products, 
     filteredProducts,
     loading, 
-    storeError 
+    storeError,
+    searchProducts,
+    filterProducts
   } = useCatalog(storeIdentifier, catalogType);
   
   const { settings } = useCatalogSettings(storeIdentifier);
+
+  // Aplicar filtros quando mudarem
+  const applyFilters = useCallback(() => {
+    console.log('🎯 PUBLIC CATALOG - Aplicando filtros:', { searchTerm, activeFilters });
+
+    // Primeiro aplicar busca por texto se houver
+    if (searchTerm.trim()) {
+      searchProducts(searchTerm);
+    } else {
+      // Se não há busca, usar todos os produtos
+      filterProducts({
+        category: activeFilters.categories.length === 1 ? activeFilters.categories[0] : undefined,
+        minPrice: activeFilters.priceRange[0],
+        maxPrice: activeFilters.priceRange[1],
+        inStock: activeFilters.inStock,
+        variations: {
+          sizes: activeFilters.variations.sizes.length ? activeFilters.variations.sizes : undefined,
+          colors: activeFilters.variations.colors.length ? activeFilters.variations.colors : undefined,
+          materials: activeFilters.variations.materials.length ? activeFilters.variations.materials : undefined,
+        }
+      });
+    }
+  }, [searchTerm, activeFilters, searchProducts, filterProducts]);
+
+  // Aplicar filtros quando mudarem
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  // Handler para mudanças de filtro
+  const handleFilterChange = useCallback((filters: FilterState) => {
+    console.log('🔧 PUBLIC CATALOG - Filtros alterados:', filters);
+    setActiveFilters(filters);
+  }, []);
+
+  // Handler para busca
+  const handleSearchChange = useCallback((query: string) => {
+    console.log('🔍 PUBLIC CATALOG - Busca alterada:', query);
+    setSearchTerm(query);
+  }, []);
 
   // Função para adicionar ao carrinho usando o hook global
   const handleAddToCart = (
@@ -165,6 +224,11 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     );
   }
 
+  const showPriceFilter = settings?.allow_price_filter ?? true;
+  const showCategoryFilter = settings?.allow_categories_filter ?? true;
+  const showPrices = settings?.show_prices ?? true;
+  const showStock = settings?.show_stock ?? true;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <TemplateWrapper
@@ -174,23 +238,66 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
         cartItemsCount={totalItems}
         wishlistCount={wishlist.length}
         whatsappNumber={store.phone || undefined}
-        onSearch={(query) => console.log('Search:', query)}
-        onToggleFilters={() => console.log('Toggle filters')}
+        onSearch={handleSearchChange}
+        onToggleFilters={() => setShowFilters(true)}
         onCartClick={() => console.log('Cart clicked')}
       >
-        <ProductGrid
-          products={filteredProducts}
-          catalogType={catalogType}
-          loading={loading}
-          onAddToWishlist={handleAddToWishlist}
-          onQuickView={handleProductClick}
-          wishlist={wishlist}
-          storeIdentifier={storeIdentifier}
-          templateName={settings?.template_name || 'modern'}
-          showPrices={true}
-          showStock={true}
-          onAddToCart={handleAddToCart}
-        />
+        <div className="flex gap-6">
+          {/* Filtros Desktop */}
+          {!isMobile && (showCategoryFilter || showPriceFilter) && (
+            <div className="w-80 flex-shrink-0">
+              <FilterSidebar
+                onFilter={handleFilterChange}
+                isOpen={true}
+                onClose={() => {}}
+                products={products}
+                isMobile={false}
+              />
+            </div>
+          )}
+
+          {/* Grid de Produtos */}
+          <div className="flex-1">
+            {/* Botão de Filtros Mobile */}
+            {isMobile && (showCategoryFilter || showPriceFilter) && (
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(true)}
+                  className="w-full"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filtros
+                </Button>
+              </div>
+            )}
+
+            <ProductGrid
+              products={filteredProducts}
+              catalogType={catalogType}
+              loading={loading}
+              onAddToWishlist={handleAddToWishlist}
+              onQuickView={handleProductClick}
+              wishlist={wishlist}
+              storeIdentifier={storeIdentifier}
+              templateName={settings?.template_name || 'modern'}
+              showPrices={showPrices}
+              showStock={showStock}
+              onAddToCart={handleAddToCart}
+            />
+          </div>
+        </div>
+
+        {/* Filtros Mobile */}
+        {isMobile && (showCategoryFilter || showPriceFilter) && (
+          <FilterSidebar
+            onFilter={handleFilterChange}
+            isOpen={showFilters}
+            onClose={() => setShowFilters(false)}
+            products={products}
+            isMobile={true}
+          />
+        )}
       </TemplateWrapper>
 
       {/* Modal de Detalhes do Produto */}

@@ -1,14 +1,13 @@
 
-import React from "react";
-import { Product } from "@/types/product";
-import { ProductVariation } from "@/types/variation";
-import { CatalogType } from "@/hooks/useCatalog";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
-import { PriceModelType } from "@/types/price-models";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Heart, Eye } from "lucide-react";
-import ProductCardCarousel from "../ProductCardCarousel";
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Heart, ShoppingCart, Eye, Zap, Star } from 'lucide-react';
+import { Product } from '@/hooks/useProducts';
+import { ProductVariation } from '@/types/variation';
+import { CatalogType } from '@/hooks/useCatalog';
+import { formatPrice } from '@/utils/formatPrice';
 
 export interface CatalogSettingsData {
   colors?: {
@@ -53,210 +52,201 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings = {},
+  editorSettings
 }) => {
-  const settings = {
-    colors: {
-      primary: "#0057FF",
-      secondary: "#FF6F00",
-      surface: "#FFFFFF",
-      text: "#1E293B",
-      ...editorSettings.colors,
-    },
-    global: {
-      borderRadius: 8,
-      fontSize: {
-        small: "14px",
-        medium: "16px",
-        large: "20px",
-      },
-      ...editorSettings.global,
-    },
-    productCard: {
-      showQuickView: true,
-      showAddToCart: true,
-      productCardStyle: "default",
-      ...editorSettings.productCard,
-    },
-  };
+  const [imageError, setImageError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const { priceModel, loading } = useStorePriceModel(product.store_id);
-  const modelKey = priceModel?.price_model || ("retail_only" as PriceModelType);
-
-  // Verificar se produto tem variações
   const hasVariations = product.variations && product.variations.length > 0;
-  const isAvailable = product.stock > 0;
+  const currentPrice = catalogType === 'wholesale' && product.wholesale_price 
+    ? product.wholesale_price 
+    : product.retail_price;
 
-  // Função para lidar com clique no botão de adicionar
-  const handleAddToCartClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (loading) return;
-    
+  // Verificar estoque disponível
+  const totalStock = hasVariations 
+    ? (product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0)
+    : (product.stock || 0);
+
+  const isOutOfStock = totalStock === 0 && !product.allow_negative_stock;
+
+  const handleAddToCart = () => {
+    console.log('🛒 ELEGANT TEMPLATE - Tentativa de adicionar ao carrinho:', {
+      productId: product.id,
+      hasVariations,
+      stock: totalStock
+    });
+
     if (hasVariations) {
       onQuickView(product);
     } else {
-      let qty = 1;
-      if (modelKey === "wholesale_only" && product.min_wholesale_qty) {
-        qty = product.min_wholesale_qty;
-      }
-      onAddToCart(product, qty);
+      onAddToCart(product, 1);
     }
   };
-
-  // Obter preço baseado no catalogType
-  const getPrice = () => {
-    if (catalogType === 'wholesale' && product.wholesale_price) {
-      return product.wholesale_price;
-    }
-    return product.retail_price;
-  };
-
-  const price = getPrice();
 
   return (
-    <div
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border group"
-      style={{
-        borderRadius: `${settings.global.borderRadius}px`,
-        borderColor: settings.colors.surface,
-      }}
+    <Card 
+      className="group overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-500 bg-white rounded-xl"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Product Image */}
-      <div className="relative">
-        <ProductCardCarousel
-          productId={product.id || ''}
-          productName={product.name}
-          onImageClick={() => onQuickView(product)}
-          autoPlay={true}
-          autoPlayInterval={4000}
+      <div className="relative aspect-square overflow-hidden rounded-t-xl">
+        {/* Imagem do Produto */}
+        <img
+          src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+          onError={() => setImageError(true)}
         />
 
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {product.is_featured && (
-            <Badge className="bg-yellow-500 text-white text-xs">
-              Destaque
-            </Badge>
-          )}
-          {!isAvailable && (
-            <Badge variant="destructive" className="text-xs">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+
+        {/* Badges Informativos - Top */}
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
+          {isOutOfStock && (
+            <Badge variant="destructive" className="text-xs font-medium shadow-lg">
               Esgotado
             </Badge>
           )}
-          {hasVariations && (
-            <Badge variant="secondary" className="text-xs">
-              Variações
+          {catalogType === 'wholesale' && (
+            <Badge className="text-xs font-medium bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg">
+              <Star className="h-3 w-3 mr-1" />
+              Atacado
+            </Badge>
+          )}
+          {product.wholesale_price && catalogType === 'retail' && (
+            <Badge className="text-xs font-medium bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg">
+              <Zap className="h-3 w-3 mr-1" />
+              Atacado Disponível
             </Badge>
           )}
         </div>
 
-        {/* Quick actions overlay */}
-        {settings.productCard.showQuickView && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-            <div className="flex gap-2">
-              <button
-                onClick={() => onQuickView(product)}
-                className="bg-white text-gray-900 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-gray-50 transition-colors"
-                style={{
-                  borderRadius: `${settings.global.borderRadius * 2}px`,
-                  fontSize: settings.global.fontSize.small,
-                }}
-              >
-                Visualizar
-              </button>
-              <button
-                onClick={() => onAddToWishlist(product)}
-                className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
-                style={{
-                  borderRadius: `${settings.global.borderRadius * 2}px`,
-                }}
-              >
-                <Heart 
-                  className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} 
-                />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Badges de Ação - Bottom Right */}
+        <div className={`absolute bottom-4 right-4 flex gap-2 transition-all duration-300 ${
+          isHovered ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
+        }`}>
+          <Button
+            size="sm"
+            className="h-10 w-10 p-0 bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm border-0 rounded-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToWishlist(product);
+            }}
+          >
+            <Heart 
+              className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} 
+            />
+          </Button>
+
+          <Button
+            size="sm"
+            className="h-10 w-10 p-0 bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm border-0 rounded-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickView(product);
+            }}
+          >
+            <Eye className="h-4 w-4 text-gray-700" />
+          </Button>
+        </div>
       </div>
 
-      {/* Product Info */}
-      <div className="p-4">
-        {/* Product Name */}
-        <h3
-          className="font-medium text-gray-900 mb-2 line-clamp-2"
-          style={{
-            color: settings.colors.text,
-            fontSize: settings.global.fontSize.medium,
-          }}
-        >
-          {product.name}
-        </h3>
+      <CardContent className="p-6">
+        {/* Nome e Categoria */}
+        <div className="space-y-2 mb-4">
+          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 group-hover:text-amber-600 transition-colors duration-300">
+            {product.name}
+          </h3>
+          {product.category && (
+            <p className="text-sm text-gray-500 uppercase tracking-wide font-medium">{product.category}</p>
+          )}
+        </div>
 
-        {/* Price */}
+        {/* Preços */}
         {showPrices && (
-          <div className="mb-3">
-            {loading ? (
-              <div className="text-gray-500">Carregando preço...</div>
-            ) : (
-              <>
-                <span
-                  className="text-lg font-bold"
-                  style={{
-                    color: settings.colors.primary,
-                    fontSize: settings.global.fontSize.large,
-                  }}
-                >
-                  R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="mb-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-bold text-gray-900">
+                {formatPrice(currentPrice)}
+              </span>
+              {catalogType === 'wholesale' && product.min_wholesale_qty && (
+                <span className="text-xs text-amber-600 font-medium">
+                  Mín: {product.min_wholesale_qty}
                 </span>
-                {catalogType === 'wholesale' && product.min_wholesale_qty && (
-                  <div
-                    className="text-xs text-gray-500 mt-1"
-                    style={{ fontSize: settings.global.fontSize.small }}
-                  >
-                    Mín. {product.min_wholesale_qty} unidades
-                  </div>
-                )}
-              </>
+              )}
+            </div>
+            
+            {catalogType === 'retail' && product.wholesale_price && (
+              <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                <p className="text-sm text-green-700 font-semibold">
+                  Atacado: {formatPrice(product.wholesale_price)}
+                  {product.min_wholesale_qty && (
+                    <span className="text-green-600 ml-1">(mín: {product.min_wholesale_qty})</span>
+                  )}
+                </p>
+              </div>
             )}
           </div>
         )}
 
-        {/* Stock */}
+        {/* Estoque */}
         {showStock && (
-          <div
-            className="text-xs text-gray-500 mb-3"
-            style={{ fontSize: settings.global.fontSize.small }}
-          >
-            {product.stock > 0
-              ? `${product.stock} em estoque`
-              : "Fora de estoque"}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 font-medium">Disponível:</span>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  totalStock > 10 ? 'bg-green-500' : 
+                  totalStock > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                }`} />
+                <span className={`font-semibold ${
+                  totalStock > 10 ? 'text-green-600' : 
+                  totalStock > 0 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {totalStock} unidades
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Actions */}
-        {settings.productCard.showAddToCart && (
-          <Button
-            onClick={handleAddToCartClick}
-            disabled={!isAvailable || loading}
-            className="w-full text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: isAvailable && !loading ? settings.colors.primary : "#9CA3AF",
-              borderRadius: `${settings.global.borderRadius}px`,
-              fontSize: settings.global.fontSize.small,
-            }}
-          >
-            {loading
-              ? "Carregando..."
-              : hasVariations
-              ? "Ver Opções"
-              : isAvailable
-              ? "Adicionar"
-              : "Sem estoque"}
-          </Button>
+        {/* Variações Preview */}
+        {hasVariations && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 font-medium mb-2">Opções disponíveis:</p>
+            <div className="flex flex-wrap gap-2">
+              {product.variations?.slice(0, 4).map((variation, index) => (
+                <div
+                  key={variation.id || index}
+                  className="text-xs px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-50 border border-gray-200 rounded-full text-gray-700 font-medium"
+                >
+                  {variation.color && variation.size 
+                    ? `${variation.color} • ${variation.size}`
+                    : variation.color || variation.size || 'Variação'
+                  }
+                </div>
+              ))}
+              {product.variations && product.variations.length > 4 && (
+                <div className="text-xs px-3 py-1 bg-amber-100 border border-amber-200 rounded-full text-amber-700 font-medium">
+                  +{product.variations.length - 4} opções
+                </div>
+              )}
+            </div>
+          </div>
         )}
-      </div>
-    </div>
+
+        {/* Botão de Ação Principal */}
+        <Button
+          className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-300"
+          onClick={handleAddToCart}
+          disabled={isOutOfStock}
+        >
+          <ShoppingCart className="h-5 w-5 mr-3" />
+          {hasVariations ? 'Ver Todas as Opções' : isOutOfStock ? 'Produto Esgotado' : 'Adicionar ao Carrinho'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 
