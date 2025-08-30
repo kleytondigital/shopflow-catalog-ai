@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +56,7 @@ export interface CatalogSettingsData {
   footer_enabled?: boolean;
   footer_custom_text?: string;
   footer_copyright_text?: string;
+  business_hours_display_type?: "summary" | "detailed";
   // Propriedades adicionais para compatibilidade com templates
   colors?: {
     primary: string;
@@ -219,6 +219,8 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           footer_enabled: (data as any).footer_enabled,
           footer_custom_text: (data as any).footer_custom_text,
           footer_copyright_text: (data as any).footer_copyright_text,
+          business_hours_display_type:
+            (data as any).business_hours_display_type || "summary",
         });
       } else {
         console.log(
@@ -284,5 +286,6 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
     error,
     updateSettings,
     refetch: fetchSettings,
+    storeId: resolvedStoreId,
   };
 };

@@ -28,6 +28,7 @@ import ShareableLinks from "./ShareableLinks";
 import CatalogModeSettings from "./CatalogModeSettings";
 import MobileLayoutSettings from "./MobileLayoutSettings";
 import FooterSettings from "./FooterSettings";
+import OrderBumpSettings from "./OrderBumpSettings";
 import {
   Palette,
   Eye,
@@ -43,6 +44,7 @@ import {
   ArrowLeftRight,
   Search,
   Globe,
+  Gift,
 } from "lucide-react";
 
 const CatalogSettings = () => {
@@ -225,7 +227,7 @@ const CatalogSettings = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="template" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
           <TabsTrigger value="template" className="flex items-center gap-1">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Template</span>
@@ -249,6 +251,10 @@ const CatalogSettings = () => {
           <TabsTrigger value="footer" className="flex items-center gap-1">
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">Footer</span>
+          </TabsTrigger>
+          <TabsTrigger value="orderbumps" className="flex items-center gap-1">
+            <Gift className="h-4 w-4" />
+            <span className="hidden sm:inline">Order Bumps</span>
           </TabsTrigger>
           <TabsTrigger value="sharing" className="flex items-center gap-1">
             <Share2 className="h-4 w-4" />
@@ -506,6 +512,10 @@ const CatalogSettings = () => {
 
         <TabsContent value="sharing" className="space-y-6">
           <ShareableLinks />
+        </TabsContent>
+
+        <TabsContent value="orderbumps" className="space-y-6">
+          <OrderBumpSettings />
         </TabsContent>
 
         <TabsContent value="seo" className="space-y-6">

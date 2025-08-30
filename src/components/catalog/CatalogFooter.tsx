@@ -69,42 +69,78 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
     ) {
       const hours = storeSettings.business_hours as any;
 
-      // Verificar se tem horários configurados para segunda-feira
-      if (hours.monday && !hours.monday.closed) {
-        let timeText = `Seg - Sex: ${hours.monday.open} às ${hours.monday.close}`;
+      // Função para formatar horário de um dia
+      const formatDayHours = (dayHours: any) => {
+        if (!dayHours || dayHours.closed) return null;
 
-        // Adicionar horário de almoço se configurado
+        let timeText = `${dayHours.open} às ${dayHours.close}`;
+
         if (
-          hours.monday.hasLunchBreak &&
-          hours.monday.lunchStart &&
-          hours.monday.lunchEnd
+          dayHours.hasLunchBreak &&
+          dayHours.lunchStart &&
+          dayHours.lunchEnd
         ) {
-          timeText += ` (Almoço: ${hours.monday.lunchStart} - ${hours.monday.lunchEnd})`;
+          timeText += ` (Almoço: ${dayHours.lunchStart} - ${dayHours.lunchEnd})`;
         }
 
         return timeText;
-      }
+      };
 
-      // Verificar outros dias se segunda não estiver configurada
+      // Verificar se os dias de semana (seg-sex) têm horários similares
       const weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-      for (const day of weekdays) {
-        if (hours[day] && !hours[day].closed) {
-          let timeText = `Seg - Sex: ${hours[day].open} às ${hours[day].close}`;
+      const weekdayHours = weekdays.map((day) => hours[day]).filter(Boolean);
 
-          if (
-            hours[day].hasLunchBreak &&
-            hours[day].lunchStart &&
-            hours[day].lunchEnd
-          ) {
-            timeText += ` (Almoço: ${hours[day].lunchStart} - ${hours[day].lunchEnd})`;
+      if (weekdayHours.length > 0) {
+        // Usar o horário de segunda como referência
+        const mondayHours = formatDayHours(hours.monday);
+
+        if (mondayHours) {
+          let result = `Seg - Sex: ${mondayHours}`;
+
+          // Adicionar sábado se configurado
+          const saturdayHours = formatDayHours(hours.saturday);
+          if (saturdayHours) {
+            result += ` • Sáb: ${saturdayHours}`;
           }
 
-          return timeText;
+          // Adicionar domingo se configurado (apenas se estiver aberto)
+          const sundayHours = formatDayHours(hours.sunday);
+          if (sundayHours) {
+            result += ` • Dom: ${sundayHours}`;
+          }
+
+          return result;
+        }
+      }
+
+      // Fallback: procurar qualquer dia com horário configurado
+      const allDays = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+      for (const day of allDays) {
+        const dayHours = formatDayHours(hours[day]);
+        if (dayHours) {
+          const dayLabels: Record<string, string> = {
+            monday: "Segunda",
+            tuesday: "Terça",
+            wednesday: "Quarta",
+            thursday: "Quinta",
+            friday: "Sexta",
+            saturday: "Sábado",
+            sunday: "Domingo",
+          };
+          return `${dayLabels[day]}: ${dayHours}`;
         }
       }
     }
 
-    return "Seg - Sex: 9h às 19h - Sab: 9h às 13h";
+    return "Seg - Sex: 9h às 18h • Sáb: 9h às 13h";
   };
 
   // Gerar horários detalhados da semana
@@ -129,28 +165,31 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
 
     const weekDays = Object.keys(dayLabels) as Array<keyof typeof dayLabels>;
 
-    return weekDays
-      .map((day) => {
-        const dayHours = hours[day];
-        if (!dayHours) return null;
+    // Função para formatar um dia específico
+    const formatDetailedDay = (day: keyof typeof dayLabels) => {
+      const dayHours = hours[day];
+      if (!dayHours) return null;
 
-        if (dayHours.closed) {
-          return `${dayLabels[day]}: Fechado`;
-        }
+      if (dayHours.closed) {
+        return `${dayLabels[day]}: Fechado`;
+      }
 
-        let timeText = `${dayLabels[day]}: ${dayHours.open} - ${dayHours.close}`;
+      let timeText = `${dayLabels[day]}: ${dayHours.open} - ${dayHours.close}`;
 
-        if (
-          dayHours.hasLunchBreak &&
-          dayHours.lunchStart &&
-          dayHours.lunchEnd
-        ) {
-          timeText += ` (Almoço: ${dayHours.lunchStart} - ${dayHours.lunchEnd})`;
-        }
+      if (dayHours.hasLunchBreak && dayHours.lunchStart && dayHours.lunchEnd) {
+        timeText += ` (Almoço: ${dayHours.lunchStart} - ${dayHours.lunchEnd})`;
+      }
 
-        return timeText;
-      })
-      .filter(Boolean);
+      return timeText;
+    };
+
+    // Gerar apenas os dias que têm configuração
+    const detailedHours = weekDays
+      .map(formatDetailedDay)
+      .filter(Boolean) as string[];
+
+    // Se não há horários configurados, retornar null para não mostrar a seção
+    return detailedHours.length > 0 ? detailedHours : null;
   };
 
   // Verificar se há redes sociais configuradas
@@ -420,31 +459,86 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
                   </div>
                 )}
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <Clock size={16} className="text-gray-400" />
-                    <span className="text-gray-300 text-sm font-medium">
-                      {getBusinessHours()}
-                    </span>
-                  </div>
+                  <div className="flex items-start gap-3">
+                    <Clock size={16} className="text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      {storeSettings?.business_hours_display_type ===
+                      "detailed" ? (
+                        <div className="space-y-1">
+                          <span className="text-gray-300 text-sm font-medium block mb-2">
+                            Horários de Funcionamento
+                          </span>
+                          {/* Horários detalhados com destaque para o dia atual */}
+                          {getDetailedBusinessHours() && (
+                            <div className="space-y-1">
+                              {getDetailedBusinessHours()?.map(
+                                (hour, index) => {
+                                  const today = new Date().getDay(); // 0 = domingo, 1 = segunda, etc.
+                                  const dayNames = [
+                                    "sunday",
+                                    "monday",
+                                    "tuesday",
+                                    "wednesday",
+                                    "thursday",
+                                    "friday",
+                                    "saturday",
+                                  ];
+                                  const currentDay = dayNames[today];
+                                  const hourDayName = hour
+                                    ?.toLowerCase()
+                                    .split(":")[0]
+                                    .trim();
 
-                  {/* Horários detalhados */}
-                  {getDetailedBusinessHours() && (
-                    <div className="ml-7 space-y-1">
-                      {getDetailedBusinessHours()
-                        ?.slice(0, 3)
-                        .map((hour, index) => (
-                          <div key={index} className="text-xs text-gray-400">
-                            {hour}
-                          </div>
-                        ))}
-                      {getDetailedBusinessHours() &&
-                        getDetailedBusinessHours()!.length > 3 && (
-                          <div className="text-xs text-gray-500">
-                            +{getDetailedBusinessHours()!.length - 3} dias
-                          </div>
-                        )}
+                                  // Mapear nomes em português para inglês
+                                  const dayMap: Record<string, string> = {
+                                    segunda: "monday",
+                                    terça: "tuesday",
+                                    quarta: "wednesday",
+                                    quinta: "thursday",
+                                    sexta: "friday",
+                                    sábado: "saturday",
+                                    domingo: "sunday",
+                                  };
+
+                                  const hourDay = dayMap[hourDayName] || "";
+                                  const isToday = hourDay === currentDay;
+
+                                  return (
+                                    <div
+                                      key={index}
+                                      className={`text-xs leading-relaxed flex items-center gap-2 ${
+                                        isToday
+                                          ? "text-yellow-400 font-medium"
+                                          : hour?.includes("Fechado")
+                                          ? "text-gray-500"
+                                          : "text-gray-400"
+                                      }`}
+                                    >
+                                      {isToday && (
+                                        <span className="text-yellow-400">
+                                          ●
+                                        </span>
+                                      )}
+                                      {hour}
+                                      {isToday && (
+                                        <span className="text-xs text-yellow-400">
+                                          (hoje)
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 text-sm font-medium block leading-relaxed">
+                          {getBusinessHours()}
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -553,24 +647,6 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
             )}
           </div>
         </div>
-
-        {/* WhatsApp Floating Button - Posicionado embaixo */}
-        {whatsappNumber && (
-          <Button
-            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg z-40 transition-all duration-300 transform hover:scale-105"
-            onClick={() => {
-              const message = `Olá! Estou interessado nos produtos da ${store.name}`;
-              window.open(
-                `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-                  message
-                )}`,
-                "_blank"
-              );
-            }}
-          >
-            <Phone className="w-6 h-6" />
-          </Button>
-        )}
       </footer>
 
       {/* Modal para exibir conteúdo das páginas */}

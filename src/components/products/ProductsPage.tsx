@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Plus, Upload, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import BulkImportModal from "./BulkImportModal";
 import BulkStockModal from "./BulkStockModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
+import ProductList from "./ProductList";
 
 const ProductsPage = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -13,7 +13,7 @@ const ProductsPage = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const { profile } = useAuth();
   const currentStore = profile?.store_id;
-  
+
   const { products, fetchProducts } = useProducts();
 
   return (
@@ -66,6 +66,14 @@ const ProductsPage = () => {
         onClose={() => setIsBulkStockModalOpen(false)}
         products={products}
         onStockUpdated={fetchProducts}
+      />
+
+      {/* Lista de produtos */}
+      <ProductList
+        products={products}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onGenerateDescription={() => {}}
       />
     </div>
   );

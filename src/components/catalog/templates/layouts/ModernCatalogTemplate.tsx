@@ -1,5 +1,6 @@
 import React from "react";
 import { Store, CatalogType } from "@/hooks/useCatalog";
+import { CatalogSettingsData } from "@/hooks/useCatalogSettings";
 import CatalogHeader from "@/components/catalog/CatalogHeader";
 import CatalogFooter from "@/components/catalog/CatalogFooter";
 import HeroBanner from "@/components/catalog/banners/HeroBanner";
@@ -12,6 +13,7 @@ interface ModernCatalogTemplateProps {
   cartItemsCount: number;
   wishlistCount: number;
   whatsappNumber?: string;
+  storeSettings?: CatalogSettingsData | null;
   onSearch: (query: string) => void;
   onToggleFilters: () => void;
   onCartClick: () => void;
@@ -25,6 +27,7 @@ const ModernCatalogTemplate: React.FC<ModernCatalogTemplateProps> = ({
   cartItemsCount,
   wishlistCount,
   whatsappNumber,
+  storeSettings,
   onSearch,
   onToggleFilters,
   onCartClick,
@@ -63,7 +66,11 @@ const ModernCatalogTemplate: React.FC<ModernCatalogTemplateProps> = ({
         </div>
       </div>
 
-      <CatalogFooter store={store} />
+      <CatalogFooter
+        store={store}
+        whatsappNumber={whatsappNumber}
+        storeSettings={storeSettings}
+      />
     </div>
   );
 };

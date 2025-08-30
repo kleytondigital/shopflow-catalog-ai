@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import {
@@ -23,7 +24,15 @@ import {
   Youtube,
   Video,
   Globe,
+  Clock,
 } from "lucide-react";
+import FooterPreview from "./FooterPreview";
+import FooterPageEditor from "./FooterPageEditor";
+import {
+  DEFAULT_CONTENT,
+  loadDefaultContent,
+  getContentDescription,
+} from "./FooterDefaultContent";
 
 const FooterSettings: React.FC = () => {
   const { settings, updateSettings } = useCatalogSettings();
@@ -34,6 +43,9 @@ const FooterSettings: React.FC = () => {
   const [footerEnabled, setFooterEnabled] = useState(true);
   const [footerCustomText, setFooterCustomText] = useState("");
   const [footerCopyrightText, setFooterCopyrightText] = useState("");
+  const [businessHoursDisplayType, setBusinessHoursDisplayType] = useState<
+    "summary" | "detailed"
+  >("summary");
 
   // Redes sociais
   const [facebookUrl, setFacebookUrl] = useState("");
@@ -56,6 +68,9 @@ const FooterSettings: React.FC = () => {
       setFooterEnabled(settings.footer_enabled !== false);
       setFooterCustomText(settings.footer_custom_text || "");
       setFooterCopyrightText(settings.footer_copyright_text || "");
+      setBusinessHoursDisplayType(
+        (settings as any).business_hours_display_type || "summary"
+      );
 
       setFacebookUrl(settings.facebook_url || "");
       setInstagramUrl(settings.instagram_url || "");
@@ -80,6 +95,7 @@ const FooterSettings: React.FC = () => {
         footer_enabled: footerEnabled,
         footer_custom_text: footerCustomText,
         footer_copyright_text: footerCopyrightText,
+        business_hours_display_type: businessHoursDisplayType,
         facebook_url: facebookUrl,
         instagram_url: instagramUrl,
         twitter_url: twitterUrl,
@@ -91,7 +107,7 @@ const FooterSettings: React.FC = () => {
         returns_policy_content: returnsPolicy,
         delivery_policy_content: deliveryPolicy,
         about_us_content: aboutUs,
-      });
+      } as any);
 
       toast({
         title: "Configurações salvas!",
@@ -110,6 +126,71 @@ const FooterSettings: React.FC = () => {
     }
   };
 
+  const loadDefaultContentHandler = (type: string) => {
+    const defaultContent = (DEFAULT_CONTENT as any)[type];
+    if (defaultContent) {
+      // Aplicar o conteúdo ao estado correto baseado no tipo
+      switch (type) {
+        case "privacy_policy":
+          setPrivacyPolicy(defaultContent);
+          break;
+        case "terms_of_use":
+          setTermsOfUse(defaultContent);
+          break;
+        case "returns_policy":
+          setReturnsPolicy(defaultContent);
+          break;
+        case "delivery_policy":
+          setDeliveryPolicy(defaultContent);
+          break;
+        case "about_us":
+          setAboutUs(defaultContent);
+          break;
+      }
+
+      toast({
+        title: "Conteúdo padrão carregado",
+        description: `Conteúdo padrão para "${getContentDescription(
+          type
+        )}" carregado.`,
+      });
+    } else {
+      toast({
+        title: "Erro ao carregar conteúdo padrão",
+        description: `Não foi possível encontrar conteúdo padrão para "${getContentDescription(
+          type
+        )}".`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearContent = (type: string) => {
+    // Limpar apenas o conteúdo específico baseado no tipo
+    switch (type) {
+      case "privacy_policy":
+        setPrivacyPolicy("");
+        break;
+      case "terms_of_use":
+        setTermsOfUse("");
+        break;
+      case "returns_policy":
+        setReturnsPolicy("");
+        break;
+      case "delivery_policy":
+        setDeliveryPolicy("");
+        break;
+      case "about_us":
+        setAboutUs("");
+        break;
+    }
+
+    toast({
+      title: "Conteúdo limpo",
+      description: `Conteúdo para "${getContentDescription(type)}" foi limpo.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -125,26 +206,67 @@ const FooterSettings: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-6">
-            <div className="space-y-0.5">
-              <Label>Exibir Footer</Label>
-              <p className="text-sm text-muted-foreground">
-                Ativar ou desativar a exibição do footer no catálogo
-              </p>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Exibir Footer</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ativar ou desativar a exibição do footer no catálogo
+                </p>
+              </div>
+              <Switch
+                checked={footerEnabled}
+                onCheckedChange={setFooterEnabled}
+              />
             </div>
-            <Switch
-              checked={footerEnabled}
-              onCheckedChange={setFooterEnabled}
-            />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <Label>Exibição dos Horários de Funcionamento</Label>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Escolha como os horários de funcionamento serão exibidos no
+                footer
+              </p>
+              <RadioGroup
+                value={businessHoursDisplayType}
+                onValueChange={(value: "summary" | "detailed") =>
+                  setBusinessHoursDisplayType(value)
+                }
+                className="grid grid-cols-1 gap-3"
+              >
+                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                  <RadioGroupItem value="summary" id="summary" />
+                  <Label htmlFor="summary" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Resumido</div>
+                    <div className="text-sm text-muted-foreground">
+                      Mostra um resumo compacto (ex: Seg-Sex: 9h às 18h • Sáb:
+                      9h às 13h)
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                  <RadioGroupItem value="detailed" id="detailed" />
+                  <Label htmlFor="detailed" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Detalhado</div>
+                    <div className="text-sm text-muted-foreground">
+                      Mostra todos os dias configurados destacando o dia atual
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="settings">Configurações</TabsTrigger>
           <TabsTrigger value="social">Redes Sociais</TabsTrigger>
           <TabsTrigger value="pages">Páginas</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="settings" className="space-y-6">
@@ -282,72 +404,72 @@ const FooterSettings: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="pages" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Páginas de Informações</CardTitle>
-              <CardDescription>
-                Configure o conteúdo das páginas que aparecerão no footer
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="privacy-policy">Política de Privacidade</Label>
-                <Textarea
-                  id="privacy-policy"
-                  placeholder="Digite o conteúdo da política de privacidade..."
-                  value={privacyPolicy}
-                  onChange={(e) => setPrivacyPolicy(e.target.value)}
-                  rows={4}
-                />
-              </div>
+          <div className="space-y-6">
+            <FooterPageEditor
+              title="Política de Privacidade"
+              type="privacy_policy"
+              content={privacyPolicy}
+              onContentChange={setPrivacyPolicy}
+              onLoadDefault={() => loadDefaultContentHandler("privacy_policy")}
+              onClear={() => clearContent("privacy_policy")}
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="terms-of-use">Termos de Uso</Label>
-                <Textarea
-                  id="terms-of-use"
-                  placeholder="Digite o conteúdo dos termos de uso..."
-                  value={termsOfUse}
-                  onChange={(e) => setTermsOfUse(e.target.value)}
-                  rows={4}
-                />
-              </div>
+            <FooterPageEditor
+              title="Termos de Uso"
+              type="terms_of_use"
+              content={termsOfUse}
+              onContentChange={setTermsOfUse}
+              onLoadDefault={() => loadDefaultContentHandler("terms_of_use")}
+              onClear={() => clearContent("terms_of_use")}
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="returns-policy">
-                  Política de Trocas e Devoluções
-                </Label>
-                <Textarea
-                  id="returns-policy"
-                  placeholder="Digite o conteúdo da política de trocas..."
-                  value={returnsPolicy}
-                  onChange={(e) => setReturnsPolicy(e.target.value)}
-                  rows={4}
-                />
-              </div>
+            <FooterPageEditor
+              title="Política de Trocas e Devoluções"
+              type="returns_policy"
+              content={returnsPolicy}
+              onContentChange={setReturnsPolicy}
+              onLoadDefault={() => loadDefaultContentHandler("returns_policy")}
+              onClear={() => clearContent("returns_policy")}
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="delivery-policy">Política de Entrega</Label>
-                <Textarea
-                  id="delivery-policy"
-                  placeholder="Digite o conteúdo da política de entrega..."
-                  value={deliveryPolicy}
-                  onChange={(e) => setDeliveryPolicy(e.target.value)}
-                  rows={4}
-                />
-              </div>
+            <FooterPageEditor
+              title="Política de Entrega"
+              type="delivery_policy"
+              content={deliveryPolicy}
+              onContentChange={setDeliveryPolicy}
+              onLoadDefault={() => loadDefaultContentHandler("delivery_policy")}
+              onClear={() => clearContent("delivery_policy")}
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="about-us">Sobre Nós</Label>
-                <Textarea
-                  id="about-us"
-                  placeholder="Digite o conteúdo sobre nós..."
-                  value={aboutUs}
-                  onChange={(e) => setAboutUs(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
+            <FooterPageEditor
+              title="Sobre Nós"
+              type="about_us"
+              content={aboutUs}
+              onContentChange={setAboutUs}
+              onLoadDefault={() => loadDefaultContentHandler("about_us")}
+              onClear={() => clearContent("about_us")}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview" className="space-y-6">
+          <FooterPreview
+            footerEnabled={footerEnabled}
+            footerCustomText={footerCustomText}
+            footerCopyrightText={footerCopyrightText}
+            businessHoursDisplayType={businessHoursDisplayType}
+            facebookUrl={facebookUrl}
+            instagramUrl={instagramUrl}
+            twitterUrl={twitterUrl}
+            linkedinUrl={linkedinUrl}
+            youtubeUrl={youtubeUrl}
+            tiktokUrl={tiktokUrl}
+            privacyPolicy={privacyPolicy}
+            termsOfUse={termsOfUse}
+            returnsPolicy={returnsPolicy}
+            deliveryPolicy={deliveryPolicy}
+            aboutUs={aboutUs}
+          />
         </TabsContent>
       </Tabs>
 

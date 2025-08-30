@@ -1,10 +1,10 @@
-
-import React from 'react';
-import { Store, CatalogType } from '@/hooks/useCatalog';
-import CatalogHeader from '@/components/catalog/CatalogHeader';
-import CatalogFooter from '@/components/catalog/CatalogFooter';
-import HeroBanner from '@/components/catalog/banners/HeroBanner';
-import PromotionalBanner from '@/components/catalog/banners/PromotionalBanner';
+import React from "react";
+import { Store, CatalogType } from "@/hooks/useCatalog";
+import { CatalogSettingsData } from "@/hooks/useCatalogSettings";
+import CatalogHeader from "@/components/catalog/CatalogHeader";
+import CatalogFooter from "@/components/catalog/CatalogFooter";
+import HeroBanner from "@/components/catalog/banners/HeroBanner";
+import PromotionalBanner from "@/components/catalog/banners/PromotionalBanner";
 
 interface IndustrialCatalogTemplateProps {
   store: Store;
@@ -12,6 +12,7 @@ interface IndustrialCatalogTemplateProps {
   cartItemsCount: number;
   wishlistCount: number;
   whatsappNumber?: string;
+  storeSettings?: CatalogSettingsData | null;
   onSearch: (query: string) => void;
   onToggleFilters: () => void;
   onCartClick: () => void;
@@ -25,11 +26,12 @@ const IndustrialCatalogTemplate: React.FC<IndustrialCatalogTemplateProps> = ({
   cartItemsCount,
   wishlistCount,
   whatsappNumber,
+  storeSettings,
   onSearch,
   onToggleFilters,
   onCartClick,
   children,
-  editorSettings
+  editorSettings,
 }) => {
   const storeId = store.url_slug || store.id;
 
@@ -53,12 +55,14 @@ const IndustrialCatalogTemplate: React.FC<IndustrialCatalogTemplateProps> = ({
         <PromotionalBanner storeId={storeId} className="mb-6" />
 
         {/* Main Content */}
-        <main className="bg-white rounded-lg shadow-sm p-6">
-          {children}
-        </main>
+        <main className="bg-white rounded-lg shadow-sm p-6">{children}</main>
       </div>
 
-      <CatalogFooter store={store} />
+      <CatalogFooter
+        store={store}
+        whatsappNumber={whatsappNumber}
+        storeSettings={storeSettings}
+      />
     </div>
   );
 };

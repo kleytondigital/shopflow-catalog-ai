@@ -1,29 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useCatalog } from '@/hooks/useCatalog';
-import { useCatalogSettings } from '@/hooks/useCatalogSettings';
-import { useCart } from '@/hooks/useCart';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { createCartItem } from '@/utils/cartHelpers';
-import { Product } from '@/hooks/useProducts';
-import { ProductVariation } from '@/types/variation';
-import { CatalogType } from '@/hooks/useCatalog';
-import { useToast } from '@/hooks/use-toast';
-import ProductDetailsModal from './ProductDetailsModal';
-import FloatingCart from './FloatingCart';
-import TemplateWrapper from './TemplateWrapper';
-import ProductGrid from './ProductGrid';
-import FilterSidebar, { FilterState } from './FilterSidebar';
-import { Button } from '@/components/ui/button';
-import { Filter } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from "react";
+import { useCatalog } from "@/hooks/useCatalog";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { useCart } from "@/hooks/useCart";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { createCartItem } from "@/utils/cartHelpers";
+import { Product } from "@/hooks/useProducts";
+import { ProductVariation } from "@/types/variation";
+import { CatalogType } from "@/hooks/useCatalog";
+import { useToast } from "@/hooks/use-toast";
+import ProductDetailsModal from "./ProductDetailsModal";
+import FloatingCart from "./FloatingCart";
+import FloatingWhatsApp from "./FloatingWhatsApp";
+import TemplateWrapper from "./TemplateWrapper";
+import ProductGrid from "./ProductGrid";
+import FilterSidebar, { FilterState } from "./FilterSidebar";
+import EnhancedCheckout from "./checkout/EnhancedCheckout";
+import { Button } from "@/components/ui/button";
+import { Filter } from "lucide-react";
 
 interface PublicCatalogProps {
   storeIdentifier: string;
   catalogType: CatalogType;
 }
 
-const PublicCatalog: React.FC<PublicCatalogProps> = ({ 
-  storeIdentifier, 
-  catalogType 
+const PublicCatalog: React.FC<PublicCatalogProps> = ({
+  storeIdentifier,
+  catalogType,
 }) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -31,7 +33,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCheckout, setShowCheckout] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     categories: [],
     priceRange: [0, 1000],
@@ -39,47 +42,59 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     variations: {
       sizes: [],
       colors: [],
-      materials: []
-    }
+      materials: [],
+    },
   });
-  
-  const { 
-    items: cartItems, 
-    addItem, 
-    removeItem, 
-    updateQuantity, 
+
+  const {
+    items: cartItems,
+    addItem,
+    removeItem,
+    updateQuantity,
     totalItems,
-    clearCart 
+    clearCart,
   } = useCart();
 
-  const { 
-    store, 
-    products, 
+  const {
+    store,
+    products,
     filteredProducts,
-    loading, 
+    loading,
     storeError,
     searchProducts,
-    filterProducts
+    filterProducts,
   } = useCatalog(storeIdentifier, catalogType);
-  
+
   const { settings } = useCatalogSettings(storeIdentifier);
 
   const applyFilters = useCallback(() => {
-    console.log('🎯 PUBLIC CATALOG - Aplicando filtros:', { searchTerm, activeFilters });
+    console.log("🎯 PUBLIC CATALOG - Aplicando filtros:", {
+      searchTerm,
+      activeFilters,
+    });
 
     if (searchTerm.trim()) {
       searchProducts(searchTerm);
     } else {
       filterProducts({
-        category: activeFilters.categories.length === 1 ? activeFilters.categories[0] : undefined,
+        category:
+          activeFilters.categories.length === 1
+            ? activeFilters.categories[0]
+            : undefined,
         minPrice: activeFilters.priceRange[0],
         maxPrice: activeFilters.priceRange[1],
         inStock: activeFilters.inStock,
         variations: {
-          sizes: activeFilters.variations.sizes.length ? activeFilters.variations.sizes : undefined,
-          colors: activeFilters.variations.colors.length ? activeFilters.variations.colors : undefined,
-          materials: activeFilters.variations.materials.length ? activeFilters.variations.materials : undefined,
-        }
+          sizes: activeFilters.variations.sizes.length
+            ? activeFilters.variations.sizes
+            : undefined,
+          colors: activeFilters.variations.colors.length
+            ? activeFilters.variations.colors
+            : undefined,
+          materials: activeFilters.variations.materials.length
+            ? activeFilters.variations.materials
+            : undefined,
+        },
       });
     }
   }, [searchTerm, activeFilters, searchProducts, filterProducts]);
@@ -89,70 +104,81 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   }, [applyFilters]);
 
   const handleFilterChange = useCallback((filters: FilterState) => {
-    console.log('🔧 PUBLIC CATALOG - Filtros alterados:', filters);
+    console.log("🔧 PUBLIC CATALOG - Filtros alterados:", filters);
     setActiveFilters(filters);
   }, []);
 
   const handleSearchChange = useCallback((query: string) => {
-    console.log('🔍 PUBLIC CATALOG - Busca alterada:', query);
+    console.log("🔍 PUBLIC CATALOG - Busca alterada:", query);
     setSearchTerm(query);
   }, []);
 
   const handleAddToCart = (
-    product: Product, 
-    quantity: number = 1, 
+    product: Product,
+    quantity: number = 1,
     variation?: ProductVariation
   ) => {
-    console.log('🛒 PUBLIC CATALOG - Adicionando ao carrinho:', {
+    console.log("🛒 PUBLIC CATALOG - Adicionando ao carrinho:", {
       productId: product.id,
       productName: product.name,
       quantity,
       catalogType,
-      variation: variation ? {
-        id: variation.id,
-        color: variation.color,
-        size: variation.size
-      } : null
+      variation: variation
+        ? {
+            id: variation.id,
+            color: variation.color,
+            size: variation.size,
+          }
+        : null,
     });
 
     try {
-      const cartItem = createCartItem(product, catalogType, quantity, variation);
+      const cartItem = createCartItem(
+        product,
+        catalogType,
+        quantity,
+        variation
+      );
       addItem(cartItem);
-      
-      console.log('✅ PUBLIC CATALOG - Item adicionado com sucesso ao carrinho global');
-      
+
+      console.log(
+        "✅ PUBLIC CATALOG - Item adicionado com sucesso ao carrinho global"
+      );
+
       toast({
         title: "Produto adicionado!",
         description: `${product.name} foi adicionado ao carrinho.`,
-        duration: 2000
+        duration: 2000,
       });
-      
     } catch (error) {
-      console.error('❌ PUBLIC CATALOG - Erro ao adicionar ao carrinho:', error);
+      console.error(
+        "❌ PUBLIC CATALOG - Erro ao adicionar ao carrinho:",
+        error
+      );
       toast({
         title: "Erro ao adicionar produto",
         description: "Tente novamente.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleAddToWishlist = (product: Product) => {
-    console.log('💝 PUBLIC CATALOG - Adicionando à wishlist:', product.name);
-    setWishlist(prev => {
-      const isInWishlist = prev.some(item => item.id === product.id);
+    console.log("💝 PUBLIC CATALOG - Adicionando à wishlist:", product.name);
+    setWishlist((prev) => {
+      const isInWishlist = prev.some((item) => item.id === product.id);
       if (isInWishlist) {
         toast({
           title: "Removido da wishlist",
           description: `${product.name} foi removido da sua lista de desejos.`,
-          duration: 2000
+          duration: 2000,
         });
-        return prev.filter(item => item.id !== product.id);
+        return prev.filter((item) => item.id !== product.id);
       } else {
         toast({
           title: "Adicionado à wishlist",
           description: `${product.name} foi adicionado à sua lista de desejos.`,
-          duration: 2000
+          duration: 2000,
         });
         return [...prev, product];
       }
@@ -160,22 +186,30 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   };
 
   const handleProductClick = (product: Product) => {
-    console.log('👆 PUBLIC CATALOG - Produto clicado:', product.name);
+    console.log("👆 PUBLIC CATALOG - Produto clicado:", product.name);
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    console.log('❌ PUBLIC CATALOG - Fechando modal');
+    console.log("❌ PUBLIC CATALOG - Fechando modal");
     setIsModalOpen(false);
     setSelectedProduct(null);
   };
 
+  const handleOpenCheckout = () => {
+    setShowCheckout(true);
+  };
+
+  const handleCloseCheckout = () => {
+    setShowCheckout(false);
+  };
+
   useEffect(() => {
-    console.log('🔍 PUBLIC CATALOG - Estado do carrinho:', {
+    console.log("🔍 PUBLIC CATALOG - Estado do carrinho:", {
       totalItems,
       itemsCount: cartItems.length,
-      catalogType
+      catalogType,
     });
   }, [cartItems, totalItems, catalogType]);
 
@@ -219,15 +253,16 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
   return (
     <div className="min-h-screen bg-gray-50">
       <TemplateWrapper
-        templateName={settings?.template_name || 'modern'}
+        templateName={settings?.template_name || "modern"}
         store={store}
         catalogType={catalogType}
         cartItemsCount={totalItems}
         wishlistCount={wishlist.length}
         whatsappNumber={store.phone || undefined}
+        storeSettings={settings}
         onSearch={handleSearchChange}
         onToggleFilters={() => setShowFilters(true)}
-        onCartClick={() => console.log('Cart clicked')}
+        onCartClick={() => console.log("Cart clicked")}
       >
         <div className="flex gap-6">
           {/* Filtros Desktop */}
@@ -267,7 +302,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
               onQuickView={handleProductClick}
               wishlist={wishlist}
               storeIdentifier={storeIdentifier}
-              templateName={settings?.template_name || 'modern'}
+              templateName={settings?.template_name || "modern"}
               showPrices={showPrices}
               showStock={showStock}
               onAddToCart={handleAddToCart}
@@ -295,11 +330,41 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
           onClose={handleCloseModal}
           onAddToCart={handleAddToCart}
           catalogType={catalogType}
+          showStock={showStock}
+          showPrices={showPrices}
+          storeName={store.name}
+          storePhone={store.phone}
+          relatedProducts={products.filter(
+            (p) =>
+              p.id !== selectedProduct.id &&
+              p.category === selectedProduct.category
+          )}
         />
       )}
 
       {/* Carrinho Flutuante */}
-      <FloatingCart />
+      <FloatingCart onCheckout={handleOpenCheckout} />
+
+      {/* WhatsApp Flutuante */}
+      <FloatingWhatsApp
+        phoneNumber={store.phone || undefined}
+        storeName={store.name}
+        isVisible={!!store.phone}
+      />
+
+      {/* Checkout Modal */}
+      {showCheckout && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-7xl max-h-[95vh] overflow-y-auto">
+            <EnhancedCheckout
+              storeId={store.id}
+              storeName={store.name}
+              storePhone={store.phone}
+              onClose={handleCloseCheckout}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

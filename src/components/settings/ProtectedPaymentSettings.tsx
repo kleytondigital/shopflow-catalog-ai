@@ -1,17 +1,21 @@
-
-import React from 'react';
-import { BenefitGate } from '@/components/billing/BenefitGate';
-import PaymentSettings from './PaymentSettings';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreditCard } from "lucide-react";
+import PaymentMethodsSettings from "./PaymentMethodsSettings";
 
 const ProtectedPaymentSettings = () => {
   return (
-    <BenefitGate 
-      benefitKey="payment_credit_card"
-      customMessage="As configurações avançadas de pagamento (cartão de crédito) estão disponíveis apenas no plano Premium."
-      silent={false}
-    >
-      <PaymentSettings />
-    </BenefitGate>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Configurações de Pagamento
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <PaymentMethodsSettings />
+      </CardContent>
+    </Card>
   );
 };
 

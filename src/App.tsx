@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,13 +8,16 @@ import { CartProvider } from "@/hooks/useCart";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import Products from "./pages/Products";
-import Orders from "./pages/Orders";
+import OrdersImproved from "./pages/OrdersImproved";
 import Customers from "./pages/Customers";
 import Categories from "./pages/Categories";
 import Reports from "./pages/Reports";
 import PublicCatalogPage from "./pages/PublicCatalogPage";
 import PublicWholesalePage from "./pages/PublicWholesalePage";
+import OrderTracking from "./pages/OrderTracking";
 import AppLayout from "./components/layout/AppLayout";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -28,74 +30,122 @@ function App() {
             <BrowserRouter>
               <div className="min-h-screen bg-background font-sans antialiased">
                 <Routes>
+                  {/* Rota de autenticação */}
+                  <Route path="/auth" element={<Auth />} />
+
+                  {/* Páginas públicas */}
+                  <Route path="/tracking" element={<OrderTracking />} />
+                  <Route
+                    path="/tracking/:orderId"
+                    element={<OrderTracking />}
+                  />
+
                   {/* Dashboard principal */}
-                  <Route 
-                    path="/" 
+                  <Route
+                    path="/"
                     element={
-                      <AppLayout title="Dashboard">
-                        <Index />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout title="Dashboard">
+                          <Index />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
+
                   {/* Páginas administrativas */}
-                  <Route 
-                    path="/settings" 
+                  <Route
+                    path="/settings"
                     element={
-                      <AppLayout title="Configurações" subtitle="Gerencie as configurações da sua loja">
-                        <Settings />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Configurações"
+                          subtitle="Gerencie as configurações da sua loja"
+                        >
+                          <Settings />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
-                  <Route 
-                    path="/products" 
+
+                  <Route
+                    path="/products"
                     element={
-                      <AppLayout title="Produtos" subtitle="Gerencie o catálogo de produtos">
-                        <Products />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Produtos"
+                          subtitle="Gerencie o catálogo de produtos"
+                        >
+                          <Products />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
-                  <Route 
-                    path="/orders" 
+
+                  <Route
+                    path="/orders"
                     element={
-                      <AppLayout title="Pedidos" subtitle="Acompanhe e gerencie pedidos">
-                        <Orders />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Pedidos"
+                          subtitle="Acompanhe e gerencie pedidos"
+                        >
+                          <OrdersImproved />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
-                  <Route 
-                    path="/customers" 
+
+                  <Route
+                    path="/customers"
                     element={
-                      <AppLayout title="Clientes" subtitle="Gerencie sua base de clientes">
-                        <Customers />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Clientes"
+                          subtitle="Gerencie sua base de clientes"
+                        >
+                          <Customers />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
-                  <Route 
-                    path="/categories" 
+
+                  <Route
+                    path="/categories"
                     element={
-                      <AppLayout title="Categorias" subtitle="Organize produtos por categoria">
-                        <Categories />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Categorias"
+                          subtitle="Organize produtos por categoria"
+                        >
+                          <Categories />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
-                  
-                  <Route 
-                    path="/reports" 
+
+                  <Route
+                    path="/reports"
                     element={
-                      <AppLayout title="Relatórios" subtitle="Análises e métricas do negócio">
-                        <Reports />
-                      </AppLayout>
-                    } 
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Relatórios"
+                          subtitle="Análises e métricas do negócio"
+                        >
+                          <Reports />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
                   />
 
                   {/* Páginas do catálogo público (sem sidebar) */}
-                  <Route path="/catalog/:storeIdentifier" element={<PublicCatalogPage />} />
-                  <Route path="/wholesale/:storeIdentifier" element={<PublicWholesalePage />} />
+                  <Route
+                    path="/catalog/:storeIdentifier"
+                    element={<PublicCatalogPage />}
+                  />
+                  <Route
+                    path="/wholesale/:storeIdentifier"
+                    element={<PublicWholesalePage />}
+                  />
                 </Routes>
               </div>
               <Toaster />

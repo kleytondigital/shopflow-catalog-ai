@@ -1,17 +1,21 @@
-
-import React from 'react';
-import { BenefitGate } from '@/components/billing/BenefitGate';
-import ShippingSettings from './ShippingSettings';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truck } from "lucide-react";
+import ShippingMethodsSettings from "./ShippingMethodsSettings";
 
 const ProtectedShippingSettings = () => {
   return (
-    <BenefitGate 
-      benefitKey="shipping_calculator"
-      customMessage="A calculadora de frete automática está disponível apenas no plano Premium."
-      silent={false}
-    >
-      <ShippingSettings />
-    </BenefitGate>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Truck className="h-5 w-5" />
+          Configurações de Entrega
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ShippingMethodsSettings />
+      </CardContent>
+    </Card>
   );
 };
 
