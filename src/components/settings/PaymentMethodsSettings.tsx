@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -25,19 +25,18 @@ import {
   Plus,
   Edit,
   Trash2,
+  Settings,
   Save,
+  X,
   AlertCircle,
-  DollarSign,
-  Smartphone,
-  Building,
-  Wallet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 
 interface PaymentMethod {
-  id?: string;
+  id: string;
   name: string;
   type:
     | "pix"
@@ -47,7 +46,7 @@ interface PaymentMethod {
     | "cash"
     | "crypto";
   is_active: boolean;
-  config: {
+  config?: {
     pix_key?: string;
     pix_key_type?: string;
     gateway_config?: any;
@@ -55,47 +54,9 @@ interface PaymentMethod {
   };
 }
 
-const paymentTypeOptions = [
-  {
-    value: "pix",
-    label: "PIX",
-    icon: "💰",
-    description: "Pagamento instantâneo",
-  },
-  {
-    value: "credit_card",
-    label: "Cartão de Crédito",
-    icon: "💳",
-    description: "Pagamento com cartão",
-  },
-  {
-    value: "debit_card",
-    label: "Cartão de Débito",
-    icon: "💳",
-    description: "Débito direto",
-  },
-  {
-    value: "bank_transfer",
-    label: "Transferência Bancária",
-    icon: "🏦",
-    description: "DOC/TED",
-  },
-  {
-    value: "cash",
-    label: "Dinheiro",
-    icon: "💵",
-    description: "Pagamento em espécie",
-  },
-  {
-    value: "crypto",
-    label: "Criptomoeda",
-    icon: "₿",
-    description: "Bitcoin, etc.",
-  },
-];
-
 const PaymentMethodsSettings: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { storeId } = useCatalogSettings();
   const { toast } = useToast();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,86 +66,57 @@ const PaymentMethodsSettings: React.FC = () => {
   );
 
   const [formData, setFormData] = useState<PaymentMethod>({
+    id: "",
     name: "",
     type: "pix",
     is_active: true,
     config: {},
   });
 
+  const currentStoreId = storeId || profile?.store_id;
+
   useEffect(() => {
-    console.log(
-      "PaymentMethodsSettings: useEffect triggered - user:",
-      !!user,
-      "store_id:",
-      user?.store_id
-    );
-    if (user?.store_id) {
+    if (currentStoreId) {
       fetchPaymentMethods();
-    } else if (user && !user.store_id) {
-      console.warn("PaymentMethodsSettings: User exists but no store_id");
-      setLoading(false);
     }
-  }, [user?.store_id]);
+  }, [currentStoreId]);
 
   const fetchPaymentMethods = async () => {
-    if (!user?.store_id) {
-      console.log("PaymentMethodsSettings: No store_id found");
-      setLoading(false);
-      return;
-    }
+    if (!currentStoreId) return;
 
-    console.log(
-      "PaymentMethodsSettings: Starting fetch with store_id:",
-      user.store_id
-    );
     setLoading(true);
-
-    // Timeout de segurança
-    const timeoutId = setTimeout(() => {
-      console.warn(
-        "PaymentMethodsSettings: fetchPaymentMethods timeout after 10 seconds"
-      );
-      setLoading(false);
-    }, 10000);
-
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("store_payment_methods")
         .select("*")
-        .eq("store_id", user.store_id)
-        .order("created_at", { ascending: false });
+        .eq("store_id", currentStoreId)
+        .order("name");
 
       if (error) {
-        console.warn("Tabela store_payment_methods não encontrada:", error);
-        setPaymentMethods([]);
+        console.error("Erro ao buscar métodos de pagamento:", error);
         toast({
-          title: "Informação",
-          description:
-            "Tabela de métodos de pagamento não encontrada. Você pode criar novos métodos.",
-          variant: "default",
+          title: "Erro",
+          description: "Erro ao carregar métodos de pagamento",
+          variant: "destructive",
         });
-      } else {
-        console.log(
-          "PaymentMethodsSettings: Found",
-          data?.length || 0,
-          "payment methods"
-        );
-        setPaymentMethods(data || []);
+        return;
       }
 
-      clearTimeout(timeoutId);
-      console.log("PaymentMethodsSettings: fetch completed successfully");
+      setPaymentMethods(data || []);
     } catch (error) {
-      console.error("PaymentMethodsSettings: Error in fetch:", error);
-      setPaymentMethods([]);
-      clearTimeout(timeoutId);
+      console.error("Erro inesperado:", error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar dados",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!user?.store_id || !formData.name.trim()) {
+    if (!currentStoreId || !formData.name.trim()) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -195,20 +127,22 @@ const PaymentMethodsSettings: React.FC = () => {
 
     try {
       const dataToSave = {
-        store_id: user.store_id,
-        name: formData.name,
+        store_id: currentStoreId,
+        name: formData.name.trim(),
         type: formData.type,
         is_active: formData.is_active,
-        config: formData.config,
+        config: formData.config || {},
       };
 
       if (editingMethod?.id) {
-        await supabase
+        await (supabase as any)
           .from("store_payment_methods")
           .update(dataToSave)
           .eq("id", editingMethod.id);
       } else {
-        await supabase.from("store_payment_methods").insert(dataToSave);
+        await (supabase as any)
+          .from("store_payment_methods")
+          .insert(dataToSave);
       }
 
       toast({
@@ -233,6 +167,7 @@ const PaymentMethodsSettings: React.FC = () => {
   const handleEdit = (method: PaymentMethod) => {
     setEditingMethod(method);
     setFormData({
+      id: method.id,
       name: method.name,
       type: method.type,
       is_active: method.is_active,
@@ -242,26 +177,14 @@ const PaymentMethodsSettings: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // Verificar se há outros métodos ativos
-    const activeMethods = paymentMethods.filter(
-      (m) => m.is_active && m.id !== id
-    );
-
-    if (activeMethods.length === 0) {
-      toast({
-        title: "Erro",
-        description:
-          "Não é possível excluir o último método de pagamento ativo. Deve haver pelo menos um método disponível.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!confirm("Tem certeza que deseja excluir este método de pagamento?"))
       return;
 
     try {
-      await supabase.from("store_payment_methods").delete().eq("id", id);
+      await (supabase as any)
+        .from("store_payment_methods")
+        .delete()
+        .eq("id", id);
 
       toast({
         title: "Sucesso!",
@@ -279,34 +202,17 @@ const PaymentMethodsSettings: React.FC = () => {
     }
   };
 
-  const handleToggleActive = async (method: PaymentMethod) => {
-    // Se está tentando desativar, verificar se há outros métodos ativos
-    if (method.is_active) {
-      const otherActiveMethods = paymentMethods.filter(
-        (m) => m.is_active && m.id !== method.id
-      );
-
-      if (otherActiveMethods.length === 0) {
-        toast({
-          title: "Erro",
-          description:
-            "Não é possível desativar o último método de pagamento ativo. Deve haver pelo menos um método disponível.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
+  const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await supabase
+      await (supabase as any)
         .from("store_payment_methods")
-        .update({ is_active: !method.is_active })
-        .eq("id", method.id);
+        .update({ is_active: !isActive })
+        .eq("id", id);
 
       toast({
         title: "Sucesso!",
-        description: `Método ${
-          !method.is_active ? "ativado" : "desativado"
+        description: `Método de pagamento ${
+          !isActive ? "ativado" : "desativado"
         } com sucesso`,
       });
 
@@ -315,7 +221,7 @@ const PaymentMethodsSettings: React.FC = () => {
       console.error("Erro ao alterar status:", error);
       toast({
         title: "Erro",
-        description: "Erro ao alterar status do método",
+        description: "Erro ao alterar status do método de pagamento",
         variant: "destructive",
       });
     }
@@ -323,6 +229,7 @@ const PaymentMethodsSettings: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
+      id: "",
       name: "",
       type: "pix",
       is_active: true,
@@ -330,77 +237,28 @@ const PaymentMethodsSettings: React.FC = () => {
     });
   };
 
-  const selectedType = paymentTypeOptions.find(
-    (option) => option.value === formData.type
-  );
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      pix: "PIX",
+      credit_card: "Cartão de Crédito",
+      debit_card: "Cartão de Débito",
+      bank_transfer: "Transferência Bancária",
+      cash: "Dinheiro",
+      crypto: "Criptomoeda",
+    };
+    return labels[type] || type;
+  };
 
-  const renderTypeSpecificFields = () => {
-    switch (formData.type) {
-      case "pix":
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Chave PIX</Label>
-              <Input
-                value={formData.config.pix_key || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    config: { ...formData.config, pix_key: e.target.value },
-                  })
-                }
-                placeholder="Sua chave PIX (CPF, CNPJ, email, telefone ou aleatória)"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo da Chave</Label>
-              <Select
-                value={formData.config.pix_key_type || ""}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    config: { ...formData.config, pix_key_type: value },
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cpf">CPF</SelectItem>
-                  <SelectItem value="cnpj">CNPJ</SelectItem>
-                  <SelectItem value="email">E-mail</SelectItem>
-                  <SelectItem value="phone">Telefone</SelectItem>
-                  <SelectItem value="random">Chave Aleatória</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
-      case "bank_transfer":
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Dados Bancários</Label>
-              <Textarea
-                value={formData.config.bank_info || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    config: { ...formData.config, bank_info: e.target.value },
-                  })
-                }
-                placeholder="Banco, Agência, Conta, Titular..."
-                rows={4}
-              />
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+  const getTypeIcon = (type: string) => {
+    const icons: Record<string, string> = {
+      pix: "💳",
+      credit_card: "💳",
+      debit_card: "💳",
+      bank_transfer: "🏦",
+      cash: "💰",
+      crypto: "₿",
+    };
+    return icons[type] || "💳";
   };
 
   if (loading) {
@@ -420,7 +278,7 @@ const PaymentMethodsSettings: React.FC = () => {
             Métodos de Pagamento
           </h2>
           <p className="text-gray-600">
-            Configure as formas de pagamento aceitas em sua loja
+            Configure as formas de pagamento aceitas pela sua loja
           </p>
         </div>
 
@@ -447,7 +305,7 @@ const PaymentMethodsSettings: React.FC = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Nome do Método *</Label>
+                  <Label>Nome *</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) =>
@@ -462,46 +320,83 @@ const PaymentMethodsSettings: React.FC = () => {
                   <Select
                     value={formData.type}
                     onValueChange={(value: any) =>
-                      setFormData({ ...formData, type: value, config: {} })
+                      setFormData({ ...formData, type: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {paymentTypeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            <span>{option.icon}</span>
-                            <span>{option.label}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="credit_card">
+                        Cartão de Crédito
+                      </SelectItem>
+                      <SelectItem value="debit_card">
+                        Cartão de Débito
+                      </SelectItem>
+                      <SelectItem value="bank_transfer">
+                        Transferência Bancária
+                      </SelectItem>
+                      <SelectItem value="cash">Dinheiro</SelectItem>
+                      <SelectItem value="crypto">Criptomoeda</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {selectedType && (
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{selectedType.icon}</span>
-                      <h4 className="font-medium">{selectedType.label}</h4>
+              {formData.type === "pix" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Chave PIX</Label>
+                      <Input
+                        value={formData.config?.pix_key || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            config: {
+                              ...formData.config,
+                              pix_key: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Sua chave PIX"
+                      />
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {selectedType.description}
-                    </p>
-                  </CardContent>
-                </Card>
+
+                    <div className="space-y-2">
+                      <Label>Tipo de Chave</Label>
+                      <Select
+                        value={formData.config?.pix_key_type || "cpf"}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            config: { ...formData.config, pix_key_type: value },
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cpf">CPF</SelectItem>
+                          <SelectItem value="cnpj">CNPJ</SelectItem>
+                          <SelectItem value="email">E-mail</SelectItem>
+                          <SelectItem value="phone">Telefone</SelectItem>
+                          <SelectItem value="random">
+                            Chave Aleatória
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               )}
 
-              {renderTypeSpecificFields()}
-
               <div className="space-y-2">
-                <Label>Instruções para o Cliente</Label>
-                <Textarea
-                  value={formData.config.instructions || ""}
+                <Label>Instruções</Label>
+                <Input
+                  value={formData.config?.instructions || ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -511,16 +406,15 @@ const PaymentMethodsSettings: React.FC = () => {
                       },
                     })
                   }
-                  placeholder="Instruções que aparecerão no checkout..."
-                  rows={3}
+                  placeholder="Instruções para o cliente"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label>Método Ativo</Label>
+                  <Label>Ativo</Label>
                   <p className="text-sm text-gray-600">
-                    Disponível no checkout
+                    Método disponível para clientes
                   </p>
                 </div>
                 <Switch
@@ -549,123 +443,120 @@ const PaymentMethodsSettings: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Métodos Padrão */}
-      <Card className="bg-green-50 border-green-200">
+      {paymentMethods.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nenhum método de pagamento configurado
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Configure as formas de pagamento aceitas pela sua loja
+            </p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeiro Método
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {paymentMethods.map((method) => (
+            <Card key={method.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">
+                        {getTypeIcon(method.type)}
+                      </span>
+                      <div>
+                        <h3 className="font-semibold">{method.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {getTypeLabel(method.type)}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={method.is_active ? "default" : "secondary"}
+                      >
+                        {method.is_active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+
+                    {method.config?.instructions && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        {method.config.instructions}
+                      </p>
+                    )}
+
+                    {method.config?.pix_key && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                        <strong>Chave PIX:</strong> {method.config.pix_key}
+                        {method.config.pix_key_type && (
+                          <span className="ml-2 text-gray-500">
+                            ({method.config.pix_key_type})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleToggleActive(method.id, method.is_active)
+                      }
+                      className={
+                        method.is_active
+                          ? "text-orange-600 hover:text-orange-700"
+                          : "text-green-600 hover:text-green-700"
+                      }
+                    >
+                      {method.is_active ? "Desativar" : "Ativar"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(method)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(method.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Card className="bg-blue-50 border-blue-200">
         <CardContent className="p-4">
           <div className="flex gap-3">
-            <AlertCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <h4 className="font-medium text-green-900 mb-1">
-                Métodos Padrão Disponíveis:
+              <h4 className="font-medium text-blue-900 mb-1">
+                Dicas para métodos de pagamento:
               </h4>
-              <p className="text-green-800">
-                <strong>"A Combinar"</strong> sempre estará disponível como
-                opção de pagamento padrão. Os pedidos são enviados via WhatsApp
-                para negociação direta.
-              </p>
+              <ul className="text-blue-700 space-y-1">
+                <li>• PIX é a forma mais rápida e econômica</li>
+                <li>• Cartões de crédito aumentam o ticket médio</li>
+                <li>• Mantenha pelo menos 2 opções ativas</li>
+                <li>• Instruções claras melhoram a experiência</li>
+              </ul>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Lista de Métodos */}
-      <div className="grid gap-4">
-        {paymentMethods.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhum método configurado
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Configure métodos de pagamento para facilitar as vendas
-              </p>
-              <Button onClick={() => setIsModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeiro Método
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          paymentMethods.map((method) => {
-            const typeOption = paymentTypeOptions.find(
-              (opt) => opt.value === method.type
-            );
-            return (
-              <Card
-                key={method.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-lg">{typeOption?.icon}</span>
-                        <h3 className="font-semibold">{method.name}</h3>
-                        <Badge
-                          variant={method.is_active ? "default" : "secondary"}
-                        >
-                          {method.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-3">
-                        {typeOption?.description}
-                      </p>
-
-                      {method.type === "pix" && method.config.pix_key && (
-                        <div className="text-sm">
-                          <p className="text-gray-600">Chave PIX:</p>
-                          <p className="font-mono">{method.config.pix_key}</p>
-                        </div>
-                      )}
-
-                      {method.config.instructions && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
-                          <p className="text-gray-600 font-medium mb-1">
-                            Instruções:
-                          </p>
-                          <p>{method.config.instructions}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleActive(method)}
-                        className={
-                          method.is_active
-                            ? "text-orange-600 hover:text-orange-700"
-                            : "text-green-600 hover:text-green-700"
-                        }
-                      >
-                        {method.is_active ? "Desativar" : "Ativar"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(method)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => method.id && handleDelete(method.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
     </div>
   );
 };

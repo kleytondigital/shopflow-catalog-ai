@@ -360,7 +360,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
               storeId={store.id}
               storeName={store.name}
               storePhone={store.phone}
-              onClose={handleCloseCheckout}
+              onClose={() => setShowCheckout(false)}
             />
           </div>
         </div>

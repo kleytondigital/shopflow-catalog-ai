@@ -2,12 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Truck,
-  MapPin,
   CreditCard,
-  Smartphone,
   User,
-  Mail,
-  Phone,
   Clock,
   Gift,
   ArrowRight,
@@ -72,14 +68,6 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
   const { toast } = useToast();
   const { createOrder, isCreatingOrder } = useOrders();
 
-  // Debug do config
-  // console.log("EnhancedCheckout: config carregado:", {
-  //   orderBumpProducts: config?.order_bump_products?.length || 0,
-  //   configCompleto: !!config,
-  // });
-  console.log("Shipping Methods:", config?.shipping_methods);
-  console.log("Payment Methods:", config?.payment_methods);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [shippingCost, setShippingCost] = useState(0);
   const [orderBumpTotal, setOrderBumpTotal] = useState(0);
@@ -91,56 +79,17 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
       customerName: "",
       customerEmail: "",
       customerPhone: "",
-      shippingMethod: "combine",
+      shippingMethod: "pickup",
       paymentMethod: "pix",
-      shippingAddress: {
-        street: "",
-        number: "",
-        complement: "",
-        neighborhood: "",
-        city: "",
-        state: "",
-        zipCode: "",
-      },
     },
   });
 
   // Verificar se o método de entrega requer endereço
   const requiresAddress = form.watch("shippingMethod") !== "pickup";
 
-  // Função para buscar endereço pelo CEP
-  const searchAddressByCep = async (cep: string) => {
-    if (cep.length !== 8) return;
-
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await response.json();
-
-      if (!data.erro) {
-        form.setValue("shippingAddress.street", data.logradouro || "");
-        form.setValue("shippingAddress.neighborhood", data.bairro || "");
-        form.setValue("shippingAddress.city", data.localidade || "");
-        form.setValue("shippingAddress.state", data.uf || "");
-
-        toast({
-          title: "Endereço encontrado!",
-          description: "Preencha apenas o número e complemento.",
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-      toast({
-        title: "Erro ao buscar CEP",
-        description: "Verifique o CEP informado.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Timer de urgência - desabilitado temporariamente
+  // Timer de urgência
   useEffect(() => {
-    // if (!config?.urgency_timer_enabled) return;
-    // Timer desabilitado até implementar a funcionalidade
+    if (!config?.store_settings?.urgency_timer_enabled) return;
 
     const timer = setInterval(() => {
       setUrgencyTime((prev) => (prev > 0 ? prev - 1 : 0));
@@ -170,6 +119,7 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
     const discountedPrice =
       product.retail_price *
       (1 - (product.order_bump_config?.discount_percentage || 0) / 100);
+
     addItem({
       id: `${product.id}-orderbump`,
       product,
@@ -177,7 +127,6 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
       price: discountedPrice,
       originalPrice: product.retail_price,
       catalogType: "retail",
-      // isOrderBump: true, // Removido para compatibilidade com CartItem
     });
     setOrderBumpTotal((prev) => prev + discountedPrice);
 
@@ -214,12 +163,18 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
                 size: item.variation.size,
               }
             : null,
-          // Dados específicos do Order Bump
-          is_order_bump: (item.product as any)?.isOrderBump || false,
-          original_price: (item.product as any)?.originalPrice || item.price,
-          discount_percentage: (item.product as any)?.discountPercentage || 0,
         })),
-        shipping_address: data.shippingAddress || undefined,
+        shipping_address: data.shippingAddress
+          ? {
+              street: data.shippingAddress.street,
+              number: data.shippingAddress.number,
+              complement: data.shippingAddress.complement,
+              neighborhood: data.shippingAddress.neighborhood,
+              city: data.shippingAddress.city,
+              state: data.shippingAddress.state,
+              zipCode: data.shippingAddress.zipCode,
+            }
+          : undefined,
         shipping_method: data.shippingMethod,
         payment_method: data.paymentMethod,
         shipping_cost: shippingCost,
@@ -227,12 +182,8 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
         store_id: storeId,
       };
 
-      console.log("EnhancedCheckout: Criando pedido:", orderData);
-
       // Criar pedido no sistema
       const createdOrder = await createOrder(orderData);
-
-      console.log("EnhancedCheckout: Pedido criado:", createdOrder);
 
       // Gerar mensagem do WhatsApp
       if (storePhone) {
@@ -248,12 +199,12 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
       toast({
         title: "Pedido finalizado!",
         description: `Pedido #${
-          (createdOrder as any)?.data?.id?.slice(-8) || "N/A"
+          createdOrder?.data?.id?.slice(-8) || "N/A"
         } criado com sucesso.`,
       });
       onClose();
     } catch (error) {
-      console.error("EnhancedCheckout: Erro ao processar pedido:", error);
+      console.error("Erro ao processar pedido:", error);
       toast({
         title: "Erro ao processar pedido",
         description:
@@ -270,22 +221,12 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
     message += `📱 *Telefone:* ${data.customerPhone}\n\n`;
 
     // Informações do pedido
-    if (order?.id) {
-      message += `📋 *Pedido:* #${order.id.slice(-8)}\n\n`;
+    if (order?.data?.id) {
+      message += `📋 *Pedido:* #${order.data.id.slice(-8)}\n\n`;
     }
 
     message += `📦 *ITENS DO PEDIDO:*\n`;
-
-    // Separar itens normais e order bumps
-    const normalItems = items.filter(
-      (item) => !(item.product as any)?.isOrderBump
-    );
-    const orderBumpItems = items.filter(
-      (item) => (item.product as any)?.isOrderBump
-    );
-
-    // Itens normais
-    normalItems.forEach((item, index) => {
+    items.forEach((item, index) => {
       message += `${index + 1}. ${item.product.name}\n`;
       message += `   Qtd: ${item.quantity}x\n`;
       message += `   Preço: ${formatCurrency(item.price)}\n`;
@@ -299,66 +240,18 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
       )}\n\n`;
     });
 
-    // Order Bumps (ofertas especiais)
-    if (orderBumpItems.length > 0) {
-      message += `🎁 *OFERTAS ESPECIAIS:*\n`;
-      orderBumpItems.forEach((item, index) => {
-        const originalPrice =
-          (item.product as any)?.originalPrice || item.price;
-        const discountPercentage =
-          (item.product as any)?.discountPercentage || 0;
-
-        message += `${index + 1}. ${item.product.name} 🔥\n`;
-        message += `   Qtd: ${item.quantity}x\n`;
-        if (discountPercentage > 0) {
-          message += `   Preço original: ${formatCurrency(originalPrice)}\n`;
-          message += `   Desconto: ${discountPercentage}% OFF\n`;
-          message += `   Preço final: ${formatCurrency(item.price)}\n`;
-        } else {
-          message += `   Preço: ${formatCurrency(item.price)}\n`;
-        }
-        if (item.variation) {
-          message += `   Variação: ${item.variation.color || ""} ${
-            item.variation.size || ""
-          }\n`;
-        }
-        message += `   Subtotal: ${formatCurrency(
-          item.price * item.quantity
-        )}\n\n`;
-      });
-    }
-
     message += `💰 *RESUMO FINANCEIRO:*\n`;
     message += `Subtotal produtos: ${formatCurrency(totalAmount)}\n`;
     if (shippingCost > 0) {
       message += `Frete: ${formatCurrency(shippingCost)}\n`;
     }
-    if (orderBumpItems.length > 0) {
-      const orderBumpTotal = orderBumpItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
-      const orderBumpSavings = orderBumpItems.reduce((sum, item) => {
-        const originalPrice =
-          (item.product as any)?.originalPrice || item.price;
-        return sum + (originalPrice - item.price) * item.quantity;
-      }, 0);
-
+    if (orderBumpTotal > 0) {
       message += `Ofertas especiais: ${formatCurrency(orderBumpTotal)}\n`;
-      if (orderBumpSavings > 0) {
-        message += `💚 Economia: ${formatCurrency(orderBumpSavings)}\n`;
-      }
     }
     message += `*TOTAL FINAL: ${formatCurrency(finalTotal)}*\n\n`;
 
-    message += `🚚 *Entrega:* ${
-      config?.shipping_methods.find((m) => m.id === data.shippingMethod)
-        ?.name || "A Combinar"
-    }\n`;
-    message += `💳 *Pagamento:* ${
-      config?.payment_methods.find((m) => m.id === data.paymentMethod)?.name ||
-      "A Combinar"
-    }\n`;
+    message += `🚚 *Entrega:* ${data.shippingMethod}\n`;
+    message += `💳 *Pagamento:* ${data.paymentMethod}\n`;
 
     if (data.notes) {
       message += `📝 *Observações:* ${data.notes}\n`;
@@ -388,7 +281,7 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header com urgência */}
-      {urgencyTime > 0 && (
+      {config?.store_settings?.urgency_timer_enabled && urgencyTime > 0 && (
         <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-4 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -403,13 +296,13 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
             </div>
           </div>
           <p className="text-sm mt-1">
-            Aproveite desccontos exclusivos válidos apenas nesta sessão!
+            Aproveite descontos exclusivos válidos apenas nesta sessão!
           </p>
         </div>
       )}
 
       {/* Social Proof em tempo real */}
-      {true && (
+      {config?.store_settings?.social_proof_enabled && (
         <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
           <div className="flex items-center gap-2 text-green-800 text-sm">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -555,187 +448,261 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
                               value={field.value}
                               onValueChange={field.onChange}
                             >
-                              {config?.shipping_methods.map((method) => (
-                                <div
-                                  key={method.id}
-                                  className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
-                                >
-                                  <RadioGroupItem
-                                    value={method.id}
-                                    id={method.id}
-                                  />
-                                  <div className="flex-1 flex items-center justify-between">
-                                    <div>
-                                      <label
-                                        htmlFor={method.id}
-                                        className="font-medium cursor-pointer"
-                                      >
-                                        {method.name}
-                                      </label>
-                                      {method.estimated_days && (
-                                        <p className="text-sm text-gray-600">
-                                          Entrega em {method.estimated_days}{" "}
-                                          dias úteis
-                                        </p>
-                                      )}
+                              {/* Opções padrão quando não há métodos configurados */}
+                              {!config?.shipping_methods ||
+                              config.shipping_methods.length === 0 ? (
+                                <>
+                                  <div
+                                    key="pickup"
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem
+                                      value="pickup"
+                                      id="pickup"
+                                    />
+                                    <div className="flex-1 flex items-center justify-between">
+                                      <div>
+                                        <label
+                                          htmlFor="pickup"
+                                          className="font-medium cursor-pointer"
+                                        >
+                                          Retirar na loja
+                                        </label>
+                                      </div>
+                                      <span className="font-bold text-green-600">
+                                        Grátis
+                                      </span>
                                     </div>
-                                    <span className="font-bold text-green-600">
-                                      {method.price === 0
-                                        ? "O mais escolhido!"
-                                        : formatCurrency(method.price)}
-                                    </span>
                                   </div>
-                                </div>
-                              ))}
+                                  <div
+                                    key="combine"
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem
+                                      value="combine"
+                                      id="combine"
+                                    />
+                                    <div className="flex-1 flex items-center justify-between">
+                                      <div>
+                                        <label
+                                          htmlFor="combine"
+                                          className="font-medium cursor-pointer"
+                                        >
+                                          A combinar
+                                        </label>
+                                        <p className="text-sm text-gray-600">
+                                          Entrega a combinar via WhatsApp
+                                        </p>
+                                      </div>
+                                      <span className="font-bold text-green-600">
+                                        Grátis
+                                      </span>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                // Mostrar apenas métodos únicos configurados
+                                Array.from(
+                                  new Map(
+                                    config.shipping_methods.map((method) => [
+                                      method.id,
+                                      method,
+                                    ])
+                                  ).values()
+                                ).map((method) => (
+                                  <div
+                                    key={method.id}
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem
+                                      value={method.id}
+                                      id={method.id}
+                                    />
+                                    <div className="flex-1 flex items-center justify-between">
+                                      <div>
+                                        <label
+                                          htmlFor={method.id}
+                                          className="font-medium cursor-pointer"
+                                        >
+                                          {method.name}
+                                        </label>
+                                        {method.estimated_days && (
+                                          <p className="text-sm text-gray-600">
+                                            Entrega em {method.estimated_days}{" "}
+                                            dias úteis
+                                          </p>
+                                        )}
+                                        {method.id === "combine" && (
+                                          <p className="text-sm text-gray-600">
+                                            Entrega a combinar via WhatsApp
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className="font-bold text-green-600">
+                                        {method.price === 0
+                                          ? "Grátis"
+                                          : formatCurrency(method.price)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
                             </RadioGroup>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {/* Campos de endereço quando necessário */}
+                    {requiresAddress && (
+                      <div className="mt-6 space-y-4">
+                        <h4 className="font-semibold text-lg text-gray-800">
+                          Endereço de Entrega
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.zipCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  CEP *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="00000-000"
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.street"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Rua/Avenida *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Nome da rua"
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.number"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Número *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="123"
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.complement"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Complemento
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Apto, bloco, etc."
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.neighborhood"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Bairro *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Nome do bairro"
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Cidade *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Nome da cidade"
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="shippingAddress.state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base font-semibold">
+                                  Estado *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="SP, RJ, MG, etc."
+                                    className="h-12 text-base border-2 focus:border-primary"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
-
-                {/* Campos de endereço quando necessário */}
-                {requiresAddress && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5" />
-                        Endereço de Entrega
-                        {form.watch("shippingMethod") === "combine" && (
-                          <Badge variant="secondary" className="text-xs">
-                            Opcional
-                          </Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.zipCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>CEP *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="00000-000"
-                                  {...field}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(
-                                      /\D/g,
-                                      ""
-                                    );
-                                    field.onChange(value);
-                                    if (value.length === 8) {
-                                      searchAddressByCep(value);
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.street"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Rua/Avenida *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Nome da rua" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.number"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Número *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="123" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.complement"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Complemento</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Apto, bloco, etc."
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.neighborhood"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Bairro *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Nome do bairro"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.city"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cidade *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Nome da cidade"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="shippingAddress.state"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Estado *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="SP, RJ, MG, etc."
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 <Card>
                   <CardHeader>
@@ -755,33 +722,87 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
                               value={field.value}
                               onValueChange={field.onChange}
                             >
-                              {config?.payment_methods.map((method) => (
-                                <div
-                                  key={method.id}
-                                  className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
-                                >
-                                  <RadioGroupItem
-                                    value={method.id}
-                                    id={method.id}
-                                  />
-                                  <div className="flex-1">
-                                    <label
-                                      htmlFor={method.id}
-                                      className="font-medium cursor-pointer flex items-center gap-2"
-                                    >
-                                      {method.type === "pix" && "💰"}
-                                      {method.type === "credit_card" && "💳"}
-                                      {method.type === "bank_transfer" && "🏦"}
-                                      {method.name}
-                                    </label>
-                                    {method.config?.instructions && (
+                              {/* Opções padrão quando não há métodos configurados */}
+                              {!config?.payment_methods ||
+                              config.payment_methods.length === 0 ? (
+                                <>
+                                  <div
+                                    key="pix"
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem value="pix" id="pix" />
+                                    <div className="flex-1">
+                                      <label
+                                        htmlFor="pix"
+                                        className="font-medium cursor-pointer flex items-center gap-2"
+                                      >
+                                        💰 PIX
+                                      </label>
                                       <p className="text-sm text-gray-600 mt-1">
-                                        {method.config.instructions}
+                                        Pagamento instantâneo via PIX
                                       </p>
-                                    )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                  <div
+                                    key="combine"
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem
+                                      value="combine"
+                                      id="combine"
+                                    />
+                                    <div className="flex-1">
+                                      <label
+                                        htmlFor="combine"
+                                        className="font-medium cursor-pointer flex items-center gap-2"
+                                      >
+                                        📱 A combinar
+                                      </label>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        Forma de pagamento será definida via
+                                        WhatsApp
+                                      </p>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                // Mostrar apenas métodos únicos configurados
+                                Array.from(
+                                  new Map(
+                                    config.payment_methods.map((method) => [
+                                      method.id,
+                                      method,
+                                    ])
+                                  ).values()
+                                ).map((method) => (
+                                  <div
+                                    key={method.id}
+                                    className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50"
+                                  >
+                                    <RadioGroupItem
+                                      value={method.id}
+                                      id={method.id}
+                                    />
+                                    <div className="flex-1">
+                                      <label
+                                        htmlFor={method.id}
+                                        className="font-medium cursor-pointer flex items-center gap-2"
+                                      >
+                                        {method.type === "pix" && "💰"}
+                                        {method.type === "credit_card" && "💳"}
+                                        {method.type === "bank_transfer" &&
+                                          "🏦"}
+                                        {method.name}
+                                      </label>
+                                      {method.config?.instructions && (
+                                        <p className="text-sm text-gray-600 mt-1">
+                                          {method.config.instructions}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
                             </RadioGroup>
                           </FormControl>
                           <FormMessage />
@@ -804,6 +825,15 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
                       type="button"
                       onClick={() => setCurrentStep(3)}
                       className="flex-1"
+                      disabled={
+                        requiresAddress &&
+                        (!form.watch("shippingAddress.street") ||
+                          !form.watch("shippingAddress.number") ||
+                          !form.watch("shippingAddress.neighborhood") ||
+                          !form.watch("shippingAddress.city") ||
+                          !form.watch("shippingAddress.state") ||
+                          !form.watch("shippingAddress.zipCode"))
+                      }
                     >
                       Revisar Pedido <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
@@ -870,19 +900,21 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
           {/* Coluna Lateral - Resumo e Order Bumps */}
           <div className="space-y-6">
             {/* Order Bumps */}
-            {config?.order_bump_products?.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                  <Gift className="h-5 w-5 text-orange-500" />
-                  Ofertas Especiais
-                </h3>
-                <OrderBump
-                  products={config.order_bump_products}
-                  onAddProduct={handleOrderBumpAdd}
-                  cartItems={items}
-                />
-              </div>
-            )}
+            {config?.order_bump_products &&
+              config.order_bump_products.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <Gift className="h-5 w-5 text-orange-500" />
+                    Ofertas Especiais
+                  </h3>
+                  <OrderBump
+                    products={config.order_bump_products}
+                    onAddProduct={handleOrderBumpAdd}
+                    cartItems={items}
+                  />
+                </div>
+              )}
+
             {/* Resumo do Pedido */}
             <Card className="sticky top-6">
               <CardHeader>
@@ -898,7 +930,11 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
                       <p className="font-medium text-sm">{item.product.name}</p>
                       <p className="text-xs text-gray-600">
                         {item.quantity}x {formatCurrency(item.price)}
-                        {/* Badge removido para compatibilidade */}
+                        {item.id.includes("orderbump") && (
+                          <Badge className="ml-2 text-xs bg-orange-500">
+                            Oferta especial
+                          </Badge>
+                        )}
                       </p>
                     </div>
                     <p className="font-bold">

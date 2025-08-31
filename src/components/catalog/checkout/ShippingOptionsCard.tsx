@@ -1,138 +1,194 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Truck, MapPin, Package, Clock, MessageCircle } from "lucide-react";
+import { Truck, Package, MapPin, Clock, Smartphone } from "lucide-react";
+import { formatPrice } from "@/utils/formatPrice";
 
-interface ShippingOption {
+interface ShippingMethod {
   id: string;
   name: string;
+  type: string;
+  is_active: boolean;
   price: number;
-  deliveryTime: string;
-  carrier: string;
+  estimated_days?: number;
+  config?: {
+    instructions?: string;
+    pickup_address?: string;
+    delivery_zones?: string[];
+  };
 }
 
 interface ShippingOptionsCardProps {
-  options: ShippingOption[];
-  selectedOption: string;
-  onOptionChange: (option: string) => void;
-  freeDeliveryAmount?: number;
-  cartTotal?: number;
+  shippingMethods: ShippingMethod[];
+  selectedShippingMethodId: string;
+  onSelectShippingMethod: (id: string) => void;
+  onUpdateShippingAddress: (address: string) => void;
+  currentShippingAddress: string;
 }
 
 const ShippingOptionsCard: React.FC<ShippingOptionsCardProps> = ({
-  options,
-  selectedOption,
-  onOptionChange,
-  freeDeliveryAmount = 0,
-  cartTotal = 0,
+  shippingMethods,
+  selectedShippingMethodId,
+  onSelectShippingMethod,
+  onUpdateShippingAddress,
+  currentShippingAddress,
 }) => {
-  const getIcon = (id: string) => {
-    switch (id) {
+  const getShippingIcon = (type: string) => {
+    switch (type) {
       case "pickup":
-        return MapPin;
+        return <Package className="h-5 w-5" />;
       case "delivery":
-        return Package;
+        return <Truck className="h-5 w-5" />;
+      case "correios":
+        return <Package className="h-5 w-5" />;
       case "combine":
-        return MessageCircle;
+        return <Smartphone className="h-5 w-5" />;
       default:
-        return Truck;
+        return <Truck className="h-5 w-5" />;
     }
   };
 
-  const isFreeDelivery = (option: ShippingOption) => {
-    return (
-      freeDeliveryAmount > 0 &&
-      cartTotal >= freeDeliveryAmount &&
-      option.id === "delivery"
-    );
+  const getShippingLabel = (type: string) => {
+    switch (type) {
+      case "pickup":
+        return "Retirada na Loja";
+      case "delivery":
+        return "Entrega Local";
+      case "correios":
+        return "Correios";
+      case "combine":
+        return "A Combinar";
+      default:
+        return type;
+    }
   };
 
-  if (options.length === 0) {
-    return null;
+  // Opções padrão quando não há métodos configurados
+  const defaultMethods = [
+    {
+      id: "pickup",
+      name: "Retirar na loja",
+      type: "pickup",
+      is_active: true,
+      price: 0,
+      estimated_days: undefined,
+      config: {
+        instructions: "Retire seu pedido diretamente na loja",
+        pickup_address: "Endereço da loja",
+        delivery_zones: [],
+      },
+    },
+    {
+      id: "combine",
+      name: "A combinar",
+      type: "combine",
+      is_active: true,
+      price: 0,
+      estimated_days: undefined,
+      config: {
+        instructions: "Entrega a combinar via WhatsApp",
+        pickup_address: "",
+        delivery_zones: [],
+      },
+    },
+  ];
+
+  const methodsToShow =
+    shippingMethods.length > 0 ? shippingMethods : defaultMethods;
+
+  if (methodsToShow.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Métodos de Entrega</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500 text-center py-4">
+            Nenhum método de entrega configurado
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-3 text-lg">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center">
-            <Truck className="h-5 w-5 text-white" />
-          </div>
-          Opções de Frete
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Truck className="h-5 w-5" />
+          Métodos de Entrega
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <RadioGroup
-          value={selectedOption}
-          onValueChange={onOptionChange}
+          value={selectedShippingMethodId}
+          onValueChange={onSelectShippingMethod}
           className="space-y-3"
         >
-          {options.map((option) => {
-            const IconComponent = getIcon(option.id);
-            const finalPrice = isFreeDelivery(option) ? 0 : option.price;
-
-            return (
-              <div
-                key={option.id}
-                className="flex items-center space-x-4 p-4 border-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all cursor-pointer"
+          {methodsToShow.map((method) => (
+            <div key={method.id} className="flex items-center space-x-3">
+              <RadioGroupItem value={method.id} id={method.id} />
+              <Label
+                htmlFor={method.id}
+                className="flex items-center gap-3 cursor-pointer flex-1"
               >
-                <RadioGroupItem value={option.id} id={option.id} />
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <IconComponent size={20} className="text-green-600" />
-                    <label
-                      htmlFor={option.id}
-                      className="font-semibold cursor-pointer text-lg"
-                    >
-                      {option.name}
-                    </label>
-                    <Badge variant="outline" className="text-xs">
-                      {option.carrier}
-                    </Badge>
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="text-green-600">
+                    {getShippingIcon(method.type)}
                   </div>
-
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {option.deliveryTime}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isFreeDelivery(option) && (
-                        <Badge className="bg-green-100 text-green-700 text-xs">
-                          Frete Grátis!
-                        </Badge>
-                      )}
-
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          finalPrice === 0
-                            ? "bg-green-100 text-green-700"
-                            : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {finalPrice === 0
-                          ? "Grátis"
-                          : `R$ ${finalPrice.toFixed(2)}`}
-                      </span>
+                  <div className="flex-1">
+                    <div className="font-medium">{method.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {getShippingLabel(method.type)}
                     </div>
                   </div>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      {method.price === 0
+                        ? "Grátis"
+                        : formatPrice(method.price)}
+                    </div>
+                    {method.estimated_days && (
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {method.estimated_days} dia(s)
+                      </div>
+                    )}
+                  </div>
+                  <Badge variant="outline">Ativo</Badge>
                 </div>
-              </div>
-            );
-          })}
+              </Label>
+            </div>
+          ))}
         </RadioGroup>
 
-        {freeDeliveryAmount > 0 && cartTotal < freeDeliveryAmount && (
-          <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <p className="text-sm text-orange-700">
-              💡 <strong>Dica:</strong> Faltam apenas R${" "}
-              {(freeDeliveryAmount - cartTotal).toFixed(2)} para frete grátis na
-              entrega local!
-            </p>
+        {/* Endereço de Entrega */}
+        {selectedShippingMethodId && selectedShippingMethodId !== "pickup" && (
+          <div className="space-y-3">
+            <Label htmlFor="shipping-address">Endereço de Entrega</Label>
+            <Input
+              id="shipping-address"
+              placeholder="Digite seu endereço completo"
+              value={currentShippingAddress}
+              onChange={(e) => onUpdateShippingAddress(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Instruções do método selecionado */}
+        {selectedShippingMethodId && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-sm text-green-800">
+              <strong>Instruções:</strong>
+              <p className="mt-1">
+                {shippingMethods.find((m) => m.id === selectedShippingMethodId)
+                  ?.config?.instructions ||
+                  "Siga as instruções fornecidas pelo vendedor para a entrega."}
+              </p>
+            </div>
           </div>
         )}
       </CardContent>

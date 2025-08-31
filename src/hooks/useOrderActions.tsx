@@ -116,7 +116,10 @@ export const useOrderActions = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (
+    orderId: string,
+    newStatus: "pending" | "confirmed" | "preparing" | "shipping" | "delivered" | "cancelled"
+  ) => {
     try {
       setLoading(true);
 
@@ -165,22 +168,15 @@ export const useOrderActions = () => {
       const message =
         `🔔 *LEMBRETE DE PAGAMENTO*\n\n` +
         `Olá ${order.customer_name}!\n\n` +
-        `Seu pedido #${order.id.slice(
-          -8
-        )} ainda está aguardando o pagamento.\n\n` +
+        `Seu pedido #${order.id.slice(-8)} ainda está aguardando o pagamento.\n\n` +
         `💰 *Valor:* R$ ${order.total_amount.toFixed(2)}\n` +
-        `📅 *Data do Pedido:* ${new Date(order.created_at).toLocaleDateString(
-          "pt-BR"
-        )}\n\n` +
+        `📅 *Data do Pedido:* ${new Date(order.created_at).toLocaleDateString("pt-BR")}\n\n` +
         `Para finalizar sua compra, entre em contato conosco:\n` +
         `📱 WhatsApp ou 📧 Email\n\n` +
         `Obrigado pela preferência! 😊`;
 
       if (order.customer_phone) {
-        const whatsappUrl = `https://wa.me/${order.customer_phone.replace(
-          /\D/g,
-          ""
-        )}?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/${order.customer_phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
         toast({
@@ -214,10 +210,7 @@ export const useOrderActions = () => {
 
       // Calcular estatísticas
       const totalOrders = orders.length;
-      const totalRevenue = orders.reduce(
-        (sum, order) => sum + order.total_amount,
-        0
-      );
+      const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
       const ordersWithBumps = orders.filter((order) =>
         order.items?.some((item) => item.is_order_bump)
       ).length;
@@ -237,8 +230,7 @@ export const useOrderActions = () => {
         totalRevenue,
         ordersWithBumps,
         bumpRevenue,
-        conversionRate:
-          totalOrders > 0 ? (ordersWithBumps / totalOrders) * 100 : 0,
+        conversionRate: totalOrders > 0 ? (ordersWithBumps / totalOrders) * 100 : 0,
         averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
       };
 
@@ -256,23 +248,14 @@ export const useOrderActions = () => {
         orders
           .map(
             (order) =>
-              `${order.id.slice(-8)},${order.customer_name},${
-                order.status
-              },R$ ${order.total_amount.toFixed(2)},${new Date(
-                order.created_at
-              ).toLocaleDateString("pt-BR")},${
-                order.items?.some((item) => item.is_order_bump) ? "Sim" : "Não"
-              }`
+              `${order.id.slice(-8)},${order.customer_name},${order.status},R$ ${order.total_amount.toFixed(2)},${new Date(order.created_at).toLocaleDateString("pt-BR")},${order.items?.some((item) => item.is_order_bump) ? "Sim" : "Não"}`
           )
           .join("\n");
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute(
-        "download",
-        `relatorio_pedidos_${new Date().toISOString().split("T")[0]}.csv`
-      );
+      link.setAttribute("download", `relatorio_pedidos_${new Date().toISOString().split("T")[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

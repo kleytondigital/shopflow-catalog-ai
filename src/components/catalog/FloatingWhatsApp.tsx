@@ -192,7 +192,7 @@ const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({
       </Button>
 
       {/* Estilo customizado para animações */}
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%,
           100% {

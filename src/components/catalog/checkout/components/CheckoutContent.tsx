@@ -84,28 +84,38 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
         />
 
         <ShippingOptionsCard
-          options={[
+          shippingMethods={[
             {
               id: "pickup",
               name: "Retirar na loja",
+              type: "pickup",
+              is_active: true,
               price: 0,
-              deliveryTime: "Imediato",
-              carrier: "Retirada",
+              estimated_days: undefined,
+              config: {
+                instructions: "Retire seu pedido diretamente na loja",
+                pickup_address: "Endereço da loja",
+                delivery_zones: [],
+              },
             },
             {
               id: "combine",
               name: "A combinar",
+              type: "combine",
+              is_active: true,
               price: 0,
-              deliveryTime: "A combinar",
-              carrier: "WhatsApp",
+              estimated_days: undefined,
+              config: {
+                instructions: "Entrega a combinar via WhatsApp",
+                pickup_address: "",
+                delivery_zones: [],
+              },
             },
           ]}
-          selectedOption={shippingMethod}
-          onOptionChange={setShippingMethod}
-          freeDeliveryAmount={
-            settings?.shipping_options?.free_delivery_amount || 0
-          }
-          cartTotal={totalAmount}
+          selectedShippingMethodId={shippingMethod}
+          onSelectShippingMethod={setShippingMethod}
+          onUpdateShippingAddress={() => {}}
+          currentShippingAddress=""
         />
 
         {/* Seletor de método de pagamento (se checkout online) */}

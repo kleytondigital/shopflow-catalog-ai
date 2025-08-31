@@ -1,10 +1,9 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageCircle, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { generateWhatsAppMessage } from './checkoutUtils';
-import { useState } from 'react';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageCircle, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { generateWhatsAppMessage } from "./checkoutUtils";
+import { useState } from "react";
 
 interface OrderPreviewCardProps {
   orderData: {
@@ -34,7 +33,7 @@ const OrderPreviewCard: React.FC<OrderPreviewCardProps> = ({ orderData }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Erro ao copiar mensagem:', err);
+      console.error("Erro ao copiar mensagem:", err);
     }
   };
 
@@ -52,7 +51,7 @@ const OrderPreviewCard: React.FC<OrderPreviewCardProps> = ({ orderData }) => {
             {message}
           </pre>
         </div>
-        
+
         <Button
           variant="outline"
           size="sm"
@@ -73,7 +72,8 @@ const OrderPreviewCard: React.FC<OrderPreviewCardProps> = ({ orderData }) => {
         </Button>
 
         <div className="text-xs text-green-600 bg-green-100 p-2 rounded-lg">
-          💡 Esta mensagem será enviada automaticamente para o WhatsApp da loja quando você confirmar o pedido.
+          💡 Esta mensagem será enviada automaticamente para o WhatsApp da loja
+          quando você confirmar o pedido.
         </div>
       </CardContent>
     </Card>

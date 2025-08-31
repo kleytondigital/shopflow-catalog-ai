@@ -166,3 +166,4 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 -- - trust_badges_enabled (BOOLEAN)
 -- - quick_add_enabled (BOOLEAN)
 -- - business_hours_display_type (ENUM)
+

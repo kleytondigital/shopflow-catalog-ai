@@ -111,3 +111,4 @@ CREATE INDEX IF NOT EXISTS idx_store_payment_methods_store_id ON store_payment_m
 CREATE INDEX IF NOT EXISTS idx_store_shipping_methods_store_id ON store_shipping_methods(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_order_bump_configs_store_id ON store_order_bump_configs(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_order_bump_configs_product_id ON store_order_bump_configs(product_id);
+
