@@ -61,9 +61,19 @@ export interface OrderBumpProduct {
   images?: string[];
   description?: string;
   weight?: number;
+  store_id?: string; // Adicionar store_id
+  image_url?: string; // Adicionar image_url
   is_order_bump: boolean;
   discount_percentage?: number;
   final_price?: number;
+  order_bump_config?: {
+    discount_percentage: number;
+    urgency_text: string;
+    social_proof_text: string;
+    bundle_price?: number;
+    is_limited_time: boolean;
+    limited_quantity: number;
+  };
 }
 
 export interface CheckoutConfig {
@@ -177,9 +187,20 @@ export const useCheckoutConfig = () => {
                 images: [], // Product images are fetched separately
                 description: product.description,
                 weight: product.weight,
+                store_id: product.store_id, // Incluir store_id
+                image_url: product.image_url, // Incluir image_url
                 is_order_bump: true,
                 discount_percentage: bump.discount_percentage,
                 final_price: finalPrice,
+                // Incluir configuração completa do order bump
+                order_bump_config: {
+                  discount_percentage: bump.discount_percentage,
+                  urgency_text: bump.urgency_text,
+                  social_proof_text: bump.social_proof_text,
+                  bundle_price: bump.bundle_price,
+                  is_limited_time: bump.is_limited_time,
+                  limited_quantity: bump.limited_quantity,
+                },
               };
             })
             .filter(Boolean) as OrderBumpProduct[];

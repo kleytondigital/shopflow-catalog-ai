@@ -21,22 +21,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { supabase } from "@/integrations/supabase/client";
 import { Plus, Edit, Trash2, Gift, Package, Clock, Users } from "lucide-react";
+import type { Database } from "@/types/database.types";
 
-interface OrderBumpConfig {
-  id: string;
-  product_id: string;
-  store_id: string;
-  discount_percentage: number;
-  urgency_text: string;
-  social_proof_text: string;
-  bundle_price: number | null;
-  is_limited_time: boolean;
-  limited_quantity: number;
-  is_active: boolean;
-  created_at: string | null;
-  updated_at: string | null;
-}
+type OrderBumpConfig =
+  Database["public"]["Tables"]["store_order_bump_configs"]["Row"];
 
 interface Product {
   id: string;
@@ -74,30 +64,47 @@ export default function OrderBumpSettings() {
     }
   }, [storeId]);
 
+  // Recarregar order bumps quando os produtos forem carregados
+  useEffect(() => {
+    if (products && products.length > 0 && orderBumps.length > 0) {
+      // Forçar re-render para atualizar os nomes dos produtos
+      setOrderBumps([...orderBumps]);
+    }
+  }, [products]);
+
   const fetchOrderBumps = async () => {
     if (!storeId) return;
 
     try {
       setLoading(true);
-      // Simular dados para demonstração
-      const mockOrderBumps: OrderBumpConfig[] = [
-        {
-          id: "1",
-          product_id: "prod-1",
-          store_id: storeId,
-          discount_percentage: 15,
-          urgency_text: "Últimas unidades!",
-          social_proof_text: "95% dos clientes escolheram!",
-          bundle_price: null,
-          is_limited_time: true,
-          limited_quantity: 10,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ];
 
-      setOrderBumps(mockOrderBumps);
+      // Buscar order bumps reais do banco de dados
+      const { data: orderBumpsData, error } = await (supabase as any)
+        .from("store_order_bump_configs")
+        .select("*")
+        .eq("store_id", storeId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar order bumps:", error);
+
+        // Se a tabela não existe, usar dados mockados temporariamente
+        if (
+          error.message?.includes("relation") ||
+          error.message?.includes("does not exist")
+        ) {
+          console.log(
+            "Tabela store_order_bump_configs não existe. Usando dados mockados temporariamente."
+          );
+          const mockOrderBumps: OrderBumpConfig[] = [];
+          setOrderBumps(mockOrderBumps);
+          return;
+        }
+
+        throw error;
+      }
+
+      setOrderBumps((orderBumpsData as OrderBumpConfig[]) || []);
     } catch (error) {
       console.error("Erro ao carregar order bumps:", error);
       toast({
@@ -117,37 +124,91 @@ export default function OrderBumpSettings() {
 
     try {
       const orderBumpData = {
-        ...formData,
         store_id: storeId,
+        product_id: formData.product_id,
+        discount_percentage: formData.discount_percentage,
+        urgency_text: formData.urgency_text,
+        social_proof_text: formData.social_proof_text,
+        is_limited_time: formData.is_limited_time,
+        limited_quantity: formData.limited_quantity,
+        is_active: formData.is_active,
         updated_at: new Date().toISOString(),
       };
 
+      // Temporariamente removendo bundle_price até a migração ser aplicada
+      // if (formData.bundle_price && formData.bundle_price > 0) {
+      //   (orderBumpData as any).bundle_price = formData.bundle_price;
+      // }
+
       if (editingOrderBump) {
-        // Atualizar existente
-        const updatedOrderBumps = orderBumps.map((ob) =>
-          ob.id === editingOrderBump.id ? { ...ob, ...orderBumpData } : ob
-        );
-        setOrderBumps(updatedOrderBumps);
+        // Atualizar existente no banco
+        const { error } = await (supabase as any)
+          .from("store_order_bump_configs")
+          .update(orderBumpData)
+          .eq("id", editingOrderBump.id);
+
+        if (error) {
+          console.error("Erro ao atualizar order bump:", error);
+          throw error;
+        }
 
         toast({
           title: "Sucesso",
           description: "Order bump atualizado com sucesso!",
         });
       } else {
-        // Criar novo
-        const newOrderBump: OrderBumpConfig = {
-          id: Date.now().toString(),
-          ...orderBumpData,
-          created_at: new Date().toISOString(),
-        };
+        // Criar novo no banco
+        console.log("Dados do order bump a serem inseridos:", orderBumpData);
+        const { data, error } = await (supabase as any)
+          .from("store_order_bump_configs")
+          .insert(orderBumpData)
+          .select();
 
-        setOrderBumps([newOrderBump, ...orderBumps]);
+        if (error) {
+          console.error("Erro ao criar order bump:", error);
+          console.error("Detalhes do erro:", JSON.stringify(error, null, 2));
+
+          // Se a tabela não existe, mostrar mensagem informativa
+          if (
+            error.message?.includes("relation") ||
+            error.message?.includes("does not exist")
+          ) {
+            toast({
+              title: "Tabela não encontrada",
+              description:
+                "A tabela store_order_bump_configs não existe. Execute a migração 20250128000002-store-order-bump-configs.sql no Supabase.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Se a coluna bundle_price não existe
+          if (
+            error.message?.includes("bundle_price") &&
+            error.message?.includes("schema cache")
+          ) {
+            toast({
+              title: "Coluna não encontrada",
+              description:
+                "A coluna 'bundle_price' não existe na tabela. Execute a migração 20250128000003-fix-order-bump-bundle-price.sql no Supabase.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          throw error;
+        }
+
+        console.log("Order bump criado com sucesso:", data);
 
         toast({
           title: "Sucesso",
           description: "Order bump criado com sucesso!",
         });
       }
+
+      // Recarregar order bumps do banco
+      await fetchOrderBumps();
 
       // Limpar formulário e fechar diálogo
       setFormData({
@@ -191,8 +252,19 @@ export default function OrderBumpSettings() {
     if (!confirm("Tem certeza que deseja excluir este order bump?")) return;
 
     try {
-      const updatedOrderBumps = orderBumps.filter((ob) => ob.id !== id);
-      setOrderBumps(updatedOrderBumps);
+      // Deletar do banco de dados
+      const { error } = await (supabase as any)
+        .from("store_order_bump_configs")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Erro ao deletar order bump:", error);
+        throw error;
+      }
+
+      // Recarregar order bumps do banco
+      await fetchOrderBumps();
 
       toast({
         title: "Sucesso",
@@ -210,16 +282,22 @@ export default function OrderBumpSettings() {
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      const updatedOrderBumps = orderBumps.map((ob) =>
-        ob.id === id
-          ? {
-              ...ob,
-              is_active: !currentStatus,
-              updated_at: new Date().toISOString(),
-            }
-          : ob
-      );
-      setOrderBumps(updatedOrderBumps);
+      // Atualizar status no banco de dados
+      const { error } = await (supabase as any)
+        .from("store_order_bump_configs")
+        .update({
+          is_active: !currentStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Erro ao alterar status do order bump:", error);
+        throw error;
+      }
+
+      // Recarregar order bumps do banco
+      await fetchOrderBumps();
 
       toast({
         title: "Sucesso",
@@ -238,11 +316,21 @@ export default function OrderBumpSettings() {
   };
 
   const getProductName = (productId: string) => {
+    // Se os produtos ainda estão carregando, mostrar loading
+    if (products === undefined) {
+      return "Carregando...";
+    }
+
     const product = products?.find((p) => p.id === productId);
     return product?.name || "Produto não encontrado";
   };
 
   const getProductPrice = (productId: string) => {
+    // Se os produtos ainda estão carregando, retornar 0
+    if (products === undefined) {
+      return 0;
+    }
+
     const product = products?.find((p) => p.id === productId);
     return product?.retail_price || 0;
   };

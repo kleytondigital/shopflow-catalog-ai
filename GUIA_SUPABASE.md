@@ -236,3 +236,4 @@ Se ainda estiver com problemas:
 
 **Sistema testado e funcionando no Supabase!** 🚀💪
 
+

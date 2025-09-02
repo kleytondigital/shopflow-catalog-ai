@@ -167,3 +167,4 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 -- - quick_add_enabled (BOOLEAN)
 -- - business_hours_display_type (ENUM)
 
+

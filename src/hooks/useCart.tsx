@@ -85,6 +85,8 @@ interface CartContextType {
       savings: number;
     };
   };
+  // ✅ LOADING STATE
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -166,6 +168,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Loading state
   const { toast } = useToast();
 
   // Cache para níveis de preço
@@ -307,8 +310,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Carregar itens do localStorage com validação
   useEffect(() => {
-    const loadCartFromStorage = () => {
+    const loadCartFromStorage = async () => {
       try {
+        setIsLoading(true); // Iniciar loading
         const savedItems = localStorage.getItem("cart-items");
         if (savedItems) {
           const parsedItems = JSON.parse(savedItems);
@@ -355,6 +359,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           variant: "destructive",
           duration: 4000,
         });
+      } finally {
+        setIsLoading(false); // Finalizar loading
       }
     };
 
@@ -703,6 +709,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     nextTierSavings: calculateNextTierSavings(),
     itemsToNextTier: calculateItemsToNextTier(),
     tierProgress: calculateTierProgress(),
+    // ✅ LOADING STATE
+    isLoading,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

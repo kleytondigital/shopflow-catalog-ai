@@ -33,6 +33,8 @@ interface OrderBumpProduct {
   retail_price: number;
   wholesale_price?: number;
   category?: string;
+  store_id?: string; // Adicionar store_id
+  image_url?: string; // Adicionar image_url
   order_bump_config?: {
     discount_percentage?: number;
     urgency_text?: string;
@@ -200,14 +202,17 @@ const OrderBump: React.FC<OrderBumpProps> = ({
           product.retail_price *
           (1 - (product.order_bump_config?.discount_percentage || 0) / 100);
 
+        // Buscar store_id do produto original
+        const productStoreId = (product as any).store_id || "";
+
         const cartItem = createCartItem(
           {
-            id: product.id,
-            name: product.name,
+            id: `${product.id}-orderbump`, // ID único para Order Bump
+            name: `${product.name} (Oferta Especial)`, // Nome diferenciado
             retail_price: discountedPrice, // Usar preço com desconto
             wholesale_price: product.wholesale_price || discountedPrice,
             category: product.category || "",
-            image_url: "",
+            image_url: product.image_url || "",
             description: product.description || "",
             is_featured: false,
             is_active: true,
@@ -216,7 +221,7 @@ const OrderBump: React.FC<OrderBumpProps> = ({
             allow_negative_stock: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            store_id: "",
+            store_id: productStoreId, // Usar store_id do produto original
             variations: [],
             // Marcar como order bump para identificação
             isOrderBump: true,
@@ -283,14 +288,17 @@ const OrderBump: React.FC<OrderBumpProps> = ({
         product.retail_price *
         (1 - (product.order_bump_config?.discount_percentage || 0) / 100);
 
+      // Buscar store_id do produto original
+      const productStoreId = (product as any).store_id || "";
+
       const cartItem = createCartItem(
         {
-          id: product.id,
-          name: product.name,
+          id: `${product.id}-orderbump`, // ID único para Order Bump
+          name: `${product.name} (Oferta Especial)`, // Nome diferenciado
           retail_price: discountedPrice, // Usar preço com desconto
           wholesale_price: product.wholesale_price || discountedPrice,
           category: product.category || "",
-          image_url: "",
+          image_url: product.image_url || "",
           description: product.description || "",
           is_featured: false,
           is_active: true,
@@ -299,7 +307,7 @@ const OrderBump: React.FC<OrderBumpProps> = ({
           allow_negative_stock: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          store_id: "",
+          store_id: productStoreId, // Usar store_id do produto original
           variations: [],
           // Marcar como order bump
           isOrderBump: true,
