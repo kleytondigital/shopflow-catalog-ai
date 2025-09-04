@@ -19,7 +19,7 @@ const MinimumPurchaseConfig: React.FC<MinimumPurchaseConfigProps> = ({
 }) => {
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { priceModel, updatePriceModel, isLoading } = useStorePriceModel(
+  const { priceModel, updatePriceModel, loading } = useStorePriceModel(
     profile?.store_id
   );
 
@@ -95,7 +95,7 @@ const MinimumPurchaseConfig: React.FC<MinimumPurchaseConfigProps> = ({
 
   const previewMessage = message.replace("{amount}", formatCurrency(amount));
 
-  if (isLoading || !priceModel) {
+  if (loading || !priceModel) {
     return (
       <Card>
         <CardHeader>

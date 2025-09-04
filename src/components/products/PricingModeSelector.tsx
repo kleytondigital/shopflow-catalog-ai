@@ -25,17 +25,17 @@ const PricingModeSelector: React.FC<PricingModeSelectorProps> = ({
 }) => {
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { priceModel, updatePriceModel, isLoading } = useStorePriceModel(
+  const { priceModel, updatePriceModel, loading } = useStorePriceModel(
     profile?.store_id
   );
-  const [selectedMode, setSelectedMode] = useState(
-    priceModel?.price_model || "retail_only"
+  const [selectedMode, setSelectedMode] = useState<PriceModelType>(
+    (priceModel?.price_model as PriceModelType) || "retail_only"
   );
 
   // Sincronizar estado local com dados do banco
   React.useEffect(() => {
     if (priceModel?.price_model) {
-      setSelectedMode(priceModel.price_model);
+      setSelectedMode(priceModel.price_model as PriceModelType);
     }
   }, [priceModel?.price_model]);
 
@@ -51,7 +51,7 @@ const PricingModeSelector: React.FC<PricingModeSelectorProps> = ({
 
     try {
       await updatePriceModel({ price_model: mode });
-      setSelectedMode(mode);
+      setSelectedMode(mode as PriceModelType);
       onModeChange?.(mode);
 
       toast({
@@ -101,7 +101,7 @@ const PricingModeSelector: React.FC<PricingModeSelectorProps> = ({
     }
   };
 
-  if (isLoading || !priceModel) {
+  if (loading || !priceModel) {
     return (
       <Card className={className}>
         <CardContent className="p-6">

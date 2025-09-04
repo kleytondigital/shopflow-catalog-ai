@@ -98,13 +98,16 @@ export const useStorePriceModel = (storeId: string | undefined) => {
       } else if (data) {
         console.log("✅ useStorePriceModel: Modelo encontrado:", data);
         console.log("🔍 useStorePriceModel: Campos de pedido mínimo:", {
-          minimum_purchase_enabled: data.minimum_purchase_enabled,
-          minimum_purchase_amount: data.minimum_purchase_amount,
-          minimum_purchase_message: data.minimum_purchase_message,
+          minimum_purchase_enabled: (data as any).minimum_purchase_enabled,
+          minimum_purchase_amount: (data as any).minimum_purchase_amount,
+          minimum_purchase_message: (data as any).minimum_purchase_message,
         });
         setPriceModel({
           ...data,
           price_model: data.price_model as PriceModelType,
+          minimum_purchase_enabled: (data as any).minimum_purchase_enabled || false,
+          minimum_purchase_amount: (data as any).minimum_purchase_amount || 0,
+          minimum_purchase_message: (data as any).minimum_purchase_message || "",
         });
       } else {
         console.warn(
@@ -163,6 +166,9 @@ export const useStorePriceModel = (storeId: string | undefined) => {
         setPriceModel({
           ...insertData,
           price_model: insertData.price_model as PriceModelType,
+          minimum_purchase_enabled: (insertData as any).minimum_purchase_enabled || false,
+          minimum_purchase_amount: (insertData as any).minimum_purchase_amount || 0,
+          minimum_purchase_message: (insertData as any).minimum_purchase_message || "",
         });
       } else {
         console.log(
@@ -172,15 +178,18 @@ export const useStorePriceModel = (storeId: string | undefined) => {
         setPriceModel({
           ...updateData,
           price_model: updateData.price_model as PriceModelType,
+          minimum_purchase_enabled: (updateData as any).minimum_purchase_enabled || false,
+          minimum_purchase_amount: (updateData as any).minimum_purchase_amount || 0,
+          minimum_purchase_message: (updateData as any).minimum_purchase_message || "",
         });
       }
 
       console.log(
         "🔍 useStorePriceModel: Campos de pedido mínimo após operação:",
         {
-          minimum_purchase_enabled: updateData?.minimum_purchase_enabled,
-          minimum_purchase_amount: updateData?.minimum_purchase_amount,
-          minimum_purchase_message: updateData?.minimum_purchase_message,
+          minimum_purchase_enabled: (updateData as any)?.minimum_purchase_enabled,
+          minimum_purchase_amount: (updateData as any)?.minimum_purchase_amount,
+          minimum_purchase_message: (updateData as any)?.minimum_purchase_message,
         }
       );
 
