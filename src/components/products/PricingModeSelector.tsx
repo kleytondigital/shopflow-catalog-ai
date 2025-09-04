@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useStorePriceModel } from "@/hooks/useStorePriceModel";
+import { useStorePriceModel, PriceModelType } from "@/hooks/useStorePriceModel";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -50,7 +50,7 @@ const PricingModeSelector: React.FC<PricingModeSelectorProps> = ({
     }
 
     try {
-      await updatePriceModel({ price_model: mode });
+      await updatePriceModel({ price_model: mode as PriceModelType });
       setSelectedMode(mode as PriceModelType);
       onModeChange?.(mode);
 
@@ -141,7 +141,7 @@ const PricingModeSelector: React.FC<PricingModeSelectorProps> = ({
                   : "hover:bg-gray-50"
               }`}
               onClick={() => handleModeChange(key)}
-              disabled={isLoading}
+              disabled={loading}
             >
               <div className="flex items-center gap-2 w-full">
                 {getModeIcon(key)}

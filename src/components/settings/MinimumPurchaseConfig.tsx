@@ -194,8 +194,8 @@ const MinimumPurchaseConfig: React.FC<MinimumPurchaseConfigProps> = ({
 
         {/* Botão Salvar */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Salvar Configuração"}
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Salvando..." : "Salvar Configuração"}
           </Button>
         </div>
       </CardContent>
