@@ -72,3 +72,4 @@ FROM store_price_models
 ORDER BY updated_at DESC 
 LIMIT 5;
 
+

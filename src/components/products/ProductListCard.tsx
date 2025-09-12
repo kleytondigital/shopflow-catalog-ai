@@ -2,7 +2,16 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Eye, Edit, Trash2, Image, AlertCircle } from "lucide-react";
+import {
+  Package,
+  Eye,
+  Edit,
+  Trash2,
+  Image,
+  AlertCircle,
+  Copy,
+  Package2,
+} from "lucide-react";
 import { Product } from "@/types/product";
 import { formatCurrency } from "@/lib/utils";
 import { useProductImages } from "@/hooks/useProductImages";
@@ -12,6 +21,8 @@ interface ProductListCardProps {
   onEdit?: (product: Product) => void;
   onDelete?: (id: string) => void;
   onView?: (product: Product) => void;
+  onDuplicate?: (product: Product) => void; // 🎯 NOVO: Callback para duplicar produto
+  onManageStock?: (product: Product) => void; // 🎯 NOVO: Callback para gerenciar estoque
   onListUpdate?: () => void; // 🎯 NOVO: Callback para atualizar lista
 }
 
@@ -20,6 +31,8 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
   onEdit,
   onDelete,
   onView,
+  onDuplicate,
+  onManageStock,
   onListUpdate,
 }) => {
   const { images } = useProductImages(product.id);
@@ -48,6 +61,8 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
     }
   };
   const handleView = () => onView?.(product);
+  const handleDuplicate = () => onDuplicate?.(product);
+  const handleManageStock = () => onManageStock?.(product);
 
   // 🎯 NOVA FUNÇÃO: Callback quando imagens são atualizadas (não usado neste componente)
   const handleImagesUpdated = () => {
@@ -166,6 +181,7 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
               size="sm"
               onClick={handleView}
               className="h-8 w-8 p-0"
+              title="Visualizar produto"
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -174,14 +190,36 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
               size="sm"
               onClick={handleEdit}
               className="h-8 w-8 p-0"
+              title="Editar produto"
             >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
+              onClick={handleDuplicate}
+              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title="Duplicar produto"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            {product.variations && product.variations.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleManageStock}
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                title="Gerenciar estoque das variações"
+              >
+                <Package2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleDelete}
               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              title="Excluir produto"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

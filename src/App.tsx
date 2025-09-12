@@ -21,6 +21,16 @@ import Automations from "./pages/Automations";
 import UserManagement from "./pages/UserManagement";
 import Analytics from "./pages/Analytics";
 import AISettings from "./pages/AISettings";
+import Organizations from "./pages/Organizations";
+import Stores from "./pages/Stores";
+import Billing from "./pages/Billing";
+import PlanManagement from "./pages/PlanManagement";
+import Revenue from "./pages/Revenue";
+import Monitoring from "./pages/Monitoring";
+import Logs from "./pages/Logs";
+import Alerts from "./pages/Alerts";
+import GlobalCustomers from "./pages/GlobalCustomers";
+import Security from "./pages/Security";
 import AppLayout from "./components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -228,6 +238,138 @@ function App() {
                           subtitle="Configure provedores de inteligência artificial"
                         >
                           <AISettings />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Novas rotas do superadmin */}
+                  <Route
+                    path="/organizations"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Organizações"
+                          subtitle="Gerencie todas as organizações do sistema"
+                        >
+                          <Organizations />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/stores"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Lojas"
+                          subtitle="Gerencie todas as lojas cadastradas no sistema"
+                        >
+                          <Stores />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/billing"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Cobranças"
+                          subtitle="Gerencie cobranças e pagamentos do sistema"
+                        >
+                          <Billing />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/plan-management"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Gerenciamento de Planos"
+                          subtitle="Configure e gerencie os planos disponíveis no sistema"
+                        >
+                          <PlanManagement />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/revenue"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Receitas"
+                          subtitle="Acompanhe o desempenho financeiro do sistema"
+                        >
+                          <Revenue />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/monitoring"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Monitoramento"
+                          subtitle="Acompanhe a saúde e performance do sistema"
+                        >
+                          <Monitoring />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/logs"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Logs do Sistema"
+                          subtitle="Visualize e analise os logs de atividade do sistema"
+                        >
+                          <Logs />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/alerts"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Alertas"
+                          subtitle="Gerencie alertas e notificações do sistema"
+                        >
+                          <Alerts />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/global-customers"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Clientes Globais"
+                          subtitle="Gerencie todos os clientes de todas as lojas"
+                        >
+                          <GlobalCustomers />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/security"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout
+                          title="Segurança"
+                          subtitle="Configure e monitore as configurações de segurança do sistema"
+                        >
+                          <Security />
                         </AppLayout>
                       </ProtectedRoute>
                     }

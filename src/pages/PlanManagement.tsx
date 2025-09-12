@@ -1,111 +1,190 @@
-
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/useAuth";
-import { Crown, Plus, Edit, Trash2 } from "lucide-react";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-import SubscriptionPlansManager from "@/components/admin/SubscriptionPlansManager";
-import { SystemBenefitsManager } from "@/components/admin/SystemBenefitsManager";
-import { PlanBenefitsSelector } from "@/components/admin/PlanBenefitsSelector";
-import PaymentGatewayConfig from "@/components/admin/PaymentGatewayConfig";
-import PlanPaymentsTable from "@/components/admin/PlanPaymentsTable";
-import SubscriptionManagement from "@/components/admin/SubscriptionManagement";
-import ResponsiveAppLayout from "@/components/layout/ResponsiveAppLayout";
+import { Crown, Star, Zap, Plus, Edit, Trash2, Check } from "lucide-react";
 
 const PlanManagement = () => {
-  const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState("subscriptions");
-  const [plans] = useState([
-    {
-      id: "1",
-      name: "Básico",
-      description: "Plano básico para lojas pequenas",
-      price_monthly: 29.9,
-      type: "basic",
-      is_active: true,
-    },
-    {
-      id: "2",
-      name: "Premium",
-      description: "Plano premium com recursos avançados",
-      price_monthly: 59.9,
-      type: "premium",
-      is_active: true,
-    },
-  ]);
-
-  if (profile?.role !== "superadmin") {
-    return (
-      <ResponsiveAppLayout title="Acesso Negado">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Acesso Negado
-            </h2>
-            <p className="text-gray-600">
-              Você não tem permissão para acessar esta página.
-            </p>
-          </div>
-        </div>
-      </ResponsiveAppLayout>
-    );
-  }
-
-  const breadcrumbs = [
-    { href: "/", label: "Dashboard" },
-    { label: "Gestão de Planos e Benefícios", current: true },
-  ];
-
   return (
-    <ResponsiveAppLayout
-      title="Gestão de Planos e Benefícios"
-      subtitle="Configure planos, gateways de pagamento e monitore financeiro do sistema"
-      breadcrumbs={breadcrumbs}
-    >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
-          <TabsTrigger value="plans">Planos</TabsTrigger>
-          <TabsTrigger value="benefits">Benefícios</TabsTrigger>
-          <TabsTrigger value="config">Configuração</TabsTrigger>
-          <TabsTrigger value="gateways">Gateways</TabsTrigger>
-          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-        </TabsList>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Gerenciamento de Planos</h1>
+          <p className="text-muted-foreground">
+            Configure e gerencie os planos disponíveis no sistema
+          </p>
+        </div>
+        <Button className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Plano
+        </Button>
+      </div>
 
-        <TabsContent value="subscriptions" className="mt-6">
-          <SubscriptionManagement />
-        </TabsContent>
+      <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-2 border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-gray-600" />
+                Plano Básico
+              </CardTitle>
+              <div className="text-3xl font-bold">R$ 99,90</div>
+              <p className="text-sm text-muted-foreground">por mês</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Até 100 produtos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">1 loja</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Suporte por email</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Relatórios básicos</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        <TabsContent value="plans" className="mt-6">
-          <SubscriptionPlansManager />
-        </TabsContent>
+          <Card className="border-2 border-blue-500 relative">
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-blue-500">Mais Popular</Badge>
+            </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-blue-600" />
+                Plano Premium
+              </CardTitle>
+              <div className="text-3xl font-bold">R$ 299,90</div>
+              <p className="text-sm text-muted-foreground">por mês</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Produtos ilimitados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Até 5 lojas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Suporte prioritário</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Relatórios avançados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">IA integrada</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        <TabsContent value="benefits" className="mt-6">
-          <SystemBenefitsManager />
-        </TabsContent>
+          <Card className="border-2 border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-purple-600" />
+                Plano Enterprise
+              </CardTitle>
+              <div className="text-3xl font-bold">R$ 599,90</div>
+              <p className="text-sm text-muted-foreground">por mês</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Produtos ilimitados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Lojas ilimitadas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Suporte 24/7</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Analytics avançados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">API personalizada</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <TabsContent value="config" className="mt-6">
-          <PlanBenefitsSelector />
-        </TabsContent>
-
-        <TabsContent value="gateways" className="mt-6">
-          <PaymentGatewayConfig />
-        </TabsContent>
-
-        <TabsContent value="payments" className="mt-6">
-          <PlanPaymentsTable />
-        </TabsContent>
-      </Tabs>
-    </ResponsiveAppLayout>
+        <Card>
+          <CardHeader>
+            <CardTitle>Estatísticas dos Planos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">45</div>
+                <p className="text-sm text-muted-foreground">
+                  Total de Assinaturas
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">18</div>
+                <p className="text-sm text-muted-foreground">Plano Básico</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">22</div>
+                <p className="text-sm text-muted-foreground">Plano Premium</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">5</div>
+                <p className="text-sm text-muted-foreground">
+                  Plano Enterprise
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

@@ -200,6 +200,160 @@ export const useProducts = () => {
     }
   };
 
+  const duplicateProduct = async (originalProduct: Product) => {
+    try {
+      console.log("useProducts: Duplicando produto:", originalProduct.name);
+
+      // 1. Criar o produto duplicado (sem ID e com nome modificado)
+      const duplicatedProductData = {
+        name: `${originalProduct.name} (Cópia)`,
+        description: originalProduct.description,
+        retail_price: originalProduct.retail_price,
+        wholesale_price: originalProduct.wholesale_price,
+        category: originalProduct.category,
+        stock: 0, // Estoque zerado para o produto duplicado
+        min_wholesale_qty: originalProduct.min_wholesale_qty,
+        meta_title: originalProduct.meta_title,
+        meta_description: originalProduct.meta_description,
+        keywords: originalProduct.keywords,
+        seo_slug: originalProduct.seo_slug
+          ? `${originalProduct.seo_slug}-copia`
+          : undefined,
+        is_featured: false, // Não destacar produto duplicado
+        allow_negative_stock: originalProduct.allow_negative_stock,
+        stock_alert_threshold: originalProduct.stock_alert_threshold,
+        is_active: false, // Produto duplicado inativo por padrão
+        whatsapp_number: originalProduct.whatsapp_number,
+        enable_gradual_wholesale: originalProduct.enable_gradual_wholesale,
+        price_model: originalProduct.price_model,
+      };
+
+      const { data: newProduct, error: productError } = await supabase
+        .from("products")
+        .insert({
+          ...duplicatedProductData,
+          store_id: profile?.store_id,
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // 2. Duplicar as variações se existirem
+      if (originalProduct.variations && originalProduct.variations.length > 0) {
+        const duplicatedVariations = originalProduct.variations.map(
+          (variation) => ({
+            product_id: newProduct.id,
+            color: variation.color,
+            size: variation.size,
+            material: variation.material,
+            sku: variation.sku ? `${variation.sku}-COPY` : undefined,
+            stock: 0, // Estoque zerado para variações duplicadas
+            price_adjustment: variation.price_adjustment,
+            is_active: false, // Variações inativas por padrão
+            image_url: variation.image_url,
+            variation_type: variation.variation_type,
+            name: variation.name,
+            is_grade: variation.is_grade,
+            grade_name: variation.grade_name,
+            grade_color: variation.grade_color,
+            grade_quantity: variation.grade_quantity,
+            grade_sizes: variation.grade_sizes,
+            grade_pairs: variation.grade_pairs,
+            display_order: variation.display_order,
+          })
+        );
+
+        const { error: variationsError } = await supabase
+          .from("product_variations")
+          .insert(duplicatedVariations);
+
+        if (variationsError) {
+          console.error("Erro ao duplicar variações:", variationsError);
+          // Não falhar a operação se as variações falharem
+        }
+      }
+
+      // 3. Duplicar as imagens se existirem
+      const { data: originalImages, error: imagesError } = await supabase
+        .from("product_images")
+        .select("*")
+        .eq("product_id", originalProduct.id);
+
+      if (!imagesError && originalImages && originalImages.length > 0) {
+        const duplicatedImages = originalImages.map((image) => ({
+          product_id: newProduct.id,
+          image_url: image.image_url,
+          alt_text: image.alt_text,
+          display_order: image.display_order,
+          is_primary: image.is_primary,
+        }));
+
+        const { error: insertImagesError } = await supabase
+          .from("product_images")
+          .insert(duplicatedImages);
+
+        if (insertImagesError) {
+          console.error("Erro ao duplicar imagens:", insertImagesError);
+          // Não falhar a operação se as imagens falharem
+        }
+      }
+
+      // 4. Duplicar os price tiers se existirem
+      const { data: originalPriceTiers, error: priceTiersError } =
+        await supabase
+          .from("product_price_tiers")
+          .select("*")
+          .eq("product_id", originalProduct.id);
+
+      if (
+        !priceTiersError &&
+        originalPriceTiers &&
+        originalPriceTiers.length > 0
+      ) {
+        const duplicatedPriceTiers = originalPriceTiers.map((tier) => ({
+          product_id: newProduct.id,
+          tier_name: tier.tier_name,
+          tier_type: tier.tier_type,
+          min_quantity: tier.min_quantity,
+          price: tier.price,
+          tier_order: tier.tier_order,
+          is_active: tier.is_active,
+        }));
+
+        const { error: insertPriceTiersError } = await supabase
+          .from("product_price_tiers")
+          .insert(duplicatedPriceTiers);
+
+        if (insertPriceTiersError) {
+          console.error("Erro ao duplicar price tiers:", insertPriceTiersError);
+          // Não falhar a operação se os price tiers falharem
+        }
+      }
+
+      await fetchProducts(); // Recarregar produtos após duplicação
+
+      toast({
+        title: "Produto duplicado com sucesso!",
+        description: `"${originalProduct.name}" foi duplicado como "${newProduct.name}". O produto duplicado está inativo por padrão.`,
+      });
+
+      return { data: newProduct, error: null };
+    } catch (error) {
+      console.error("Erro ao duplicar produto:", error);
+      toast({
+        title: "Erro ao duplicar produto",
+        description: "Não foi possível duplicar o produto. Tente novamente.",
+        variant: "destructive",
+      });
+      return {
+        data: null,
+        error:
+          error instanceof Error ? error.message : "Erro ao duplicar produto",
+      };
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -210,6 +364,7 @@ export const useProducts = () => {
     fetchProducts,
     deleteProduct,
     createProduct,
+    duplicateProduct,
   };
 };
 

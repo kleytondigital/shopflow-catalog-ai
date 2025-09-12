@@ -12,3 +12,4 @@ COMMENT ON COLUMN store_price_models.minimum_purchase_enabled IS 'Habilita pedid
 COMMENT ON COLUMN store_price_models.minimum_purchase_amount IS 'Valor mínimo do pedido em reais';
 COMMENT ON COLUMN store_price_models.minimum_purchase_message IS 'Mensagem personalizada para pedido mínimo (use {amount} para o valor)';
 
+

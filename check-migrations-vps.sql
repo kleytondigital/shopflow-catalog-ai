@@ -131,3 +131,4 @@ SELECT
 SELECT 
     'Versão PostgreSQL' as check_name,
     version() as status;
+

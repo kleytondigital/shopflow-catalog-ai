@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import BulkImportModal from "./BulkImportModal";
 import BulkStockModal from "./BulkStockModal";
 import ProductFormModal from "./ProductFormModal";
+import ProductStockManagerModal from "./ProductStockManagerModal";
 import PricingModeSelector from "./PricingModeSelector";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
@@ -17,11 +18,15 @@ const ProductsPage = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [stockManagerProduct, setStockManagerProduct] =
+    useState<Product | null>(null);
+  const [isStockManagerOpen, setIsStockManagerOpen] = useState(false);
   const { profile } = useAuth();
   const currentStore = profile?.store_id;
   const { toast } = useToast();
 
-  const { products, fetchProducts, deleteProduct } = useProducts();
+  const { products, fetchProducts, deleteProduct, duplicateProduct } =
+    useProducts();
 
   // Função para editar produto
   const handleEdit = (product: Product) => {
@@ -48,6 +53,32 @@ const ProductsPage = () => {
         });
       }
     }
+  };
+
+  // Função para duplicar produto
+  const handleDuplicate = async (product: Product) => {
+    try {
+      const result = await duplicateProduct(product);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      // O toast já é mostrado dentro da função duplicateProduct
+    } catch (error) {
+      console.error("Erro ao duplicar produto:", error);
+      // O toast de erro já é mostrado dentro da função duplicateProduct
+    }
+  };
+
+  // Função para gerenciar estoque das variações
+  const handleManageStock = (product: Product) => {
+    setStockManagerProduct(product);
+    setIsStockManagerOpen(true);
+  };
+
+  // Função para fechar modal de gerenciamento de estoque
+  const handleCloseStockManager = () => {
+    setIsStockManagerOpen(false);
+    setStockManagerProduct(null);
   };
 
   // Função para fechar modal de edição
@@ -146,9 +177,21 @@ const ProductsPage = () => {
         products={products}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        onManageStock={handleManageStock}
         onGenerateDescription={() => {}}
         onListUpdate={fetchProducts}
       />
+
+      {/* Modal de Gerenciamento de Estoque */}
+      {stockManagerProduct && (
+        <ProductStockManagerModal
+          isOpen={isStockManagerOpen}
+          onClose={handleCloseStockManager}
+          product={stockManagerProduct}
+          onStockUpdated={fetchProducts}
+        />
+      )}
     </div>
   );
 };

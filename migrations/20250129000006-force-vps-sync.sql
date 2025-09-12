@@ -165,3 +165,4 @@ ORDER BY policyname;
 
 -- 17. Comentário final
 COMMENT ON TABLE store_price_models IS 'Tabela sincronizada para VPS - Erro 406 corrigido';
+

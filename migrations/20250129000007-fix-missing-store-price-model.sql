@@ -145,3 +145,4 @@ ORDER BY created_at DESC;
 
 -- 8. Comentário final
 COMMENT ON TABLE store_price_models IS 'Registro faltante para loja 9f94e65a-e5ec-42cd-bfb6-0cc4782d226c criado';
+

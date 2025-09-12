@@ -16,6 +16,8 @@ import {
   ShoppingBag,
   Layers,
   Camera,
+  Copy,
+  Package2,
 } from "lucide-react";
 import { Product } from "@/types/product";
 import ProductStockBadge from "./ProductStockBadge";
@@ -26,6 +28,8 @@ interface ProductInfoCardProps {
   onEdit?: (product: Product) => void;
   onDelete?: (id: string) => void;
   onView?: (product: Product) => void;
+  onDuplicate?: (product: Product) => void; // 🎯 NOVO: Callback para duplicar produto
+  onManageStock?: (product: Product) => void; // 🎯 NOVO: Callback para gerenciar estoque
   onListUpdate?: () => void; // 🎯 NOVO: Callback para atualizar lista
 }
 
@@ -34,6 +38,8 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   onEdit,
   onDelete,
   onView,
+  onDuplicate,
+  onManageStock,
   onListUpdate, // 🎯 NOVO: Receber callback
 }) => {
   const { images } = useProductImages(product.id || "");
@@ -58,6 +64,20 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   const handleView = () => {
     if (onView) {
       onView(product);
+    }
+  };
+
+  const handleDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDuplicate) {
+      onDuplicate(product);
+    }
+  };
+
+  const handleManageStock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onManageStock) {
+      onManageStock(product);
     }
   };
 
@@ -246,6 +266,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                 size="sm"
                 onClick={handleView}
                 className="flex-1 flex items-center gap-1"
+                title="Visualizar produto"
               >
                 <Eye className="h-3 w-3" />
                 Ver
@@ -256,6 +277,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                 size="sm"
                 onClick={handleEdit}
                 className="flex items-center gap-1"
+                title="Editar produto"
               >
                 <Edit3 className="h-3 w-3" />
                 Editar
@@ -264,8 +286,33 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleDuplicate}
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                title="Duplicar produto"
+              >
+                <Copy className="h-3 w-3" />
+                Duplicar
+              </Button>
+
+              {product.variations && product.variations.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManageStock}
+                  className="flex items-center gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  title="Gerenciar estoque das variações"
+                >
+                  <Package2 className="h-3 w-3" />
+                  Estoque
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleDelete}
                 className="flex items-center gap-1 text-destructive hover:text-destructive"
+                title="Excluir produto"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>

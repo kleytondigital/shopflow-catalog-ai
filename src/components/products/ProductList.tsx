@@ -11,6 +11,8 @@ interface ProductListProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (product: Product) => void; // 🎯 NOVO: Callback para duplicar produto
+  onManageStock?: (product: Product) => void; // 🎯 NOVO: Callback para gerenciar estoque
   onGenerateDescription?: (productId: string) => void;
   onListUpdate?: () => void; // 🎯 NOVO: Callback para atualizar lista
 }
@@ -19,6 +21,8 @@ const ProductList: React.FC<ProductListProps> = ({
   products,
   onEdit,
   onDelete,
+  onDuplicate,
+  onManageStock,
   onGenerateDescription,
   onListUpdate, // 🎯 NOVO: Receber callback
 }) => {
@@ -161,6 +165,8 @@ const ProductList: React.FC<ProductListProps> = ({
                 product={product}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onDuplicate={onDuplicate}
+                onManageStock={onManageStock}
                 onView={handleView}
                 onListUpdate={onListUpdate}
               />
@@ -170,6 +176,8 @@ const ProductList: React.FC<ProductListProps> = ({
                 product={product}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onDuplicate={onDuplicate}
+                onManageStock={onManageStock}
                 onView={handleView}
                 onListUpdate={onListUpdate}
               />

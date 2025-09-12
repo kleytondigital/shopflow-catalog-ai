@@ -62,3 +62,4 @@ WHERE table_name = 'store_price_models'
 AND column_name LIKE 'minimum_purchase%'
 ORDER BY column_name;
 
+
