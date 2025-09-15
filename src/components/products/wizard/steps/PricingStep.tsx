@@ -143,7 +143,7 @@ const PricingStep: React.FC<PricingStepProps> = ({ formData, updateFormData }) =
                   <p className="text-xs text-red-500">Preço de atacado é obrigatório</p>
                 )}
               </div>
-              {(isSimpleWholesale || isGradualWholesale) && (
+              {(isSimpleWholesale || isGradualWholesale || isWholesaleOnly) && (
                 <div className="space-y-2">
                   <Label htmlFor="minWholesaleQty">Quantidade Mínima Atacado</Label>
                   <Input

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Upload, Package } from "lucide-react";
+import { Plus, Upload, Package, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BulkImportModal from "./BulkImportModal";
 import BulkStockModal from "./BulkStockModal";
@@ -21,11 +21,12 @@ const ProductsPage = () => {
   const [stockManagerProduct, setStockManagerProduct] =
     useState<Product | null>(null);
   const [isStockManagerOpen, setIsStockManagerOpen] = useState(false);
+  const [showPriceModeSelector, setShowPriceModeSelector] = useState(false);
   const { profile } = useAuth();
   const currentStore = profile?.store_id;
   const { toast } = useToast();
 
-  const { products, fetchProducts, deleteProduct, duplicateProduct } =
+  const { products, fetchProducts, deleteProduct, duplicateProduct, toggleProductStatus } =
     useProducts();
 
   // Função para editar produto
@@ -75,6 +76,20 @@ const ProductsPage = () => {
     setIsStockManagerOpen(true);
   };
 
+  // Função para ativar/desativar produto
+  const handleToggleStatus = async (product: Product, isActive: boolean) => {
+    try {
+      const result = await toggleProductStatus(product.id, isActive);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      // O toast já é mostrado dentro da função toggleProductStatus
+    } catch (error) {
+      console.error("Erro ao alterar status do produto:", error);
+      // O toast de erro já é mostrado dentro da função toggleProductStatus
+    }
+  };
+
   // Função para fechar modal de gerenciamento de estoque
   const handleCloseStockManager = () => {
     setIsStockManagerOpen(false);
@@ -96,6 +111,15 @@ const ProductsPage = () => {
         </div>
 
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowPriceModeSelector(!showPriceModeSelector)}
+            className="flex items-center gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Modo de Preços
+          </Button>
+
           <Button
             variant="outline"
             onClick={() => setIsBulkStockModalOpen(true)}
@@ -125,7 +149,7 @@ const ProductsPage = () => {
       </div>
 
       {/* Seletor de Modo de Preços */}
-      <div className="mb-6">
+      <div className={`mb-6 ${showPriceModeSelector ? 'block' : 'hidden'}`}>
         <PricingModeSelector
           onModeChange={() => {
             // Recarregar produtos quando o modo mudar
@@ -179,6 +203,7 @@ const ProductsPage = () => {
         onDelete={handleDelete}
         onDuplicate={handleDuplicate}
         onManageStock={handleManageStock}
+        onToggleStatus={handleToggleStatus}
         onGenerateDescription={() => {}}
         onListUpdate={fetchProducts}
       />

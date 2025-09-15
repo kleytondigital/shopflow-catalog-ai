@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Copy,
   Package2,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Product } from "@/types/product";
 import { formatCurrency } from "@/lib/utils";
@@ -23,6 +25,7 @@ interface ProductListCardProps {
   onView?: (product: Product) => void;
   onDuplicate?: (product: Product) => void; // 🎯 NOVO: Callback para duplicar produto
   onManageStock?: (product: Product) => void; // 🎯 NOVO: Callback para gerenciar estoque
+  onToggleStatus?: (product: Product, isActive: boolean) => void; // 🎯 NOVO: Callback para ativar/desativar
   onListUpdate?: () => void; // 🎯 NOVO: Callback para atualizar lista
 }
 
@@ -33,6 +36,7 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
   onView,
   onDuplicate,
   onManageStock,
+  onToggleStatus,
   onListUpdate,
 }) => {
   const { images } = useProductImages(product.id);
@@ -63,6 +67,7 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
   const handleView = () => onView?.(product);
   const handleDuplicate = () => onDuplicate?.(product);
   const handleManageStock = () => onManageStock?.(product);
+  const handleToggleStatus = () => onToggleStatus?.(product, !product.is_active);
 
   // 🎯 NOVA FUNÇÃO: Callback quando imagens são atualizadas (não usado neste componente)
   const handleImagesUpdated = () => {
@@ -202,6 +207,23 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
               title="Duplicar produto"
             >
               <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleStatus}
+              className={`h-8 w-8 p-0 ${
+                product.is_active 
+                  ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                  : "text-green-600 hover:text-green-700 hover:bg-green-50"
+              }`}
+              title={product.is_active ? "Desativar produto" : "Ativar produto"}
+            >
+              {product.is_active ? (
+                <PowerOff className="h-4 w-4" />
+              ) : (
+                <Power className="h-4 w-4" />
+              )}
             </Button>
             {product.variations && product.variations.length > 0 && (
               <Button

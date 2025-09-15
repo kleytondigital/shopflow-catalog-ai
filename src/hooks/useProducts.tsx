@@ -200,6 +200,37 @@ export const useProducts = () => {
     }
   };
 
+  const toggleProductStatus = async (productId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_active: isActive })
+        .eq("id", productId);
+
+      if (error) throw error;
+
+      await fetchProducts(); // Recarregar produtos após alteração
+
+      toast({
+        title: isActive ? "Produto ativado!" : "Produto desativado!",
+        description: `O produto foi ${isActive ? "ativado" : "desativado"} com sucesso.`,
+      });
+
+      return { data: null, error: null };
+    } catch (error) {
+      console.error("Erro ao alterar status do produto:", error);
+      toast({
+        title: "Erro ao alterar status",
+        description: "Não foi possível alterar o status do produto.",
+        variant: "destructive",
+      });
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : "Erro ao alterar status",
+      };
+    }
+  };
+
   const duplicateProduct = async (originalProduct: Product) => {
     try {
       console.log("useProducts: Duplicando produto:", originalProduct.name);
@@ -365,6 +396,7 @@ export const useProducts = () => {
     deleteProduct,
     createProduct,
     duplicateProduct,
+    toggleProductStatus,
   };
 };
 

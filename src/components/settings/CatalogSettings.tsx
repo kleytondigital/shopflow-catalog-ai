@@ -25,7 +25,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import AdvancedColorSettings from "./AdvancedColorSettings";
 import ShareableLinks from "./ShareableLinks";
-import CatalogModeSettings from "./CatalogModeSettings";
 import MobileLayoutSettings from "./MobileLayoutSettings";
 import FooterSettings from "./FooterSettings";
 import OrderBumpSettings from "./OrderBumpSettings";
@@ -41,7 +40,6 @@ import {
   Zap,
   Sparkles,
   Share2,
-  ArrowLeftRight,
   Search,
   Globe,
   Gift,
@@ -232,10 +230,6 @@ const CatalogSettings = () => {
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Template</span>
           </TabsTrigger>
-          <TabsTrigger value="mode" className="flex items-center gap-1">
-            <ArrowLeftRight className="h-4 w-4" />
-            <span className="hidden sm:inline">Modo</span>
-          </TabsTrigger>
           <TabsTrigger value="display" className="flex items-center gap-1">
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline">Exibição</span>
@@ -364,9 +358,6 @@ const CatalogSettings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="mode" className="space-y-6">
-          <CatalogModeSettings />
-        </TabsContent>
 
         <TabsContent value="display" className="space-y-6">
           {/* Appearance Settings */}
