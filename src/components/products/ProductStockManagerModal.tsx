@@ -348,3 +348,4 @@ const ProductStockManagerModal: React.FC<ProductStockManagerModalProps> = ({
 };
 
 export default ProductStockManagerModal;
+

@@ -67,7 +67,8 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
   const handleView = () => onView?.(product);
   const handleDuplicate = () => onDuplicate?.(product);
   const handleManageStock = () => onManageStock?.(product);
-  const handleToggleStatus = () => onToggleStatus?.(product, !product.is_active);
+  const handleToggleStatus = () =>
+    onToggleStatus?.(product, !product.is_active);
 
   // 🎯 NOVA FUNÇÃO: Callback quando imagens são atualizadas (não usado neste componente)
   const handleImagesUpdated = () => {
@@ -213,8 +214,8 @@ const ProductListCard: React.FC<ProductListCardProps> = ({
               size="sm"
               onClick={handleToggleStatus}
               className={`h-8 w-8 p-0 ${
-                product.is_active 
-                  ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                product.is_active
+                  ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                   : "text-green-600 hover:text-green-700 hover:bg-green-50"
               }`}
               title={product.is_active ? "Desativar produto" : "Ativar produto"}

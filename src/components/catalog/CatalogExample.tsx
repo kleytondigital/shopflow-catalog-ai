@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import CatalogHeader from "./CatalogHeader";
 import ResponsiveProductGrid from "./ResponsiveProductGrid";
@@ -21,31 +20,34 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({
 }) => {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
   const {
     store,
     products,
     loading: storeLoading,
     storeError,
     initializeCatalog,
-  } = useCatalog();
+  } = useCatalog(storeIdentifier);
 
   // Inicializar catálogo quando componente montar
   useEffect(() => {
     if (storeIdentifier) {
-      console.log('🚀 CATALOG EXAMPLE - Inicializando catálogo:', { storeIdentifier, catalogType });
-      initializeCatalog(storeIdentifier, catalogType);
+      console.log("🚀 CATALOG EXAMPLE - Inicializando catálogo:", {
+        storeIdentifier,
+        catalogType,
+      });
+      initializeCatalog(storeIdentifier);
     }
   }, [storeIdentifier, catalogType, initializeCatalog]);
 
   const { addItem } = useCart();
 
   const handleAddToWishlist = (product: Product) => {
-    const isInWishlist = wishlist.some(item => item.id === product.id);
+    const isInWishlist = wishlist.some((item) => item.id === product.id);
     if (isInWishlist) {
-      setWishlist(prev => prev.filter(item => item.id !== product.id));
+      setWishlist((prev) => prev.filter((item) => item.id !== product.id));
     } else {
-      setWishlist(prev => [...prev, product]);
+      setWishlist((prev) => [...prev, product]);
     }
   };
 
@@ -53,9 +55,13 @@ const CatalogExample: React.FC<CatalogExampleProps> = ({
     setSelectedProduct(product);
   };
 
-  const handleAddToCart = (product: Product, quantity: number = 1, variation?: any) => {
-    console.log('Adding to cart:', { product, quantity, variation });
-    
+  const handleAddToCart = (
+    product: Product,
+    quantity: number = 1,
+    variation?: any
+  ) => {
+    console.log("Adding to cart:", { product, quantity, variation });
+
     // Criar item do carrinho usando a função helper
     const cartItem = createCartItem(product, catalogType, quantity, variation);
     addItem(cartItem);

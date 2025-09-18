@@ -26,8 +26,13 @@ const ProductsPage = () => {
   const currentStore = profile?.store_id;
   const { toast } = useToast();
 
-  const { products, fetchProducts, deleteProduct, duplicateProduct, toggleProductStatus } =
-    useProducts();
+  const {
+    products,
+    fetchProducts,
+    deleteProduct,
+    duplicateProduct,
+    toggleProductStatus,
+  } = useProducts();
 
   // Função para editar produto
   const handleEdit = (product: Product) => {
@@ -149,7 +154,7 @@ const ProductsPage = () => {
       </div>
 
       {/* Seletor de Modo de Preços */}
-      <div className={`mb-6 ${showPriceModeSelector ? 'block' : 'hidden'}`}>
+      <div className={`mb-6 ${showPriceModeSelector ? "block" : "hidden"}`}>
         <PricingModeSelector
           onModeChange={() => {
             // Recarregar produtos quando o modo mudar

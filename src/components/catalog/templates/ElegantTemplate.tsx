@@ -1,14 +1,13 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, Eye } from 'lucide-react';
-import { Product } from '@/hooks/useProducts';
-import { ProductVariation } from '@/types/variation';
-import { CatalogType } from '@/hooks/useCatalog';
-import { formatPrice } from '@/utils/formatPrice';
-import { useProductDisplayPrice } from '@/hooks/useProductDisplayPrice';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Heart, ShoppingCart, Eye } from "lucide-react";
+import { Product } from "@/hooks/useProducts";
+import { ProductVariation } from "@/types/variation";
+import { CatalogType } from "@/hooks/useCatalog";
+import { formatPrice } from "@/utils/formatPrice";
+import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 
 export interface CatalogSettingsData {
   colors?: {
@@ -35,7 +34,11 @@ export interface CatalogSettingsData {
 interface ElegantTemplateProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  onAddToCart: (
+    product: Product,
+    quantity?: number,
+    variation?: ProductVariation
+  ) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
@@ -53,7 +56,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings
+  editorSettings,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -67,29 +70,32 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
     quantity: 1,
   });
 
+  // Usar quantidade mínima do produto
+  const minQuantity = priceInfo.minQuantity;
+
   // Verificar estoque disponível
-  const totalStock = hasVariations 
-    ? (product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0)
-    : (product.stock || 0);
+  const totalStock = hasVariations
+    ? product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0
+    : product.stock || 0;
 
   const isOutOfStock = totalStock === 0 && !product.allow_negative_stock;
 
   const handleAddToCart = () => {
-    console.log('🛒 ELEGANT TEMPLATE - Tentativa de adicionar ao carrinho:', {
+    console.log("🛒 ELEGANT TEMPLATE - Tentativa de adicionar ao carrinho:", {
       productId: product.id,
       hasVariations,
-      stock: totalStock
+      stock: totalStock,
     });
 
     if (hasVariations) {
       onQuickView(product);
     } else {
-      onAddToCart(product, 1);
+      onAddToCart(product, minQuantity);
     }
   };
 
   return (
-    <Card 
+    <Card
       className="group overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-500 bg-white rounded-xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -97,7 +103,11 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
       <div className="relative aspect-square overflow-hidden rounded-t-xl">
         {/* Imagem do Produto */}
         <img
-          src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
+          src={
+            imageError
+              ? "/placeholder.svg"
+              : product.image_url || "/placeholder.svg"
+          }
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           onError={() => setImageError(true)}
@@ -116,9 +126,13 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         )}
 
         {/* Botões de Ação - Top Right */}
-        <div className={`absolute top-4 right-4 flex gap-2 transition-all duration-300 ${
-          isHovered ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
-        }`}>
+        <div
+          className={`absolute top-4 right-4 flex gap-2 transition-all duration-300 ${
+            isHovered
+              ? "opacity-100 transform translate-y-0"
+              : "opacity-0 transform translate-y-2"
+          }`}
+        >
           <Button
             size="sm"
             className="h-10 w-10 p-0 bg-white/95 hover:bg-white shadow-lg backdrop-blur-sm border-0 rounded-full"
@@ -127,8 +141,10 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
               onAddToWishlist(product);
             }}
           >
-            <Heart 
-              className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} 
+            <Heart
+              className={`h-4 w-4 ${
+                isInWishlist ? "fill-red-500 text-red-500" : "text-gray-700"
+              }`}
             />
           </Button>
 
@@ -145,13 +161,15 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         </div>
 
         {/* Badge de Variações - Bottom Center */}
-        {hasVariations && product.variations && product.variations.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <Badge className="text-xs font-medium bg-white/90 text-gray-700 shadow-lg">
-              +{product.variations.length} opções
-            </Badge>
-          </div>
-        )}
+        {hasVariations &&
+          product.variations &&
+          product.variations.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="text-xs font-medium bg-white/90 text-gray-700 shadow-lg">
+                +{product.variations.length} opções
+              </Badge>
+            </div>
+          )}
       </div>
 
       <CardContent className="p-6">
@@ -170,20 +188,23 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
                 {formatPrice(priceInfo.displayPrice)}
               </span>
             </div>
-            
-            {priceInfo.shouldShowWholesaleInfo && 
-             priceInfo.shouldShowRetailPrice && 
-             !priceInfo.isWholesaleOnly && 
-             priceInfo.retailPrice !== priceInfo.wholesalePrice && (
-              <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                <p className="text-sm text-green-700 font-semibold">
-                  Atacado: {formatPrice(priceInfo.wholesalePrice || 0)}
-                  {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && (
-                    <span className="text-green-600 ml-1">(mín: {priceInfo.minWholesaleQty})</span>
-                  )}
-                </p>
-              </div>
-            )}
+
+            {priceInfo.shouldShowWholesaleInfo &&
+              priceInfo.shouldShowRetailPrice &&
+              !priceInfo.isWholesaleOnly &&
+              priceInfo.retailPrice !== priceInfo.wholesalePrice && (
+                <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-700 font-semibold">
+                    Atacado: {formatPrice(priceInfo.wholesalePrice || 0)}
+                    {priceInfo.minWholesaleQty &&
+                      priceInfo.minWholesaleQty > 1 && (
+                        <span className="text-green-600 ml-1">
+                          (mín: {priceInfo.minWholesaleQty})
+                        </span>
+                      )}
+                  </p>
+                </div>
+              )}
           </div>
         )}
 
@@ -193,14 +214,24 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 font-medium">Disponível:</span>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  totalStock > 10 ? 'bg-green-500' : 
-                  totalStock > 0 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} />
-                <span className={`font-semibold ${
-                  totalStock > 10 ? 'text-green-600' : 
-                  totalStock > 0 ? 'text-yellow-600' : 'text-red-600'
-                }`}>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    totalStock > 10
+                      ? "bg-green-500"
+                      : totalStock > 0
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                />
+                <span
+                  className={`font-semibold ${
+                    totalStock > 10
+                      ? "text-green-600"
+                      : totalStock > 0
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                  }`}
+                >
                   {totalStock} unidades
                 </span>
               </div>
@@ -215,7 +246,11 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
           disabled={isOutOfStock}
         >
           <ShoppingCart className="h-5 w-5 mr-3" />
-          {hasVariations ? 'Ver Todas as Opções' : isOutOfStock ? 'Produto Esgotado' : 'Adicionar ao Carrinho'}
+          {hasVariations
+            ? "Ver Todas as Opções"
+            : isOutOfStock
+            ? "Produto Esgotado"
+            : "Adicionar ao Carrinho"}
         </Button>
       </CardContent>
     </Card>

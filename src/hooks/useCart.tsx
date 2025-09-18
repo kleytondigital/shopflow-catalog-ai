@@ -203,15 +203,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Função para recalcular preços baseado na quantidade (lógica híbrida)
   const recalculateItemPrices = (cartItems: CartItem[]): CartItem[] => {
+    console.log(
+      "🔄 [recalculateItemPrices] INICIANDO - Itens recebidos:",
+      cartItems.length
+    );
+
     return cartItems.map((item) => {
       const product = item.product;
       const quantity = item.quantity;
 
-      // Se for apenas atacado, sempre usar preço de atacado
-      if (product.price_model === "wholesale_only") {
+      // Se for catálogo atacado ou apenas atacado, sempre usar preço de atacado
+      if (
+        item.catalogType === "wholesale" ||
+        product.price_model === "wholesale_only"
+      ) {
+        const wholesalePrice =
+          product.wholesale_price || product.retail_price || 0;
+        console.log(
+          `✅ [recalculateItemPrices] ${product.name}: Aplicando preço atacado (catalogType: ${item.catalogType}, price_model: ${product.price_model}): R$${wholesalePrice}`
+        );
         return {
           ...item,
-          price: product.wholesale_price,
+          price: wholesalePrice,
+          originalPrice: wholesalePrice,
           isWholesalePrice: true,
           currentTier: undefined,
           nextTier: undefined,
@@ -306,6 +320,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         isWholesalePrice: false,
       };
     });
+
+    // Log final para verificar se os preços foram recalculados
+    const finalItems = cartItems.map((item) => {
+      const product = item.product;
+      const quantity = item.quantity;
+
+      // Se for catálogo atacado ou apenas atacado, sempre usar preço de atacado
+      if (
+        item.catalogType === "wholesale" ||
+        product.price_model === "wholesale_only"
+      ) {
+        const wholesalePrice =
+          product.wholesale_price || product.retail_price || 0;
+        return {
+          ...item,
+          price: wholesalePrice,
+          originalPrice: wholesalePrice,
+          isWholesalePrice: true,
+          currentTier: undefined,
+          nextTier: undefined,
+          nextTierQuantityNeeded: undefined,
+          nextTierPotentialSavings: undefined,
+        };
+      }
+      return item;
+    });
+
+    console.log(
+      "🔄 [recalculateItemPrices] FINALIZANDO - Itens recalculados:",
+      finalItems.map((item) => ({
+        name: item.product.name,
+        price: item.price,
+        catalogType: item.catalogType,
+        isWholesalePrice: item.isWholesalePrice,
+      }))
+    );
+
+    return finalItems;
   };
 
   // Carregar itens do localStorage com validação
@@ -445,7 +497,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // Recalcular preços após adicionar
+      console.log("🔄 [addItem] ANTES do recalculateItemPrices:", {
+        newItemsCount: newItems.length,
+        newItems: newItems.map((item) => ({
+          name: item.product.name,
+          price: item.price,
+          catalogType: item.catalogType,
+          isWholesalePrice: item.isWholesalePrice,
+        })),
+      });
+
       const recalculatedItems = recalculateItemPrices(newItems);
+
+      console.log("🔄 [addItem] DEPOIS do recalculateItemPrices:", {
+        recalculatedItemsCount: recalculatedItems.length,
+        recalculatedItems: recalculatedItems.map((item) => ({
+          name: item.product.name,
+          price: item.price,
+          catalogType: item.catalogType,
+          isWholesalePrice: item.isWholesalePrice,
+        })),
+      });
 
       // Verificar se algum item mudou para preço de atacado
       const itemWithWholesalePrice = recalculatedItems.find(
@@ -529,6 +601,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Calcular valores com validação de segurança
   // LOG: Total do carrinho e detalhes dos itens
+  console.log("🛒 [useCart] DEBUG - Itens antes do cálculo:", {
+    itemsCount: items.length,
+    items: items.map((item) => ({
+      id: item.id,
+      name: item.product?.name,
+      price: item.price,
+      quantity: item.quantity,
+      catalogType: item.catalogType,
+      isWholesalePrice: item.isWholesalePrice,
+      originalPrice: item.originalPrice,
+      productWholesalePrice: item.product?.wholesale_price,
+      productRetailPrice: item.product?.retail_price,
+    })),
+  });
+
   const totalAmount = items.reduce((total, item) => {
     const itemPrice =
       typeof item.price === "number" && !isNaN(item.price) ? item.price : 0;

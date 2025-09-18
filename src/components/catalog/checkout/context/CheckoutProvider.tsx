@@ -175,6 +175,13 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   const availablePaymentMethods = React.useMemo(() => {
     const methods = [];
 
+    // Sempre incluir PIX como opção básica
+    methods.push({
+      id: "pix",
+      name: "PIX",
+      icon: "QrCode",
+    });
+
     if (hasWhatsAppConfigured) {
       methods.push({
         id: "whatsapp",
@@ -184,14 +191,6 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
     }
 
     if (canUseOnlinePayment && effectiveSettings.payment_methods) {
-      if (effectiveSettings.payment_methods.pix) {
-        methods.push({
-          id: "pix",
-          name: "PIX",
-          icon: "QrCode",
-        });
-      }
-
       if (effectiveSettings.payment_methods.credit_card) {
         methods.push({
           id: "credit_card",

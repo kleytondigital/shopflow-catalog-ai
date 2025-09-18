@@ -1,20 +1,23 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, Eye } from 'lucide-react';
-import { Product } from '@/hooks/useProducts';
-import { ProductVariation } from '@/types/variation';
-import { CatalogType } from '@/hooks/useCatalog';
-import { formatPrice } from '@/utils/formatPrice';
-import { useProductDisplayPrice } from '@/hooks/useProductDisplayPrice';
-import { CatalogSettingsData } from './ModernTemplate';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Heart, ShoppingCart, Eye } from "lucide-react";
+import { Product } from "@/hooks/useProducts";
+import { ProductVariation } from "@/types/variation";
+import { CatalogType } from "@/hooks/useCatalog";
+import { formatPrice } from "@/utils/formatPrice";
+import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
+import { CatalogSettingsData } from "./ModernTemplate";
 
 interface IndustrialTemplateProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  onAddToCart: (
+    product: Product,
+    quantity?: number,
+    variation?: ProductVariation
+  ) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
@@ -32,7 +35,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings
+  editorSettings,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -46,29 +49,35 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
     quantity: 1,
   });
 
+  // Usar quantidade mínima do produto
+  const minQuantity = priceInfo.minQuantity;
+
   // Verificar estoque disponível
-  const totalStock = hasVariations 
-    ? (product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0)
-    : (product.stock || 0);
+  const totalStock = hasVariations
+    ? product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0
+    : product.stock || 0;
 
   const isOutOfStock = totalStock === 0 && !product.allow_negative_stock;
 
   const handleAddToCart = () => {
-    console.log('🛒 INDUSTRIAL TEMPLATE - Tentativa de adicionar ao carrinho:', {
-      productId: product.id,
-      hasVariations,
-      stock: totalStock
-    });
+    console.log(
+      "🛒 INDUSTRIAL TEMPLATE - Tentativa de adicionar ao carrinho:",
+      {
+        productId: product.id,
+        hasVariations,
+        stock: totalStock,
+      }
+    );
 
     if (hasVariations) {
       onQuickView(product);
     } else {
-      onAddToCart(product, 1);
+      onAddToCart(product, minQuantity);
     }
   };
 
   return (
-    <Card 
+    <Card
       className="group overflow-hidden border-2 border-gray-300 hover:border-gray-400 transition-all duration-300 bg-white"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -76,7 +85,11 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         {/* Imagem do Produto */}
         <img
-          src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
+          src={
+            imageError
+              ? "/placeholder.svg"
+              : product.image_url || "/placeholder.svg"
+          }
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={() => setImageError(true)}
@@ -92,9 +105,13 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         )}
 
         {/* Botões de Ação - Top Right */}
-        <div className={`absolute top-3 right-3 flex gap-1 transition-all duration-200 ${
-          isHovered ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform translate-x-2'
-        }`}>
+        <div
+          className={`absolute top-3 right-3 flex gap-1 transition-all duration-200 ${
+            isHovered
+              ? "opacity-100 transform translate-x-0"
+              : "opacity-0 transform translate-x-2"
+          }`}
+        >
           <Button
             variant="secondary"
             size="sm"
@@ -104,8 +121,10 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
               onAddToWishlist(product);
             }}
           >
-            <Heart 
-              className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} 
+            <Heart
+              className={`h-4 w-4 ${
+                isInWishlist ? "fill-red-500 text-red-500" : "text-gray-700"
+              }`}
             />
           </Button>
 
@@ -123,13 +142,15 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         </div>
 
         {/* Badge de Variações - Bottom Center */}
-        {hasVariations && product.variations && product.variations.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
-            <Badge className="text-xs font-bold bg-gray-600 text-white uppercase tracking-wide">
-              +{product.variations.length} OPÇÕES
-            </Badge>
-          </div>
-        )}
+        {hasVariations &&
+          product.variations &&
+          product.variations.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+              <Badge className="text-xs font-bold bg-gray-600 text-white uppercase tracking-wide">
+                +{product.variations.length} OPÇÕES
+              </Badge>
+            </div>
+          )}
 
         {/* Corner Lines - Design Industrial */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gray-400" />
@@ -154,18 +175,20 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
                 {formatPrice(priceInfo.displayPrice)}
               </span>
             </div>
-            
-            {priceInfo.shouldShowWholesaleInfo && 
-             priceInfo.shouldShowRetailPrice && 
-             !priceInfo.isWholesaleOnly && 
-             priceInfo.retailPrice !== priceInfo.wholesalePrice && (
-              <div className="mt-2 p-2 bg-yellow-100 border-2 border-yellow-300 rounded">
-                <p className="text-xs text-yellow-800 font-bold uppercase">
-                  Bulk: {formatPrice(priceInfo.wholesalePrice || 0)}
-                  {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && ` (mín: ${priceInfo.minWholesaleQty})`}
-                </p>
-              </div>
-            )}
+
+            {priceInfo.shouldShowWholesaleInfo &&
+              priceInfo.shouldShowRetailPrice &&
+              !priceInfo.isWholesaleOnly &&
+              priceInfo.retailPrice !== priceInfo.wholesalePrice && (
+                <div className="mt-2 p-2 bg-yellow-100 border-2 border-yellow-300 rounded">
+                  <p className="text-xs text-yellow-800 font-bold uppercase">
+                    Bulk: {formatPrice(priceInfo.wholesalePrice || 0)}
+                    {priceInfo.minWholesaleQty &&
+                      priceInfo.minWholesaleQty > 1 &&
+                      ` (mín: ${priceInfo.minWholesaleQty})`}
+                  </p>
+                </div>
+              )}
           </div>
         )}
 
@@ -173,16 +196,28 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         {showStock && (
           <div className="mb-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-600 font-bold uppercase tracking-wide">Estoque:</span>
+              <span className="text-gray-600 font-bold uppercase tracking-wide">
+                Estoque:
+              </span>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-1 ${
-                  totalStock > 10 ? 'bg-green-500' : 
-                  totalStock > 0 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} />
-                <span className={`font-black font-mono ${
-                  totalStock > 10 ? 'text-green-600' : 
-                  totalStock > 0 ? 'text-yellow-600' : 'text-red-600'
-                }`}>
+                <div
+                  className={`w-3 h-1 ${
+                    totalStock > 10
+                      ? "bg-green-500"
+                      : totalStock > 0
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                />
+                <span
+                  className={`font-black font-mono ${
+                    totalStock > 10
+                      ? "text-green-600"
+                      : totalStock > 0
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                  }`}
+                >
                   {totalStock}
                 </span>
               </div>
@@ -197,7 +232,11 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
           disabled={isOutOfStock}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
-          {hasVariations ? 'VER OPÇÕES' : isOutOfStock ? 'ESGOTADO' : 'ADICIONAR'}
+          {hasVariations
+            ? "VER OPÇÕES"
+            : isOutOfStock
+            ? "ESGOTADO"
+            : "ADICIONAR"}
         </Button>
       </CardContent>
     </Card>

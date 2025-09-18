@@ -95,3 +95,4 @@ FROM information_schema.triggers
 WHERE event_object_table = 'store_price_models' 
 AND event_object_schema = 'public';
 
+

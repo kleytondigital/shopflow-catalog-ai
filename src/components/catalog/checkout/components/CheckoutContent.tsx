@@ -30,6 +30,23 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
     hasWhatsAppConfigured,
   } = useCheckoutContext();
 
+  // Debug do total do carrinho
+  console.log("🛒 CheckoutContent - Debug:", {
+    cartItemsCount: cartItems.length,
+    totalAmount,
+    shippingCost,
+    finalTotal: totalAmount + shippingCost,
+    cartItems: cartItems.map((item) => ({
+      name: item.product?.name,
+      price: item.price,
+      quantity: item.quantity,
+      subtotal: item.price * item.quantity,
+      catalogType: item.catalogType,
+      isWholesalePrice: item.isWholesalePrice,
+      originalPrice: item.originalPrice,
+    })),
+  });
+
   const {
     handleCreateOrder,
     handleShippingCalculated,
@@ -87,7 +104,7 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
           shippingMethods={[
             {
               id: "pickup",
-              name: "Retirar na loja",
+              name: "Retirar na Loja",
               type: "pickup",
               is_active: true,
               price: 0,
@@ -99,9 +116,9 @@ const CheckoutContent: React.FC<CheckoutContentProps> = ({ onClose }) => {
               },
             },
             {
-              id: "combine",
-              name: "A combinar",
-              type: "combine",
+              id: "delivery",
+              name: "Entrega a Combinar",
+              type: "delivery",
               is_active: true,
               price: 0,
               estimated_days: undefined,

@@ -1,9 +1,8 @@
-
-import React, { useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Store } from '@/hooks/useCatalog';
-import { CatalogType } from '@/hooks/useCatalog';
-import { useTemplateHeaderColors } from '@/hooks/useTemplateHeaderColors';
+import React, { useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Store } from "@/hooks/useCatalog";
+import { CatalogType } from "@/hooks/useCatalog";
+import { useTemplateHeaderColors } from "@/hooks/useTemplateHeaderColors";
 
 export interface CatalogHeaderProps {
   store: Store;
@@ -19,22 +18,22 @@ export interface CatalogHeaderProps {
 const CatalogHeader: React.FC<CatalogHeaderProps> = ({
   store,
   catalogType,
-  templateName = 'modern',
+  templateName = "modern",
   cartItemsCount = 0,
   wishlistCount = 0,
   onSearch,
   onToggleFilters,
-  onCartClick
+  onCartClick,
 }) => {
   const storeId = store.url_slug || store.id;
   const { isReady } = useTemplateHeaderColors(storeId);
 
   return (
-    <header 
+    <header
       className="text-white"
-      style={{ 
-        backgroundColor: 'var(--template-header-bg, #0057FF)',
-        color: 'var(--template-header-text, #FFFFFF)'
+      style={{
+        backgroundColor: "var(--template-header-bg, #0057FF)",
+        color: "var(--template-header-text, #FFFFFF)",
       }}
     >
       <div className="container mx-auto px-4 py-8">
@@ -54,30 +53,29 @@ const CatalogHeader: React.FC<CatalogHeaderProps> = ({
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Cart and Wishlist counters */}
             {(cartItemsCount > 0 || wishlistCount > 0) && (
               <div className="flex items-center gap-2">
                 {cartItemsCount > 0 && (
-                  <Badge variant="secondary" className="bg-white/10 text-white border-white/20">
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/10 text-white border-white/20"
+                  >
                     Carrinho: {cartItemsCount}
                   </Badge>
                 )}
                 {wishlistCount > 0 && (
-                  <Badge variant="secondary" className="bg-white/10 text-white border-white/20">
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/10 text-white border-white/20"
+                  >
                     Favoritos: {wishlistCount}
                   </Badge>
                 )}
               </div>
             )}
-            
-            <Badge 
-              variant="secondary" 
-              className="bg-white/10 text-white border-white/20"
-            >
-              {catalogType === 'wholesale' ? 'Atacado' : 'Varejo'}
-            </Badge>
           </div>
         </div>
       </div>

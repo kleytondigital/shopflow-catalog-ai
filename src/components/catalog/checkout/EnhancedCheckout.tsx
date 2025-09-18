@@ -328,6 +328,20 @@ const EnhancedCheckout: React.FC<EnhancedCheckoutProps> = ({
       });
     }
 
+    // Debug do total
+    console.log("🛒 EnhancedCheckout - Debug total:", {
+      totalAmount,
+      shippingCost,
+      finalTotal,
+      cartItemsCount: items.length,
+      cartItems: items.map((item) => ({
+        name: item.product?.name,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.price * item.quantity,
+      })),
+    });
+
     message += `💰 *RESUMO FINANCEIRO:*\n`;
     message += `Subtotal produtos: ${formatCurrency(totalAmount)}\n`;
     if (shippingCost > 0) {

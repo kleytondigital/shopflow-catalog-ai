@@ -310,11 +310,13 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                 size="sm"
                 onClick={handleToggleStatus}
                 className={`flex items-center gap-1 ${
-                  product.is_active 
-                    ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                  product.is_active
+                    ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                     : "text-green-600 hover:text-green-700 hover:bg-green-50"
                 }`}
-                title={product.is_active ? "Desativar produto" : "Ativar produto"}
+                title={
+                  product.is_active ? "Desativar produto" : "Ativar produto"
+                }
               >
                 {product.is_active ? (
                   <PowerOff className="h-3 w-3" />

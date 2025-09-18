@@ -247,3 +247,4 @@ const { realtimeData, isConnected } = useRealtimeAnalytics("store-uuid");
 
 O sistema de Analytics agora é uma solução completa e profissional, pronta para uso em produção.
 
+

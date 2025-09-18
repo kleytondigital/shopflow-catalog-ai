@@ -127,3 +127,4 @@ Implementar um botão de "Estoque" que abre uma modal dedicada para edição rá
 ## 🎉 **Status: IMPLEMENTADO E FUNCIONANDO**
 
 A funcionalidade de gerenciar estoque das variações está **100% implementada** e pronta para uso em produção. A solução é elegante, prática e resolve exatamente o problema identificado sem afetar o wizard existente.
+

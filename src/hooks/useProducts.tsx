@@ -213,7 +213,9 @@ export const useProducts = () => {
 
       toast({
         title: isActive ? "Produto ativado!" : "Produto desativado!",
-        description: `O produto foi ${isActive ? "ativado" : "desativado"} com sucesso.`,
+        description: `O produto foi ${
+          isActive ? "ativado" : "desativado"
+        } com sucesso.`,
       });
 
       return { data: null, error: null };
@@ -226,7 +228,8 @@ export const useProducts = () => {
       });
       return {
         data: null,
-        error: error instanceof Error ? error.message : "Erro ao alterar status",
+        error:
+          error instanceof Error ? error.message : "Erro ao alterar status",
       };
     }
   };

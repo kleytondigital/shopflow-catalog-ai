@@ -157,3 +157,4 @@ CREATE TRIGGER update_analytics_alerts_config_updated_at
   BEFORE UPDATE ON public.analytics_alerts_config 
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+

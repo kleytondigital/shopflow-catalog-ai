@@ -13,3 +13,4 @@ COMMENT ON COLUMN store_price_models.minimum_purchase_amount IS 'Valor mínimo d
 COMMENT ON COLUMN store_price_models.minimum_purchase_message IS 'Mensagem personalizada para pedido mínimo (use {amount} para o valor)';
 
 
+

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
@@ -23,7 +22,16 @@ interface ProductPriceDisplayProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   // Corrigir o tipo da prop product para incluir propriedades obrigatórias
-  product?: Pick<Product, 'id' | 'name' | 'stock' | 'retail_price' | 'wholesale_price' | 'min_wholesale_qty' | 'store_id'>;
+  product?: Pick<
+    Product,
+    | "id"
+    | "name"
+    | "stock"
+    | "retail_price"
+    | "wholesale_price"
+    | "min_wholesale_qty"
+    | "store_id"
+  >;
 }
 
 const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
@@ -45,7 +53,7 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
   // Criar objeto produto para o hook se não fornecido
   const productForHook = product || {
     id: productId,
-    name: 'Produto',
+    name: "Produto",
     stock: 0,
     retail_price: retailPrice,
     wholesale_price: wholesalePrice,
@@ -70,6 +78,7 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
 
   // Usar o preço correto baseado no modelo
   const displayPrice = priceInfo.displayPrice;
+  const isLoading = priceInfo.isLoading;
 
   const sizeClasses = {
     sm: {
@@ -99,9 +108,16 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
       {/* Preço Principal */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <span className={`text-primary ${classes.mainPrice}`}>
-            {formatCurrency(displayPrice)}
-          </span>
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-pulse bg-gray-200 h-6 w-20 rounded"></div>
+              <span className="text-xs text-gray-500">Carregando...</span>
+            </div>
+          ) : (
+            <span className={`text-primary ${classes.mainPrice}`}>
+              {formatCurrency(displayPrice)}
+            </span>
+          )}
 
           {/* Preço Atacado Destaque */}
           {catalogType === "retail" && priceCalculation.isWholesale && (
@@ -129,44 +145,48 @@ const ProductPriceDisplay: React.FC<ProductPriceDisplayProps> = ({
       </div>
 
       {/* Preços Varejo e Atacado (quando ambos estão disponíveis e diferentes) */}
-      {priceInfo.shouldShowWholesaleInfo && 
-       priceInfo.shouldShowRetailPrice && 
-       !priceInfo.isWholesaleOnly && 
-       priceInfo.retailPrice !== priceInfo.wholesalePrice && (
-        <div className="space-y-1 pt-2 border-t border-border/20">
-          {/* Preço Varejo */}
-          <div className="flex items-center justify-between">
-            <span className={`text-muted-foreground ${classes.secondaryPrice}`}>
-              Varejo:
-            </span>
-            <span className={`font-medium ${classes.secondaryPrice}`}>
-              {formatCurrency(priceInfo.retailPrice || 0)}
-            </span>
-          </div>
-
-          {/* Preço Atacado */}
-          <div className="flex items-center justify-between">
-            <span className={`text-muted-foreground ${classes.secondaryPrice}`}>
-              Atacado:
-            </span>
-            <div className="flex items-center gap-1">
+      {priceInfo.shouldShowWholesaleInfo &&
+        priceInfo.shouldShowRetailPrice &&
+        !priceInfo.isWholesaleOnly &&
+        priceInfo.retailPrice !== priceInfo.wholesalePrice && (
+          <div className="space-y-1 pt-2 border-t border-border/20">
+            {/* Preço Varejo */}
+            <div className="flex items-center justify-between">
               <span
-                className={`font-medium text-green-600 ${classes.secondaryPrice}`}
+                className={`text-muted-foreground ${classes.secondaryPrice}`}
               >
-                {formatCurrency(priceInfo.wholesalePrice || 0)}
+                Varejo:
               </span>
-              {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && (
-                <Badge
-                  variant="secondary"
-                  className={`bg-orange-100 text-orange-700 ${classes.badge}`}
+              <span className={`font-medium ${classes.secondaryPrice}`}>
+                {formatCurrency(priceInfo.retailPrice || 0)}
+              </span>
+            </div>
+
+            {/* Preço Atacado */}
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-muted-foreground ${classes.secondaryPrice}`}
+              >
+                Atacado:
+              </span>
+              <div className="flex items-center gap-1">
+                <span
+                  className={`font-medium text-green-600 ${classes.secondaryPrice}`}
                 >
-                  mín. {priceInfo.minWholesaleQty}
-                </Badge>
-              )}
+                  {formatCurrency(priceInfo.wholesalePrice || 0)}
+                </span>
+                {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && (
+                  <Badge
+                    variant="secondary"
+                    className={`bg-orange-100 text-orange-700 ${classes.badge}`}
+                  >
+                    mín. {priceInfo.minWholesaleQty}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Informação de quantidade mínima para wholesale_only */}
       {priceInfo.isWholesaleOnly && priceInfo.minQuantity > 1 && (

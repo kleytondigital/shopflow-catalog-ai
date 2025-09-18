@@ -17,7 +17,7 @@ export const useDynamicMetaTags = ({
   customDescription,
   customImage,
 }: UseDynamicMetaTagsProps) => {
-  const { store } = useCatalog(storeIdentifier, catalogType);
+  const { store } = useCatalog(storeIdentifier);
   const { settings } = useCatalogSettings(storeIdentifier);
 
   useEffect(() => {

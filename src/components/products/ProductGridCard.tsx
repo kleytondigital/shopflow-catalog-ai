@@ -265,11 +265,13 @@ const ProductGridCard: React.FC<ProductGridCardProps> = ({
                 size="sm"
                 onClick={handleToggleStatus}
                 className={`h-8 w-8 p-0 ${
-                  product.is_active 
-                    ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50" 
+                  product.is_active
+                    ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                     : "text-green-600 hover:text-green-700 hover:bg-green-50"
                 }`}
-                title={product.is_active ? "Desativar produto" : "Ativar produto"}
+                title={
+                  product.is_active ? "Desativar produto" : "Ativar produto"
+                }
               >
                 {product.is_active ? (
                   <PowerOff className="h-4 w-4" />

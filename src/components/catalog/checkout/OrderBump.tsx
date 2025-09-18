@@ -564,7 +564,7 @@ const OrderBump: React.FC<OrderBumpProps> = ({
             setSelectedProduct(null);
           }}
           onAddToCart={handleAddToCartFromModal}
-          catalogType="retail"
+          catalogType="wholesale"
           showStock={true}
           showPrices={true}
         />

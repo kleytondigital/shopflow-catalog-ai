@@ -56,3 +56,4 @@ SELECT
   SUM(CASE WHEN status = 'delivered' THEN total_amount ELSE 0 END) as total_revenue
 FROM public.orders;
 
+

@@ -402,7 +402,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                           priceInfo.originalPrice !== price &&
                           priceInfo.originalPrice > 0 && (
                             <div className="text-sm text-muted-foreground line-through">
-                              Varejo: {formatCurrency(priceInfo.originalPrice)}
+                              Varejo: {formatCurrency(priceInfo.retailPrice)}
                             </div>
                           )}
                       </div>
@@ -820,7 +820,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                           </h4>
                           {showPrices && (
                             <p className="text-sm font-medium text-primary">
-                              {formatCurrency(relatedProduct.retail_price || 0)}
+                              {formatCurrency(
+                                catalogType === "wholesale"
+                                  ? relatedProduct.wholesale_price || 0
+                                  : relatedProduct.retail_price || 0
+                              )}
                             </p>
                           )}
                           <Button

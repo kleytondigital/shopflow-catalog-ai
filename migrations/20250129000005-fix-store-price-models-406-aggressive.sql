@@ -192,3 +192,4 @@ AND schemaname = 'public';
 -- 13. Comentário final
 COMMENT ON TABLE store_price_models IS 'Configuração do modelo de preço por loja - Erro 406 corrigido definitivamente';
 
+

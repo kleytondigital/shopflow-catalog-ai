@@ -67,11 +67,27 @@ const HierarchicalColorSizeSelector: React.FC<
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedVariation, setSelectedVariation] =
     useState<ProductVariation | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  // Debug para verificar catalogType
+  console.log("🔍 HierarchicalColorSizeSelector - Debug:", {
+    catalogType,
+    productMinWholesaleQty: product.min_wholesale_qty,
+    productName: product.name,
+  });
+
+  // Quantidade mínima
+  const minQuantity: number =
+    catalogType === "wholesale" && product.min_wholesale_qty
+      ? product.min_wholesale_qty
+      : 1;
+
+  const [quantity, setQuantity] = useState(minQuantity);
   const [cart, setCart] = useState<VariationSelection[]>([]);
 
   // Função para adicionar variação à lista
-  const addVariationToList = (variation: ProductVariation, qty: number = 1) => {
+  const addVariationToList = (
+    variation: ProductVariation,
+    qty: number = minQuantity
+  ) => {
     const existingIndex = selectedVariations.findIndex(
       (item) => item.variation.id === variation.id
     );
@@ -205,12 +221,6 @@ const HierarchicalColorSizeSelector: React.FC<
     return basePrice + (variation.price_adjustment || 0);
   };
 
-  // Quantidade mínima
-  const minQuantity =
-    catalogType === "wholesale" && product.min_wholesale_qty
-      ? product.min_wholesale_qty
-      : 1;
-
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
     setSelectedSize(null);
@@ -282,7 +292,7 @@ const HierarchicalColorSizeSelector: React.FC<
     setSelectedColor(null);
     setSelectedSize(null);
     setSelectedVariation(null);
-    setQuantity(1);
+    setQuantity(minQuantity);
   };
 
   const handleRemoveFromCart = (variationId: string) => {
@@ -316,6 +326,13 @@ const HierarchicalColorSizeSelector: React.FC<
               automaticamente à sua lista. Você pode ajustar as quantidades e
               adicionar quantas variações quiser antes de finalizar.
             </p>
+            {minQuantity > 1 && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-xs text-amber-700 font-medium">
+                  ⚠️ Quantidade mínima: {minQuantity} unidades por variação
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -563,10 +580,11 @@ const HierarchicalColorSizeSelector: React.FC<
                         onClick={() =>
                           updateVariationQuantity(
                             item.variation.id!,
-                            item.quantity - 1
+                            Math.max(minQuantity, item.quantity - 1)
                           )
                         }
                         className="h-6 w-6 p-0"
+                        disabled={item.quantity <= minQuantity}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>

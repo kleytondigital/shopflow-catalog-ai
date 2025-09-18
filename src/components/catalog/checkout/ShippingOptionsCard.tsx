@@ -70,7 +70,7 @@ const ShippingOptionsCard: React.FC<ShippingOptionsCardProps> = ({
   const defaultMethods = [
     {
       id: "pickup",
-      name: "Retirar na loja",
+      name: "Retirar na Loja",
       type: "pickup",
       is_active: true,
       price: 0,
@@ -82,9 +82,9 @@ const ShippingOptionsCard: React.FC<ShippingOptionsCardProps> = ({
       },
     },
     {
-      id: "combine",
-      name: "A combinar",
-      type: "combine",
+      id: "delivery",
+      name: "Entrega a Combinar",
+      type: "delivery",
       is_active: true,
       price: 0,
       estimated_days: undefined,
@@ -96,8 +96,8 @@ const ShippingOptionsCard: React.FC<ShippingOptionsCardProps> = ({
     },
   ];
 
-  const methodsToShow =
-    shippingMethods.length > 0 ? shippingMethods : defaultMethods;
+  // Sempre usar os métodos padrão para garantir que as opções apareçam
+  const methodsToShow = defaultMethods;
 
   if (methodsToShow.length === 0) {
     return (

@@ -71,3 +71,4 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({
   );
 };
 
+

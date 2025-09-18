@@ -1,14 +1,13 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, Eye } from 'lucide-react';
-import { Product } from '@/hooks/useProducts';
-import { ProductVariation } from '@/types/variation';
-import { CatalogType } from '@/hooks/useCatalog';
-import { formatPrice } from '@/utils/formatPrice';
-import { useProductDisplayPrice } from '@/hooks/useProductDisplayPrice';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Heart, ShoppingCart, Eye } from "lucide-react";
+import { Product } from "@/hooks/useProducts";
+import { ProductVariation } from "@/types/variation";
+import { CatalogType } from "@/hooks/useCatalog";
+import { formatPrice } from "@/utils/formatPrice";
+import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 
 export interface CatalogSettingsData {
   colors?: {
@@ -35,7 +34,11 @@ export interface CatalogSettingsData {
 interface ModernTemplateProps {
   product: Product;
   catalogType: CatalogType;
-  onAddToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  onAddToCart: (
+    product: Product,
+    quantity?: number,
+    variation?: ProductVariation
+  ) => void;
   onAddToWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   isInWishlist: boolean;
@@ -53,7 +56,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
   isInWishlist,
   showPrices,
   showStock,
-  editorSettings
+  editorSettings,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -67,29 +70,32 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
     quantity: 1,
   });
 
+  // Usar quantidade mínima do produto
+  const minQuantity = priceInfo.minQuantity;
+
   // Verificar estoque disponível
-  const totalStock = hasVariations 
-    ? (product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0)
-    : (product.stock || 0);
+  const totalStock = hasVariations
+    ? product.variations?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0
+    : product.stock || 0;
 
   const isOutOfStock = totalStock === 0 && !product.allow_negative_stock;
 
   const handleAddToCart = () => {
-    console.log('🛒 MODERN TEMPLATE - Tentativa de adicionar ao carrinho:', {
+    console.log("🛒 MODERN TEMPLATE - Tentativa de adicionar ao carrinho:", {
       productId: product.id,
       hasVariations,
-      stock: totalStock
+      stock: totalStock,
     });
 
     if (hasVariations) {
       onQuickView(product);
     } else {
-      onAddToCart(product, 1);
+      onAddToCart(product, minQuantity);
     }
   };
 
   return (
-    <Card 
+    <Card
       className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -97,7 +103,11 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
       <div className="relative aspect-square overflow-hidden">
         {/* Imagem do Produto */}
         <img
-          src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
+          src={
+            imageError
+              ? "/placeholder.svg"
+              : product.image_url || "/placeholder.svg"
+          }
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={() => setImageError(true)}
@@ -113,9 +123,11 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
         )}
 
         {/* Botões de Ação - Top Right */}
-        <div className={`absolute top-3 right-3 flex gap-1 transition-all duration-200 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
+        <div
+          className={`absolute top-3 right-3 flex gap-1 transition-all duration-200 ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
+        >
           <Button
             variant="secondary"
             size="sm"
@@ -125,8 +137,10 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
               onAddToWishlist(product);
             }}
           >
-            <Heart 
-              className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+            <Heart
+              className={`h-4 w-4 ${
+                isInWishlist ? "fill-red-500 text-red-500" : "text-gray-600"
+              }`}
             />
           </Button>
 
@@ -144,18 +158,25 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
         </div>
 
         {/* Badge de Variações - Bottom Center */}
-        {hasVariations && product.variations && product.variations.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
-            <Badge variant="outline" className="text-xs font-medium bg-gray-100 text-gray-700 border-gray-300 shadow-sm">
-              +{product.variations.length} opções
-            </Badge>
-          </div>
-        )}
+        {hasVariations &&
+          product.variations &&
+          product.variations.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+              <Badge
+                variant="outline"
+                className="text-xs font-medium bg-gray-100 text-gray-700 border-gray-300 shadow-sm"
+              >
+                +{product.variations.length} opções
+              </Badge>
+            </div>
+          )}
 
         {/* Overlay de hover */}
-        <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`} />
+        <div
+          className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
+        />
       </div>
 
       <CardContent className="p-4">
@@ -174,16 +195,18 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
                 {formatPrice(priceInfo.displayPrice)}
               </span>
             </div>
-            
-            {priceInfo.shouldShowWholesaleInfo && 
-             priceInfo.shouldShowRetailPrice && 
-             !priceInfo.isWholesaleOnly && 
-             priceInfo.retailPrice !== priceInfo.wholesalePrice && (
-              <p className="text-sm text-green-600 font-medium">
-                Atacado: {formatPrice(priceInfo.wholesalePrice || 0)}
-                {priceInfo.minWholesaleQty && priceInfo.minWholesaleQty > 1 && ` (mín: ${priceInfo.minWholesaleQty})`}
-              </p>
-            )}
+
+            {priceInfo.shouldShowWholesaleInfo &&
+              priceInfo.shouldShowRetailPrice &&
+              !priceInfo.isWholesaleOnly &&
+              priceInfo.retailPrice !== priceInfo.wholesalePrice && (
+                <p className="text-sm text-green-600 font-medium">
+                  Atacado: {formatPrice(priceInfo.wholesalePrice || 0)}
+                  {priceInfo.minWholesaleQty &&
+                    priceInfo.minWholesaleQty > 1 &&
+                    ` (mín: ${priceInfo.minWholesaleQty})`}
+                </p>
+              )}
           </div>
         )}
 
@@ -192,10 +215,15 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           <div className="mb-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Estoque:</span>
-              <span className={`font-medium ${
-                totalStock > 10 ? 'text-green-600' : 
-                totalStock > 0 ? 'text-yellow-600' : 'text-red-600'
-              }`}>
+              <span
+                className={`font-medium ${
+                  totalStock > 10
+                    ? "text-green-600"
+                    : totalStock > 0
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
                 {totalStock} unidades
               </span>
             </div>
@@ -209,7 +237,11 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           disabled={isOutOfStock}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
-          {hasVariations ? 'Ver Opções' : isOutOfStock ? 'Esgotado' : 'Adicionar'}
+          {hasVariations
+            ? "Ver Opções"
+            : isOutOfStock
+            ? "Esgotado"
+            : "Adicionar"}
         </Button>
       </CardContent>
     </Card>

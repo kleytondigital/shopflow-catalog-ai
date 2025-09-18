@@ -20,13 +20,9 @@ import { Filter } from "lucide-react";
 
 interface PublicCatalogProps {
   storeIdentifier: string;
-  catalogType: CatalogType;
 }
 
-const PublicCatalog: React.FC<PublicCatalogProps> = ({
-  storeIdentifier,
-  catalogType,
-}) => {
+const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -61,9 +57,10 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({
     filteredProducts,
     loading,
     storeError,
+    catalogType, // Agora obtido automaticamente do useCatalog
     searchProducts,
     filterProducts,
-  } = useCatalog(storeIdentifier, catalogType);
+  } = useCatalog(storeIdentifier);
 
   const { settings } = useCatalogSettings(storeIdentifier);
 

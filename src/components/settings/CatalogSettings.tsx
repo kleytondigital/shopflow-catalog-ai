@@ -358,7 +358,6 @@ const CatalogSettings = () => {
           </Card>
         </TabsContent>
 
-
         <TabsContent value="display" className="space-y-6">
           {/* Appearance Settings */}
           <Card>
