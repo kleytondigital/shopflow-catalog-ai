@@ -142,9 +142,6 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   const [selectedVariation, setSelectedVariation] =
     useState<ProductVariation | null>(null);
   const [quickAddItems, setQuickAddItems] = useState<VariationSelection[]>([]);
-  const [cep, setCep] = useState("");
-  const [loadingShipping, setLoadingShipping] = useState(false);
-  const [shippingInfo, setShippingInfo] = useState<string | null>(null);
 
   // Usar um produto "vazio" para manter consistência dos hooks
   const safeProduct =
@@ -304,30 +301,6 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     }
   };
 
-  // Função para calcular frete (simulada)
-  const handleCalculateShipping = async () => {
-    if (!cep || cep.length < 8) {
-      toast({
-        title: "CEP inválido",
-        description: "Digite um CEP válido com 8 dígitos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoadingShipping(true);
-
-    // Simular chamada de API
-    setTimeout(() => {
-      setShippingInfo("Entrega em 3-5 dias úteis • Frete: R$ 15,90");
-      setLoadingShipping(false);
-      toast({
-        title: "Frete calculado!",
-        description: "Informações de entrega atualizadas.",
-      });
-    }, 1500);
-  };
-
   const isDescriptionLong =
     product.description && product.description.length > 120;
   const totalQuickAddItems = quickAddItems.reduce(
@@ -483,46 +456,6 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     </div>
                   </div>
                 )}
-
-                {/* Calculadora de Frete */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <h5 className="font-medium mb-3 flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
-                    Calcular Frete e Prazo
-                  </h5>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Digite seu CEP"
-                        value={cep}
-                        onChange={(e) =>
-                          setCep(e.target.value.replace(/\D/g, "").slice(0, 8))
-                        }
-                        className="flex-1"
-                        maxLength={8}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleCalculateShipping}
-                        disabled={loadingShipping || cep.length < 8}
-                      >
-                        {loadingShipping ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Calcular"
-                        )}
-                      </Button>
-                    </div>
-                    {shippingInfo && (
-                      <div className="text-sm p-2 bg-green-50 border border-green-200 rounded text-green-700">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4" />
-                          <span>{shippingInfo}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {/* Descrição Compacta */}
                 {product.description && (
