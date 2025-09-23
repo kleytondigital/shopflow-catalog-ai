@@ -62,6 +62,9 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const hasVariations = product.variations && product.variations.length > 0;
+  const hasGradeVariations =
+    hasVariations &&
+    product.variations?.some((v) => v.is_grade || v.variation_type === "grade");
 
   // Usar o hook para cálculo correto de preços
   const priceInfo = useProductDisplayPrice({
@@ -165,8 +168,18 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
           product.variations &&
           product.variations.length > 1 && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-              <Badge className="text-xs font-medium bg-white/90 text-gray-700 shadow-lg">
-                +{product.variations.length} opções
+              <Badge
+                className={`text-xs font-medium shadow-lg ${
+                  hasGradeVariations
+                    ? "bg-orange-100/90 text-orange-700 border-orange-300"
+                    : "bg-white/90 text-gray-700"
+                }`}
+              >
+                {hasGradeVariations ? (
+                  <>📦 {product.variations.length} grades</>
+                ) : (
+                  `+${product.variations.length} opções`
+                )}
               </Badge>
             </div>
           )}

@@ -134,27 +134,10 @@ export const useCatalog = (storeSlug?: string) => {
       setLoading(true);
 
       try {
-        // Usar LEFT JOIN para incluir produtos sem variações
+        // Buscar produtos primeiro
         const { data: productsData, error: productsError } = await supabase
           .from("products")
-          .select(
-            `
-          *,
-          product_variations (
-            id,
-            product_id,
-            color,
-            size,
-            sku,
-            stock,
-            price_adjustment,
-            is_active,
-            image_url,
-            created_at,
-            updated_at
-          )
-        `
-          )
+          .select("*")
           .eq("store_id", storeId)
           .eq("is_active", true)
           .order("name", { ascending: true });
@@ -164,27 +147,62 @@ export const useCatalog = (storeSlug?: string) => {
           return false;
         }
 
-        // Transformar os dados para incluir variações corretamente
-        const productsWithVariations =
-          productsData?.map((product) => ({
-            ...product,
-            variations:
-              product.product_variations
-                ?.filter((variation) => variation.is_active) // Filtrar apenas variações ativas
-                ?.map((variation) => ({
-                  id: variation.id,
-                  product_id: variation.product_id,
-                  color: variation.color,
-                  size: variation.size,
-                  sku: variation.sku,
-                  stock: variation.stock,
-                  price_adjustment: variation.price_adjustment,
-                  is_active: variation.is_active,
-                  image_url: variation.image_url,
-                  created_at: variation.created_at,
-                  updated_at: variation.updated_at,
-                })) || [],
-          })) || [];
+        // Buscar todas as variações dos produtos em uma query separada
+        const productIds = productsData?.map((p) => p.id) || [];
+        let variationsData: any[] = [];
+
+        if (productIds.length > 0) {
+          const { data: variations, error: variationsError } = await supabase
+            .from("product_variations")
+            .select("*")
+            .in("product_id", productIds)
+            .eq("is_active", true)
+            .order("display_order", { ascending: true });
+
+          if (variationsError) {
+            console.error("Erro ao buscar variações:", variationsError);
+          } else {
+            variationsData = variations || [];
+            console.log(
+              `🔍 CATÁLOGO - ${variationsData.length} variações carregadas`
+            );
+          }
+        }
+
+        // Mapear produtos e suas variações (igual ao useProducts.tsx)
+        const productsWithVariations: Product[] = (productsData || []).map(
+          (product) => {
+            const productVariations = variationsData
+              .filter((v) => v.product_id === product.id)
+              .map((v) => ({
+                id: v.id,
+                product_id: v.product_id,
+                color: v.color,
+                size: v.size,
+                sku: v.sku,
+                stock: v.stock,
+                price_adjustment: v.price_adjustment,
+                is_active: v.is_active,
+                image_url: v.image_url,
+                created_at: v.created_at,
+                updated_at: v.updated_at,
+                variation_type: v.variation_type,
+                name: v.name,
+                is_grade: v.is_grade,
+                grade_name: v.grade_name,
+                grade_color: v.grade_color,
+                grade_quantity: v.grade_quantity,
+                grade_sizes: v.grade_sizes,
+                grade_pairs: v.grade_pairs,
+                display_order: v.display_order,
+              })) as ProductVariation[];
+
+            return {
+              ...product,
+              variations: productVariations,
+            };
+          }
+        );
 
         console.log("✅ CATÁLOGO - Produtos carregados:", {
           total: productsWithVariations.length,
@@ -194,6 +212,76 @@ export const useCatalog = (storeSlug?: string) => {
           withoutVariations: productsWithVariations.filter(
             (p) => !p.variations?.length
           ).length,
+        });
+
+        // Debug: verificar variações carregadas
+        console.log("🔍 CATÁLOGO - Debug variações carregadas:", {
+          totalVariations: variationsData.length,
+          variationsWithGrades: variationsData.filter(
+            (v) => v.is_grade === true
+          ).length,
+          sampleVariations: variationsData.slice(0, 3).map((v) => ({
+            id: v.id,
+            product_id: v.product_id,
+            color: v.color,
+            is_grade: v.is_grade,
+            variation_type: v.variation_type,
+            grade_name: v.grade_name,
+            grade_color: v.grade_color,
+            grade_sizes: v.grade_sizes,
+            grade_pairs: v.grade_pairs,
+          })),
+        });
+
+        // Debug específico para grades
+        const productsWithGrades = productsWithVariations.filter((p) =>
+          p.variations?.some((v) => v.is_grade === true)
+        );
+
+        // Debug detalhado para o produto específico
+        const adidasProduct = productsWithVariations.find(
+          (p) => p.name === "Tênis Adidas Ultraboost"
+        );
+        if (adidasProduct) {
+          console.log("🔍 CATÁLOGO - Debug Adidas Ultraboost:", {
+            productName: adidasProduct.name,
+            variationsCount: adidasProduct.variations?.length,
+            variations: adidasProduct.variations?.map((v) => ({
+              id: v.id,
+              color: v.color,
+              size: v.size,
+              is_grade: v.is_grade,
+              variation_type: v.variation_type,
+              grade_name: v.grade_name,
+              grade_color: v.grade_color,
+              grade_sizes: v.grade_sizes,
+              grade_pairs: v.grade_pairs,
+              // Verificar se todos os campos estão presentes
+              allFields: Object.keys(v),
+            })),
+          });
+        }
+
+        console.log("🔍 CATÁLOGO - Debug grades:", {
+          totalProducts: productsWithVariations.length,
+          productsWithVariations: productsWithVariations.filter(
+            (p) => p.variations?.length > 0
+          ).length,
+          productsWithGrades: productsWithGrades.length,
+          gradeProducts: productsWithGrades.map((p) => ({
+            name: p.name,
+            variations: p.variations
+              ?.filter((v) => v.is_grade)
+              .map((v) => ({
+                id: v.id,
+                name: v.name,
+                is_grade: v.is_grade,
+                grade_name: v.grade_name,
+                grade_color: v.grade_color,
+                grade_sizes: v.grade_sizes,
+                grade_pairs: v.grade_pairs,
+              })),
+          })),
         });
 
         if (type === "wholesale") {

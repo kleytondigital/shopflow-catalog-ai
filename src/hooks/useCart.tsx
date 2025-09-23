@@ -101,6 +101,9 @@ const validateCartItem = (item: any): CartItem | null => {
       inputStoreId: item.product?.store_id,
       productName: item.product?.name,
       productId: item.product?.id,
+      hasGradeInfo: !!item.gradeInfo,
+      gradeInfo: item.gradeInfo,
+      itemPrice: item.price,
     });
 
     // Verificar propriedades obrigatórias
@@ -141,19 +144,24 @@ const validateCartItem = (item: any): CartItem | null => {
       variation: item.variation,
       catalogType: item.catalogType || "retail",
       isWholesalePrice: item.isWholesalePrice || false,
-      // Extrair informações de grade da variação
-      gradeInfo: item.variation?.grade_name
-        ? {
-            name: item.variation.grade_name,
-            sizes: item.variation.grade_sizes || [],
-            pairs: item.variation.grade_pairs || [],
-          }
-        : undefined,
+      // Preservar gradeInfo original do cartHelpers.ts
+      gradeInfo:
+        item.gradeInfo ||
+        (item.variation?.grade_name
+          ? {
+              name: item.variation.grade_name,
+              sizes: item.variation.grade_sizes || [],
+              pairs: item.variation.grade_pairs || [],
+            }
+          : undefined),
     };
 
     console.log("🔍 validateCartItem - Item validado:", {
       outputStoreId: validatedItem.product.store_id,
       productName: validatedItem.product.name,
+      hasGradeInfo: !!validatedItem.gradeInfo,
+      gradeInfo: validatedItem.gradeInfo,
+      validatedPrice: validatedItem.price,
     });
 
     return validatedItem;
@@ -211,6 +219,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return cartItems.map((item) => {
       const product = item.product;
       const quantity = item.quantity;
+
+      // Se for uma grade, não recalcular o preço (já foi calculado corretamente no cartHelpers)
+      if (item.gradeInfo && item.variation?.is_grade) {
+        console.log(
+          `📦 [recalculateItemPrices] ${product.name}: Mantendo preço da grade (R$${item.price})`
+        );
+        return {
+          ...item,
+          // Manter o preço original da grade
+          isWholesalePrice: item.catalogType === "wholesale",
+          currentTier: undefined,
+          nextTier: undefined,
+          nextTierQuantityNeeded: undefined,
+          nextTierPotentialSavings: undefined,
+        };
+      }
+
+      // Debug para verificar se gradeInfo está chegando
+      console.log(
+        `🔍 [recalculateItemPrices] ${product.name}: Debug gradeInfo:`,
+        {
+          hasGradeInfo: !!item.gradeInfo,
+          gradeInfo: item.gradeInfo,
+          hasVariation: !!item.variation,
+          variationIsGrade: item.variation?.is_grade,
+          itemPrice: item.price,
+          itemKeys: Object.keys(item),
+        }
+      );
 
       // Se for catálogo atacado ou apenas atacado, sempre usar preço de atacado
       if (
@@ -331,6 +368,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         item.catalogType === "wholesale" ||
         product.price_model === "wholesale_only"
       ) {
+        // Debug para verificar por que não está entrando na condição da grade
+        console.log(
+          `🔍 [recalculateItemPrices] ${product.name}: Debug grade:`,
+          {
+            hasGradeInfo: !!item.gradeInfo,
+            hasVariation: !!item.variation,
+            variationIsGrade: item.variation?.is_grade,
+            gradeInfo: item.gradeInfo,
+            variation: item.variation,
+          }
+        );
+
+        // Para grades, preservar o preço já calculado
+        if (item.gradeInfo && item.variation?.is_grade) {
+          console.log(
+            `📦 [recalculateItemPrices] ${product.name}: Preservando preço da grade (R$${item.price})`
+          );
+          return {
+            ...item,
+            isWholesalePrice: true,
+            currentTier: undefined,
+            nextTier: undefined,
+            nextTierQuantityNeeded: undefined,
+            nextTierPotentialSavings: undefined,
+          };
+        }
+
         const wholesalePrice =
           product.wholesale_price || product.retail_price || 0;
         return {
@@ -430,6 +494,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // addItem agora recebe modelKey como parâmetro
   const addItem = (item: CartItem, modelKey?: CartPriceModelType) => {
+    console.log("🔄 [addItem] Item recebido:", {
+      itemId: item.id,
+      itemPrice: item.price,
+      hasGradeInfo: !!item.gradeInfo,
+      gradeInfo: item.gradeInfo,
+      hasVariation: !!item.variation,
+      variationIsGrade: item.variation?.is_grade,
+    });
+
     // Validar item antes de adicionar
     const validatedItem = validateCartItem(item);
     if (!validatedItem) {
@@ -446,17 +519,41 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    console.log("🔄 [addItem] Item validado:", {
+      validatedId: validatedItem.id,
+      validatedPrice: validatedItem.price,
+      hasGradeInfo: !!validatedItem.gradeInfo,
+      gradeInfo: validatedItem.gradeInfo,
+      variationIsGrade: validatedItem.variation?.is_grade,
+    });
+
     const minQty =
       modelKey === "wholesale_only"
         ? validatedItem.product.min_wholesale_qty || 1
         : 1;
 
     // Se for wholesale_only, garantir quantidade mínima e preço de atacado
+    // MAS não sobrescrever preço de grades (já calculado corretamente)
     if (modelKey === "wholesale_only") {
       validatedItem.quantity = Math.max(minQty, validatedItem.quantity);
-      validatedItem.price = validatedItem.product.wholesale_price;
-      validatedItem.originalPrice = validatedItem.product.wholesale_price;
+
+      // Não sobrescrever preço se for uma grade (já foi calculado corretamente no cartHelpers)
+      if (!validatedItem.gradeInfo || !validatedItem.variation?.is_grade) {
+        validatedItem.price = validatedItem.product.wholesale_price;
+        validatedItem.originalPrice = validatedItem.product.wholesale_price;
+      } else {
+        console.log("🔄 [addItem] Preservando preço da grade:", {
+          gradePrice: validatedItem.price,
+          wholesalePrice: validatedItem.product.wholesale_price,
+        });
+      }
     }
+
+    console.log("🔄 [addItem] Item final antes de adicionar:", {
+      finalPrice: validatedItem.price,
+      hasGradeInfo: !!validatedItem.gradeInfo,
+      gradeInfo: validatedItem.gradeInfo,
+    });
 
     // Buscar níveis de preço se não estiverem em cache
     if (!priceTiersCache[validatedItem.product.id]) {
@@ -504,6 +601,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           price: item.price,
           catalogType: item.catalogType,
           isWholesalePrice: item.isWholesalePrice,
+          hasGradeInfo: !!item.gradeInfo,
+          gradeInfo: item.gradeInfo,
         })),
       });
 
@@ -516,6 +615,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           price: item.price,
           catalogType: item.catalogType,
           isWholesalePrice: item.isWholesalePrice,
+          hasGradeInfo: !!item.gradeInfo,
+          gradeInfo: item.gradeInfo,
         })),
       });
 

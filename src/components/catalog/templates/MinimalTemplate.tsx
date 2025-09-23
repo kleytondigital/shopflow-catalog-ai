@@ -41,6 +41,22 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const hasVariations = product.variations && product.variations.length > 0;
+  const hasGradeVariations =
+    hasVariations &&
+    product.variations?.some((v) => v.is_grade || v.variation_type === "grade");
+
+  // Debug para detecção de grades
+  console.log("🔍 MinimalTemplate - Debug grade:", {
+    productName: product.name,
+    hasVariations,
+    hasGradeVariations,
+    variations: product.variations?.map((v) => ({
+      id: v.id,
+      is_grade: v.is_grade,
+      variation_type: v.variation_type,
+      grade_name: v.grade_name,
+    })),
+  });
 
   // Usar o hook para cálculo correto de preços
   const priceInfo = useProductDisplayPrice({
@@ -62,13 +78,25 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
   const handleAddToCart = () => {
     console.log("🛒 MINIMAL TEMPLATE - Tentativa de adicionar ao carrinho:", {
       productId: product.id,
+      productName: product.name,
       hasVariations,
+      variationsCount: product.variations?.length || 0,
+      variations: product.variations?.map((v) => ({
+        id: v.id,
+        color: v.color,
+        is_grade: v.is_grade,
+        variation_type: v.variation_type,
+      })),
       stock: totalStock,
     });
 
     if (hasVariations) {
+      console.log("🔄 MINIMAL TEMPLATE - Abrindo modal (tem variações)");
       onQuickView(product);
     } else {
+      console.log(
+        "🔄 MINIMAL TEMPLATE - Adicionando diretamente (sem variações)"
+      );
       onAddToCart(product, minQuantity);
     }
   };
@@ -143,9 +171,17 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
             <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
               <Badge
                 variant="outline"
-                className="text-xs bg-white/90 text-gray-700"
+                className={`text-xs bg-white/90 ${
+                  hasGradeVariations
+                    ? "text-orange-700 border-orange-300 bg-orange-50/90"
+                    : "text-gray-700"
+                }`}
               >
-                +{product.variations.length} opções
+                {hasGradeVariations ? (
+                  <>📦 {product.variations.length} grades</>
+                ) : (
+                  `+${product.variations.length} opções`
+                )}
               </Badge>
             </div>
           )}
@@ -201,7 +237,19 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
         <Button
           className="w-full"
           variant={isOutOfStock ? "outline" : "default"}
-          onClick={handleAddToCart}
+          onClick={() => {
+            console.log("🖱️ MINIMAL TEMPLATE - Botão clicado:", {
+              productName: product.name,
+              hasVariations,
+              isOutOfStock,
+              buttonText: hasVariations
+                ? "Ver Opções"
+                : isOutOfStock
+                ? "Esgotado"
+                : "Adicionar",
+            });
+            handleAddToCart();
+          }}
           disabled={isOutOfStock}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />

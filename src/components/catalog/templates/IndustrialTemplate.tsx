@@ -41,6 +41,9 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const hasVariations = product.variations && product.variations.length > 0;
+  const hasGradeVariations =
+    hasVariations &&
+    product.variations?.some((v) => v.is_grade || v.variation_type === "grade");
 
   // Usar o hook para cálculo correto de preços
   const priceInfo = useProductDisplayPrice({
@@ -146,8 +149,16 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
           product.variations &&
           product.variations.length > 1 && (
             <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
-              <Badge className="text-xs font-bold bg-gray-600 text-white uppercase tracking-wide">
-                +{product.variations.length} OPÇÕES
+              <Badge
+                className={`text-xs font-bold uppercase tracking-wide ${
+                  hasGradeVariations
+                    ? "bg-orange-600 text-white"
+                    : "bg-gray-600 text-white"
+                }`}
+              >
+                {hasGradeVariations
+                  ? `📦 ${product.variations.length} GRADES`
+                  : `+${product.variations.length} OPÇÕES`}
               </Badge>
             </div>
           )}

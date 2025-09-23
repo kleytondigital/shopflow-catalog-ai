@@ -19,6 +19,11 @@ interface CartItem {
   originalPrice: number;
   variation?: any;
   catalogType: string;
+  gradeInfo?: {
+    name: string;
+    sizes: string[];
+    pairs: number[];
+  };
 }
 
 interface PriceCalculationResult {
@@ -81,6 +86,12 @@ export const useCartPriceCalculation = (
       retailPrice,
       wholesalePrice,
       quantity,
+      // Debug específico para grade
+      hasGradeInfo: !!item.gradeInfo,
+      gradeInfo: item.gradeInfo,
+      hasVariation: !!item.variation,
+      variationIsGrade: item.variation?.is_grade,
+      itemPrice: item.price,
     });
 
     console.log(
@@ -170,7 +181,24 @@ export const useCartPriceCalculation = (
       finalPrice = retailPrice || 0;
     }
 
-    const total = finalPrice * quantity;
+    // Para grades, usar o preço já calculado (não multiplicar por quantidade)
+    // Para produtos normais, multiplicar preço unitário por quantidade
+    let total;
+    if (item.gradeInfo && item.variation?.is_grade) {
+      // Para grades, o preço já é o total da grade
+      total = item.price || finalPrice;
+      console.log("📦 useCartPriceCalculation - Grade detectada:", {
+        productName: item.product.name,
+        gradeName: item.gradeInfo.name,
+        itemPrice: item.price,
+        finalPrice,
+        total,
+        quantity,
+      });
+    } else {
+      // Para produtos normais, multiplicar preço unitário por quantidade
+      total = finalPrice * quantity;
+    }
 
     return {
       total,

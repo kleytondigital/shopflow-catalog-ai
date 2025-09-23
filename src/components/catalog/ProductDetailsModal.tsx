@@ -142,6 +142,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   const [selectedVariation, setSelectedVariation] =
     useState<ProductVariation | null>(null);
   const [quickAddItems, setQuickAddItems] = useState<VariationSelection[]>([]);
+  const [isGradeSelected, setIsGradeSelected] = useState(false);
 
   // Usar um produto "vazio" para manter consistência dos hooks
   const safeProduct =
@@ -175,16 +176,91 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     hasVariations &&
     product.variations?.some((v) => v.is_grade || v.variation_type === "grade");
 
+  // Debug para variações
+  console.log("🔍 ProductDetailsModal - Debug variações:", {
+    productName: product.name,
+    hasVariations,
+    variationsCount: product.variations?.length || 0,
+    hasGradeVariations,
+    variations: product.variations?.map((v) => ({
+      id: v.id,
+      color: v.color,
+      size: v.size,
+      is_grade: v.is_grade,
+      variation_type: v.variation_type,
+      grade_name: v.grade_name,
+      grade_sizes: v.grade_sizes,
+      grade_pairs: v.grade_pairs,
+      // Debug: verificar todos os campos disponíveis
+      allFields: Object.keys(v),
+      // Debug: verificar valores específicos
+      rawData: v,
+    })),
+  });
+
+  // Debug adicional: verificar se o produto tem as variações corretas
+  console.log("🔍 ProductDetailsModal - Debug produto completo:", {
+    productId: product.id,
+    productName: product.name,
+    productKeys: Object.keys(product),
+    variationsRaw: product.variations,
+    firstVariation: product.variations?.[0],
+  });
+
   const handleQuickAdd = (
     variation: ProductVariation,
     quantity: number = minQuantity
   ) => {
-    onAddToCart(product, quantity, variation);
+    console.log("🚀 ProductDetailsModal - handleQuickAdd CHAMADO:", {
+      variationId: variation.id,
+      variationColor: variation.color,
+      isGrade: variation.is_grade,
+      gradeName: variation.grade_name,
+    });
+
+    // Para produtos com grade, quantidade sempre é 1 (1 grade completa)
+    const finalQuantity = variation.is_grade ? 1 : quantity;
+
+    console.log("🛒 ProductDetailsModal - handleQuickAdd:", {
+      productName: product.name,
+      variationId: variation.id,
+      variationColor: variation.color,
+      variationIsGrade: variation.is_grade,
+      variationGradeName: variation.grade_name,
+      variationGradePairs: variation.grade_pairs,
+      variationGradeSizes: variation.grade_sizes,
+      quantityOriginal: quantity,
+      quantityFinal: finalQuantity,
+      catalogType,
+      basePrice:
+        catalogType === "wholesale"
+          ? product.wholesale_price || product.retail_price || 0
+          : product.retail_price || 0,
+      // Debug completo da variação
+      variationComplete: {
+        id: variation.id,
+        color: variation.color,
+        size: variation.size,
+        is_grade: variation.is_grade,
+        grade_name: variation.grade_name,
+        grade_color: variation.grade_color,
+        grade_quantity: variation.grade_quantity,
+        grade_sizes: variation.grade_sizes,
+        grade_pairs: variation.grade_pairs,
+        variation_type: variation.variation_type,
+        stock: variation.stock,
+        price_adjustment: variation.price_adjustment,
+      },
+    });
+
+    onAddToCart(product, finalQuantity, variation);
 
     toast({
       title: "Adicionado ao carrinho!",
-      description: `${quantity}x ${variation.color || ""} ${
+      description: `${finalQuantity}x ${variation.color || ""} ${
         variation.size || ""
+      }${
+        variation.is_grade ? ` (${variation.grade_name || "Grade"})` : ""
       } adicionado.`,
     });
 
@@ -218,12 +294,17 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   };
 
   const handleSingleVariationAddToCart = (variation: ProductVariation) => {
-    onAddToCart(product, minQuantity, variation);
+    // Para produtos com grade, quantidade sempre é 1 (1 grade completa)
+    const finalQuantity = variation.is_grade ? 1 : minQuantity;
+
+    onAddToCart(product, finalQuantity, variation);
 
     toast({
       title: "Produto adicionado!",
-      description: `${minQuantity}x ${variation.color || ""} ${
+      description: `${finalQuantity}x ${variation.color || ""} ${
         variation.size || ""
+      }${
+        variation.is_grade ? ` (${variation.grade_name || "Grade"})` : ""
       } adicionado.`,
     });
 
@@ -501,17 +582,177 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     {hasGradeVariations ? (
                       // Usar ProductVariationSelector para variações de grade
                       <div className="space-y-3">
-                        <h4 className="font-medium text-base">
-                          Selecione a grade:
-                        </h4>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-base">
+                            {isGradeSelected
+                              ? "Grade selecionada:"
+                              : "Selecione a grade:"}
+                          </h4>
+                          {isGradeSelected && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setIsGradeSelected(false);
+                                setSelectedVariation(null);
+                              }}
+                              className="text-xs"
+                            >
+                              Ver outras grades
+                            </Button>
+                          )}
+                        </div>
                         <ProductVariationSelector
-                          variations={product.variations || []}
+                          variations={
+                            isGradeSelected && selectedVariation
+                              ? [selectedVariation] // Mostrar apenas a grade selecionada
+                              : product.variations || []
+                          }
                           selectedVariation={selectedVariation}
-                          onVariationChange={setSelectedVariation}
-                          basePrice={price}
+                          onVariationChange={(variation) => {
+                            setSelectedVariation(variation);
+                            setIsGradeSelected(!!variation?.is_grade);
+                          }}
+                          basePrice={
+                            catalogType === "wholesale"
+                              ? product.wholesale_price ||
+                                product.retail_price ||
+                                0
+                              : product.retail_price || 0
+                          }
                           showPriceInCards={false}
                           showStock={showStock}
                         />
+
+                        {/* Card de variação selecionada */}
+                        {selectedVariation && selectedVariation.is_grade && (
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-semibold text-blue-900 flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                Variação Selecionada
+                              </h5>
+                              <Badge
+                                variant="secondary"
+                                className="bg-blue-100 text-blue-800"
+                              >
+                                {selectedVariation.color || "Grade"}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Informações básicas */}
+                              <div className="space-y-2">
+                                <div className="text-sm">
+                                  <span className="text-gray-600">SKU:</span>
+                                  <span className="ml-2 font-medium">
+                                    {selectedVariation.sku ||
+                                      selectedVariation.color}
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-600">Grade:</span>
+                                  <span className="ml-2 font-medium text-blue-700">
+                                    {selectedVariation.grade_name}
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-600">
+                                    Estoque:
+                                  </span>
+                                  <span className="ml-2 font-medium text-green-600">
+                                    {selectedVariation.stock} unidades
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Preços */}
+                              <div className="space-y-2">
+                                <div className="text-lg font-bold text-blue-700">
+                                  {formatCurrency(
+                                    selectedVariation.grade_pairs &&
+                                      selectedVariation.grade_sizes
+                                      ? (catalogType === "wholesale"
+                                          ? product.wholesale_price ||
+                                            product.retail_price ||
+                                            0
+                                          : product.retail_price || 0) *
+                                          (Array.isArray(
+                                            selectedVariation.grade_pairs
+                                          )
+                                            ? selectedVariation.grade_pairs.reduce(
+                                                (sum: number, pairs: number) =>
+                                                  sum + pairs,
+                                                0
+                                              )
+                                            : 0)
+                                      : selectedVariation.price_adjustment || 0
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Preço unitário:{" "}
+                                  {formatCurrency(
+                                    catalogType === "wholesale"
+                                      ? product.wholesale_price ||
+                                          product.retail_price ||
+                                          0
+                                      : product.retail_price || 0
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Total de pares:{" "}
+                                  {selectedVariation.grade_pairs &&
+                                  Array.isArray(selectedVariation.grade_pairs)
+                                    ? selectedVariation.grade_pairs.reduce(
+                                        (sum: number, pairs: number) =>
+                                          sum + pairs,
+                                        0
+                                      )
+                                    : 0}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Composição da grade */}
+                            {selectedVariation.grade_sizes &&
+                              selectedVariation.grade_pairs && (
+                                <div className="border-t border-blue-200 pt-3">
+                                  <h6 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                                    <Package className="h-3 w-3" />
+                                    Composição da Grade:
+                                  </h6>
+                                  <div className="grid grid-cols-3 gap-2 text-sm">
+                                    {Array.isArray(
+                                      selectedVariation.grade_sizes
+                                    ) &&
+                                      Array.isArray(
+                                        selectedVariation.grade_pairs
+                                      ) &&
+                                      selectedVariation.grade_sizes.map(
+                                        (size, index) => (
+                                          <div
+                                            key={index}
+                                            className="flex justify-between bg-white rounded px-2 py-1 border"
+                                          >
+                                            <span className="text-gray-600">
+                                              Tamanho {size}:
+                                            </span>
+                                            <span className="font-medium text-blue-700">
+                                              {
+                                                selectedVariation.grade_pairs[
+                                                  index
+                                                ]
+                                              }{" "}
+                                              pares
+                                            </span>
+                                          </div>
+                                        )
+                                      )}
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        )}
 
                         {/* Botões para variação de grade com adição rápida */}
                         <div className="space-y-3 pt-4">

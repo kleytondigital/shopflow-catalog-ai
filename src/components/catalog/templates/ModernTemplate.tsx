@@ -62,6 +62,9 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const hasVariations = product.variations && product.variations.length > 0;
+  const hasGradeVariations =
+    hasVariations &&
+    product.variations?.some((v) => v.is_grade || v.variation_type === "grade");
 
   // Usar o hook para cálculo correto de preços
   const priceInfo = useProductDisplayPrice({
@@ -164,9 +167,17 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
             <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
               <Badge
                 variant="outline"
-                className="text-xs font-medium bg-gray-100 text-gray-700 border-gray-300 shadow-sm"
+                className={`text-xs font-medium shadow-sm ${
+                  hasGradeVariations
+                    ? "text-orange-700 border-orange-300 bg-orange-100"
+                    : "bg-gray-100 text-gray-700 border-gray-300"
+                }`}
               >
-                +{product.variations.length} opções
+                {hasGradeVariations ? (
+                  <>📦 {product.variations.length} grades</>
+                ) : (
+                  `+${product.variations.length} opções`
+                )}
               </Badge>
             </div>
           )}

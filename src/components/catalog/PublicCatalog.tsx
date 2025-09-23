@@ -125,17 +125,45 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
             id: variation.id,
             color: variation.color,
             size: variation.size,
+            is_grade: variation.is_grade,
+            grade_name: variation.grade_name,
+            grade_sizes: variation.grade_sizes,
+            grade_pairs: variation.grade_pairs,
+            variation_type: variation.variation_type,
           }
         : null,
     });
 
     try {
+      console.log("🔧 PUBLIC CATALOG - ANTES createCartItem:", {
+        product: product.name,
+        catalogType,
+        quantity,
+        variation: variation
+          ? {
+              id: variation.id,
+              is_grade: variation.is_grade,
+              grade_name: variation.grade_name,
+              grade_pairs: variation.grade_pairs,
+              grade_sizes: variation.grade_sizes,
+            }
+          : null,
+      });
+
       const cartItem = createCartItem(
         product,
         catalogType,
         quantity,
         variation
       );
+
+      console.log("🔧 PUBLIC CATALOG - DEPOIS createCartItem:", {
+        cartItemId: cartItem.id,
+        cartItemPrice: cartItem.price,
+        hasGradeInfo: !!cartItem.gradeInfo,
+        gradeInfo: cartItem.gradeInfo,
+      });
+
       addItem(cartItem);
 
       console.log(
@@ -184,6 +212,17 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
 
   const handleProductClick = (product: Product) => {
     console.log("👆 PUBLIC CATALOG - Produto clicado:", product.name);
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleQuickView = (product: Product) => {
+    console.log("🚀 PUBLIC CATALOG - handleQuickView chamado:", {
+      productName: product.name,
+      productId: product.id,
+      hasVariations: product.variations && product.variations.length > 0,
+      variationsCount: product.variations?.length || 0,
+    });
     setSelectedProduct(product);
     setIsModalOpen(true);
   };

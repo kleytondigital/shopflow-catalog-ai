@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,16 +23,41 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
   basePrice = 0,
   showStock = false,
 }) => {
-  const finalPrice = basePrice + (variation.price_adjustment || 0);
+  // Calcular preço para grade: preço unitário × total de pares
+  let finalPrice = basePrice + (variation.price_adjustment || 0);
+
+  if (variation.is_grade && variation.grade_pairs && variation.grade_sizes) {
+    try {
+      const totalPairs = Array.isArray(variation.grade_pairs)
+        ? variation.grade_pairs.reduce(
+            (sum: number, pairs: number) => sum + pairs,
+            0
+          )
+        : 0;
+      finalPrice = basePrice * totalPairs;
+
+      console.log("📦 GradeVariationCard - Cálculo de preço:", {
+        variationName: variation.grade_name,
+        basePrice,
+        totalPairs,
+        finalPrice,
+        gradeSizes: variation.grade_sizes,
+        gradePairs: variation.grade_pairs,
+      });
+    } catch (error) {
+      console.error("Erro ao calcular preço da grade:", error);
+    }
+  }
+
   const isOutOfStock = variation.stock === 0;
 
   return (
-    <Card 
+    <Card
       className={`cursor-pointer transition-all duration-200 ${
-        isSelected 
-          ? 'border-primary shadow-md bg-primary/5' 
-          : 'border-border hover:border-primary/50 hover:shadow-sm'
-      } ${isOutOfStock ? 'opacity-60' : ''}`}
+        isSelected
+          ? "border-primary shadow-md bg-primary/5"
+          : "border-border hover:border-primary/50 hover:shadow-sm"
+      } ${isOutOfStock ? "opacity-60" : ""}`}
       onClick={onSelect}
     >
       <CardContent className="p-4">
@@ -42,7 +66,7 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
             {/* Informações da variação */}
             <div className="flex flex-wrap items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
-              
+
               {variation.color && (
                 <Badge variant="outline" className="text-xs">
                   {variation.hex_color && (
@@ -54,13 +78,13 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
                   {variation.color}
                 </Badge>
               )}
-              
+
               {variation.size && (
                 <Badge variant="outline" className="text-xs">
                   {variation.size}
                 </Badge>
               )}
-              
+
               {variation.material && (
                 <Badge variant="outline" className="text-xs">
                   {variation.material}
@@ -75,13 +99,44 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
               </div>
             )}
 
+            {/* Informações da Grade - Pares disponíveis */}
+            {variation.is_grade &&
+              variation.grade_sizes &&
+              variation.grade_pairs && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-primary">
+                    Pares da Grade:
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    {variation.grade_sizes.map((size, index) => (
+                      <div
+                        key={size}
+                        className="flex justify-between items-center bg-gray-100 px-2 py-1 rounded"
+                      >
+                        <span className="font-medium">{size}</span>
+                        <span className="text-muted-foreground">
+                          {variation.grade_pairs?.[index] || 0} pares
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {variation.grade_name && (
+                    <div className="text-xs text-muted-foreground">
+                      Grade: {variation.grade_name}
+                    </div>
+                  )}
+                </div>
+              )}
+
             {/* Estoque - apenas se showStock for true */}
             {showStock && (
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Estoque:</span>
-                <span className={`font-medium ${
-                  isOutOfStock ? 'text-red-600' : 'text-green-600'
-                }`}>
+                <span
+                  className={`font-medium ${
+                    isOutOfStock ? "text-red-600" : "text-green-600"
+                  }`}
+                >
                   {variation.stock} unidades
                 </span>
                 {isOutOfStock && (
@@ -97,9 +152,23 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
             {showPrice && (
               <div className="text-lg font-semibold text-primary">
                 {formatCurrency(finalPrice)}
+                {variation.is_grade && variation.grade_pairs && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    <div>Preço unitário: {formatCurrency(basePrice)}</div>
+                    <div>
+                      Total de pares:{" "}
+                      {Array.isArray(variation.grade_pairs)
+                        ? variation.grade_pairs.reduce(
+                            (sum, pairs) => sum + pairs,
+                            0
+                          )
+                        : 0}
+                    </div>
+                  </div>
+                )}
                 {variation.price_adjustment !== 0 && (
                   <span className="text-sm text-muted-foreground ml-2">
-                    ({variation.price_adjustment > 0 ? '+' : ''}
+                    ({variation.price_adjustment > 0 ? "+" : ""}
                     {formatCurrency(variation.price_adjustment)})
                   </span>
                 )}
