@@ -207,7 +207,7 @@ const StoreInfoSettings: React.FC = () => {
       // Carregar horários salvos do banco de dados se existirem, com validação
       const savedBusinessHours = normalizeBusinessHours(catalogSettings.business_hours);
       
-      form.reset({
+      const formData = {
         storeName: currentStore.name || "",
         description: currentStore.description || "",
         address: currentStore.address || "",
@@ -215,7 +215,10 @@ const StoreInfoSettings: React.FC = () => {
         email: currentStore.email || "",
         cnpj: currentStore.cnpj || "",
         businessHours: savedBusinessHours,
-      });
+      };
+      
+      console.log('Resetando formulário com dados:', formData);
+      form.reset(formData);
     }
   }, [currentStore, catalogSettings, form]);
 
@@ -223,7 +226,9 @@ const StoreInfoSettings: React.FC = () => {
     try {
       setSaving(true);
       
-      console.log('Enviando dados para salvar:', data);
+      console.log('🚀 Iniciando salvamento dos dados:', data);
+      console.log('🏪 Dados da loja atual:', currentStore);
+      console.log('⚙️ Configurações do catálogo:', catalogSettings);
       
       // Atualização dos dados da loja
       const storeUpdates = {
@@ -235,10 +240,17 @@ const StoreInfoSettings: React.FC = () => {
         cnpj: data.cnpj,
       };
       
-      const { error: updateError } = await updateCurrentStore(storeUpdates);
-      if (updateError) throw new Error(updateError);
+      console.log('📝 Atualizando dados da loja:', storeUpdates);
+      
+      const storeResult = await updateCurrentStore(storeUpdates);
+      console.log('📝 Resultado da atualização da loja:', storeResult);
+      
+      if (storeResult.error) {
+        console.error("❌ Erro ao atualizar loja:", storeResult.error);
+        throw new Error(`Erro ao atualizar dados da loja: ${storeResult.error}`);
+      }
 
-      // NOVO: Salvar horários de funcionamento nas configurações do catálogo
+      // Salvar horários de funcionamento nas configurações do catálogo
       if (catalogSettings) {
         const catalogUpdates = {
           business_hours: data.businessHours,
@@ -248,21 +260,27 @@ const StoreInfoSettings: React.FC = () => {
           twitter_url: catalogSettings.twitter_url || null,
         };
         
-        console.log('Salvando horários no catálogo:', catalogUpdates);
+        console.log('⏰ Salvando horários no catálogo:', catalogUpdates);
         
-        const { error: catalogError } = await updateCatalogSettings(catalogUpdates);
-        if (catalogError) {
-          console.error("Erro ao salvar horários:", catalogError);
-          throw new Error("Erro ao salvar horários de funcionamento");
+        const catalogResult = await updateCatalogSettings(catalogUpdates);
+        console.log('⏰ Resultado da atualização do catálogo:', catalogResult);
+        
+        if (catalogResult.error) {
+          console.error("❌ Erro ao salvar horários:", catalogResult.error);
+          throw new Error(`Erro ao salvar horários de funcionamento: ${catalogResult.error}`);
         }
+      } else {
+        console.warn("⚠️ Configurações do catálogo não encontradas");
       }
 
+      console.log('✅ Todos os dados foram salvos com sucesso!');
+      
       toast({
         title: "✅ Dados salvos!",
         description: "As informações da loja e horários de funcionamento foram atualizados com sucesso.",
       });
     } catch (error: any) {
-      console.error("Erro ao salvar configurações:", error);
+      console.error("💥 Erro ao salvar configurações:", error);
       toast({
         title: "Erro ao salvar",
         description:
@@ -687,19 +705,36 @@ const StoreInfoSettings: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Button
-          type="submit"
-          className={cn(
-            "w-full py-3 text-sm font-semibold rounded-xl shadow-lg transition-all",
-            saving
-              ? "opacity-70 pointer-events-none"
-              : "bg-primary text-white hover:bg-primary/90"
-          )}
-          disabled={saving}
-        >
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {saving ? "Salvando..." : "Salvar Configurações da Loja"}
-        </Button>
+        <div className="space-y-4">
+          {/* Botão de Debug - Temporário */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              console.log('🔍 DEBUG - Estado atual do formulário:', form.getValues());
+              console.log('🔍 DEBUG - Dados da loja atual:', currentStore);
+              console.log('🔍 DEBUG - Configurações do catálogo:', catalogSettings);
+              console.log('🔍 DEBUG - Erros do formulário:', form.formState.errors);
+            }}
+            className="w-full"
+          >
+            🔍 Debug - Ver Estado Atual
+          </Button>
+          
+          <Button
+            type="submit"
+            className={cn(
+              "w-full py-3 text-sm font-semibold rounded-xl shadow-lg transition-all",
+              saving
+                ? "opacity-70 pointer-events-none"
+                : "bg-primary text-white hover:bg-primary/90"
+            )}
+            disabled={saving}
+          >
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {saving ? "Salvando..." : "Salvar Configurações da Loja"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

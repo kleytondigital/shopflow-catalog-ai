@@ -154,35 +154,50 @@ export const useStores = () => {
     try {
       setError(null);
       
+      console.log('🔄 useStores: Atualizando loja', { id, updates });
+      
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('🔄 useStores: Dados para atualização:', updateData);
+      
       const { data, error } = await supabase
         .from('stores')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .maybeSingle();
 
-      if (error) throw error;
+      console.log('🔄 useStores: Resultado da atualização:', { data, error });
+
+      if (error) {
+        console.error('❌ useStores: Erro na atualização:', error);
+        throw error;
+      }
       
       if (data) {
+        console.log('✅ useStores: Loja atualizada com sucesso:', data);
+        
         // Atualizar estado local
         if (profile?.role === 'superadmin') {
           setStores(prev => prev.map(store => store.id === id ? data : store));
         }
         if (profile?.store_id === id) {
+          console.log('🔄 useStores: Atualizando currentStore com novos dados');
           setCurrentStore(data);
         }
         
         return { data, error: null };
       } else {
-        const errorMessage = 'Não foi possível atualizar a loja';
+        const errorMessage = 'Não foi possível atualizar a loja - nenhum dado retornado';
+        console.error('❌ useStores:', errorMessage);
         setError(errorMessage);
         return { data: null, error: errorMessage };
       }
     } catch (error) {
-      console.error('Erro ao atualizar loja:', error);
+      console.error('💥 useStores: Erro ao atualizar loja:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar loja';
       setError(errorMessage);
       return { data: null, error: errorMessage };
@@ -191,11 +206,14 @@ export const useStores = () => {
 
   const updateCurrentStore = async (updates: UpdateStoreData) => {
     if (!profile?.store_id) {
-      const errorMessage = 'Store ID não encontrado';
+      const errorMessage = 'Store ID não encontrado no perfil do usuário';
+      console.error('❌ useStores: updateCurrentStore -', errorMessage);
+      console.error('❌ useStores: Profile atual:', profile);
       setError(errorMessage);
       return { data: null, error: errorMessage };
     }
     
+    console.log('🔄 useStores: updateCurrentStore chamado para store_id:', profile.store_id);
     return updateStore(profile.store_id, updates);
   };
 

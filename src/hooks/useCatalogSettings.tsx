@@ -247,17 +247,28 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
 
   const updateSettings = async (updates: Partial<CatalogSettingsData>) => {
     if (!resolvedStoreId) {
-      throw new Error("Store ID não disponível");
+      const errorMessage = "Store ID não disponível para atualização das configurações";
+      console.error("❌ useCatalogSettings:", errorMessage);
+      throw new Error(errorMessage);
     }
 
     try {
+      console.log("🔄 useCatalogSettings: Atualizando configurações", {
+        storeId: resolvedStoreId,
+        updates
+      });
+
+      const updateData = {
+        store_id: resolvedStoreId,
+        ...updates,
+      };
+
+      console.log("🔄 useCatalogSettings: Dados para upsert:", updateData);
+
       const { data, error } = await supabase
         .from("store_settings")
         .upsert(
-          {
-            store_id: resolvedStoreId,
-            ...updates,
-          },
+          updateData,
           {
             onConflict: "store_id",
           }
@@ -265,15 +276,21 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
         .select()
         .single();
 
+      console.log("🔄 useCatalogSettings: Resultado do upsert:", { data, error });
+
       if (error) {
+        console.error("❌ useCatalogSettings: Erro no upsert:", error);
         throw error;
       }
 
+      console.log("✅ useCatalogSettings: Configurações atualizadas com sucesso");
+      
+      // Refetch para garantir que os dados estão sincronizados
       await fetchSettings();
       return { data, error: null };
     } catch (error) {
       console.error(
-        "useCatalogSettings: Erro ao atualizar configurações:",
+        "💥 useCatalogSettings: Erro ao atualizar configurações:",
         error
       );
       return { data: null, error };
