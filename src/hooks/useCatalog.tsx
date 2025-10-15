@@ -26,6 +26,16 @@ export interface Store {
   price_model?: string;
 }
 
+// 🚀 Cache global para dados do catálogo
+const catalogCache = new Map<string, {
+  store: Store;
+  products: Product[];
+  timestamp: number;
+  expiresIn: number;
+}>();
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
 export const useCatalog = (storeSlug?: string) => {
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -130,46 +140,63 @@ export const useCatalog = (storeSlug?: string) => {
 
   const loadProducts = useCallback(
     async (storeId: string, type: CatalogType) => {
-      console.log("📦 CATÁLOGO - Carregando produtos:", { storeId, type });
+      console.log("📦 CATÁLOGO - Carregando produtos (OTIMIZADO):", { storeId, type });
+      const startTime = performance.now();
       setLoading(true);
 
       try {
-        // Buscar produtos primeiro
-        const { data: productsData, error: productsError } = await supabase
-          .from("products")
-          .select("*")
-          .eq("store_id", storeId)
-          .eq("is_active", true)
-          .order("name", { ascending: true });
+        // 🚀 OTIMIZAÇÃO: Usar Promise.all para buscar dados em paralelo
+        const [productsResult, variationsResult, imagesResult] = await Promise.all([
+          // Buscar produtos
+          supabase
+            .from("products")
+            .select("*")
+            .eq("store_id", storeId)
+            .eq("is_active", true)
+            .order("name", { ascending: true }),
+          
+          // Buscar todas as variações em paralelo
+          supabase
+            .from("product_variations")
+            .select("*")
+            .eq("is_active", true)
+            .order("display_order", { ascending: true }),
+          
+          // 🚀 NOVA: Buscar todas as imagens dos produtos de uma vez
+          supabase
+            .from("product_images")
+            .select("*")
+            .order("is_primary", { ascending: false })
+            .order("image_order", { ascending: true })
+        ]);
+
+        const { data: productsData, error: productsError } = productsResult;
+        const { data: allVariations, error: variationsError } = variationsResult;
+        const { data: allImages, error: imagesError } = imagesResult;
 
         if (productsError) {
           console.error("❌ Erro ao buscar produtos:", productsError);
           return false;
         }
 
-        // Buscar todas as variações dos produtos em uma query separada
-        const productIds = productsData?.map((p) => p.id) || [];
-        let variationsData: any[] = [];
-
-        if (productIds.length > 0) {
-          const { data: variations, error: variationsError } = await supabase
-            .from("product_variations")
-            .select("*")
-            .in("product_id", productIds)
-            .eq("is_active", true)
-            .order("display_order", { ascending: true });
-
-          if (variationsError) {
-            console.error("Erro ao buscar variações:", variationsError);
-          } else {
-            variationsData = variations || [];
-            console.log(
-              `🔍 CATÁLOGO - ${variationsData.length} variações carregadas`
-            );
-          }
+        if (variationsError) {
+          console.warn("⚠️ Erro ao buscar variações:", variationsError);
         }
 
-        // Mapear produtos e suas variações (igual ao useProducts.tsx)
+        if (imagesError) {
+          console.warn("⚠️ Erro ao buscar imagens:", imagesError);
+        }
+
+        // Filtrar variações apenas dos produtos da loja
+        const productIds = productsData?.map((p) => p.id) || [];
+        const variationsData = allVariations?.filter(v => productIds.includes(v.product_id)) || [];
+        const imagesData = allImages?.filter(img => productIds.includes(img.product_id)) || [];
+
+        console.log(
+          `🔍 CATÁLOGO - Dados carregados: ${productsData?.length} produtos, ${variationsData.length} variações, ${imagesData.length} imagens`
+        );
+
+        // 🚀 OTIMIZAÇÃO: Mapear produtos com variações E imagens
         const productsWithVariations: Product[] = (productsData || []).map(
           (product) => {
             const productVariations = variationsData
@@ -187,19 +214,23 @@ export const useCatalog = (storeSlug?: string) => {
                 created_at: v.created_at,
                 updated_at: v.updated_at,
                 variation_type: v.variation_type,
-                name: v.name,
-                is_grade: v.is_grade,
-                grade_name: v.grade_name,
-                grade_color: v.grade_color,
-                grade_quantity: v.grade_quantity,
-                grade_sizes: v.grade_sizes,
-                grade_pairs: v.grade_pairs,
+                name: (v as any).name,
+                is_grade: (v as any).is_grade,
+                grade_name: (v as any).grade_name,
+                grade_color: (v as any).grade_color,
+                grade_quantity: (v as any).grade_quantity,
+                grade_sizes: (v as any).grade_sizes,
+                grade_pairs: (v as any).grade_pairs,
                 display_order: v.display_order,
               })) as ProductVariation[];
+
+            // 🚀 NOVA: Adicionar imagens ao produto
+            const productImages = imagesData.filter(img => img.product_id === product.id);
 
             return {
               ...product,
               variations: productVariations,
+              images: productImages, // 🚀 Adicionar imagens pré-carregadas
             };
           }
         );
@@ -218,18 +249,18 @@ export const useCatalog = (storeSlug?: string) => {
         console.log("🔍 CATÁLOGO - Debug variações carregadas:", {
           totalVariations: variationsData.length,
           variationsWithGrades: variationsData.filter(
-            (v) => v.is_grade === true
+            (v) => (v as any).is_grade === true
           ).length,
           sampleVariations: variationsData.slice(0, 3).map((v) => ({
             id: v.id,
             product_id: v.product_id,
             color: v.color,
-            is_grade: v.is_grade,
+            is_grade: (v as any).is_grade,
             variation_type: v.variation_type,
-            grade_name: v.grade_name,
-            grade_color: v.grade_color,
-            grade_sizes: v.grade_sizes,
-            grade_pairs: v.grade_pairs,
+            grade_name: (v as any).grade_name,
+            grade_color: (v as any).grade_color,
+            grade_sizes: (v as any).grade_sizes,
+            grade_pairs: (v as any).grade_pairs,
           })),
         });
 
@@ -300,6 +331,10 @@ export const useCatalog = (storeSlug?: string) => {
           setFilteredProducts(productsWithVariations);
         }
 
+        const endTime = performance.now();
+        const loadTime = (endTime - startTime).toFixed(2);
+        console.log(`⚡ CATÁLOGO - Tempo de carregamento: ${loadTime}ms`);
+
         return true;
       } catch (error) {
         console.error("🚨 Erro ao carregar produtos:", error);
@@ -314,10 +349,37 @@ export const useCatalog = (storeSlug?: string) => {
   const initializeCatalog = useCallback(
     async (slug: string) => {
       console.log("🚀 CATÁLOGO - Inicializando:", { slug });
+      const startTime = performance.now();
+
+      // 🚀 OTIMIZAÇÃO: Verificar cache primeiro
+      const cached = catalogCache.get(slug);
+      const now = Date.now();
+      
+      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+        console.log("⚡ CATÁLOGO - Usando dados do cache", {
+          age: `${((now - cached.timestamp) / 1000).toFixed(1)}s`,
+          productsCount: cached.products.length
+        });
+        
+        setStore(cached.store);
+        setProducts(cached.products);
+        setFilteredProducts(cached.products);
+        
+        const determinedCatalogType: CatalogType =
+          cached.store.price_model === "wholesale_only" ? "wholesale" : "retail";
+        setCatalogType(determinedCatalogType);
+        
+        loadedStoreRef.current = slug;
+        loadedCatalogTypeRef.current = determinedCatalogType;
+        
+        const endTime = performance.now();
+        console.log(`⚡ CACHE HIT - Tempo: ${(endTime - startTime).toFixed(2)}ms`);
+        return true;
+      }
 
       // Avoid reloading if same store
       if (loadedStoreRef.current === slug && store) {
-        console.log("ℹ️ CATÁLOGO - Cache hit, não recarregando");
+        console.log("ℹ️ CATÁLOGO - Já carregado no estado, não recarregando");
         return true;
       }
 
@@ -342,13 +404,26 @@ export const useCatalog = (storeSlug?: string) => {
       if (productsLoaded) {
         loadedStoreRef.current = slug;
         loadedCatalogTypeRef.current = determinedCatalogType;
-        console.log("✅ CATÁLOGO - Inicialização concluída com sucesso");
+        
+        // 🚀 OTIMIZAÇÃO: Salvar no cache
+        catalogCache.set(slug, {
+          store: storeData,
+          products: products,
+          timestamp: Date.now(),
+          expiresIn: CACHE_DURATION
+        });
+        
+        console.log("✅ CATÁLOGO - Inicialização concluída e dados salvos no cache");
       }
 
       setLoading(false);
+      
+      const endTime = performance.now();
+      console.log(`⚡ CATÁLOGO COMPLETO - Tempo total: ${(endTime - startTime).toFixed(2)}ms`);
+      
       return productsLoaded;
     },
-    [loadStore, loadProducts, store]
+    [loadStore, loadProducts, store, products]
   );
 
   // Only initialize when store slug changes

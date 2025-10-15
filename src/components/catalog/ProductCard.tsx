@@ -131,6 +131,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           productName={product.name}
           maxImages={3}
           className="aspect-square" // 🎯 FORÇA ASPECT RATIO 1:1
+          preloadedImages={(product as any).images} // 🚀 OTIMIZAÇÃO: Passar imagens pré-carregadas
         />
 
         {/* 🎯 REORGANIZADOS: Badges sem sobreposição */}

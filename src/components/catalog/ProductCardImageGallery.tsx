@@ -6,6 +6,7 @@ interface ProductCardImageGalleryProps {
   productName: string;
   maxImages?: number;
   className?: string;
+  preloadedImages?: any[]; // 🚀 NOVA: Imagens pré-carregadas
 }
 
 const ProductCardImageGallery: React.FC<ProductCardImageGalleryProps> = ({
@@ -13,14 +14,25 @@ const ProductCardImageGallery: React.FC<ProductCardImageGalleryProps> = ({
   productName,
   maxImages = 5,
   className = "",
+  preloadedImages, // 🚀 NOVA: Receber imagens pré-carregadas
 }) => {
   const [images, setImages] = useState<any[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 🚀 OTIMIZAÇÃO: Se as imagens foram pré-carregadas, usar elas
+    if (preloadedImages && preloadedImages.length > 0) {
+      console.log(`⚡ ProductCardImageGallery - Usando imagens pré-carregadas (${preloadedImages.length})`);
+      setImages(preloadedImages.slice(0, maxImages));
+      setLoading(false);
+      return;
+    }
+
+    // Caso contrário, buscar do banco (fallback)
     const fetchImages = async () => {
       try {
+        console.log(`🔍 ProductCardImageGallery - Buscando imagens do banco (fallback)`);
         const { supabase } = await import("@/integrations/supabase/client");
         const { data: productImages } = await supabase
           .from("product_images")
@@ -42,7 +54,7 @@ const ProductCardImageGallery: React.FC<ProductCardImageGalleryProps> = ({
     if (productId) {
       fetchImages();
     }
-  }, [productId, maxImages]);
+  }, [productId, maxImages, preloadedImages]);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
