@@ -114,6 +114,7 @@ const CatalogSettings = () => {
       background_color: localSettings.background_color,
       text_color: localSettings.text_color,
       border_color: localSettings.border_color,
+      conversion_mode: localSettings.conversion_mode,
     };
 
     const result = await updateSettings(updates);
@@ -449,6 +450,49 @@ const CatalogSettings = () => {
                         })
                       }
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="conversion-mode">Modo de Conversão</Label>
+                    <Select
+                      value={localSettings.conversion_mode}
+                      onValueChange={(value: "simple" | "optimized") =>
+                        setLocalSettings({
+                          ...localSettings,
+                          conversion_mode: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger id="conversion-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="simple">
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Modo Simples</div>
+                              <div className="text-xs text-gray-500">Interface básica e limpa</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="optimized">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Conversão Ativa</div>
+                              <div className="text-xs text-gray-500">Com badges, avaliações e urgência</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      {localSettings.conversion_mode === "optimized" 
+                        ? "✨ Modo otimizado com elementos de conversão: badges de urgência, avaliações, timer de ofertas e mais."
+                        : "👁️ Modo simples com interface básica sem elementos de conversão adicionais."
+                      }
+                    </p>
                   </div>
 
                   <div className="space-y-2">

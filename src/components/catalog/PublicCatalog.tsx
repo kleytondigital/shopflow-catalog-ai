@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import ProductDetailsModal from "./ProductDetailsModal";
 import ProductDetailsModalOptimized from "./ProductDetailsModalOptimized";
 import ProductCardOptimized from "./ProductCardOptimized";
-import ConversionToggle from "./conversion/ConversionToggle";
 import FloatingCart from "./FloatingCart";
 import FloatingWhatsApp from "./FloatingWhatsApp";
 import TemplateWrapper from "./TemplateWrapper";
@@ -34,7 +33,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
-  const [useOptimizedComponents, setUseOptimizedComponents] = useState(true);
   const [activeFilters, setActiveFilters] = useState<FilterState>({
     categories: [],
     priceRange: [0, 1000],
@@ -306,6 +304,7 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
   const showCategoryFilter = settings?.allow_categories_filter ?? true;
   const showPrices = settings?.show_prices ?? true;
   const showStock = settings?.show_stock ?? true;
+  const useOptimizedComponents = settings?.conversion_mode === "optimized";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -352,14 +351,6 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
                 </Button>
               </div>
             )}
-
-            {/* Toggle de Conversão */}
-            <div className="flex justify-end mb-4">
-              <ConversionToggle
-                isOptimized={useOptimizedComponents}
-                onToggle={setUseOptimizedComponents}
-              />
-            </div>
 
             <ProductGrid
               products={filteredProducts}
