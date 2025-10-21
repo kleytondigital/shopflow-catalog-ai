@@ -21,6 +21,8 @@ interface TemplateWrapperProps {
   onToggleFilters: () => void;
   onCartClick: () => void;
   children: React.ReactNode;
+  products?: any[];
+  onProductSelect?: (product: any) => void;
 }
 
 const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
@@ -35,6 +37,8 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
   onToggleFilters,
   onCartClick,
   children,
+  products,
+  onProductSelect,
 }) => {
   // Sempre chamar hooks na mesma ordem, independente de condições
   const storeId = store?.url_slug || store?.id || "";
@@ -83,6 +87,8 @@ const TemplateWrapper: React.FC<TemplateWrapperProps> = ({
     onCartClick,
     children,
     editorSettings: settings,
+    products,
+    onProductSelect,
   };
 
   // Verificação de segurança após os hooks

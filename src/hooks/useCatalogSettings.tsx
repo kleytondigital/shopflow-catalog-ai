@@ -57,6 +57,7 @@ export interface CatalogSettingsData {
   footer_custom_text?: string;
   footer_copyright_text?: string;
   business_hours_display_type?: "summary" | "detailed";
+  conversion_mode?: "simple" | "optimized"; // Modo de conversão do catálogo
   // Propriedades adicionais para compatibilidade com templates
   colors?: {
     primary: string;

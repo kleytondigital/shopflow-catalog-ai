@@ -69,6 +69,7 @@ const CatalogSettings = () => {
     font_family: "Inter",
     custom_css: "",
     seo_keywords: "",
+    conversion_mode: "optimized" as "simple" | "optimized",
   });
 
   useEffect(() => {
@@ -92,6 +93,7 @@ const CatalogSettings = () => {
         font_family: "Inter",
         custom_css: "",
         seo_keywords: settings.seo_keywords || "",
+        conversion_mode: settings.conversion_mode || "optimized",
       });
     }
   }, [settings]);

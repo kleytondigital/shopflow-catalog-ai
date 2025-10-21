@@ -320,6 +320,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
         onSearch={handleSearchChange}
         onToggleFilters={() => setShowFilters(true)}
         onCartClick={() => console.log("Cart clicked")}
+        products={filteredProducts}
+        onProductSelect={handleProductClick}
       >
         <div className="flex gap-6">
           {/* Filtros Desktop */}
