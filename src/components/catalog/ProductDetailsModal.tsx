@@ -577,13 +577,6 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   </div>
                 )}
 
-                {/* Debug de Variações */}
-                <VariationDebugger 
-                  variations={product.variations || []}
-                  productName={product.name}
-                  productId={product.id}
-                />
-
                 {/* Seletor de Variações */}
                 {hasVariations ? (
                   <div className="space-y-4">

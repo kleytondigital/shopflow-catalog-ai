@@ -57,21 +57,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
                 className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover object-center hover:scale-105 transition-transform duration-300"
                 loading="eager"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-              {(heroBanner.title || heroBanner.description) && (
-                <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 text-white max-w-[calc(100%-2rem)] sm:max-w-md">
-                  {heroBanner.title && (
-                    <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 leading-tight">
-                      {heroBanner.title}
-                    </h2>
-                  )}
-                  {heroBanner.description && (
-                    <p className="text-sm sm:text-lg md:text-xl opacity-90 leading-snug line-clamp-3">
-                      {heroBanner.description}
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* Título e descrição removidos - apenas a imagem do banner é exibida */}
             </div>
           </a>
         ) : (
@@ -82,21 +68,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
               className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover object-center"
               loading="eager"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            {(heroBanner.title || heroBanner.description) && (
-              <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 text-white max-w-[calc(100%-2rem)] sm:max-w-md">
-                {heroBanner.title && (
-                  <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 leading-tight">
-                    {heroBanner.title}
-                  </h2>
-                )}
-                {heroBanner.description && (
-                  <p className="text-sm sm:text-lg md:text-xl opacity-90 leading-snug line-clamp-3">
-                    {heroBanner.description}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Título e descrição removidos - apenas a imagem do banner é exibida */}
           </div>
         )}
       </div>
@@ -131,21 +103,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
                       className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover object-center hover:scale-105 transition-transform duration-300"
                       loading={index === 0 ? "eager" : "lazy"}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    {(banner.title || banner.description) && (
-                      <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 text-white max-w-[calc(100%-2rem)] sm:max-w-md">
-                        {banner.title && (
-                          <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 leading-tight">
-                            {banner.title}
-                          </h2>
-                        )}
-                        {banner.description && (
-                          <p className="text-sm sm:text-lg md:text-xl opacity-90 leading-snug line-clamp-3">
-                            {banner.description}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                    {/* Título e descrição removidos - apenas a imagem do banner é exibida */}
                   </div>
                 </a>
               ) : (
@@ -156,21 +114,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ storeId, className = '' }) => {
                     className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover object-center"
                     loading={index === 0 ? "eager" : "lazy"}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  {(banner.title || banner.description) && (
-                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 text-white max-w-[calc(100%-2rem)] sm:max-w-md">
-                      {banner.title && (
-                        <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 leading-tight">
-                          {banner.title}
-                        </h2>
-                      )}
-                      {banner.description && (
-                        <p className="text-sm sm:text-lg md:text-xl opacity-90 leading-snug line-clamp-3">
-                          {banner.description}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  {/* Título e descrição removidos - apenas a imagem do banner é exibida */}
                 </div>
               )}
             </CarouselItem>
