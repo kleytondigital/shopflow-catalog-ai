@@ -35,7 +35,6 @@ import { Product, ProductVariation } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
 import VariationDebugger from "../debug/VariationDebugger";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
-import HierarchicalColorSizeSelector from "./HierarchicalColorSizeSelector";
 import ProductVariationSelector from "@/components/catalog/ProductVariationSelector";
 import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 import { formatCurrency } from "@/lib/utils";
@@ -404,24 +403,14 @@ const ProductDetailsModalOptimized: React.FC<ProductDetailsModalOptimizedProps> 
                 {/* Seletor de Variações */}
                 {hasVariations ? (
                   <div className="space-y-4">
-                    {hasGradeVariations ? (
-                      <ProductVariationSelector
-                        variations={product.variations || []}
-                        selectedVariation={selectedVariation}
-                        onVariationChange={setSelectedVariation}
-                        basePrice={price}
-                        showPriceInCards={true}
-                        showStock={showStock}
-                      />
-                    ) : (
-                      <HierarchicalColorSizeSelector
-                        variations={product.variations || []}
-                        selectedVariation={selectedVariation}
-                        onVariationChange={setSelectedVariation}
-                        basePrice={price}
-                        showStock={showStock}
-                      />
-                    )}
+                    <ProductVariationSelector
+                      variations={product.variations || []}
+                      selectedVariation={selectedVariation}
+                      onVariationChange={setSelectedVariation}
+                      basePrice={price}
+                      showPriceInCards={true}
+                      showStock={showStock}
+                    />
                   </div>
                 ) : null}
 

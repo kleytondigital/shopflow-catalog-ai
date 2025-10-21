@@ -48,9 +48,9 @@ const CrossSellUpsell: React.FC<CrossSellUpsellProps> = ({
           >
             {/* Imagem do produto */}
             <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden">
-              {product.images && product.images.length > 0 ? (
+              {product.image_url ? (
                 <img
-                  src={product.images[0].image_url}
+                  src={product.image_url}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
