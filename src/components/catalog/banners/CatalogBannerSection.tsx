@@ -58,20 +58,7 @@ const CatalogBannerSection: React.FC<CatalogBannerSectionProps> = ({
             />
           )}
 
-          {!compact && (banner.title || banner.description) && (
-            <div className="banner-content mt-3 text-center">
-              {banner.title && (
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                  {banner.title}
-                </h3>
-              )}
-              {banner.description && (
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {banner.description}
-                </p>
-              )}
-            </div>
-          )}
+          {/* Título e descrição removidos - apenas a imagem do banner é exibida */}
         </div>
       ))}
     </div>

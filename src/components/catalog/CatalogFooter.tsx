@@ -40,6 +40,7 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
     title: string;
     content: string;
   } | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { applyColorsToDocument } = useTemplateColors(
     store.url_slug || store.id
   );
@@ -318,10 +319,24 @@ const CatalogFooter: React.FC<CatalogFooterProps> = ({
                 )}
                 <h3 className="text-xl font-bold">{store.name}</h3>
               </div>
-              <p className="text-gray-300 mb-4">
-                {store.description ||
-                  "Oferecemos produtos de qualidade com os melhores preços do mercado."}
-              </p>
+              <div className="text-gray-300 mb-4">
+                <p className={`text-sm leading-relaxed ${
+                  store.description && store.description.length > 150 && !isDescriptionExpanded
+                    ? "line-clamp-3" 
+                    : ""
+                }`}>
+                  {store.description ||
+                    "Oferecemos produtos de qualidade com os melhores preços do mercado."}
+                </p>
+                {store.description && store.description.length > 150 && (
+                  <button
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    className="text-xs text-blue-400 hover:text-blue-300 mt-1 transition-colors"
+                  >
+                    {isDescriptionExpanded ? 'Ver menos' : 'Continuar lendo...'}
+                  </button>
+                )}
+              </div>
 
               {/* Redes Sociais */}
               {hasSocialMedia() && (
