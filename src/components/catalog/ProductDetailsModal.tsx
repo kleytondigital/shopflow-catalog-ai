@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Product, ProductVariation } from "@/types/product";
 import { CatalogType } from "@/hooks/useCatalog";
+import VariationDebugger from "../debug/VariationDebugger";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
 import HierarchicalColorSizeSelector from "./HierarchicalColorSizeSelector";
 import ProductVariationSelector from "@/components/catalog/ProductVariationSelector";
@@ -575,6 +576,13 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Debug de Variações */}
+                <VariationDebugger 
+                  variations={product.variations || []}
+                  productName={product.name}
+                  productId={product.id}
+                />
 
                 {/* Seletor de Variações */}
                 {hasVariations ? (
