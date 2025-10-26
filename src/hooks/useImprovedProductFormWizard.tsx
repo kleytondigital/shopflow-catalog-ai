@@ -416,38 +416,39 @@ export const useImprovedProductFormWizard = (
           }
         }
 
-        // 🎬 FASE 2: Salvar vídeo do produto
-        if (productId && formData.video_url) {
-          console.log("🎬 WIZARD - Salvando vídeo do produto");
-          try {
-            // Deletar vídeo existente
-            await supabase
-              .from("product_videos")
-              .delete()
-              .eq("product_id", productId);
+        // TODO: Implementar quando a tabela product_videos for criada
+        // // 🎬 FASE 2: Salvar vídeo do produto
+        // if (productId && formData.video_url) {
+        //   console.log("🎬 WIZARD - Salvando vídeo do produto");
+        //   try {
+        //     // Deletar vídeo existente
+        //     await supabase
+        //       .from("product_videos")
+        //       .delete()
+        //       .eq("product_id", productId);
 
-            // Inserir novo vídeo
-            const { error: videoError } = await supabase
-              .from("product_videos")
-              .insert({
-                product_id: productId,
-                video_url: formData.video_url,
-                video_type: formData.video_type || 'youtube',
-                thumbnail_url: formData.video_thumbnail || null,
-                is_active: true,
-                display_order: 0,
-              });
+        //     // Inserir novo vídeo
+        //     const { error: videoError } = await supabase
+        //       .from("product_videos")
+        //       .insert({
+        //         product_id: productId,
+        //         video_url: formData.video_url,
+        //         video_type: formData.video_type || 'youtube',
+        //         thumbnail_url: formData.video_thumbnail || null,
+        //         is_active: true,
+        //         display_order: 0,
+        //       });
 
-            if (videoError) {
-              console.error("Erro ao salvar vídeo:", videoError);
-              // Não interromper o salvamento por erro de vídeo
-            } else {
-              console.log("✅ WIZARD - Vídeo salvo com sucesso");
-            }
-          } catch (videoError) {
-            console.error("Erro ao salvar vídeo:", videoError);
-          }
-        }
+        //     if (videoError) {
+        //       console.error("Erro ao salvar vídeo:", videoError);
+        //       // Não interromper o salvamento por erro de vídeo
+        //     } else {
+        //       console.log("✅ WIZARD - Vídeo salvo com sucesso");
+        //     }
+        //   } catch (videoError) {
+        //     console.error("Erro ao salvar vídeo:", videoError);
+        //   }
+        // }
 
         // Salvar price tiers automaticamente baseado no modelo de preços
         if (productId && priceModel) {

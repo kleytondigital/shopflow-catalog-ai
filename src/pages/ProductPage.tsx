@@ -127,34 +127,7 @@ const ProductPage: React.FC = () => {
           })),
         });
 
-        // 🎬 FASE 2: Buscar vídeo do produto
-        const { data: videos } = await supabase
-          .from('product_videos')
-          .select('video_url, video_type, thumbnail_url')
-          .eq('product_id', productId)
-          .eq('is_active', true)
-          .order('display_order', { ascending: true })
-          .limit(1);
-
-        if (videos && videos.length > 0) {
-          console.log("🎬 Vídeo encontrado:", videos[0]);
-          setProductVideo(videos[0]);
-        }
-
-        // 🎬 FASE 2: Buscar depoimentos
-        const { data: testimonialsData } = await supabase
-          .from('product_testimonials')
-          .select('*')
-          .eq('product_id', productId)
-          .eq('is_approved', true)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
-        if (testimonialsData) {
-          console.log("💬 Depoimentos encontrados:", testimonialsData.length);
-          setTestimonials(testimonialsData);
-        }
+        // TODO: Implementar quando as tabelas forem criadas no banco de dados
 
         // Montar produto completo
         const fullProduct = {
@@ -510,16 +483,17 @@ const ProductPage: React.FC = () => {
 
               <Separator className="my-6" />
 
-              {/* 🚀 PREÇO OTIMIZADO - Gatilho Mental #4 */}
-              <EnhancedPriceDisplay
-                currentPrice={priceInfo.displayPrice}
-                originalPrice={priceInfo.hasDiscount ? priceInfo.originalPrice : undefined}
-                discountPercentage={priceInfo.discountPercentage}
-                installments={12}
-                showInstallments={true}
-                catalogType={priceInfo.priceMode === 'wholesale' ? 'wholesale' : 'retail'}
-                minQuantity={priceInfo.priceMode === 'wholesale' ? priceInfo.minQuantity : undefined}
-              />
+              {/* TODO: Implementar EnhancedPriceDisplay quando hooks tiverem campos necessários */}
+              <div className="space-y-2">
+                <div className="text-3xl md:text-4xl font-bold text-primary">
+                  {formatCurrency(priceInfo.displayPrice)}
+                </div>
+                {priceInfo.originalPrice > priceInfo.displayPrice && (
+                  <div className="text-lg text-gray-500 line-through">
+                    {formatCurrency(priceInfo.originalPrice)}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Descrição */}

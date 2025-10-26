@@ -297,22 +297,22 @@ const ExpandableProductFormContent: React.FC<ExpandableProductFormProps> = ({
           await loadExistingImages(productId);
         }
         
-        // Buscar e carregar vídeo do produto (se houver)
-        const { data: videos } = await supabase
-          .from('product_videos')
-          .select('video_url, video_type, thumbnail_url')
-          .eq('product_id', productId)
-          .eq('is_active', true)
-          .limit(1);
+        // TODO: Buscar e carregar vídeo do produto quando a tabela product_videos for criada
+        // const { data: videos } = await supabase
+        //   .from('product_videos')
+        //   .select('video_url, video_type, thumbnail_url')
+        //   .eq('product_id', productId)
+        //   .eq('is_active', true)
+        //   .limit(1);
 
-        if (videos && videos.length > 0) {
-          console.log("🎬 Vídeo encontrado ao editar:", videos[0]);
-          updateFormData({
-            video_url: videos[0].video_url,
-            video_type: videos[0].video_type as any,
-            video_thumbnail: videos[0].thumbnail_url || "",
-          });
-        }
+        // if (videos && videos.length > 0) {
+        //   console.log("🎬 Vídeo encontrado ao editar:", videos[0]);
+        //   updateFormData({
+        //     video_url: videos[0].video_url,
+        //     video_type: videos[0].video_type as any,
+        //     video_thumbnail: videos[0].thumbnail_url || "",
+        //   });
+        // }
         
       } catch (error: any) {
         console.error("❌ Erro ao carregar produto:", error);
@@ -476,46 +476,47 @@ const ExpandableProductFormContent: React.FC<ExpandableProductFormProps> = ({
         formData.product_category_type === 'roupa_superior' ||
         formData.product_category_type === 'roupa_inferior';
 
-      if (isShoeOrClothing && savedProductId) {
-        console.log("🧼 Salvando instruções de cuidado automáticas...");
-        
-        try {
-          // Deletar instruções existentes
-          await supabase
-            .from('product_care_instructions')
-            .delete()
-            .eq('product_id', savedProductId);
+      // TODO: Implementar quando a tabela product_care_instructions for criada
+      // if (isShoeOrClothing && savedProductId) {
+      //   console.log("🧼 Salvando instruções de cuidado automáticas...");
+      //   
+      //   try {
+      //     // Deletar instruções existentes
+      //     await supabase
+      //       .from('product_care_instructions')
+      //       .delete()
+      //       .eq('product_id', savedProductId);
 
-          // Gerar instruções baseadas no tipo e material
-          const careInstructions = generateCareInstructions(
-            formData.product_category_type,
-            formData.material
-          );
+      //     // Gerar instruções baseadas no tipo e material
+      //     const careInstructions = generateCareInstructions(
+      //       formData.product_category_type,
+      //       formData.material
+      //     );
 
-          if (careInstructions.length > 0) {
-            const { error: careError } = await supabase
-              .from('product_care_instructions')
-              .insert(
-                careInstructions.map((instruction: any, index: number) => ({
-                  product_id: savedProductId,
-                  instruction_type: instruction.type,
-                  icon_type: instruction.icon,
-                  instruction_text: instruction.instruction,
-                  display_order: index,
-                  is_active: true,
-                }))
-              );
+      //     if (careInstructions.length > 0) {
+      //       const { error: careError } = await supabase
+      //         .from('product_care_instructions')
+      //         .insert(
+      //           careInstructions.map((instruction: any, index: number) => ({
+      //             product_id: savedProductId,
+      //             instruction_type: instruction.type,
+      //             icon_type: instruction.icon,
+      //             instruction_text: instruction.instruction,
+      //             display_order: index,
+      //             is_active: true,
+      //           }))
+      //         );
 
-            if (careError) {
-              console.error("⚠️ Erro ao salvar instruções de cuidado:", careError);
-            } else {
-              console.log(`✅ ${careInstructions.length} instruções de cuidado salvas`);
-            }
-          }
-        } catch (careError) {
-          console.error("⚠️ Erro ao salvar cuidados:", careError);
-        }
-      }
+      //       if (careError) {
+      //         console.error("⚠️ Erro ao salvar instruções de cuidado:", careError);
+      //       } else {
+      //         console.log(`✅ ${careInstructions.length} instruções de cuidado salvas`);
+      //       }
+      //     }
+      //   } catch (careError) {
+      //     console.error("⚠️ Erro ao salvar cuidados:", careError);
+      //   }
+      // }
 
       setLastSaved(new Date());
       

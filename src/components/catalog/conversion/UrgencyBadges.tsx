@@ -24,8 +24,12 @@ interface UrgencyBadgesProps {
   isFastDelivery?: boolean;
   isNew?: boolean;
   isBestSeller?: boolean;
+  isOnSale?: boolean;
+  discountPercentage?: number;
   viewsLast24h?: number;
+  viewsCount?: number;
   salesCount?: number;
+  isLimited?: boolean;
 }
 
 const UrgencyBadges: React.FC<UrgencyBadgesProps> = ({
@@ -35,8 +39,12 @@ const UrgencyBadges: React.FC<UrgencyBadgesProps> = ({
   isFastDelivery = true,
   isNew = false,
   isBestSeller = false,
+  isOnSale = false,
+  discountPercentage = 0,
   viewsLast24h,
+  viewsCount,
   salesCount,
+  isLimited = false,
 }) => {
   return (
     <div className="flex flex-wrap gap-2 mb-6">
@@ -88,11 +96,35 @@ const UrgencyBadges: React.FC<UrgencyBadgesProps> = ({
         </Badge>
       )}
 
+      {/* Promoção - DESCONTO */}
+      {isOnSale && discountPercentage > 0 && (
+        <Badge className="bg-red-500 text-white px-3 py-1 text-sm font-semibold">
+          <Zap className="w-4 h-4 mr-1" />
+          {discountPercentage}% OFF
+        </Badge>
+      )}
+
+      {/* Edição Limitada - EXCLUSIVIDADE */}
+      {isLimited && (
+        <Badge className="bg-purple-500 text-white border border-purple-600 px-3 py-1 text-sm font-semibold">
+          <Clock className="w-4 h-4 mr-1" />
+          Edição Limitada
+        </Badge>
+      )}
+
       {/* Visualizações - PROVA SOCIAL */}
       {viewsLast24h && viewsLast24h > 10 && (
         <Badge className="bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1 text-sm">
           <Eye className="w-4 h-4 mr-1" />
           {viewsLast24h} pessoas viram nas últimas 24h
+        </Badge>
+      )}
+
+      {/* Visualizações alternativo */}
+      {viewsCount && viewsCount > 10 && !viewsLast24h && (
+        <Badge className="bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1 text-sm">
+          <Eye className="w-4 h-4 mr-1" />
+          {viewsCount} visualizando
         </Badge>
       )}
 

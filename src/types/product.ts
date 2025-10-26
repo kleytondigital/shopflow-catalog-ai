@@ -61,6 +61,11 @@ export interface Product {
   price_tiers?: ProductPriceTier[];
   enable_gradual_wholesale?: boolean; // Toggle para ativar/desativar atacado gradativo
   price_model?: string; // Adicionar propriedade price_model
+  // Campos adicionais para sistema expandido
+  product_gender?: string;
+  product_category_type?: string;
+  material?: string;
+  video_url?: string;
 }
 
 export interface CreateProductData {

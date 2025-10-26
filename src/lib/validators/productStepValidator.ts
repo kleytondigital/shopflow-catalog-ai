@@ -111,10 +111,11 @@ export class ProductStepValidator {
     const missingFields: string[] = [];
 
     // Imagens não são obrigatórias, mas recomendadas
-    if (!formData.image_url && (!formData.variations || formData.variations.length === 0)) {
-      warnings.push('Adicionar pelo menos uma imagem melhora significativamente as vendas');
-      warnings.push('Produtos sem imagem têm 70% menos conversão');
-    }
+    // TODO: Validar imagens quando houver campo apropriado
+    // if (!formData.image_url && (!formData.variations || formData.variations.length === 0)) {
+    //   warnings.push('Adicionar pelo menos uma imagem melhora significativamente as vendas');
+    //   warnings.push('Produtos sem imagem têm 70% menos conversão');
+    // }
 
     // Sempre válido (imagens são opcionais)
     return {
@@ -306,7 +307,8 @@ export class ProductStepValidator {
       }
 
       case 'images': {
-        return formData.image_url ? 100 : 0;
+        // TODO: Validar imagens quando houver campo apropriado
+        return 100; // Sempre completo por enquanto
       }
 
       case 'variations': {
