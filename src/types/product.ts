@@ -29,6 +29,9 @@ export interface ProductVariation {
   grade_sizes?: string[]; // Tamanhos da grade
   grade_pairs?: number[]; // Quantidade de pares por tamanho
   is_grade?: boolean; // Indica se é variação de grade
+  // Suporte a grade flexível (múltiplas formas de venda)
+  flexible_grade_config?: import('./flexible-grade').FlexibleGradeConfig; // Configuração de grade flexível
+  grade_sale_mode?: 'full' | 'half' | 'custom'; // Modo de venda ativo
 }
 
 export interface Product {

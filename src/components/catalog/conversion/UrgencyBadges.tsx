@@ -1,117 +1,108 @@
+/**
+ * UrgencyBadges - Gatilhos de Urgência e Escassez
+ * Aumenta conversão criando senso de urgência
+ */
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp, Star, Zap, AlertTriangle } from "lucide-react";
+import { 
+  AlertTriangle, 
+  Truck, 
+  Zap, 
+  Clock, 
+  TrendingUp,
+  Star,
+  Users,
+  Eye,
+  CheckCircle,
+} from "lucide-react";
 
 interface UrgencyBadgesProps {
-  stock: number;
-  isBestSeller?: boolean;
-  isOnSale?: boolean;
-  discountPercentage?: number;
-  viewsCount?: number;
-  salesCount?: number;
+  stock?: number;
+  lowStockThreshold?: number;
+  hasFreeShipping?: boolean;
+  isFastDelivery?: boolean;
   isNew?: boolean;
-  isLimited?: boolean;
+  isBestSeller?: boolean;
+  viewsLast24h?: number;
+  salesCount?: number;
 }
 
 const UrgencyBadges: React.FC<UrgencyBadgesProps> = ({
-  stock,
-  isBestSeller = false,
-  isOnSale = false,
-  discountPercentage = 0,
-  viewsCount = 0,
-  salesCount = 0,
+  stock = 0,
+  lowStockThreshold = 10,
+  hasFreeShipping = true,
+  isFastDelivery = true,
   isNew = false,
-  isLimited = false,
+  isBestSeller = false,
+  viewsLast24h,
+  salesCount,
 }) => {
-  const badges = [];
-
-  // Badge de estoque baixo
-  if (stock <= 5 && stock > 0) {
-    badges.push({
-      text: `Apenas ${stock} restantes!`,
-      variant: "destructive" as const,
-      icon: AlertTriangle,
-      className: "animate-pulse",
-    });
-  }
-
-  // Badge de mais vendido
-  if (isBestSeller) {
-    badges.push({
-      text: "Mais Vendido",
-      variant: "default" as const,
-      icon: TrendingUp,
-      className: "bg-gradient-to-r from-orange-500 to-red-500 text-white",
-    });
-  }
-
-  // Badge de promoção
-  if (isOnSale && discountPercentage > 0) {
-    badges.push({
-      text: `${discountPercentage}% OFF`,
-      variant: "destructive" as const,
-      icon: Zap,
-      className: "bg-gradient-to-r from-red-500 to-pink-500 text-white",
-    });
-  }
-
-  // Badge de produto novo
-  if (isNew) {
-    badges.push({
-      text: "Novo",
-      variant: "secondary" as const,
-      icon: Star,
-      className: "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-    });
-  }
-
-  // Badge de edição limitada
-  if (isLimited) {
-    badges.push({
-      text: "Edição Limitada",
-      variant: "outline" as const,
-      icon: Clock,
-      className: "border-purple-500 text-purple-600",
-    });
-  }
-
-  // Badge de visualizações (se alto)
-  if (viewsCount > 10) {
-    badges.push({
-      text: `${viewsCount} visualizando`,
-      variant: "secondary" as const,
-      icon: Clock,
-      className: "bg-blue-100 text-blue-700",
-    });
-  }
-
-  // Badge de vendas (se alto)
-  if (salesCount > 50) {
-    badges.push({
-      text: `${salesCount}+ vendidos`,
-      variant: "secondary" as const,
-      icon: TrendingUp,
-      className: "bg-green-100 text-green-700",
-    });
-  }
-
-  if (badges.length === 0) return null;
-
   return (
-    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-      {badges.slice(0, 3).map((badge, index) => {
-        const Icon = badge.icon;
-        return (
-          <Badge
-            key={index}
-            variant={badge.variant}
-            className={`text-xs font-semibold px-2 py-1 shadow-lg ${badge.className}`}
-          >
-            <Icon className="h-3 w-3 mr-1" />
-            {badge.text}
-          </Badge>
-        );
-      })}
+    <div className="flex flex-wrap gap-2 mb-6">
+      {/* Estoque Baixo - URGÊNCIA */}
+      {stock > 0 && stock <= lowStockThreshold && (
+        <Badge className="bg-red-100 text-red-700 border border-red-300 px-3 py-1 text-sm font-semibold animate-pulse">
+          <AlertTriangle className="w-4 h-4 mr-1" />
+          Últimas {stock} unidades!
+        </Badge>
+      )}
+
+      {/* Frete Grátis - VALOR */}
+      {hasFreeShipping && (
+        <Badge className="bg-green-100 text-green-700 border border-green-300 px-3 py-1 text-sm font-semibold">
+          <Truck className="w-4 h-4 mr-1" />
+          Frete Grátis
+        </Badge>
+      )}
+
+      {/* Entrega Rápida - BENEFÍCIO */}
+      {isFastDelivery && (
+        <Badge className="bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1 text-sm font-semibold">
+          <Zap className="w-4 h-4 mr-1" />
+          Entrega Rápida
+        </Badge>
+      )}
+
+      {/* Novidade - EXCLUSIVIDADE */}
+      {isNew && (
+        <Badge className="bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 text-sm font-semibold">
+          <Star className="w-4 h-4 mr-1" />
+          ✨ Novidade
+        </Badge>
+      )}
+
+      {/* Mais Vendido - PROVA SOCIAL */}
+      {isBestSeller && (
+        <Badge className="bg-orange-100 text-orange-700 border border-orange-300 px-3 py-1 text-sm font-semibold">
+          <TrendingUp className="w-4 h-4 mr-1" />
+          Mais Vendido
+        </Badge>
+      )}
+
+      {/* Vendas - PROVA SOCIAL */}
+      {salesCount && salesCount > 20 && (
+        <Badge className="bg-blue-600 text-white px-3 py-1 text-sm font-semibold">
+          <Users className="w-4 h-4 mr-1" />
+          +{salesCount} vendidos
+        </Badge>
+      )}
+
+      {/* Visualizações - PROVA SOCIAL */}
+      {viewsLast24h && viewsLast24h > 10 && (
+        <Badge className="bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1 text-sm">
+          <Eye className="w-4 h-4 mr-1" />
+          {viewsLast24h} pessoas viram nas últimas 24h
+        </Badge>
+      )}
+
+      {/* Em Estoque - DISPONIBILIDADE */}
+      {stock > lowStockThreshold && (
+        <Badge className="bg-green-50 text-green-700 border border-green-200 px-3 py-1 text-sm">
+          <CheckCircle className="w-4 h-4 mr-1" />
+          Em Estoque
+        </Badge>
+      )}
     </div>
   );
 };

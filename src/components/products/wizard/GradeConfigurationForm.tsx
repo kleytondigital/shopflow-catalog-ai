@@ -15,10 +15,16 @@ import {
   Sparkles,
   TrendingUp,
   Eye,
+  Settings,
+  Info,
+  CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { generateUniqueProductSKU } from "@/utils/skuGenerator";
+import FlexibleGradeConfigForm from "./FlexibleGradeConfigForm";
+import type { FlexibleGradeConfig } from "@/types/flexible-grade";
+import { DEFAULT_FLEXIBLE_GRADE_CONFIG } from "@/types/flexible-grade";
 
 interface GradeConfigurationFormProps {
   variations: ProductVariation[];
@@ -45,6 +51,12 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
   const [customColor, setCustomColor] = useState("");
   const [sizePairConfigs, setSizePairConfigs] = useState<SizePairConfig[]>([]);
   const [gradeName, setGradeName] = useState("Grade Personalizada");
+  
+  // Estado para configuração de grade flexível
+  const [showFlexibleConfig, setShowFlexibleConfig] = useState(false);
+  const [flexibleGradeConfig, setFlexibleGradeConfig] = useState<FlexibleGradeConfig>(
+    DEFAULT_FLEXIBLE_GRADE_CONFIG
+  );
 
   const commonColors = [
     "Preto",
@@ -295,6 +307,9 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           display_order: colorIndex,
+          // Adicionar configuração de grade flexível (se configurada)
+          flexible_grade_config: showFlexibleConfig ? flexibleGradeConfig : undefined,
+          grade_sale_mode: 'full',
         };
 
         console.log(`✅ Grade criada [${colorIndex + 1}]:`, {
@@ -655,18 +670,87 @@ const GradeConfigurationForm: React.FC<GradeConfigurationFormProps> = ({
             </div>
           )}
 
+          {/* Configuração de Grade Flexível */}
+          {selectedColors.length > 0 && sizePairConfigs.length > 0 && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2 text-purple-700">
+                      <Sparkles className="w-5 h-5 animate-pulse" />
+                      Grade Flexível
+                      <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 text-xs">
+                        ⭐ Novidade
+                      </Badge>
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Permita que clientes comprem Grade Completa, Meia Grade ou Mesclagem Personalizada
+                    </p>
+                  </div>
+                  <Button
+                    variant={showFlexibleConfig ? "secondary" : "default"}
+                    size="lg"
+                    onClick={() => setShowFlexibleConfig(!showFlexibleConfig)}
+                    className={showFlexibleConfig ? "" : "bg-purple-600 hover:bg-purple-700 text-white"}
+                  >
+                    {showFlexibleConfig ? "✓ Ativo" : "⚡ Ativar"}
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              {showFlexibleConfig && (
+                <CardContent className="border-t-2 border-purple-200 bg-gradient-to-b from-purple-50/30 to-white">
+                  <Alert className="mb-4 border-purple-300 bg-purple-50">
+                    <Info className="h-4 w-4 text-purple-600" />
+                    <AlertDescription className="text-purple-900">
+                      <strong>Grade Flexível Ativa!</strong> Configure as opções de compra que seus clientes terão no catálogo.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <FlexibleGradeConfigForm
+                    config={flexibleGradeConfig}
+                    onChange={(newConfig) => {
+                      console.log("📝 Configuração de grade flexível atualizada:", newConfig);
+                      setFlexibleGradeConfig(newConfig);
+                    }}
+                    fullGradeSizes={sizePairConfigs.map(c => c.size)}
+                    fullGradePairs={sizePairConfigs.map(c => c.pairs)}
+                    simplified={true}
+                  />
+                  
+                  <Alert className="mt-4 border-green-300 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-900">
+                      Esta configuração será aplicada a todas as {selectedColors.length} grades que você gerar.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
           {/* Botão de Geração */}
           <div className="pt-4">
             <Button
               onClick={generateVariations}
-              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
+              className={`w-full h-12 text-lg ${
+                showFlexibleConfig
+                  ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              }`}
               disabled={
                 selectedColors.length === 0 || sizePairConfigs.length === 0
               }
             >
               <Package className="w-5 h-5 mr-2" />
-              Gerar {totalVariations} Grade{totalVariations > 1 ? "s" : ""} com
-              SKUs Únicos
+              Gerar {totalVariations} Grade{totalVariations > 1 ? "s" : ""} com SKUs Únicos
+              {showFlexibleConfig && (
+                <>
+                  {" "}
+                  <Sparkles className="w-4 h-4 mx-1 animate-pulse" />
+                  + Opções Flexíveis
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

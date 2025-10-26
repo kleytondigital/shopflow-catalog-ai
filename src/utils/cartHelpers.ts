@@ -25,12 +25,20 @@ export const createCartItem = (
       : null,
   });
 
+  // ⭐ FALLBACK: Se retail_price é 0/null, usar wholesale_price
+  // Isso evita preços zerados em lojas atacado-only
+  const retailPrice = product.retail_price || 0;
+  const wholesalePrice = product.wholesale_price || 0;
+  
+  // Se retail_price é 0 mas wholesale_price existe, usar wholesale
+  const effectiveRetailPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
+  
   // Para wholesale_only, sempre usar wholesale_price se disponível
-  // Para outros casos, usar retail_price inicialmente (será recalculado no hook)
+  // Para outros casos, usar retail_price (com fallback para wholesale)
   const basePrice =
     catalogType === "wholesale"
-      ? product.wholesale_price || product.retail_price || 0
-      : product.retail_price;
+      ? wholesalePrice || effectiveRetailPrice || 0
+      : effectiveRetailPrice;
 
   // Calcular preço final considerando ajuste da variação
   let finalPrice = variation
@@ -86,6 +94,9 @@ export const createCartItem = (
   }
 
   console.log("💰 CART HELPER - Cálculo de preço:", {
+    retailPrice: product.retail_price,
+    wholesalePrice: product.wholesale_price,
+    effectiveRetailPrice,
     basePrice,
     variationAdjustment: variation?.price_adjustment || 0,
     finalPrice,
@@ -95,6 +106,7 @@ export const createCartItem = (
     quantidadeFinal: finalQuantity,
     isGrade: variation?.is_grade || false,
     gradeName: variation?.grade_name || null,
+    usouFallback: effectiveRetailPrice === wholesalePrice && retailPrice === 0,
   });
 
   // Criar ID único considerando variação

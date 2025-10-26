@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,13 @@ export interface WizardFormData {
   meta_description?: string;
   keywords?: string;
   seo_slug?: string;
+  // 🎯 FASE 2: Novos campos
+  product_gender?: 'masculino' | 'feminino' | 'unissex' | 'infantil';
+  product_category_type?: 'calcado' | 'roupa_superior' | 'roupa_inferior' | 'acessorio';
+  material?: string;
+  video_url?: string;
+  video_type?: 'youtube' | 'vimeo' | 'direct';
+  video_thumbnail?: string;
 }
 
 export interface WizardStep {
@@ -58,6 +65,13 @@ export const useImprovedProductFormWizard = (
     is_active: true,
     allow_negative_stock: false,
     stock_alert_threshold: 5,
+    // 🎯 FASE 2: Novos campos
+    product_gender: undefined,
+    product_category_type: undefined,
+    material: "",
+    video_url: "",
+    video_type: "youtube",
+    video_thumbnail: "",
     store_id: profile?.store_id || "",
     variations: [],
     price_model: "wholesale_only",
@@ -69,29 +83,49 @@ export const useImprovedProductFormWizard = (
     seo_slug: "",
   });
 
-  const steps: WizardStep[] = [
-    {
-      id: 0,
-      label: "Informações Básicas",
-      description: "Nome, categoria e descrição",
-    },
-    {
-      id: 1,
-      label: "Preços e Estoque",
-      description: "Preços, estoque e configurações",
-    },
-    { id: 2, label: "Imagens", description: "Imagens do produto" },
-    {
-      id: 3,
-      label: "Variações",
-      description: "Cores, tamanhos e outras variações",
-    },
-    {
-      id: 4,
+  // Steps dinâmicos baseados no tipo de produto
+  const steps: WizardStep[] = useMemo(() => {
+    const baseSteps = [
+      {
+        id: 0,
+        label: "Informações Básicas",
+        description: "Nome, categoria e descrição",
+      },
+      {
+        id: 1,
+        label: "Preços e Estoque",
+        description: "Preços, estoque e configurações",
+      },
+      { id: 2, label: "Imagens e Vídeo", description: "Fotos e vídeo do produto" },
+      {
+        id: 3,
+        label: "Variações",
+        description: "Cores, tamanhos e outras variações",
+      },
+    ];
+
+    // Adiciona step de Tabela de Medidas SÓ se for calçado ou roupa
+    const isShoeOrClothing = 
+      formData.product_category_type === 'calcado' ||
+      formData.product_category_type === 'roupa_superior' ||
+      formData.product_category_type === 'roupa_inferior';
+
+    if (isShoeOrClothing) {
+      baseSteps.push({
+        id: 4,
+        label: "Tabela e Cuidados",
+        description: "Medidas e instruções de cuidado",
+      });
+    }
+
+    baseSteps.push({
+      id: isShoeOrClothing ? 5 : 4,
       label: "SEO e Marketing",
       description: "Otimização e configurações de marketing",
-    },
-  ];
+    });
+
+    return baseSteps;
+  }, [formData.product_category_type]);
 
   const updateFormData = useCallback((updates: Partial<WizardFormData>) => {
     console.log("📝 WIZARD - Atualizando formData:", updates);
@@ -330,6 +364,10 @@ export const useImprovedProductFormWizard = (
           meta_description: formData.meta_description,
           keywords: formData.keywords,
           seo_slug: formData.seo_slug,
+          // 🎯 FASE 2: Novos campos
+          product_gender: formData.product_gender,
+          product_category_type: formData.product_category_type,
+          material: formData.material,
         };
 
         let productId = editingProductId;
@@ -375,6 +413,39 @@ export const useImprovedProductFormWizard = (
           } catch (imageError) {
             console.error("Erro no upload de imagens:", imageError);
             // Não interromper o salvamento por erro de imagem
+          }
+        }
+
+        // 🎬 FASE 2: Salvar vídeo do produto
+        if (productId && formData.video_url) {
+          console.log("🎬 WIZARD - Salvando vídeo do produto");
+          try {
+            // Deletar vídeo existente
+            await supabase
+              .from("product_videos")
+              .delete()
+              .eq("product_id", productId);
+
+            // Inserir novo vídeo
+            const { error: videoError } = await supabase
+              .from("product_videos")
+              .insert({
+                product_id: productId,
+                video_url: formData.video_url,
+                video_type: formData.video_type || 'youtube',
+                thumbnail_url: formData.video_thumbnail || null,
+                is_active: true,
+                display_order: 0,
+              });
+
+            if (videoError) {
+              console.error("Erro ao salvar vídeo:", videoError);
+              // Não interromper o salvamento por erro de vídeo
+            } else {
+              console.log("✅ WIZARD - Vídeo salvo com sucesso");
+            }
+          } catch (videoError) {
+            console.error("Erro ao salvar vídeo:", videoError);
           }
         }
 

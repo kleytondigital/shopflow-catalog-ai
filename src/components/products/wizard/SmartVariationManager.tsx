@@ -22,6 +22,8 @@ import {
   Edit,
   EyeOff,
   Eye,
+  Copy,
+  PlusCircle,
 } from "lucide-react";
 import { ProductVariation } from "@/types/product";
 import UnifiedVariationWizard from "./UnifiedVariationWizard";
@@ -219,13 +221,87 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
   };
 
   const recreateWithWizard = () => {
-    setViewMode("wizard");
+    // ⚠️ Avisar usuário antes de deletar variações
+    const confirmRecreate = window.confirm(
+      `⚠️ ATENÇÃO: Isso irá DELETAR todas as ${variations.length} variações existentes e criar novas do zero.\n\n` +
+      `As variações atuais serão perdidas. Tem certeza?`
+    );
+    
+    if (!confirmRecreate) return;
+    
+    // Limpar todas as variações antes de recriar
+    console.log(`🗑️ Deletando ${variations.length} variações antes de recriar...`);
+    onVariationsChange([]);
+    
+    // Aguardar um pouco para garantir que state foi atualizado
+    setTimeout(() => {
+      console.log("✅ Variações limpas, abrindo wizard...");
+      setViewMode("wizard");
+    }, 100);
   };
 
-  // Renderizar baseado no modo atual
-  switch (viewMode) {
-    case "wizard":
-      return (
+  // Copiar grade existente
+  const copyVariation = (variation: ProductVariation) => {
+    const copiedVariation: ProductVariation = {
+      ...variation,
+      id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      sku: `${variation.sku}-COPY`,
+      display_order: variations.length + 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    onVariationsChange([...variations, copiedVariation]);
+
+    toast({
+      title: "✅ Variação copiada!",
+      description: "Uma cópia foi adicionada à lista. Edite o SKU e outros detalhes conforme necessário.",
+    });
+  };
+
+  // Adicionar grade similar (apenas muda a cor)
+  const addSimilarGrade = (variation: ProductVariation) => {
+    if (!variation.is_grade) {
+      toast({
+        title: "⚠️ Atenção",
+        description: "Esta função só está disponível para grades.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Criar prompt para nova cor
+    const newColor = prompt("Digite a cor da nova grade:", "");
+    
+    if (!newColor || newColor.trim() === "") {
+      return;
+    }
+
+    const similarGrade: ProductVariation = {
+      ...variation,
+      id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      color: newColor.trim(),
+      grade_color: newColor.trim(),
+      grade_name: variation.grade_name?.replace(variation.color || "", newColor.trim()) || `Grade - ${newColor.trim()}`,
+      sku: `${variation.sku?.split('-')[0]}-${newColor.trim().toUpperCase()}`,
+      display_order: variations.length + 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    onVariationsChange([...variations, similarGrade]);
+
+    toast({
+      title: "✅ Grade similar adicionada!",
+      description: `Nova grade criada com cor ${newColor}. Manteve tamanhos e quantidades.`,
+    });
+  };
+
+  // Função para renderizar conteúdo baseado no modo
+  const renderContent = () => {
+    switch (viewMode) {
+      case "wizard":
+        return (
         <div className="space-y-4">
           <Alert className="border-yellow-200 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
@@ -254,10 +330,10 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
             productName={productName}
           />
         </div>
-      );
+        );
 
-    case "add_form":
-      return (
+      case "add_form":
+        return (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -367,10 +443,10 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
             </CardContent>
           </Card>
         </div>
-      );
+        );
 
-    default: // 'list'
-      return (
+      default: // 'list'
+        return (
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -458,6 +534,30 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
                       </Badge>
 
                       <div className="flex gap-1">
+                        {/* Copiar Variação */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyVariation(variation)}
+                          title="Copiar variação"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Adicionar Similar (só para grades) */}
+                        {variation.is_grade && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => addSimilarGrade(variation)}
+                            title="Adicionar grade similar (outra cor)"
+                            className="text-purple-600 hover:text-purple-700"
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        
                         <Button
                           variant="ghost"
                           size="sm"
@@ -537,11 +637,15 @@ const SmartVariationManager: React.FC<SmartVariationManagerProps> = ({
             </CardContent>
           </Card>
         </div>
-      );
-  }
+        );
+    }
+  };
 
+  // Renderizar com Dialog sempre disponível
   return (
     <>
+      {renderContent()}
+      
       {/* Diálogo de edição */}
       <VariationEditDialog
         variation={editingVariation}

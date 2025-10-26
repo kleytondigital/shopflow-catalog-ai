@@ -14,6 +14,7 @@ import Categories from "./pages/Categories";
 import Reports from "./pages/Reports";
 import PublicCatalogPage from "./pages/PublicCatalogPage";
 import PublicWholesalePage from "./pages/PublicWholesalePage";
+import ProductPage from "./pages/ProductPage";
 import OrderTracking from "./pages/OrderTracking";
 import AdminSettings from "./pages/AdminSettings";
 import GlobalIntegrations from "./pages/GlobalIntegrations";
@@ -161,6 +162,12 @@ function App() {
                   <Route
                     path="/wholesale/:storeIdentifier"
                     element={<PublicWholesalePage />}
+                  />
+                  
+                  {/* Página dedicada do produto */}
+                  <Route
+                    path="/produto/:productId"
+                    element={<ProductPage />}
                   />
 
                   {/* Rotas de Super Admin */}

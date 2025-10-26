@@ -246,3 +246,5 @@ A migração para Nginx foi concluída com sucesso. O frontend agora é servido 
 2. Configurar deploy no Easypanel
 3. Monitorar performance em produção
 
+
+

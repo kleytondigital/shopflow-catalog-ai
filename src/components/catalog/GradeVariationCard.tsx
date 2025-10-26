@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductVariation } from "@/types/variation";
 import { formatCurrency } from "@/lib/utils";
-import { Package, AlertTriangle } from "lucide-react";
+import { Package, AlertTriangle, Sparkles } from "lucide-react";
+import { hasFlexibleConfig, allowsMultiplePurchaseOptions } from "@/types/flexible-grade";
 
 export interface GradeVariationCardProps {
   variation: ProductVariation;
@@ -50,6 +51,10 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
   }
 
   const isOutOfStock = variation.stock === 0;
+  
+  // Detectar se tem configuração flexível
+  const isFlexibleGrade = hasFlexibleConfig(variation);
+  const hasMultipleOptions = isFlexibleGrade && allowsMultiplePurchaseOptions(variation.flexible_grade_config!);
 
   return (
     <Card
@@ -66,6 +71,14 @@ const GradeVariationCard: React.FC<GradeVariationCardProps> = ({
             {/* Informações da variação */}
             <div className="flex flex-wrap items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
+              
+              {/* Badge de Grade Flexível */}
+              {hasMultipleOptions && (
+                <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Múltiplas Opções
+                </Badge>
+              )}
 
               {variation.color && (
                 <Badge variant="outline" className="text-xs">

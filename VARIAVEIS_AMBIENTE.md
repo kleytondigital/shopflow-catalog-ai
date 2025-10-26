@@ -202,3 +202,5 @@ VITE_GA_TRACKING_ID=UA-XXXXXXXXX-X
 
 **Última atualização:** Migração para Nginx
 
+
+

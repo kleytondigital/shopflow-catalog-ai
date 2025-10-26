@@ -100,3 +100,5 @@ const PriceStrategy: React.FC<PriceStrategyProps> = ({
 };
 
 export default PriceStrategy;
+
+

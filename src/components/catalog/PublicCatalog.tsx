@@ -231,8 +231,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
 
   const handleProductClick = (product: Product) => {
     console.log("👆 PUBLIC CATALOG - Produto clicado:", product.name);
-    setSelectedProduct(product);
-    setIsModalOpen(true);
+    // Redirecionar para página dedicada do produto
+    window.location.href = `/produto/${product.id}`;
   };
 
   const handleQuickView = (product: Product) => {

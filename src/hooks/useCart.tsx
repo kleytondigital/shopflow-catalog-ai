@@ -45,6 +45,16 @@ export interface CartItem {
     sizes: string[];
     pairs: number[];
   };
+  // Suporte a grade flexível
+  flexibleGradeMode?: 'full' | 'half' | 'custom';
+  customGradeSelection?: {
+    items: Array<{
+      color: string;
+      size: string;
+      quantity: number;
+    }>;
+    totalPairs: number;
+  };
 }
 
 // Novo tipo para modelo de preço
@@ -107,15 +117,30 @@ const validateCartItem = (item: any): CartItem | null => {
     });
 
     // Verificar propriedades obrigatórias
-    if (!item.id || !item.product || typeof item.quantity !== "number")
+    if (!item.id || !item.product || typeof item.quantity !== "number") {
+      console.warn("⚠️ validateCartItem - Faltando id/product/quantity:", item);
       return null;
-    if (typeof item.price !== "number" || isNaN(item.price)) return null;
-    if (!item.product.id || !item.product.name) return null;
-    if (
+    }
+    
+    if (typeof item.price !== "number" || isNaN(item.price)) {
+      console.warn("⚠️ validateCartItem - Preço inválido:", item.price);
+      return null;
+    }
+    
+    if (!item.product.id || !item.product.name) {
+      console.warn("⚠️ validateCartItem - Faltando product.id/name:", item.product);
+      return null;
+    }
+    
+    // ⭐ RELAXAR para grades: retail_price pode ser 0 se for grade
+    const isGrade = item.variation?.is_grade || item.gradeInfo;
+    if (!isGrade && (
       typeof item.product.retail_price !== "number" ||
       isNaN(item.product.retail_price)
-    )
+    )) {
+      console.warn("⚠️ validateCartItem - retail_price inválido (não é grade):", item.product.retail_price);
       return null;
+    }
 
     // Garantir que originalPrice existe e é válido
     const originalPrice =
@@ -424,35 +449,70 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return finalItems;
   };
 
-  // Carregar itens do localStorage com validação
+  // Carregar itens do localStorage com validação (APENAS UMA VEZ)
   useEffect(() => {
     const loadCartFromStorage = async () => {
       try {
+        console.log("🔄 [useCart] loadCartFromStorage DISPARADO");
         setIsLoading(true); // Iniciar loading
         const savedItems = localStorage.getItem("cart-items");
+        console.log("📦 [useCart] localStorage.getItem resultado:", savedItems ? `${savedItems.substring(0, 100)}...` : "NULL");
+        
         if (savedItems) {
           const parsedItems = JSON.parse(savedItems);
 
           if (Array.isArray(parsedItems)) {
-            console.log("🛒 Carregando itens do carrinho:", parsedItems.length);
+            console.log("🛒 Carregando itens do carrinho do localStorage:", parsedItems.length);
+            console.log("📋 Items do localStorage (RAW):", parsedItems);
 
             // Validar e filtrar itens válidos
-            const validItems = parsedItems
-              .map(validateCartItem)
-              .filter((item): item is CartItem => item !== null);
+            const validationResults = parsedItems.map((item, index) => {
+              const validated = validateCartItem(item);
+              return {
+                index,
+                original: item,
+                validated,
+                isValid: validated !== null,
+              };
+            });
+
+            const validItems = validationResults
+              .filter(r => r.validated !== null)
+              .map(r => r.validated!);
 
             console.log("✅ Itens válidos encontrados:", validItems.length);
+            console.log("📊 Resultado da validação:", validationResults.map(r => ({
+              index: r.index,
+              productName: r.original.product?.name,
+              isValid: r.isValid,
+              failedReason: !r.isValid ? "Ver logs acima de validateCartItem" : "OK",
+            })));
 
-            if (validItems.length !== parsedItems.length) {
-              console.warn(
-                "⚠️ Alguns itens do carrinho foram removidos por dados inválidos"
+            // ⭐ SÓ mostrar aviso se realmente removeu itens
+            const removedCount = parsedItems.length - validItems.length;
+            if (removedCount > 0) {
+              const removedItems = validationResults.filter(r => !r.isValid);
+              console.error(
+                `❌ ${removedCount} itens REMOVIDOS por validação:`,
+                removedItems.map(r => ({
+                  productName: r.original.product?.name,
+                  productId: r.original.product?.id,
+                  price: r.original.price,
+                  quantity: r.original.quantity,
+                  hasGradeInfo: !!r.original.gradeInfo,
+                  variation: r.original.variation,
+                }))
               );
-              toast({
-                title: "Carrinho atualizado",
-                description:
-                  "Alguns itens foram removidos devido a dados inconsistentes.",
-                duration: 3000,
-              });
+              
+              // NÃO mostrar toast se for apenas 1 item e for validação normal
+              // Evita spam de mensagens
+              if (removedCount > 1 || parsedItems.length > 2) {
+                toast({
+                  title: "Carrinho atualizado",
+                  description: `${removedCount} item${removedCount > 1 ? 'ns foram removidos' : ' foi removido'} por dados inconsistentes.`,
+                  duration: 3000,
+                });
+              }
             }
 
             // Recalcular preços ao carregar
@@ -481,16 +541,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     loadCartFromStorage();
-  }, [toast]);
+  }, []); // ⭐ VAZIO - Carregar APENAS na montagem inicial do CartProvider
 
   // Salvar no localStorage sempre que items mudarem
   useEffect(() => {
+    // ⚠️ IMPORTANTE: Não salvar array vazio no primeiro render
+    // Isso evita sobrescrever carrinho existente antes de carregar do localStorage
+    if (isLoading) {
+      console.log("⏸️ [useCart] Aguardando carregamento do localStorage, não salvando ainda...");
+      return;
+    }
+
     try {
+      console.log("💾 [useCart] Salvando items no localStorage:", {
+        itemsCount: items.length,
+        items: items.map(i => ({
+          productName: i.product.name,
+          quantity: i.quantity,
+          price: i.price,
+        })),
+      });
       localStorage.setItem("cart-items", JSON.stringify(items));
+      console.log("✅ [useCart] Items salvos no localStorage com sucesso!");
+      
+      // Verificar imediatamente se salvou
+      const verify = localStorage.getItem("cart-items");
+      console.log("🔍 [useCart] Verificação: localStorage tem", verify ? JSON.parse(verify).length : 0, "itens");
     } catch (error) {
       console.error("❌ Erro ao salvar carrinho:", error);
     }
-  }, [items]);
+  }, [items, isLoading]);
 
   // addItem agora recebe modelKey como parâmetro
   const addItem = (item: CartItem, modelKey?: CartPriceModelType) => {

@@ -367,3 +367,5 @@ const ProductCardOptimized: React.FC<ProductCardOptimizedProps> = ({
 };
 
 export default ProductCardOptimized;
+
+

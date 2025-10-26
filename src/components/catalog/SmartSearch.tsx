@@ -353,3 +353,5 @@ const SmartSearch: React.FC<SmartSearchProps> = ({
 };
 
 export default SmartSearch;
+
+

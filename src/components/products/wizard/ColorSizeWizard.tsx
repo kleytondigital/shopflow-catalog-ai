@@ -130,8 +130,15 @@ const ColorSizeWizard: React.FC<ColorSizeWizardProps> = ({
     },
   ];
 
-  const selectedColors = colorConfigs.filter((color) => color.selected);
-  const selectedSizes = sizeConfigs.filter((size) => size.selected);
+  const selectedColors = React.useMemo(() => 
+    colorConfigs.filter((color) => color.selected), 
+    [colorConfigs]
+  );
+  
+  const selectedSizes = React.useMemo(() => 
+    sizeConfigs.filter((size) => size.selected), 
+    [sizeConfigs]
+  );
 
   // Gerar combinações quando cores e tamanhos mudarem
   React.useEffect(() => {

@@ -6,6 +6,7 @@ import BulkStockModal from "./BulkStockModal";
 import ProductFormModal from "./ProductFormModal";
 import ProductStockManagerModal from "./ProductStockManagerModal";
 import PricingModeSelector from "./PricingModeSelector";
+import ExpandableProductForm from "./ExpandableProductForm";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
 import ProductList from "./ProductList";
@@ -22,6 +23,11 @@ const ProductsPage = () => {
     useState<Product | null>(null);
   const [isStockManagerOpen, setIsStockManagerOpen] = useState(false);
   const [showPriceModeSelector, setShowPriceModeSelector] = useState(false);
+  
+  // Estados para ExpandableProductForm
+  const [isExpandableFormOpen, setIsExpandableFormOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | undefined>(undefined);
+  
   const { profile } = useAuth();
   const currentStore = profile?.store_id;
   const { toast } = useToast();
@@ -34,10 +40,30 @@ const ProductsPage = () => {
     toggleProductStatus,
   } = useProducts();
 
-  // Função para editar produto
+  // Função para editar produto (usando div expansível)
   const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setIsEditModalOpen(true);
+    console.log("🔧 ProductsPage - handleEdit chamado para:", {
+      productId: product.id,
+      productName: product.name,
+    });
+    setEditingProductId(product.id);
+    setIsExpandableFormOpen(true);
+    // Scroll suave para o topo
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Função para novo produto (usando div expansível)
+  const handleNewProduct = () => {
+    setEditingProductId(undefined);
+    setIsExpandableFormOpen(true);
+    // Scroll suave para o topo
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Função para fechar form expansível
+  const handleCloseExpandableForm = () => {
+    setIsExpandableFormOpen(false);
+    setEditingProductId(undefined);
   };
 
   // Função para deletar produto
@@ -144,8 +170,8 @@ const ProductsPage = () => {
           </Button>
 
           <Button
-            onClick={() => setShowProductModal(true)}
-            className="flex items-center gap-2"
+            onClick={handleNewProduct}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             <Plus className="h-4 w-4" />
             Novo Produto
@@ -162,6 +188,20 @@ const ProductsPage = () => {
           }}
         />
       </div>
+
+      {/* Formulário Expansível de Produto */}
+      <ExpandableProductForm
+        isOpen={isExpandableFormOpen}
+        onClose={handleCloseExpandableForm}
+        productId={editingProductId}
+        onSaved={async (productId) => {
+          await fetchProducts();
+          toast({
+            title: "✅ Sucesso!",
+            description: editingProductId ? "Produto atualizado" : "Produto criado",
+          });
+        }}
+      />
 
       {/* Modal de Importação */}
       <BulkImportModal

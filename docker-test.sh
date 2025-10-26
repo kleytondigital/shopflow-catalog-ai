@@ -131,3 +131,5 @@ echo "   docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME"
 echo ""
 echo "${YELLOW}💡 Lembre-se de adicionar variáveis de ambiente do Vite no Easypanel!${NC}"
 
+
+

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,9 @@ import { Package, Palette } from "lucide-react";
 import GradeVariationCard from "./GradeVariationCard";
 import VariationInfoPanel from "./VariationInfoPanel";
 import VariationSelectionAlert from "./VariationSelectionAlert";
+import FlexibleGradeSelector from "./FlexibleGradeSelector";
+import { hasFlexibleConfig, allowsMultiplePurchaseOptions } from "@/types/flexible-grade";
+import type { CustomGradeSelection } from "@/types/flexible-grade";
 
 interface ProductVariationSelectorProps {
   variations: ProductVariation[];
@@ -28,6 +31,9 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
   showPriceInCards = false,
   showStock = false,
 }) => {
+  // Estado para grade flexível
+  const [flexibleGradeMode, setFlexibleGradeMode] = useState<'full' | 'half' | 'custom'>('full');
+  const [customSelection, setCustomSelection] = useState<CustomGradeSelection | null>(null);
   if (loading) {
     return (
       <div className="space-y-4">
@@ -133,6 +139,37 @@ const ProductVariationSelector: React.FC<ProductVariationSelectorProps> = ({
             showStock={showStock}
           />
         )}
+
+        {/* Seletor de Grade Flexível (se disponível) */}
+        {selectedVariation && (() => {
+          const hasConfig = hasFlexibleConfig(selectedVariation);
+          const allowsMultiple = selectedVariation.flexible_grade_config 
+            ? allowsMultiplePurchaseOptions(selectedVariation.flexible_grade_config)
+            : false;
+          
+          // 🔍 DEBUG: Log detalhado
+          console.log("🔍 FlexibleGradeSelector - Verificação:", {
+            gradeSelected: selectedVariation.grade_name,
+            hasConfig,
+            allowsMultiple,
+            config: selectedVariation.flexible_grade_config,
+            willRender: hasConfig && allowsMultiple,
+          });
+          
+          if (hasConfig && allowsMultiple) {
+            return (
+              <FlexibleGradeSelector
+                variation={selectedVariation}
+                onModeSelect={setFlexibleGradeMode}
+                onCustomSelection={setCustomSelection}
+                basePrice={basePrice}
+                selectedMode={flexibleGradeMode}
+                showPrices={showPriceInCards}
+              />
+            );
+          }
+          return null;
+        })()}
       </div>
     );
   }

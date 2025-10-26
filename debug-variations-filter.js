@@ -19,3 +19,4 @@ console.log = function(...args) {
 
 console.log('🔍 Filtro ativado! Agora só aparecerão logs relacionados a variações.');
 console.log('📝 Clique em um produto no catálogo para ver os logs de debug.');
+

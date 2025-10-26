@@ -28,6 +28,13 @@ export interface ProductFormData {
   price_model: string;
   simple_wholesale_enabled: boolean;
   gradual_wholesale_enabled: boolean;
+  // 🎯 FASE 2: Novos campos
+  product_gender?: 'masculino' | 'feminino' | 'unissex' | 'infantil';
+  product_category_type?: 'calcado' | 'roupa_superior' | 'roupa_inferior' | 'acessorio';
+  material?: string;
+  video_url?: string;
+  video_type?: 'youtube' | 'vimeo' | 'direct';
+  video_thumbnail?: string;
 }
 
 export interface WizardStep {
@@ -43,7 +50,7 @@ export const useProductFormWizard = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [productId, setProductId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<ProductFormData>({
+  const initialFormData: ProductFormData = {
     name: "",
     description: "",
     retail_price: 0,
@@ -66,7 +73,16 @@ export const useProductFormWizard = () => {
     price_model: "wholesale_only",
     simple_wholesale_enabled: true,
     gradual_wholesale_enabled: false,
-  });
+    // 🎯 FASE 2: Novos campos
+    product_gender: undefined,
+    product_category_type: undefined,
+    material: "",
+    video_url: "",
+    video_type: "youtube",
+    video_thumbnail: "",
+  };
+
+  const [formData, setFormData] = useState<ProductFormData>(initialFormData);
 
   const steps: WizardStep[] = [
     {
@@ -176,7 +192,21 @@ export const useProductFormWizard = () => {
       price_model: "wholesale_only",
       simple_wholesale_enabled: true,
       gradual_wholesale_enabled: product.enable_gradual_wholesale || false,
+      // 🎯 FASE 2: Carregar novos campos
+      product_gender: product.product_gender || undefined,
+      product_category_type: product.product_category_type || undefined,
+      material: product.material || "",
+      video_url: product.video_url || "",
+      video_type: product.video_type || "youtube",
+      video_thumbnail: product.video_thumbnail || "",
     };
+
+    console.log("🔍 DEBUG - Campos FASE 2 carregados:", {
+      product_gender: productData.product_gender,
+      product_category_type: productData.product_category_type,
+      material: productData.material,
+      video_url: productData.video_url,
+    });
 
     setFormData(productData);
     setProductId(product.id);
@@ -189,11 +219,25 @@ export const useProductFormWizard = () => {
       try {
         console.log("💾 Saving product with data:", data);
 
+        // ⭐ AUTO-PREENCHER: Se retail_price é 0/undefined mas wholesale_price existe,
+        // copiar wholesale_price para retail_price (evita produtos com preço zero)
+        let finalRetailPrice = data.retail_price || 0;
+        let finalWholesalePrice = data.wholesale_price;
+        
+        if (finalRetailPrice === 0 && finalWholesalePrice && finalWholesalePrice > 0) {
+          finalRetailPrice = finalWholesalePrice;
+          console.log("⚠️ Auto-preenchendo retail_price com wholesale_price:", {
+            wholesale: finalWholesalePrice,
+            retail_antes: data.retail_price,
+            retail_depois: finalRetailPrice,
+          });
+        }
+
         const productData = {
           name: data.name.trim(),
           description: data.description || "",
-          retail_price: data.retail_price,
-          wholesale_price: data.wholesale_price,
+          retail_price: finalRetailPrice,
+          wholesale_price: finalWholesalePrice,
           min_wholesale_qty: data.min_wholesale_qty || 1,
           stock: data.stock,
           category: data.category || "",
@@ -205,7 +249,21 @@ export const useProductFormWizard = () => {
           allow_negative_stock: data.allow_negative_stock || false,
           stock_alert_threshold: data.stock_alert_threshold || 5,
           is_active: data.is_active !== false,
+          // 🎯 FASE 2: Novos campos
+          product_gender: (data as any).product_gender || null,
+          product_category_type: (data as any).product_category_type || null,
+          material: (data as any).material || null,
         };
+
+        console.log("🔍 DEBUG - Dados que serão salvos:", {
+          name: productData.name,
+          product_gender: productData.product_gender,
+          product_category_type: productData.product_category_type,
+          material: productData.material,
+          formData_gender: data.product_gender,
+          formData_category: data.product_category_type,
+          formData_material: data.material,
+        });
 
         let result;
 
@@ -274,34 +332,11 @@ export const useProductFormWizard = () => {
   );
 
   const resetForm = useCallback(() => {
-    setFormData({
-      name: "",
-      description: "",
-      retail_price: 0,
-      wholesale_price: undefined,
-      min_wholesale_qty: 1,
-      stock: 0,
-      category: "",
-      keywords: "",
-      meta_title: "",
-      meta_description: "",
-      seo_slug: "",
-      is_featured: false,
-      allow_negative_stock: false,
-      stock_alert_threshold: 5,
-      is_active: true,
-      variations: [],
-      price_tiers: [],
-      store_id: "",
-      enable_gradual_wholesale: false,
-      // Adicionar valores padrão para reset
-      price_model: "wholesale_only",
-      simple_wholesale_enabled: true,
-      gradual_wholesale_enabled: false,
-    });
+    console.log("🔄 RESET - Limpando formulário");
+    setFormData(initialFormData);
     setCurrentStep(0);
     setProductId(null);
-  }, []);
+  }, [initialFormData]);
 
   const cancelAndCleanup = useCallback(() => {
     resetForm();
