@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/useCart";
 import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
+import { useConversionTracking } from "@/hooks/useConversionTracking";
 import { formatCurrency } from "@/lib/utils";
 import { createCartItem } from "@/utils/cartHelpers";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
@@ -53,6 +54,7 @@ const ProductPage: React.FC = () => {
   const { toast } = useToast();
   const { addItem, items: cartItems, totalAmount, toggleCart } = useCart();
   const { settings: storeSettings } = useCatalogSettings();
+  const { trackProductView, trackAddToCart, trackInitiateCheckout } = useConversionTracking();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +148,14 @@ const ProductPage: React.FC = () => {
         });
 
         setProduct(fullProduct);
+
+        // 📊 Tracking: ViewContent (produto visualizado)
+        trackProductView({
+          id: fullProduct.id,
+          name: fullProduct.name,
+          category: fullProduct.category || '',
+          price: fullProduct.retail_price,
+        });
 
         // Buscar dados da loja (nome, telefone, url_slug) para checkout e navegação
         supabase
@@ -247,6 +257,14 @@ const ProductPage: React.FC = () => {
       addItem(cartItem);
 
       console.log("✅ addItem() chamado com sucesso");
+
+      // 📊 Tracking: AddToCart
+      trackAddToCart({
+        id: product.id,
+        name: product.name,
+        price: priceInfo.displayPrice,
+        quantity: quantity,
+      });
 
       // Lógica simples: Mostrar toast e abrir carrinho
       toast({
@@ -643,6 +661,10 @@ const ProductPage: React.FC = () => {
       <FloatingCart 
         onCheckout={() => {
           console.log("🛒 Abrindo checkout...");
+          
+          // 📊 Tracking: InitiateCheckout
+          trackInitiateCheckout(totalAmount, cartItems.length);
+          
           setShowCheckout(true);
         }}
         storeId={product.store_id}
