@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/useCart";
 import { useProductDisplayPrice } from "@/hooks/useProductDisplayPrice";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 import { formatCurrency } from "@/lib/utils";
 import { createCartItem } from "@/utils/cartHelpers";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
@@ -51,6 +52,7 @@ const ProductPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addItem, items: cartItems, totalAmount, toggleCart } = useCart();
+  const { settings: storeSettings } = useCatalogSettings();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -407,7 +409,7 @@ const ProductPage: React.FC = () => {
 
             {/* 🎯 FASE 2: Vídeo do Produto (abaixo das imagens) - SÓ SE HOUVER VÍDEO CADASTRADO */}
             <div className="mt-6 space-y-4">
-              {productVideo && (
+              {storeSettings?.product_show_videos && productVideo && (
                 <ProductVideoSection
                   videoUrl={productVideo.video_url}
                   videoType={productVideo.video_type}
@@ -417,10 +419,10 @@ const ProductPage: React.FC = () => {
               )}
 
               {/* 🎯 FASE 2: Depoimentos de Clientes - SÓ SE HOUVER DEPOIMENTOS */}
-              {testimonials && testimonials.length > 0 && (
+              {storeSettings?.product_show_testimonials && testimonials && testimonials.length > 0 && (
                 <SocialProofTestimonials
                   testimonials={testimonials}
-                  maxDisplay={3}
+                  maxDisplay={storeSettings.product_testimonials_max_display || 3}
                 />
               )}
             </div>
@@ -441,45 +443,51 @@ const ProductPage: React.FC = () => {
               <Separator className="my-4" />
 
               {/* 🚀 BADGES DE URGÊNCIA - Gatilho Mental #1 */}
-              <UrgencyBadges
-                stock={product.stock || 0}
-                lowStockThreshold={10}
-                hasFreeShipping={true}
-                isFastDelivery={true}
-                isNew={false}
-                isBestSeller={product.is_featured}
-                salesCount={75} // Mock - pode vir de analytics
-                viewsLast24h={42} // Mock
-              />
+              {storeSettings?.product_show_urgency_badges && (
+                <UrgencyBadges
+                  stock={storeSettings.product_show_low_stock_badge ? (product.stock || 0) : 999}
+                  lowStockThreshold={storeSettings.product_low_stock_threshold || 10}
+                  hasFreeShipping={storeSettings.product_show_free_shipping_badge !== false}
+                  isFastDelivery={storeSettings.product_show_fast_delivery_badge !== false}
+                  isNew={false}
+                  isBestSeller={storeSettings.product_show_best_seller_badge && product.is_featured}
+                  salesCount={storeSettings.product_show_sales_count ? 75 : undefined}
+                  viewsLast24h={storeSettings.product_show_views_count ? 42 : undefined}
+                />
+              )}
 
               {/* 🚀 PROVA SOCIAL EM CARROSSEL - Gatilho Mental #2 (FASE 2: Melhorado) */}
-              <SocialProofCarousel
-                salesCount={75}
-                viewsLast24h={42}
-                viewsNow={3}
-                stockStatus="in_stock"
-                isBestSeller={product.is_featured}
-                recentPurchases={[
-                  {
-                    customerName: "Maria S.",
-                    city: "São Paulo",
-                    timeAgo: "há 2 horas",
-                  },
-                  {
-                    customerName: "João P.",
-                    city: "Rio de Janeiro",
-                    timeAgo: "há 5 horas",
-                  },
-                ]}
-                autoRotateInterval={4000}
-              />
+              {storeSettings?.product_show_social_proof_carousel && (
+                <SocialProofCarousel
+                  salesCount={75}
+                  viewsLast24h={42}
+                  viewsNow={3}
+                  stockStatus="in_stock"
+                  isBestSeller={product.is_featured}
+                  recentPurchases={[
+                    {
+                      customerName: "Maria S.",
+                      city: "São Paulo",
+                      timeAgo: "há 2 horas",
+                    },
+                    {
+                      customerName: "João P.",
+                      city: "Rio de Janeiro",
+                      timeAgo: "há 5 horas",
+                    },
+                  ]}
+                  autoRotateInterval={storeSettings.product_social_proof_autorotate ? (storeSettings.product_social_proof_interval || 4000) : undefined}
+                />
+              )}
 
               {/* 🚀 RATING - Gatilho Mental #3 */}
-              <SimpleRating
-                rating={4.8}
-                reviewCount={127}
-                showDistribution={true}
-              />
+              {storeSettings?.product_show_ratings && (
+                <SimpleRating
+                  rating={4.8}
+                  reviewCount={127}
+                  showDistribution={storeSettings.product_show_rating_distribution !== false}
+                />
+              )}
 
               <Separator className="my-6" />
 
@@ -583,21 +591,24 @@ const ProductPage: React.FC = () => {
             </div>
 
             {/* 🚀 SEÇÃO DE CONFIANÇA - Gatilho Mental #6 */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <TrustSection
-                hasFreeShipping={true}
-                hasMoneyBackGuarantee={true}
-                hasFastDelivery={true}
-                hasSecurePayment={true}
-                deliveryDays="2-5"
-                returnDays={7}
-                isAuthorizedDealer={false}
-                brandName={product.category}
-              />
-            </div>
+            {storeSettings?.product_show_trust_section && (
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <TrustSection
+                  hasFreeShipping={storeSettings.product_trust_free_shipping !== false}
+                  hasMoneyBackGuarantee={storeSettings.product_trust_money_back !== false}
+                  hasFastDelivery={storeSettings.product_trust_fast_delivery !== false}
+                  hasSecurePayment={storeSettings.product_trust_secure_payment !== false}
+                  deliveryDays={storeSettings.product_trust_delivery_days || "2-5"}
+                  returnDays={storeSettings.product_trust_return_days || 7}
+                  isAuthorizedDealer={false}
+                  brandName={product.category}
+                />
+              </div>
+            )}
 
             {/* 🎯 FASE 2: Tabela de Medidas Automática - SÓ para calçado e roupa */}
-            {product.product_gender && 
+            {storeSettings?.product_show_size_chart &&
+             product.product_gender && 
              product.product_category_type && 
              (product.product_category_type === 'calcado' || 
               product.product_category_type === 'roupa_superior' || 
@@ -607,19 +618,20 @@ const ProductPage: React.FC = () => {
                   gender={product.product_gender as any}
                   category={product.product_category_type as any}
                   isCollapsible={true}
-                  defaultOpen={false}
+                  defaultOpen={storeSettings.product_size_chart_default_open || false}
                 />
               </div>
             )}
 
             {/* 🎯 FASE 2: Cuidados do Produto - Usa dados cadastrados ou auto-gera */}
-            {(product.product_category_type || product.material) && (
+            {storeSettings?.product_show_care_section &&
+             (product.product_category_type || product.material) && (
               <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <ProductCareSection
                   productCategory={product.product_category_type || 'calcado'}
                   material={product.material}
                   isCollapsible={true}
-                  defaultOpen={false}
+                  defaultOpen={storeSettings.product_care_section_default_open || false}
                 />
               </div>
             )}
