@@ -77,6 +77,47 @@ ADD COLUMN IF NOT EXISTS product_size_chart_default_open boolean DEFAULT false,
 ADD COLUMN IF NOT EXISTS product_show_care_section boolean DEFAULT true,
 ADD COLUMN IF NOT EXISTS product_care_section_default_open boolean DEFAULT false;
 
+-- ============================================================================
+-- PIXELS E TRACKING DE CONVERSÃO
+-- ============================================================================
+
+-- Meta Pixel (Facebook Ads)
+ALTER TABLE store_settings
+ADD COLUMN IF NOT EXISTS meta_pixel_id text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS meta_pixel_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS meta_pixel_access_token text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS meta_pixel_verified boolean DEFAULT false,
+
+-- Google Analytics 4
+ADD COLUMN IF NOT EXISTS ga4_measurement_id text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS ga4_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS ga4_api_secret text DEFAULT NULL,
+
+-- Google Ads
+ADD COLUMN IF NOT EXISTS google_ads_id text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS google_ads_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS google_ads_conversion_label text DEFAULT NULL,
+
+-- TikTok Pixel
+ADD COLUMN IF NOT EXISTS tiktok_pixel_id text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS tiktok_pixel_enabled boolean DEFAULT false,
+
+-- Eventos de Conversão
+ADD COLUMN IF NOT EXISTS tracking_pageview boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_view_content boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_add_to_cart boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_initiate_checkout boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_add_payment_info boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_purchase boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_search boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_view_category boolean DEFAULT true,
+
+-- Configurações Avançadas
+ADD COLUMN IF NOT EXISTS tracking_advanced_matching boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS tracking_auto_events boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS tracking_debug_mode boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS custom_events_config jsonb DEFAULT '[]'::jsonb;
+
 -- Atualizar registros existentes
 UPDATE store_settings
 SET 
