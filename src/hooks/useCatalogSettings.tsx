@@ -241,6 +241,26 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           footer_copyright_text: (data as any).footer_copyright_text,
           business_hours_display_type:
             (data as any).business_hours_display_type || "summary",
+          conversion_mode: (data as any).conversion_mode,
+          // Estilos de aparência
+          button_style: (data as any).button_style,
+          footer_style: (data as any).footer_style,
+          footer_bg_color: (data as any).footer_bg_color,
+          footer_text_color: (data as any).footer_text_color,
+          logo_color_palette: (data as any).logo_color_palette,
+          auto_extract_colors: (data as any).auto_extract_colors,
+          // Badges do header
+          header_badges_enabled: (data as any).header_badges_enabled,
+          header_badge_fast_delivery: (data as any).header_badge_fast_delivery,
+          header_badge_fast_delivery_text: (data as any).header_badge_fast_delivery_text,
+          header_badge_free_shipping: (data as any).header_badge_free_shipping,
+          header_badge_free_shipping_text: (data as any).header_badge_free_shipping_text,
+          header_free_shipping_threshold: (data as any).header_free_shipping_threshold,
+          header_badge_secure_checkout: (data as any).header_badge_secure_checkout,
+          header_badge_secure_checkout_text: (data as any).header_badge_secure_checkout_text,
+          header_badge_custom_1: (data as any).header_badge_custom_1,
+          header_badge_custom_1_text: (data as any).header_badge_custom_1_text,
+          header_badge_custom_1_icon: (data as any).header_badge_custom_1_icon,
         });
       } else {
         console.log(
