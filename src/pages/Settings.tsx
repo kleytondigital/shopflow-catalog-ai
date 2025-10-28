@@ -38,9 +38,19 @@ import PriceModelDebug from "@/components/debug/PriceModelDebug";
 import ButtonTest from "@/components/debug/ButtonTest";
 
 import { useStoreData } from "@/hooks/useStoreData";
+import { useCatalogSettings } from "@/hooks/useCatalogSettings";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("store");
+  const { settings, updateSettings } = useCatalogSettings();
+
+  const handleSettingsUpdate = async (field: string, value: any) => {
+    try {
+      await updateSettings({ [field]: value });
+    } catch (error) {
+      console.error('Erro ao atualizar configuração:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -49,52 +59,70 @@ const Settings = () => {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-11">
-          <TabsTrigger value="store" className="flex items-center gap-2">
-            <Store className="h-4 w-4" />
-            <span className="hidden sm:inline">Loja</span>
-          </TabsTrigger>
-          <TabsTrigger value="catalog" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Catálogo</span>
-          </TabsTrigger>
-          <TabsTrigger value="pricing" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span className="hidden sm:inline">Preços</span>
-          </TabsTrigger>
-          <TabsTrigger value="banners" className="flex items-center gap-2">
-            <Image className="h-4 w-4" />
-            <span className="hidden sm:inline">Banners</span>
-          </TabsTrigger>
-          <TabsTrigger value="shipping" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            <span className="hidden sm:inline">Entrega</span>
-          </TabsTrigger>
-          <TabsTrigger value="payment" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            <span className="hidden sm:inline">Pagamento</span>
-          </TabsTrigger>
-          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">WhatsApp</span>
-          </TabsTrigger>
-          <TabsTrigger value="domains" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Domínios</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            <span className="hidden sm:inline">Analytics</span>
-          </TabsTrigger>
-          <TabsTrigger value="seo" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">SEO</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Segurança</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="space-y-4">
+          {/* Primeira linha - Configurações Principais */}
+          <div className="flex flex-wrap gap-2">
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="store" className="flex items-center gap-2">
+                <Store className="h-4 w-4" />
+                <span className="hidden sm:inline">Loja</span>
+              </TabsTrigger>
+              <TabsTrigger value="catalog" className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                <span className="hidden sm:inline">Catálogo</span>
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                <span className="hidden sm:inline">Preços</span>
+              </TabsTrigger>
+              <TabsTrigger value="banners" className="flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                <span className="hidden sm:inline">Banners</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Segunda linha - Integrações */}
+          <div className="flex flex-wrap gap-2">
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="shipping" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                <span className="hidden sm:inline">Entrega</span>
+              </TabsTrigger>
+              <TabsTrigger value="payment" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                <span className="hidden sm:inline">Pagamento</span>
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Terceira linha - Marketing e Técnico */}
+          <div className="flex flex-wrap gap-2">
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="domains" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">Domínios</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="seo" className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline">SEO</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Segurança</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </div>
+
 
         <TabsContent value="store" className="space-y-6">
           <Card>
@@ -167,8 +195,8 @@ const Settings = () => {
             </CardHeader>
             <CardContent>
               <DomainSettings 
-                settings={{}}
-                onUpdate={() => {}}
+                settings={settings || {}}
+                onUpdate={handleSettingsUpdate}
               />
             </CardContent>
           </Card>
@@ -187,8 +215,8 @@ const Settings = () => {
             </CardHeader>
             <CardContent>
               <PixelTrackingSettings
-                settings={{}}
-                onUpdate={() => {}}
+                settings={settings || {}}
+                onUpdate={handleSettingsUpdate}
               />
             </CardContent>
           </Card>
@@ -196,8 +224,8 @@ const Settings = () => {
 
         <TabsContent value="seo" className="space-y-6">
           <SEOSettings
-            settings={{}}
-            onUpdate={() => {}}
+            settings={settings || {}}
+            onUpdate={handleSettingsUpdate}
           />
         </TabsContent>
 
