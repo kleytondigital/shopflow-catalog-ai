@@ -29,6 +29,7 @@ import ProtectedPaymentSettings from "@/components/settings/ProtectedPaymentSett
 import ProtectedWhatsAppSettings from "@/components/settings/ProtectedWhatsAppSettings";
 import DomainSettings from "@/components/settings/DomainSettings";
 import PixelTrackingSettings from "@/components/settings/PixelTrackingSettings";
+import SEOSettings from "@/components/settings/SEOSettings";
 import SecuritySettings from "@/components/settings/SecuritySettings";
 import BannerManager from "@/components/settings/BannerManager";
 import MinimumPurchaseConfig from "@/components/settings/MinimumPurchaseConfig";
@@ -194,24 +195,10 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="seo" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                SEO e Marketing
-              </CardTitle>
-              <CardDescription>
-                Otimize o SEO do seu catálogo e configure estratégias de marketing
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Conteúdo SEO será implementado aqui */}
-              <div className="text-center py-8 text-muted-foreground">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Configurações de SEO serão implementadas em breve</p>
-              </div>
-            </CardContent>
-          </Card>
+          <SEOSettings
+            settings={{}}
+            onUpdate={() => {}}
+          />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">
