@@ -91,12 +91,14 @@ export const useDomainDetection = () => {
 
         console.log('🔍 Buscando loja por subdomínio:', subdomain);
 
-        const { data, error } = await supabase
+        const response: any = await supabase
           .from('store_settings')
-          .select('*')
+          .select('store_id, subdomain, subdomain_enabled')
           .ilike('subdomain', subdomain)
           .eq('subdomain_enabled', true)
-          .maybeSingle() as any;
+          .maybeSingle();
+
+        const { data, error } = response;
 
         if (error) {
           console.error('❌ Erro ao buscar por subdomínio:', error);
@@ -121,13 +123,15 @@ export const useDomainDetection = () => {
       if (domainType === 'custom_domain') {
         console.log('🔍 Buscando loja por domínio próprio:', host);
 
-        const { data, error } = await supabase
+        const response: any = await supabase
           .from('store_settings')
-          .select('*')
+          .select('store_id, custom_domain, custom_domain_enabled, custom_domain_verified')
           .ilike('custom_domain', host)
           .eq('custom_domain_enabled', true)
           .eq('custom_domain_verified', true)
-          .maybeSingle() as any;
+          .maybeSingle();
+
+        const { data, error } = response;
 
         if (error) {
           console.error('❌ Erro ao buscar por domínio próprio:', error);
