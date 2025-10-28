@@ -75,7 +75,7 @@ const Settings = () => {
           </TabsTrigger>
           <TabsTrigger value="domain" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Domínio</span>
+            <span className="hidden sm:inline">Domínioos</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
@@ -141,7 +141,7 @@ const Settings = () => {
           <ProtectedWhatsAppSettings />
         </TabsContent>
 
-        <TabsContent value="domain" className="space-y-6">
+        <TabsContent value="domains" className="space-y-6">
           {/* DomainSettings agora está em CatalogSettings > Aba Domínios */}
         </TabsContent>
 

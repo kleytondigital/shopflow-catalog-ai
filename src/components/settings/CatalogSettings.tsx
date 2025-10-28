@@ -524,10 +524,10 @@ const CatalogSettings = () => {
             <Search className="h-4 w-4" />
             <span className="hidden sm:inline">SEO</span>
           </TabsTrigger>
-          <TabsTrigger value="domains" className="flex items-center gap-1">
+          {/* <TabsTrigger value="domains" className="flex items-center gap-1">
             <Link2 className="h-4 w-4" />
             <span className="hidden sm:inline">Domínios</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="template" className="space-y-6">
