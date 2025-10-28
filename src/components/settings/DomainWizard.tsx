@@ -21,9 +21,16 @@ import {
   Crown,
   Zap,
   Info,
+  Loader2,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStores } from '@/hooks/useStores';
+import {
+  validateSubdomain,
+  checkSubdomainAvailability,
+} from '@/utils/dnsValidator';
 
 interface DomainWizardProps {
   settings: any;
@@ -51,6 +58,66 @@ const DomainWizard: React.FC<DomainWizardProps> = ({
   const [currentStep, setCurrentStep] = useState<'select' | 'configure'>('select');
   const [subdomainInput, setSubdomainInput] = useState('');
   const [customDomainInput, setCustomDomainInput] = useState('');
+  
+  // Estados para verificação de disponibilidade
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<{
+    available: boolean | null;
+    error: string | null;
+    checked: boolean;
+  }>({ available: null, error: null, checked: false });
+
+  // Função para verificar disponibilidade de subdomínio
+  const checkAvailability = async (subdomain: string) => {
+    if (!subdomain || subdomain.length < 3) {
+      setAvailabilityStatus({ available: null, error: null, checked: false });
+      return;
+    }
+
+    // Validar formato primeiro
+    const validation = validateSubdomain(subdomain);
+    if (!validation.valid) {
+      setAvailabilityStatus({ 
+        available: false, 
+        error: validation.error || 'Formato inválido', 
+        checked: true 
+      });
+      return;
+    }
+
+    setIsCheckingAvailability(true);
+    
+    try {
+      const result = await checkSubdomainAvailability(subdomain, currentStore?.id);
+      
+      setAvailabilityStatus({
+        available: result.available,
+        error: result.error,
+        checked: true
+      });
+    } catch (error) {
+      setAvailabilityStatus({
+        available: false,
+        error: 'Erro ao verificar disponibilidade',
+        checked: true
+      });
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  };
+
+  // Verificar disponibilidade quando o input muda
+  useEffect(() => {
+    if (subdomainInput) {
+      const timeoutId = setTimeout(() => {
+        checkAvailability(subdomainInput);
+      }, 500); // Debounce de 500ms
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setAvailabilityStatus({ available: null, error: null, checked: false });
+    }
+  }, [subdomainInput, currentStore?.id]);
 
   // URL atual baseada no tipo selecionado
   const getCurrentUrl = () => {
@@ -133,20 +200,28 @@ const DomainWizard: React.FC<DomainWizardProps> = ({
       return;
     }
 
-    // Validar formato
-    const isValid = /^[a-z0-9-]+$/.test(subdomainInput);
-    if (!isValid) {
-      toast.error('Use apenas letras minúsculas, números e hífen');
+    // Verificar se já foi validado e está disponível
+    if (!availabilityStatus.checked || !availabilityStatus.available) {
+      if (availabilityStatus.error) {
+        toast.error(availabilityStatus.error);
+      } else {
+        toast.error('Aguarde a verificação de disponibilidade');
+      }
       return;
     }
 
-    // Salvar configurações
-    await onUpdate('subdomain', subdomainInput);
-    await onUpdate('subdomain_enabled', true);
-    await onUpdate('domain_mode', 'subdomain');
+    try {
+      // Salvar configurações
+      await onUpdate('subdomain', subdomainInput);
+      await onUpdate('subdomain_enabled', true);
+      await onUpdate('domain_mode', 'subdomain');
 
-    toast.success('Subdomínio configurado com sucesso!');
-    setCurrentStep('select');
+      toast.success('Subdomínio configurado com sucesso!');
+      setCurrentStep('select');
+    } catch (error) {
+      toast.error('Erro ao configurar subdomínio');
+      console.error('Erro:', error);
+    }
   };
 
   const handleCustomDomainSave = async () => {
@@ -203,25 +278,61 @@ const DomainWizard: React.FC<DomainWizardProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="subdomain-config">Escolha seu Subdomínio</Label>
                   <div className="flex gap-2">
-                    <Input
-                      id="subdomain-config"
-                      placeholder="minhaloja"
-                      value={subdomainInput}
-                      onChange={(e) => {
-                        const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                        setSubdomainInput(value);
-                      }}
-                      className="flex-1"
-                    />
+                    <div className="flex-1 relative">
+                      <Input
+                        id="subdomain-config"
+                        placeholder="minhaloja"
+                        value={subdomainInput}
+                        onChange={(e) => {
+                          const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                          setSubdomainInput(value);
+                        }}
+                        className={`pr-10 ${
+                          availabilityStatus.checked && availabilityStatus.available === false
+                            ? 'border-red-500 focus:border-red-500'
+                            : availabilityStatus.checked && availabilityStatus.available === true
+                            ? 'border-green-500 focus:border-green-500'
+                            : ''
+                        }`}
+                      />
+                      
+                      {/* Ícone de status */}
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {isCheckingAvailability && (
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        )}
+                        {!isCheckingAvailability && availabilityStatus.checked && availabilityStatus.available === true && (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        )}
+                        {!isCheckingAvailability && availabilityStatus.checked && availabilityStatus.available === false && (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+                    
                     <div className="flex items-center px-3 text-sm bg-gray-100 border rounded-md">
                       .aoseudispor.com.br
                     </div>
                   </div>
                   
-                  {subdomainInput && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-sm font-medium text-green-800">
-                        Sua URL será: <code className="bg-green-100 px-1 rounded">
+                  {/* Status de verificação */}
+                  {availabilityStatus.checked && (
+                    <div className={`p-2 rounded-md text-sm ${
+                      availabilityStatus.available 
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                      {availabilityStatus.available 
+                        ? '✅ Subdomínio disponível!'
+                        : `❌ ${availabilityStatus.error}`
+                      }
+                    </div>
+                  )}
+                  
+                  {subdomainInput && availabilityStatus.available && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm font-medium text-blue-800">
+                        Sua URL será: <code className="bg-blue-100 px-1 rounded">
                           https://{subdomainInput}.aoseudispor.com.br
                         </code>
                       </p>
@@ -231,11 +342,25 @@ const DomainWizard: React.FC<DomainWizardProps> = ({
 
                 <Button 
                   onClick={handleSubdomainSave}
-                  disabled={!subdomainInput || subdomainInput.length < 3}
+                  disabled={
+                    !subdomainInput || 
+                    subdomainInput.length < 3 || 
+                    isCheckingAvailability ||
+                    !availabilityStatus.available
+                  }
                   className="w-full"
                 >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Ativar Subdomínio
+                  {isCheckingAvailability ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Ativar Subdomínio
+                    </>
+                  )}
                 </Button>
               </>
             )}

@@ -215,24 +215,44 @@ export const validateSubdomain = (subdomain: string): { valid: boolean; error?: 
 /**
  * Verifica disponibilidade de subdomínio
  */
-export const checkSubdomainAvailability = async (subdomain: string): Promise<{ available: boolean; error: string | null }> => {
+export const checkSubdomainAvailability = async (
+  subdomain: string, 
+  excludeStoreId?: string
+): Promise<{ available: boolean; error: string | null }> => {
   try {
-    const { data, error } = await supabase
+    console.log('🔍 Verificando disponibilidade do subdomínio:', subdomain);
+    
+    let query = supabase
       .from('store_settings')
-      .select('subdomain')
-      .ilike('subdomain', subdomain)
-      .maybeSingle();
+      .select('subdomain, store_id')
+      .ilike('subdomain', subdomain);
+
+    // Excluir a própria loja da verificação  
+    if (excludeStoreId) {
+      query = query.neq('store_id', excludeStoreId);
+    }
+
+    const { data, error } = await (query as any).maybeSingle();
 
     if (error) {
-      console.error('Erro ao verificar disponibilidade:', error);
+      console.error('❌ Erro ao verificar disponibilidade:', error);
       return { available: false, error: error.message };
     }
 
+    const available = !data;
+    
+    if (available) {
+      console.log('✅ Subdomínio disponível:', subdomain);
+    } else {
+      console.log('❌ Subdomínio em uso:', subdomain, 'por loja:', (data as any)?.store_id);
+    }
+
     return {
-      available: !data,
-      error: data ? 'Subdomínio já está em uso' : null,
+      available,
+      error: data ? 'Subdomínio já está sendo usado por outra loja' : null,
     };
   } catch (err) {
+    console.error('💥 Erro ao verificar disponibilidade:', err);
     return {
       available: false,
       error: err instanceof Error ? err.message : 'Erro desconhecido',
