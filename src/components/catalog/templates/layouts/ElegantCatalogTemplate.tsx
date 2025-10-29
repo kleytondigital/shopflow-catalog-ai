@@ -4,7 +4,6 @@ import { CatalogSettingsData } from "@/hooks/useCatalogSettings";
 import CatalogFooter from "@/components/catalog/CatalogFooter";
 import HeroBanner from "@/components/catalog/banners/HeroBanner";
 import PromotionalBanner from "@/components/catalog/banners/PromotionalBanner";
-import ProfessionalSidebar from "@/components/catalog/ProfessionalSidebar";
 import SmartSearch from "@/components/catalog/SmartSearch";
 import { ShoppingCart, Heart, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -110,19 +109,8 @@ const ElegantCatalogTemplate: React.FC<ElegantCatalogTemplateProps> = ({
         {/* Promotional Banners */}
         <PromotionalBanner storeId={storeId} className="mb-10" />
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Professional Sidebar */}
-          <aside className="lg:w-80 flex-shrink-0">
-            <ProfessionalSidebar 
-              storeId={storeId} 
-              store={store}
-              whatsappNumber={whatsappNumber}
-            />
-          </aside>
-
-          {/* Main Content */}
-          <main className="flex-1">{children}</main>
-        </div>
+        {/* Main Content */}
+        <main className="w-full">{children}</main>
       </div>
 
       <CatalogFooter
