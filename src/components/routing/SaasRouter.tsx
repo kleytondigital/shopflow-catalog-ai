@@ -4,6 +4,7 @@ import { getSubdomainInfo, shouldShowCatalog, shouldShowAdmin } from '@/utils/su
 import { useSubdomainStore } from '@/hooks/useSubdomainStore';
 import PublicCatalogPage from '@/pages/PublicCatalogPage';
 import SubdomainCatalogPage from '@/pages/SubdomainCatalogPage';
+import SubdomainProductPage from '@/pages/SubdomainProductPage';
 import { Loader2 } from 'lucide-react';
 
 // Import admin components
@@ -84,7 +85,10 @@ const SubdomainError: React.FC<{ error: string; subdomain: string }> = ({ error,
 const SubdomainCatalogRouter: React.FC = () => {
   return (
     <Routes>
-      {/* All paths lead to catalog for subdomain */}
+      {/* Product page route */}
+      <Route path="/produto/:productId" element={<SubdomainProductPage />} />
+      
+      {/* Main catalog route - must be last */}
       <Route path="/*" element={<SubdomainCatalogPage />} />
     </Routes>
   );
@@ -371,6 +375,10 @@ const MainAppRouter: React.FC = () => {
           </ProtectedRoute>
         } 
       />
+      
+      {/* Legacy catalog routes for backward compatibility */}
+      <Route path="/catalog/:storeSlug" element={<PublicCatalogPage />} />
+      <Route path="/catalog/:storeSlug/produto/:productId" element={<PublicCatalogPage />} />
       
       {/* Catch all - redirect to dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
