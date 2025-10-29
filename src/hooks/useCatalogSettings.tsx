@@ -104,6 +104,8 @@ export interface CatalogSettingsData {
   product_size_chart_default_open?: boolean;
   product_show_care_section?: boolean;
   product_care_section_default_open?: boolean;
+  product_videos_default_open?: boolean;
+  product_testimonials_default_open?: boolean;
   // Pixels e Tracking
   meta_pixel_id?: string;
   meta_pixel_enabled?: boolean;
@@ -351,6 +353,8 @@ export const useCatalogSettings = (storeIdentifier?: string) => {
           product_size_chart_default_open: (data as any).product_size_chart_default_open,
           product_show_care_section: (data as any).product_show_care_section,
           product_care_section_default_open: (data as any).product_care_section_default_open,
+          product_videos_default_open: (data as any).product_videos_default_open,
+          product_testimonials_default_open: (data as any).product_testimonials_default_open,
           // Pixels e Tracking
           meta_pixel_id: (data as any).meta_pixel_id,
           meta_pixel_enabled: (data as any).meta_pixel_enabled,

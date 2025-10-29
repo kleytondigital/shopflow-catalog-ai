@@ -661,6 +661,16 @@ const ProductPage: React.FC<ProductPageProps> = ({
               </div>
             )}
 
+            {/* 🎬 FASE 2: Vídeo do Produto */}
+            {storeSettings?.product_show_videos && product.video_url && (
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <ProductVideoSection
+                  videoUrl={product.video_url}
+                  productName={product.name}
+                />
+              </div>
+            )}
+
             {/* 🎯 FASE 2: Tabela de Medidas Automática - SÓ para calçado e roupa */}
             {storeSettings?.product_show_size_chart &&
              product.product_gender && 
@@ -674,6 +684,16 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   category={product.product_category_type as any}
                   isCollapsible={true}
                   defaultOpen={storeSettings.product_size_chart_default_open || false}
+                />
+              </div>
+            )}
+
+            {/* 💬 FASE 2: Depoimentos de Clientes */}
+            {storeSettings?.product_show_testimonials && (
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <SocialProofTestimonials
+                  testimonials={testimonials}
+                  maxDisplay={storeSettings.product_testimonials_max_display || 3}
                 />
               </div>
             )}
