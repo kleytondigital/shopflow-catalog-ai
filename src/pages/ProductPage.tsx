@@ -65,7 +65,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addItem, items: cartItems, totalAmount, toggleCart } = useCart();
-  const { settings: storeSettings } = useCatalogSettings();
+  // Passar storeIdentifier quando estiver no contexto público
+  const { settings: storeSettings } = useCatalogSettings(
+    isPublicContext && storeContext ? storeContext.id || storeContext.slug : undefined
+  );
   const { trackProductView, trackAddToCart, trackInitiateCheckout } = useConversionTracking();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -84,6 +87,25 @@ const ProductPage: React.FC<ProductPageProps> = ({
     thumbnail_url?: string;
   } | null>(null);
   const [testimonials, setTestimonials] = useState<any[]>([]);
+
+  // Debug: Log das configurações de produto
+  useEffect(() => {
+    if (storeSettings) {
+      console.log("🔧 ProductPage - Configurações carregadas:", {
+        product_show_urgency_badges: storeSettings.product_show_urgency_badges,
+        product_show_social_proof_carousel: storeSettings.product_show_social_proof_carousel,
+        product_show_ratings: storeSettings.product_show_ratings,
+        product_show_trust_section: storeSettings.product_show_trust_section,
+        product_show_videos: storeSettings.product_show_videos,
+        product_show_testimonials: storeSettings.product_show_testimonials,
+        store_id: storeSettings.store_id,
+        isPublicContext,
+        storeContext: storeContext ? { id: storeContext.id, slug: storeContext.slug } : null,
+      });
+    } else {
+      console.warn("⚠️ ProductPage - storeSettings está null/undefined");
+    }
+  }, [storeSettings, isPublicContext, storeContext]);
 
   // Carregar produto
   useEffect(() => {
