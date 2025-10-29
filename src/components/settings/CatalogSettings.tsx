@@ -1,59 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCatalogSettings } from "@/hooks/useCatalogSettings";
-import { useTemplateColors } from "@/hooks/useTemplateColors";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import AdvancedColorSettings from "./AdvancedColorSettings";
-import ShareableLinks from "./ShareableLinks";
-import MobileLayoutSettings from "./MobileLayoutSettings";
-import FooterSettings from "./FooterSettings";
-import OrderBumpSettings from "./OrderBumpSettings";
-import ProductPageSettings from "./ProductPageSettings";
 import {
   Palette,
   Eye,
-  Settings,
-  Save,
-  RotateCw,
-  Monitor,
   Smartphone,
-  Crown,
+  Gift,
   Zap,
   Sparkles,
   Share2,
-  Globe,
-  Gift,
-  Truck,
-  Shield,
-  Star,
   ShoppingBag,
+  ChevronLeft,
+  Monitor,
+  Crown,
+  Settings as SettingsIcon,
+  Globe,
+  Save,
+  CheckCircle2
 } from "lucide-react";
+
+// Importar componentes específicos
+import TemplateSettingsCard from "./cards/TemplateSettingsCard";
+import ProductPageSettings from "./ProductPageSettings";
+import MobileLayoutSettings from "./MobileLayoutSettings";
+import FooterSettings from "./FooterSettings";
+import OrderBumpSettings from "./OrderBumpSettings";
+import ShareableLinks from "./ShareableLinks";
+
+interface ConfigCard {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  badge?: string;
+}
 
 const CatalogSettings = () => {
   const { profile } = useAuth();
   const { settings, loading, updateSettings } = useCatalogSettings();
-  const { resetToTemplateDefaults } = useTemplateColors();
-
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState({
     template_name: "modern",
     show_prices: true,
@@ -61,97 +51,7 @@ const CatalogSettings = () => {
     show_categories: true,
     show_search: true,
     show_filters: true,
-    items_per_page: 12,
-    catalog_title: "",
-    catalog_description: "",
-    primary_color: "#0057FF",
-    secondary_color: "#FF6F00",
-    accent_color: "#8E2DE2",
-    background_color: "#F8FAFC",
-    text_color: "#1E293B",
-    border_color: "#E2E8F0",
-    font_family: "Inter",
-    custom_css: "",
-    seo_keywords: "",
     conversion_mode: "optimized" as "simple" | "optimized",
-    // Estilos de aparência
-    button_style: "modern" as "flat" | "modern" | "rounded",
-    footer_style: "dark" as "dark" | "light" | "gradient",
-    footer_bg_color: "",
-    footer_text_color: "",
-    // Badges do header
-    header_badges_enabled: true,
-    header_badge_fast_delivery: true,
-    header_badge_fast_delivery_text: "Entrega Rápida em 24h",
-    header_badge_free_shipping: true,
-    header_badge_free_shipping_text: "Frete Grátis",
-    header_free_shipping_threshold: 200,
-    header_badge_secure_checkout: true,
-    header_badge_secure_checkout_text: "Compra 100% Segura",
-    header_badge_custom_1: false,
-    header_badge_custom_1_text: "",
-    header_badge_custom_1_icon: "star",
-    // Configurações da Página do Produto
-    product_show_urgency_badges: true,
-    product_show_low_stock_badge: true,
-    product_low_stock_threshold: 10,
-    product_show_best_seller_badge: true,
-    product_show_sales_count: true,
-    product_show_views_count: true,
-    product_show_free_shipping_badge: true,
-    product_show_fast_delivery_badge: true,
-    product_show_social_proof_carousel: true,
-    product_social_proof_autorotate: true,
-    product_social_proof_interval: 4000,
-    product_show_ratings: true,
-    product_show_rating_distribution: true,
-    product_show_trust_section: true,
-    product_trust_free_shipping: true,
-    product_trust_money_back: true,
-    product_trust_fast_delivery: true,
-    product_trust_secure_payment: true,
-    product_trust_delivery_days: "2-5",
-    product_trust_return_days: 7,
-    product_show_videos: true,
-    product_show_testimonials: true,
-    product_testimonials_max_display: 3,
-    product_show_size_chart: true,
-    product_size_chart_default_open: false,
-    product_show_care_section: true,
-    product_care_section_default_open: false,
-    // Pixels e Tracking
-    meta_pixel_id: "",
-    meta_pixel_enabled: false,
-    meta_pixel_access_token: "",
-    ga4_measurement_id: "",
-    ga4_enabled: false,
-    ga4_api_secret: "",
-    google_ads_id: "",
-    google_ads_enabled: false,
-    google_ads_conversion_label: "",
-    tiktok_pixel_id: "",
-    tiktok_pixel_enabled: false,
-    tracking_pageview: true,
-    tracking_view_content: true,
-    tracking_add_to_cart: true,
-    tracking_initiate_checkout: true,
-    tracking_add_payment_info: true,
-    tracking_purchase: true,
-    tracking_search: true,
-    tracking_view_category: true,
-    tracking_advanced_matching: false,
-    tracking_auto_events: true,
-    tracking_debug_mode: false,
-    // Domínios
-    subdomain_enabled: false,
-    subdomain: "",
-    custom_domain: "",
-    custom_domain_enabled: false,
-    custom_domain_verified: false,
-    custom_domain_verification_token: "",
-    custom_domain_verified_at: "",
-    domain_mode: "slug" as "slug" | "subdomain" | "custom_domain",
-    ssl_cert_status: "pending" as "pending" | "active" | "failed",
   });
 
   useEffect(() => {
@@ -163,97 +63,7 @@ const CatalogSettings = () => {
         show_categories: settings.allow_categories_filter !== false,
         show_search: true,
         show_filters: settings.allow_price_filter !== false,
-        items_per_page: 12,
-        catalog_title: settings.seo_title || "",
-        catalog_description: settings.seo_description || "",
-        primary_color: settings.primary_color || "#0057FF",
-        secondary_color: settings.secondary_color || "#FF6F00",
-        accent_color: settings.accent_color || "#8E2DE2",
-        background_color: settings.background_color || "#F8FAFC",
-        text_color: settings.text_color || "#1E293B",
-        border_color: settings.border_color || "#E2E8F0",
-        font_family: "Inter",
-        custom_css: "",
-        seo_keywords: settings.seo_keywords || "",
         conversion_mode: settings.conversion_mode || "optimized",
-        // Estilos de aparência
-        button_style: (settings.button_style as any) || "modern",
-        footer_style: (settings.footer_style as any) || "dark",
-        footer_bg_color: (settings.footer_bg_color as any) || "",
-        footer_text_color: (settings.footer_text_color as any) || "",
-        // Badges do header
-        header_badges_enabled: (settings.header_badges_enabled as any) !== false,
-        header_badge_fast_delivery: (settings.header_badge_fast_delivery as any) !== false,
-        header_badge_fast_delivery_text: (settings.header_badge_fast_delivery_text as any) || "Entrega Rápida em 24h",
-        header_badge_free_shipping: (settings.header_badge_free_shipping as any) !== false,
-        header_badge_free_shipping_text: (settings.header_badge_free_shipping_text as any) || "Frete Grátis",
-        header_free_shipping_threshold: (settings.header_free_shipping_threshold as any) || 200,
-        header_badge_secure_checkout: (settings.header_badge_secure_checkout as any) !== false,
-        header_badge_secure_checkout_text: (settings.header_badge_secure_checkout_text as any) || "Compra 100% Segura",
-        header_badge_custom_1: (settings.header_badge_custom_1 as any) || false,
-        header_badge_custom_1_text: (settings.header_badge_custom_1_text as any) || "",
-        header_badge_custom_1_icon: (settings.header_badge_custom_1_icon as any) || "star",
-        // Configurações da Página do Produto
-        product_show_urgency_badges: (settings.product_show_urgency_badges as any) !== false,
-        product_show_low_stock_badge: (settings.product_show_low_stock_badge as any) !== false,
-        product_low_stock_threshold: (settings.product_low_stock_threshold as any) || 10,
-        product_show_best_seller_badge: (settings.product_show_best_seller_badge as any) !== false,
-        product_show_sales_count: (settings.product_show_sales_count as any) !== false,
-        product_show_views_count: (settings.product_show_views_count as any) !== false,
-        product_show_free_shipping_badge: (settings.product_show_free_shipping_badge as any) !== false,
-        product_show_fast_delivery_badge: (settings.product_show_fast_delivery_badge as any) !== false,
-        product_show_social_proof_carousel: (settings.product_show_social_proof_carousel as any) !== false,
-        product_social_proof_autorotate: (settings.product_social_proof_autorotate as any) !== false,
-        product_social_proof_interval: (settings.product_social_proof_interval as any) || 4000,
-        product_show_ratings: (settings.product_show_ratings as any) !== false,
-        product_show_rating_distribution: (settings.product_show_rating_distribution as any) !== false,
-        product_show_trust_section: (settings.product_show_trust_section as any) !== false,
-        product_trust_free_shipping: (settings.product_trust_free_shipping as any) !== false,
-        product_trust_money_back: (settings.product_trust_money_back as any) !== false,
-        product_trust_fast_delivery: (settings.product_trust_fast_delivery as any) !== false,
-        product_trust_secure_payment: (settings.product_trust_secure_payment as any) !== false,
-        product_trust_delivery_days: (settings.product_trust_delivery_days as any) || "2-5",
-        product_trust_return_days: (settings.product_trust_return_days as any) || 7,
-        product_show_videos: (settings.product_show_videos as any) !== false,
-        product_show_testimonials: (settings.product_show_testimonials as any) !== false,
-        product_testimonials_max_display: (settings.product_testimonials_max_display as any) || 3,
-        product_show_size_chart: (settings.product_show_size_chart as any) !== false,
-        product_size_chart_default_open: (settings.product_size_chart_default_open as any) || false,
-        product_show_care_section: (settings.product_show_care_section as any) !== false,
-        product_care_section_default_open: (settings.product_care_section_default_open as any) || false,
-        // Pixels e Tracking
-        meta_pixel_id: (settings.meta_pixel_id as any) || "",
-        meta_pixel_enabled: (settings.meta_pixel_enabled as any) || false,
-        meta_pixel_access_token: (settings.meta_pixel_access_token as any) || "",
-        ga4_measurement_id: (settings.ga4_measurement_id as any) || "",
-        ga4_enabled: (settings.ga4_enabled as any) || false,
-        ga4_api_secret: (settings.ga4_api_secret as any) || "",
-        google_ads_id: (settings.google_ads_id as any) || "",
-        google_ads_enabled: (settings.google_ads_enabled as any) || false,
-        google_ads_conversion_label: (settings.google_ads_conversion_label as any) || "",
-        tiktok_pixel_id: (settings.tiktok_pixel_id as any) || "",
-        tiktok_pixel_enabled: (settings.tiktok_pixel_enabled as any) || false,
-        tracking_pageview: (settings.tracking_pageview as any) !== false,
-        tracking_view_content: (settings.tracking_view_content as any) !== false,
-        tracking_add_to_cart: (settings.tracking_add_to_cart as any) !== false,
-        tracking_initiate_checkout: (settings.tracking_initiate_checkout as any) !== false,
-        tracking_add_payment_info: (settings.tracking_add_payment_info as any) !== false,
-        tracking_purchase: (settings.tracking_purchase as any) !== false,
-        tracking_search: (settings.tracking_search as any) !== false,
-        tracking_view_category: (settings.tracking_view_category as any) !== false,
-        tracking_advanced_matching: (settings.tracking_advanced_matching as any) || false,
-        tracking_auto_events: (settings.tracking_auto_events as any) !== false,
-        tracking_debug_mode: (settings.tracking_debug_mode as any) || false,
-        // Domínios
-        subdomain_enabled: (settings.subdomain_enabled as any) || false,
-        subdomain: (settings.subdomain as any) || "",
-        custom_domain: (settings.custom_domain as any) || "",
-        custom_domain_enabled: (settings.custom_domain_enabled as any) || false,
-        custom_domain_verified: (settings.custom_domain_verified as any) || false,
-        custom_domain_verification_token: (settings.custom_domain_verification_token as any) || "",
-        custom_domain_verified_at: (settings.custom_domain_verified_at as any) || "",
-        domain_mode: (settings.domain_mode as any) || "slug",
-        ssl_cert_status: (settings.ssl_cert_status as any) || "pending",
       });
     }
   }, [settings]);
@@ -265,159 +75,16 @@ const CatalogSettings = () => {
       show_stock: localSettings.show_stock,
       allow_categories_filter: localSettings.show_categories,
       allow_price_filter: localSettings.show_filters,
-      seo_title: localSettings.catalog_title,
-      seo_description: localSettings.catalog_description,
-      seo_keywords: localSettings.seo_keywords,
-      primary_color: localSettings.primary_color,
-      secondary_color: localSettings.secondary_color,
-      accent_color: localSettings.accent_color,
-      background_color: localSettings.background_color,
-      text_color: localSettings.text_color,
-      border_color: localSettings.border_color,
       conversion_mode: localSettings.conversion_mode,
-      // Estilos de aparência
-      button_style: localSettings.button_style,
-      footer_style: localSettings.footer_style,
-      footer_bg_color: localSettings.footer_bg_color || null,
-      footer_text_color: localSettings.footer_text_color || null,
-      // Badges do header
-      header_badges_enabled: localSettings.header_badges_enabled,
-      header_badge_fast_delivery: localSettings.header_badge_fast_delivery,
-      header_badge_fast_delivery_text: localSettings.header_badge_fast_delivery_text,
-      header_badge_free_shipping: localSettings.header_badge_free_shipping,
-      header_badge_free_shipping_text: localSettings.header_badge_free_shipping_text,
-      header_free_shipping_threshold: localSettings.header_free_shipping_threshold,
-      header_badge_secure_checkout: localSettings.header_badge_secure_checkout,
-      header_badge_secure_checkout_text: localSettings.header_badge_secure_checkout_text,
-      header_badge_custom_1: localSettings.header_badge_custom_1,
-      header_badge_custom_1_text: localSettings.header_badge_custom_1_text || null,
-      header_badge_custom_1_icon: localSettings.header_badge_custom_1_icon,
-      // Página do Produto
-      product_show_urgency_badges: localSettings.product_show_urgency_badges,
-      product_show_low_stock_badge: localSettings.product_show_low_stock_badge,
-      product_low_stock_threshold: localSettings.product_low_stock_threshold,
-      product_show_best_seller_badge: localSettings.product_show_best_seller_badge,
-      product_show_sales_count: localSettings.product_show_sales_count,
-      product_show_views_count: localSettings.product_show_views_count,
-      product_show_free_shipping_badge: localSettings.product_show_free_shipping_badge,
-      product_show_fast_delivery_badge: localSettings.product_show_fast_delivery_badge,
-      product_show_social_proof_carousel: localSettings.product_show_social_proof_carousel,
-      product_social_proof_autorotate: localSettings.product_social_proof_autorotate,
-      product_social_proof_interval: localSettings.product_social_proof_interval,
-      product_show_ratings: localSettings.product_show_ratings,
-      product_show_rating_distribution: localSettings.product_show_rating_distribution,
-      product_show_trust_section: localSettings.product_show_trust_section,
-      product_trust_free_shipping: localSettings.product_trust_free_shipping,
-      product_trust_money_back: localSettings.product_trust_money_back,
-      product_trust_fast_delivery: localSettings.product_trust_fast_delivery,
-      product_trust_secure_payment: localSettings.product_trust_secure_payment,
-      product_trust_delivery_days: localSettings.product_trust_delivery_days,
-      product_trust_return_days: localSettings.product_trust_return_days,
-      product_show_videos: localSettings.product_show_videos,
-      product_show_testimonials: localSettings.product_show_testimonials,
-      product_testimonials_max_display: localSettings.product_testimonials_max_display,
-      product_show_size_chart: localSettings.product_show_size_chart,
-      product_size_chart_default_open: localSettings.product_size_chart_default_open,
-      product_show_care_section: localSettings.product_show_care_section,
-      product_care_section_default_open: localSettings.product_care_section_default_open,
-      // Pixels e Tracking
-      meta_pixel_id: localSettings.meta_pixel_id || null,
-      meta_pixel_enabled: localSettings.meta_pixel_enabled,
-      meta_pixel_access_token: localSettings.meta_pixel_access_token || null,
-      ga4_measurement_id: localSettings.ga4_measurement_id || null,
-      ga4_enabled: localSettings.ga4_enabled,
-      ga4_api_secret: localSettings.ga4_api_secret || null,
-      google_ads_id: localSettings.google_ads_id || null,
-      google_ads_enabled: localSettings.google_ads_enabled,
-      google_ads_conversion_label: localSettings.google_ads_conversion_label || null,
-      tiktok_pixel_id: localSettings.tiktok_pixel_id || null,
-      tiktok_pixel_enabled: localSettings.tiktok_pixel_enabled,
-      tracking_pageview: localSettings.tracking_pageview,
-      tracking_view_content: localSettings.tracking_view_content,
-      tracking_add_to_cart: localSettings.tracking_add_to_cart,
-      tracking_initiate_checkout: localSettings.tracking_initiate_checkout,
-      tracking_add_payment_info: localSettings.tracking_add_payment_info,
-      tracking_purchase: localSettings.tracking_purchase,
-      tracking_search: localSettings.tracking_search,
-      tracking_view_category: localSettings.tracking_view_category,
-      tracking_advanced_matching: localSettings.tracking_advanced_matching,
-      tracking_auto_events: localSettings.tracking_auto_events,
-      tracking_debug_mode: localSettings.tracking_debug_mode,
-      // Domínios
-      subdomain_enabled: localSettings.subdomain_enabled,
-      subdomain: localSettings.subdomain || null,
-      custom_domain: localSettings.custom_domain || null,
-      custom_domain_enabled: localSettings.custom_domain_enabled,
-      custom_domain_verified: localSettings.custom_domain_verified,
-      custom_domain_verification_token: localSettings.custom_domain_verification_token || null,
-      custom_domain_verified_at: localSettings.custom_domain_verified_at || null,
-      domain_mode: localSettings.domain_mode,
-      ssl_cert_status: localSettings.ssl_cert_status,
-    } as any; // Type assertion para novos campos
-
-    const result = await updateSettings(updates);
-    if (result.data && !result.error) {
-      toast.success("Configurações do catálogo salvas com sucesso!");
-    } else {
-      toast.error(
-        "Erro ao salvar configurações: " +
-          (result.error?.message || "Erro desconhecido")
-      );
-    }
-  };
-
-  const handleTemplateChange = async (templateName: string) => {
-    const defaultColors = resetToTemplateDefaults(templateName);
-
-    setLocalSettings((prev) => ({
-      ...prev,
-      template_name: templateName,
-      ...defaultColors,
-    }));
-
-    const updates = {
-      template_name: templateName,
-      ...defaultColors,
     };
 
-    const result = await updateSettings(updates);
-    if (result.data && !result.error) {
-      toast.success(`Template "${templateName}" aplicado com cores padrão!`);
+    try {
+      await updateSettings(updates);
+      toast.success("Configurações salvas com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      toast.error("Erro ao salvar configurações");
     }
-  };
-
-  const handleReset = () => {
-    const defaultColors = resetToTemplateDefaults(localSettings.template_name);
-    setLocalSettings((prev) => ({
-      ...prev,
-      ...defaultColors,
-      show_prices: true,
-      show_stock: true,
-      show_categories: true,
-      show_search: true,
-      show_filters: true,
-      items_per_page: 12,
-      catalog_title: "",
-      catalog_description: "",
-      seo_keywords: "",
-    }));
-    toast.info("Configurações resetadas para o padrão!");
-  };
-
-  const handleColorChange = (colors: any) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      ...colors,
-    }));
-  };
-
-  const handleColorReset = () => {
-    const defaultColors = resetToTemplateDefaults(localSettings.template_name);
-    setLocalSettings((prev) => ({
-      ...prev,
-      ...defaultColors,
-    }));
-    toast.success("Cores resetadas para o padrão do template!");
   };
 
   const templates = [
@@ -457,11 +124,165 @@ const CatalogSettings = () => {
       value: "industrial",
       label: "Industrial",
       description: "Robusto e profissional",
-      icon: Settings,
+      icon: SettingsIcon,
       colors: ["#475569", "#F59E0B", "#DC2626"],
       features: ["Visual metálico", "Bordas definidas", "Estilo corporativo"],
     },
   ];
+
+  const configCards: ConfigCard[] = [
+    {
+      id: "template",
+      title: "Template",
+      description: "Escolha o visual e layout do seu catálogo",
+      icon: <Palette className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-purple-500 to-pink-500",
+      badge: "Essencial"
+    },
+    {
+      id: "display",
+      title: "Exibição",
+      description: "Configure o que será mostrado no catálogo",
+      icon: <Eye className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-blue-500 to-cyan-500"
+    },
+    {
+      id: "appearance",
+      title: "Aparência",
+      description: "Personalize cores, fontes e estilo visual",
+      icon: <Sparkles className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-amber-500 to-orange-500"
+    },
+    {
+      id: "product",
+      title: "Produto",
+      description: "Configurações das páginas de produtos",
+      icon: <ShoppingBag className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-green-500 to-emerald-500"
+    },
+    {
+      id: "mobile",
+      title: "Mobile",
+      description: "Otimizações para dispositivos móveis",
+      icon: <Smartphone className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-indigo-500 to-purple-500"
+    },
+    {
+      id: "footer",
+      title: "Footer",
+      description: "Configure o rodapé do catálogo",
+      icon: <Globe className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-gray-600 to-gray-800"
+    },
+    {
+      id: "orderbumps",
+      title: "Order Bumps",
+      description: "Ofertas especiais e produtos relacionados",
+      icon: <Gift className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-red-500 to-pink-500",
+      badge: "Pro"
+    },
+    {
+      id: "sharing",
+      title: "Links",
+      description: "Links compartilháveis do catálogo",
+      icon: <Share2 className="h-5 w-5 text-white" />,
+      color: "bg-gradient-to-br from-teal-500 to-cyan-500"
+    }
+  ];
+
+  const renderCardContent = () => {
+    switch (selectedCard) {
+      case "template":
+        return (
+          <TemplateSettingsCard
+            templates={templates}
+            selectedTemplate={localSettings.template_name}
+            onTemplateChange={(value) => 
+              setLocalSettings(prev => ({ ...prev, template_name: value }))
+            }
+          />
+        );
+      case "product":
+        return (
+          <ProductPageSettings 
+            settings={settings || {}}
+            onUpdate={(field, value) => console.log('Update:', field, value)}
+          />
+        );
+      case "mobile":
+        return <MobileLayoutSettings />;
+      case "footer":
+        return <FooterSettings />;
+      case "orderbumps":
+        return <OrderBumpSettings />;
+      case "sharing":
+        return <ShareableLinks />;
+      case "display":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Exibição</CardTitle>
+                <CardDescription>
+                  Configure o que será mostrado no catálogo público
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <span>Mostrar Preços</span>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.show_prices}
+                      onChange={(e) => 
+                        setLocalSettings(prev => ({ ...prev, show_prices: e.target.checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Mostrar Estoque</span>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.show_stock}
+                      onChange={(e) => 
+                        setLocalSettings(prev => ({ ...prev, show_stock: e.target.checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Filtro por Categorias</span>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.show_categories}
+                      onChange={(e) => 
+                        setLocalSettings(prev => ({ ...prev, show_categories: e.target.checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Filtro por Preço</span>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.show_filters}
+                      onChange={(e) => 
+                        setLocalSettings(prev => ({ ...prev, show_filters: e.target.checked }))
+                      }
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Componente em desenvolvimento...</p>
+          </div>
+        );
+    }
+  };
 
   if (loading) {
     return (
@@ -471,725 +292,117 @@ const CatalogSettings = () => {
     );
   }
 
+  // Vista detalhada do card
+  if (selectedCard) {
+    const card = configCards.find(c => c.id === selectedCard);
+    
+    return (
+      <div className="space-y-6">
+        {/* Botão Voltar */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => setSelectedCard(null)}
+            className="flex items-center gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Voltar para Configurações
+          </Button>
+
+          <Button onClick={handleSave} className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            Salvar Alterações
+          </Button>
+        </div>
+
+        {/* Header do Card */}
+        {card && (
+          <div className="flex items-center gap-3 pb-4 border-b">
+            <div className={`p-3 rounded-lg ${card.color}`}>
+              {card.icon}
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                {card.title}
+                {card.badge && (
+                  <Badge variant="secondary">{card.badge}</Badge>
+                )}
+              </h3>
+              <p className="text-sm text-gray-600">{card.description}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Conteúdo do Card */}
+        {renderCardContent()}
+      </div>
+    );
+  }
+
+  // Vista principal com cards
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="template" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-13">
-          <TabsTrigger value="template" className="flex items-center gap-1">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Template</span>
-          </TabsTrigger>
-          <TabsTrigger value="display" className="flex items-center gap-1">
-            <Eye className="h-4 w-4" />
-            <span className="hidden sm:inline">Exibição</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-1">
-            <Zap className="h-4 w-4" />
-            <span className="hidden sm:inline">Aparência</span>
-          </TabsTrigger>
-          <TabsTrigger value="product-page" className="flex items-center gap-1">
-            <ShoppingBag className="h-4 w-4" />
-            <span className="hidden sm:inline">Produto</span>
-          </TabsTrigger>
-          <TabsTrigger value="mobile" className="flex items-center gap-1">
-            <Smartphone className="h-4 w-4" />
-            <span className="hidden sm:inline">Mobile</span>
-          </TabsTrigger>
-          <TabsTrigger value="colors" className="flex items-center gap-1">
-            <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline">Cores</span>
-          </TabsTrigger>
-          <TabsTrigger value="footer" className="flex items-center gap-1">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Footer</span>
-          </TabsTrigger>
-          <TabsTrigger value="orderbumps" className="flex items-center gap-1">
-            <Gift className="h-4 w-4" />
-            <span className="hidden sm:inline">Order Bumps</span>
-          </TabsTrigger>
-          <TabsTrigger value="sharing" className="flex items-center gap-1">
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Links</span>
-          </TabsTrigger>
-          {/* <TabsTrigger value="domains" className="flex items-center gap-1">
-            <Link2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Domínios</span>
-          </TabsTrigger> */}
-        </TabsList>
-
-        <TabsContent value="template" className="space-y-6">
-          {/* Template Selection with Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Template do Catálogo
-              </CardTitle>
-              <CardDescription>
-                Escolha o template visual que melhor representa sua marca. O
-                template será aplicado a todo o catálogo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {templates.map((template) => {
-                  const IconComponent = template.icon;
-                  return (
-                    <Card
-                      key={template.value}
-                      className={`cursor-pointer transition-all border-2 hover:shadow-lg ${
-                        localSettings.template_name === template.value
-                          ? "border-blue-500 bg-blue-50 shadow-md"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => handleTemplateChange(template.value)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`p-2 rounded-lg ${
-                                  localSettings.template_name === template.value
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-100"
-                                }`}
-                              >
-                                <IconComponent size={20} />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-lg">
-                                  {template.label}
-                                </h4>
-                                <p className="text-sm text-gray-600">
-                                  {template.description}
-                                </p>
-                              </div>
-                            </div>
-                            {localSettings.template_name === template.value && (
-                              <Badge className="bg-blue-500">
-                                <Sparkles size={12} className="mr-1" />
-                                Ativo
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Color Preview */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              Paleta:
-                            </span>
-                            {template.colors.map((color, index) => (
-                              <div
-                                key={index}
-                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
-                          </div>
-
-                          {/* Features */}
-                          <div className="space-y-2">
-                            <span className="text-xs text-gray-500 font-medium">
-                              Características:
-                            </span>
-                            <div className="flex flex-wrap gap-1">
-                              {template.features.map((feature, index) => (
-                                <Badge
-                                  key={index}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {feature}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="display" className="space-y-6">
-          {/* Appearance Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Configurações de Exibição
-              </CardTitle>
-              <CardDescription>
-                Configure o que será exibido em seu catálogo
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Elementos Visuais</h4>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-prices">Exibir Preços</Label>
-                    <Switch
-                      id="show-prices"
-                      checked={localSettings.show_prices}
-                      onCheckedChange={(checked) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          show_prices: checked,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-stock">Exibir Estoque</Label>
-                    <Switch
-                      id="show-stock"
-                      checked={localSettings.show_stock}
-                      onCheckedChange={(checked) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          show_stock: checked,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-categories">Exibir Categorias</Label>
-                    <Switch
-                      id="show-categories"
-                      checked={localSettings.show_categories}
-                      onCheckedChange={(checked) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          show_categories: checked,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">Funcionalidades</h4>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-search">Barra de Pesquisa</Label>
-                    <Switch
-                      id="show-search"
-                      checked={localSettings.show_search}
-                      onCheckedChange={(checked) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          show_search: checked,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-filters">Filtros de Produto</Label>
-                    <Switch
-                      id="show-filters"
-                      checked={localSettings.show_filters}
-                      onCheckedChange={(checked) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          show_filters: checked,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="conversion-mode">Modo de Conversão</Label>
-                    <Select
-                      value={localSettings.conversion_mode}
-                      onValueChange={(value: "simple" | "optimized") =>
-                        setLocalSettings({
-                          ...localSettings,
-                          conversion_mode: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger id="conversion-mode">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="simple">
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Modo Simples</div>
-                              <div className="text-xs text-gray-500">Interface básica e limpa</div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="optimized">
-                          <div className="flex items-center gap-2">
-                            <Zap className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Conversão Ativa</div>
-                              <div className="text-xs text-gray-500">Com badges, avaliações e urgência</div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      {localSettings.conversion_mode === "optimized" 
-                        ? "✨ Modo otimizado com elementos de conversão: badges de urgência, avaliações, timer de ofertas e mais."
-                        : "👁️ Modo simples com interface básica sem elementos de conversão adicionais."
-                      }
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="items-per-page">Itens por Página</Label>
-                    <Select
-                      value={localSettings.items_per_page.toString()}
-                      onValueChange={(value) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          items_per_page: parseInt(value),
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="8">8 itens</SelectItem>
-                        <SelectItem value="12">12 itens</SelectItem>
-                        <SelectItem value="16">16 itens</SelectItem>
-                        <SelectItem value="24">24 itens</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="appearance" className="space-y-6">
-          {/* Estilo de Botões */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Estilo de Botões
-              </CardTitle>
-              <CardDescription>
-                Escolha o estilo dos botões que melhor combina com sua marca
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Flat */}
-                <Card 
-                  className={`cursor-pointer transition-all ${
-                    localSettings.button_style === 'flat' 
-                      ? 'ring-2 ring-primary shadow-lg' 
-                      : 'hover:shadow-lg'
-                  }`}
-                  onClick={() => setLocalSettings({ ...localSettings, button_style: 'flat' })}
-                >
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        Flat
-                        {localSettings.button_style === 'flat' && (
-                          <Badge className="text-xs">Selecionado</Badge>
-                        )}
-                      </h4>
-                      <p className="text-xs text-gray-500">Minimalista sem sombras</p>
-                      <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 bg-primary text-white text-sm rounded" style={{borderRadius: '4px', boxShadow: 'none'}}>
-                          Exemplo
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Modern */}
-                <Card 
-                  className={`cursor-pointer transition-all ${
-                    localSettings.button_style === 'modern' 
-                      ? 'ring-2 ring-primary shadow-lg' 
-                      : 'hover:shadow-lg'
-                  }`}
-                  onClick={() => setLocalSettings({ ...localSettings, button_style: 'modern' })}
-                >
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        Modern
-                        {localSettings.button_style === 'modern' && (
-                          <Badge className="text-xs">Selecionado</Badge>
-                        )}
-                      </h4>
-                      <p className="text-xs text-gray-500">Arredondado com sombras</p>
-                      <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 bg-primary text-white text-sm rounded-lg shadow-md">
-                          Exemplo
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Rounded */}
-                <Card 
-                  className={`cursor-pointer transition-all ${
-                    localSettings.button_style === 'rounded' 
-                      ? 'ring-2 ring-primary shadow-lg' 
-                      : 'hover:shadow-lg'
-                  }`}
-                  onClick={() => setLocalSettings({ ...localSettings, button_style: 'rounded' })}
-                >
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        Rounded
-                        {localSettings.button_style === 'rounded' && (
-                          <Badge className="text-xs">Selecionado</Badge>
-                        )}
-                      </h4>
-                      <p className="text-xs text-gray-500">Muito arredondado</p>
-                      <div className="flex items-center gap-2">
-                        <button className="px-6 py-3 bg-primary text-white text-sm rounded-full shadow-lg">
-                          Exemplo
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Header Badges */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Badges no Header
-              </CardTitle>
-              <CardDescription>
-                Gatilhos de urgência e conversão no topo do catálogo - Configure individualmente quais mostrar
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Toggle geral */}
-              <div className="flex items-center justify-between pb-4 border-b">
-                <div>
-                  <Label htmlFor="header-badges-master">Exibir Badges no Header</Label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Ativar/desativar todos os badges de conversão
-                  </p>
-                </div>
-                <Switch 
-                  id="header-badges-master" 
-                  checked={localSettings.header_badges_enabled}
-                  onCheckedChange={(checked) => 
-                    setLocalSettings({ ...localSettings, header_badges_enabled: checked })
-                  }
-                />
-              </div>
-
-              {/* Badge: Entrega Rápida */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-green-700" />
-                    <Label htmlFor="badge-fast-delivery">Entrega Rápida</Label>
-                  </div>
-                  <Switch 
-                    id="badge-fast-delivery" 
-                    checked={localSettings.header_badge_fast_delivery}
-                    onCheckedChange={(checked) =>
-                      setLocalSettings({ ...localSettings, header_badge_fast_delivery: checked })
-                    }
-                  />
-                </div>
-                <div className="ml-6">
-                  <Label htmlFor="badge-fast-delivery-text" className="text-xs text-gray-500">
-                    Texto Personalizado
-                  </Label>
-                  <Input
-                    id="badge-fast-delivery-text"
-                    placeholder="Entrega Rápida em 24h"
-                    className="mt-1"
-                    value={localSettings.header_badge_fast_delivery_text}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, header_badge_fast_delivery_text: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Badge: Frete Grátis */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-blue-700" />
-                    <Label htmlFor="badge-free-shipping">Frete Grátis</Label>
-                  </div>
-                  <Switch 
-                    id="badge-free-shipping" 
-                    checked={localSettings.header_badge_free_shipping}
-                    onCheckedChange={(checked) =>
-                      setLocalSettings({ ...localSettings, header_badge_free_shipping: checked })
-                    }
-                  />
-                </div>
-                <div className="ml-6 space-y-2">
-                  <div>
-                    <Label htmlFor="badge-free-shipping-text" className="text-xs text-gray-500">
-                      Texto Personalizado
-                    </Label>
-                    <Input
-                      id="badge-free-shipping-text"
-                      placeholder="Frete Grátis"
-                      className="mt-1"
-                      value={localSettings.header_badge_free_shipping_text}
-                      onChange={(e) =>
-                        setLocalSettings({ ...localSettings, header_badge_free_shipping_text: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="free-shipping-threshold" className="text-xs text-gray-500">
-                      Valor Mínimo (deixe 0 para não mostrar)
-                    </Label>
-                    <Input
-                      id="free-shipping-threshold"
-                      type="number"
-                      placeholder="200.00"
-                      step="0.01"
-                      className="mt-1"
-                      value={localSettings.header_free_shipping_threshold}
-                      onChange={(e) =>
-                        setLocalSettings({ ...localSettings, header_free_shipping_threshold: parseFloat(e.target.value) || 0 })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Badge: Compra Segura */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-purple-700" />
-                    <Label htmlFor="badge-secure-checkout">Compra Segura</Label>
-                  </div>
-                  <Switch 
-                    id="badge-secure-checkout" 
-                    checked={localSettings.header_badge_secure_checkout}
-                    onCheckedChange={(checked) =>
-                      setLocalSettings({ ...localSettings, header_badge_secure_checkout: checked })
-                    }
-                  />
-                </div>
-                <div className="ml-6">
-                  <Label htmlFor="badge-secure-checkout-text" className="text-xs text-gray-500">
-                    Texto Personalizado
-                  </Label>
-                  <Input
-                    id="badge-secure-checkout-text"
-                    placeholder="Compra 100% Segura"
-                    className="mt-1"
-                    value={localSettings.header_badge_secure_checkout_text}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, header_badge_secure_checkout_text: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Badge Customizado */}
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-orange-700" />
-                    <Label htmlFor="badge-custom-1">Badge Customizado</Label>
-                  </div>
-                  <Switch 
-                    id="badge-custom-1" 
-                    checked={localSettings.header_badge_custom_1}
-                    onCheckedChange={(checked) =>
-                      setLocalSettings({ ...localSettings, header_badge_custom_1: checked })
-                    }
-                  />
-                </div>
-                <div className="ml-6 space-y-2">
-                  <div>
-                    <Label htmlFor="badge-custom-1-text" className="text-xs text-gray-500">
-                      Texto Personalizado
-                    </Label>
-                    <Input
-                      id="badge-custom-1-text"
-                      placeholder="Ex: Garantia de 30 dias"
-                      className="mt-1"
-                      value={localSettings.header_badge_custom_1_text}
-                      onChange={(e) =>
-                        setLocalSettings({ ...localSettings, header_badge_custom_1_text: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="badge-custom-1-icon" className="text-xs text-gray-500">
-                      Ícone
-                    </Label>
-                    <Select 
-                      value={localSettings.header_badge_custom_1_icon}
-                      onValueChange={(value) =>
-                        setLocalSettings({ ...localSettings, header_badge_custom_1_icon: value })
-                      }
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="star">⭐ Estrela</SelectItem>
-                        <SelectItem value="gift">🎁 Presente</SelectItem>
-                        <SelectItem value="trophy">🏆 Troféu</SelectItem>
-                        <SelectItem value="tag">🏷️ Tag</SelectItem>
-                        <SelectItem value="zap">⚡ Raio</SelectItem>
-                        <SelectItem value="truck">🚚 Caminhão</SelectItem>
-                        <SelectItem value="shield">🛡️ Escudo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <p className="text-xs text-gray-500">
-                  💡 <strong>Dica:</strong> Marque apenas os badges que fazem sentido para seu negócio. 
-                  Por exemplo, se você não oferece frete grátis, desmarque essa opção.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Footer Style */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Estilo do Footer
-              </CardTitle>
-              <CardDescription>
-                Personalize a aparência do rodapé
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { value: 'dark', label: 'Escuro', bg: '#1E293B', text: '#FFFFFF' },
-                  { value: 'light', label: 'Claro', bg: '#FFFFFF', text: '#1E293B' },
-                  { value: 'gradient', label: 'Gradiente', bg: 'linear-gradient(135deg, #0057FF, #8E2DE2)', text: '#FFFFFF' },
-                ].map((style) => (
-                  <Card 
-                    key={style.value} 
-                    className={`cursor-pointer transition-all ${
-                      localSettings.footer_style === style.value
-                        ? 'ring-2 ring-primary shadow-lg'
-                        : 'hover:shadow-lg'
-                    }`}
-                    onClick={() => setLocalSettings({ ...localSettings, footer_style: style.value as any })}
-                  >
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <h4 className="font-semibold flex items-center gap-2">
-                          {style.label}
-                          {localSettings.footer_style === style.value && (
-                            <Badge className="text-xs">Selecionado</Badge>
-                          )}
-                        </h4>
-                        <div 
-                          className="h-16 rounded-lg flex items-center justify-center text-sm font-medium"
-                          style={{ 
-                            background: style.bg,
-                            color: style.text 
-                          }}
-                        >
-                          Footer Preview
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="product-page" className="space-y-6">
-          <ProductPageSettings 
-            settings={localSettings}
-            onUpdate={(field, value) => setLocalSettings({ ...localSettings, [field]: value })}
-          />
-        </TabsContent>
-
-
-        <TabsContent value="mobile" className="space-y-6">
-          <MobileLayoutSettings />
-        </TabsContent>
-
-        <TabsContent value="colors" className="space-y-6">
-          <AdvancedColorSettings
-            colors={{
-              primary_color: localSettings.primary_color,
-              secondary_color: localSettings.secondary_color,
-              accent_color: localSettings.accent_color,
-              background_color: localSettings.background_color,
-              text_color: localSettings.text_color,
-              border_color: localSettings.border_color,
-            }}
-            onChange={handleColorChange}
-            onReset={handleColorReset}
-          />
-        </TabsContent>
-
-        <TabsContent value="footer" className="space-y-6">
-          <FooterSettings />
-        </TabsContent>
-
-        <TabsContent value="sharing" className="space-y-6">
-          <ShareableLinks />
-        </TabsContent>
-
-        <TabsContent value="orderbumps" className="space-y-6">
-          <OrderBumpSettings />
-        </TabsContent>
-
-
-      </Tabs>
-
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-end">
-        <Button
-          variant="outline"
-          onClick={handleReset}
-          className="flex items-center gap-2"
-        >
-          <RotateCw className="h-4 w-4" />
-          Resetar
-        </Button>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Configurações do Catálogo</h2>
+          <p className="text-gray-600">Personalize a aparência, funcionamento e compartilhamento do seu catálogo</p>
+        </div>
         <Button onClick={handleSave} className="flex items-center gap-2">
           <Save className="h-4 w-4" />
-          Salvar Configurações
+          Salvar Alterações
         </Button>
+      </div>
+
+      {/* Grid de Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {configCards.map((card) => (
+          <Card
+            key={card.id}
+            className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105"
+            onClick={() => setSelectedCard(card.id)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`p-3 rounded-lg ${card.color}`}>
+                  {card.icon}
+                </div>
+                {card.badge && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {card.badge}
+                  </Badge>
+                )}
+              </div>
+              <CardTitle className="text-base">{card.title}</CardTitle>
+              <CardDescription className="text-sm line-clamp-2">
+                {card.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-primary font-medium">
+                  Configurar
+                </span>
+                <ChevronLeft className="h-4 w-4 text-gray-400 rotate-180" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Dica */}
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-blue-900 mb-1">
+              Configurações Rápidas
+            </p>
+            <p className="text-sm text-blue-700">
+              Clique em qualquer card acima para configurar as opções de forma detalhada. As alterações são salvas automaticamente.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
