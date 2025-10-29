@@ -103,7 +103,14 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-square overflow-hidden rounded-t-xl">
+      <div 
+        className="relative aspect-square overflow-hidden rounded-t-xl cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('🖼️ ElegantTemplate - Click na imagem:', product.name);
+          onQuickView(product);
+        }}
+      >
         {/* Imagem do Produto */}
         <img
           src={
@@ -117,11 +124,11 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         />
 
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
 
         {/* Badge de Destaque - Top Left */}
         {product.is_featured && (
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 pointer-events-none">
             <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-medium shadow-lg">
               ✨ DESTAQUE
             </Badge>
@@ -135,6 +142,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
               ? "opacity-100 transform translate-y-0"
               : "opacity-0 transform translate-y-2"
           }`}
+          onClick={(e) => e.stopPropagation()}
         >
           <Button
             size="sm"
@@ -167,7 +175,7 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
         {hasVariations &&
           product.variations &&
           product.variations.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none">
               <Badge
                 className={`text-xs font-medium shadow-lg ${
                   hasGradeVariations
@@ -188,7 +196,14 @@ const ElegantTemplate: React.FC<ElegantTemplateProps> = ({
       <CardContent className="p-6">
         {/* Nome */}
         <div className="space-y-2 mb-4">
-          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 group-hover:text-amber-600 transition-colors duration-300">
+          <h3 
+            className="font-semibold text-lg text-gray-900 line-clamp-2 group-hover:text-amber-600 transition-colors duration-300 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('📝 ElegantTemplate - Click no título:', product.name);
+              onQuickView(product);
+            }}
+          >
             {product.name}
           </h3>
         </div>

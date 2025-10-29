@@ -107,7 +107,14 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-square overflow-hidden">
+      <div 
+        className="relative aspect-square overflow-hidden cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('🖼️ MinimalTemplate - Click na imagem:', product.name);
+          onQuickView(product);
+        }}
+      >
         {/* Imagem do Produto */}
         <img
           src={
@@ -122,7 +129,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
 
         {/* Badge de Destaque - Top Left */}
         {product.is_featured && (
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-2 left-2 pointer-events-none">
             <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-medium shadow-sm">
               ✨ DESTAQUE
             </Badge>
@@ -134,6 +141,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
           className={`absolute top-2 right-2 flex gap-1 transition-opacity duration-200 ${
             isHovered ? "opacity-100" : "opacity-0"
           }`}
+          onClick={(e) => e.stopPropagation()}
         >
           <Button
             variant="outline"
@@ -168,7 +176,7 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
         {hasVariations &&
           product.variations &&
           product.variations.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 pointer-events-none">
               <Badge
                 variant="outline"
                 className={`text-xs bg-white/90 ${
@@ -190,7 +198,14 @@ const MinimalTemplate: React.FC<MinimalTemplateProps> = ({
       <CardContent className="p-4 space-y-3">
         {/* Nome */}
         <div>
-          <h3 className="font-medium text-gray-900 line-clamp-1">
+          <h3 
+            className="font-medium text-gray-900 line-clamp-1 cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('📝 MinimalTemplate - Click no título:', product.name);
+              onQuickView(product);
+            }}
+          >
             {product.name}
           </h3>
         </div>

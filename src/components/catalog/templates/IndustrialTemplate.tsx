@@ -85,7 +85,14 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
+      <div 
+        className="relative aspect-square overflow-hidden bg-gray-50 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('🖼️ IndustrialTemplate - Click na imagem:', product.name);
+          onQuickView(product);
+        }}
+      >
         {/* Imagem do Produto */}
         <img
           src={
@@ -100,7 +107,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
 
         {/* Badge de Destaque - Top Left */}
         {product.is_featured && (
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 pointer-events-none">
             <Badge className="bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-xs font-bold uppercase tracking-wide shadow-md">
               ✨ DESTAQUE
             </Badge>
@@ -114,6 +121,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
               ? "opacity-100 transform translate-x-0"
               : "opacity-0 transform translate-x-2"
           }`}
+          onClick={(e) => e.stopPropagation()}
         >
           <Button
             variant="secondary"
@@ -148,7 +156,7 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
         {hasVariations &&
           product.variations &&
           product.variations.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 pointer-events-none">
               <Badge
                 className={`text-xs font-bold uppercase tracking-wide ${
                   hasGradeVariations
@@ -164,16 +172,23 @@ const IndustrialTemplate: React.FC<IndustrialTemplateProps> = ({
           )}
 
         {/* Corner Lines - Design Industrial */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gray-400" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-gray-400" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-gray-400" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-gray-400" />
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gray-400 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-gray-400 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-gray-400 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-gray-400 pointer-events-none" />
       </div>
 
       <CardContent className="p-4 bg-gray-50 border-t-2 border-gray-200">
         {/* Nome */}
         <div className="space-y-1 mb-3">
-          <h3 className="font-bold text-gray-900 line-clamp-2 uppercase tracking-wide text-sm group-hover:text-slate-600 transition-colors">
+          <h3 
+            className="font-bold text-gray-900 line-clamp-2 uppercase tracking-wide text-sm group-hover:text-slate-600 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('📝 IndustrialTemplate - Click no título:', product.name);
+              onQuickView(product);
+            }}
+          >
             {product.name}
           </h3>
         </div>

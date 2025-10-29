@@ -103,7 +103,14 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-square overflow-hidden">
+      <div 
+        className="relative aspect-square overflow-hidden cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('🖼️ ModernTemplate - Click na imagem:', product.name);
+          onQuickView(product);
+        }}
+      >
         {/* Imagem do Produto */}
         <img
           src={
@@ -118,7 +125,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
 
         {/* Badge de Destaque - Top Left */}
         {product.is_featured && (
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 pointer-events-none">
             <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-medium shadow-md">
               ✨ DESTAQUE
             </Badge>
@@ -130,6 +137,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
           className={`absolute top-3 right-3 flex gap-1 transition-all duration-200 ${
             isHovered ? "opacity-100" : "opacity-0"
           }`}
+          onClick={(e) => e.stopPropagation()}
         >
           <Button
             variant="secondary"
@@ -164,7 +172,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
         {hasVariations &&
           product.variations &&
           product.variations.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 pointer-events-none">
               <Badge
                 variant="outline"
                 className={`text-xs font-medium shadow-sm ${
@@ -184,7 +192,7 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
 
         {/* Overlay de hover */}
         <div
-          className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${
+          className={`absolute inset-0 bg-black/20 transition-opacity duration-200 pointer-events-none ${
             isHovered ? "opacity-100" : "opacity-0"
           }`}
         />
@@ -193,7 +201,14 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({
       <CardContent className="p-4">
         {/* Nome */}
         <div className="space-y-1 mb-3">
-          <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          <h3 
+            className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('📝 ModernTemplate - Click no título:', product.name);
+              onQuickView(product);
+            }}
+          >
             {product.name}
           </h3>
         </div>
