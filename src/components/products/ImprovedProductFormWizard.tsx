@@ -95,14 +95,14 @@ const ImprovedProductFormWizardContent: React.FC<
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
+      <DialogContent className="w-[95vw] md:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col p-4 md:p-6">
+        <DialogHeader className="pb-2 md:pb-4">
+          <DialogTitle className="text-lg md:text-xl font-semibold">
             {editingProduct ? "Editar Produto" : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 gap-2 md:gap-4">
           {/* Step Navigation */}
           <ImprovedWizardStepNavigation
             steps={navigationSteps}
@@ -111,7 +111,7 @@ const ImprovedProductFormWizardContent: React.FC<
           />
 
           {/* Step Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto px-1 md:px-6 py-2 md:py-4">
             <WizardStepContent
               currentStep={currentStep}
               formData={formData}

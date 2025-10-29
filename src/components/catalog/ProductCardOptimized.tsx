@@ -238,7 +238,10 @@ const ProductCardOptimized: React.FC<ProductCardOptimizedProps> = ({
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         {/* Product Info */}
         <div className="flex-1">
-          <h3 className="font-semibold text-base line-clamp-2 leading-tight mb-2">
+          <h3 
+            className="font-semibold text-base line-clamp-2 leading-tight mb-2 cursor-pointer hover:text-primary transition-colors"
+            onClick={handleViewDetails}
+          >
             {product.name}
           </h3>
           
@@ -337,17 +340,16 @@ const ProductCardOptimized: React.FC<ProductCardOptimizedProps> = ({
             )}
           </Button>
 
-          {hasVariations && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={handleViewDetails}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Ver Detalhes
-            </Button>
-          )}
+          {/* Botão Ver Detalhes sempre disponível */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleViewDetails}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Ver Detalhes
+          </Button>
         </div>
 
         {/* Trust Badges (compactos) */}

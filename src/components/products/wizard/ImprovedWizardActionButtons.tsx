@@ -28,27 +28,41 @@ const ImprovedWizardActionButtons: React.FC<
   isLastStep,
 }) => {
   return (
-    <div className="flex items-center justify-between p-6 border-t bg-gray-50/50">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-0 p-3 md:p-6 border-t bg-gray-50/50">
+      <div className="flex items-center gap-2 md:gap-3 justify-between md:justify-start order-2 md:order-1">
         {/* Previous Button */}
         <Button
           variant="outline"
           onClick={onPrevious}
           disabled={currentStep === 0 || isSaving}
-          className="min-w-[100px]"
+          className="flex-1 md:flex-initial md:min-w-[100px]"
+          size="sm"
         >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Anterior
+          <ChevronLeft className="h-4 w-4 mr-1 md:mr-2" />
+          <span className="hidden sm:inline">Anterior</span>
+          <span className="sm:hidden">Ant</span>
         </Button>
-      </div>
 
-      <div className="flex items-center gap-3">
-        {/* Cancel Button */}
+        {/* Cancel Button - Hide on mobile */}
         <Button
           variant="ghost"
           onClick={onCancel}
           disabled={isSaving}
-          className="min-w-[100px]"
+          className="hidden md:flex md:min-w-[100px]"
+          size="sm"
+        >
+          Cancelar
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 md:gap-3 order-1 md:order-2">
+        {/* Cancel Button - Show on mobile */}
+        <Button
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="flex md:hidden flex-1"
+          size="sm"
         >
           Cancelar
         </Button>
@@ -61,17 +75,20 @@ const ImprovedWizardActionButtons: React.FC<
               onSave();
             }}
             disabled={!canProceed || isSaving}
-            className="min-w-[130px] bg-primary hover:bg-primary/90"
+            className="flex-1 md:flex-initial md:min-w-[130px] bg-primary hover:bg-primary/90"
+            size="sm"
           >
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
+                <Loader2 className="h-4 w-4 mr-1 md:mr-2 animate-spin" />
+                <span className="hidden sm:inline">Salvando...</span>
+                <span className="sm:hidden">...</span>
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Produto
+                <Save className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Salvar Produto</span>
+                <span className="sm:hidden">Salvar</span>
               </>
             )}
           </Button>
@@ -79,10 +96,12 @@ const ImprovedWizardActionButtons: React.FC<
           <Button
             onClick={onNext}
             disabled={!canProceed || isSaving}
-            className="min-w-[100px]"
+            className="flex-1 md:flex-initial md:min-w-[100px]"
+            size="sm"
           >
-            Próximo
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <span className="hidden sm:inline">Próximo</span>
+            <span className="sm:hidden">Prox</span>
+            <ChevronRight className="h-4 w-4 ml-1 md:ml-2" />
           </Button>
         )}
       </div>
