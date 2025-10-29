@@ -1,105 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useParams } from "react-router-dom";
 import { useSubdomainStore } from "@/hooks/useSubdomainStore";
 import { getSubdomainInfo } from "@/utils/subdomainRouter";
-import { supabase } from "@/integrations/supabase/client";
-import { useCatalogSettings } from "@/hooks/useCatalogSettings";
-import { useConversionTracking } from "@/hooks/useConversionTracking";
-import TemplateWrapper from "@/components/catalog/TemplateWrapper";
-import ProductDetailsModalOptimized from "@/components/catalog/ProductDetailsModalOptimized";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Product, ProductVariation } from "@/types/product";
+import ProductPage from "@/pages/ProductPage";
 
 /**
  * Product page specifically for subdomain routing
- * Renders a product page in the public catalog context
+ * Uses the complete ProductPage with all conversion elements
+ * but renders in public catalog context
  */
 const SubdomainProductPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const { store, loading: storeLoading, error: storeError } = useSubdomainStore();
   const { subdomain } = getSubdomainInfo();
-  const { settings } = useCatalogSettings();
-  const { trackProductView } = useConversionTracking();
-
-  const [product, setProduct] = useState<Product | null>(null);
-  const [variations, setVariations] = useState<ProductVariation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
-
-  useEffect(() => {
-    if (store && productId) {
-      loadProduct();
-    }
-  }, [store, productId]);
-
-  const loadProduct = async () => {
-    if (!store || !productId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Buscar produto
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .eq('store_id', store.id)
-        .eq('is_active', true)
-        .single();
-
-      if (productError) {
-        console.error('Erro ao carregar produto:', productError);
-        setError('Produto não encontrado');
-        return;
-      }
-
-      if (!productData) {
-        setError('Produto não encontrado');
-        return;
-      }
-
-      setProduct(productData);
-
-      // Buscar variações do produto
-      const { data: variationsData, error: variationsError } = await supabase
-        .from('product_variations')
-        .select('*')
-        .eq('product_id', productId)
-        .eq('is_active', true);
-
-      if (variationsError) {
-        console.error('Erro ao carregar variações:', variationsError);
-      } else {
-        setVariations(variationsData || []);
-        if (variationsData && variationsData.length > 0) {
-          setSelectedVariation(variationsData[0]);
-        }
-      }
-
-      // Track product view
-      trackProductView({
-        id: productData.id,
-        name: productData.name,
-        category: productData.category,
-        price: productData.retail_price || 0
-      });
-
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setError('Erro ao carregar produto');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleBackToCatalog = () => {
     window.location.href = `https://${subdomain}.aoseudispor.com.br`;
   };
 
-  if (storeLoading || loading) {
+  if (storeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -115,7 +36,7 @@ const SubdomainProductPage: React.FC = () => {
     );
   }
 
-  if (storeError || error || !store || !product) {
+  if (storeError || !store || !productId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
@@ -131,7 +52,7 @@ const SubdomainProductPage: React.FC = () => {
             Produto não encontrado
           </h1>
           <p className="text-gray-600 mb-4">
-            {storeError || error || 'O produto solicitado não está disponível'}
+            {storeError || 'O produto solicitado não está disponível'}
           </p>
           
           <div className="bg-gray-100 rounded-lg p-4 mb-6">
@@ -166,42 +87,13 @@ const SubdomainProductPage: React.FC = () => {
     );
   }
 
-  // Convert SubdomainStoreInfo to Store interface
-  const storeAdapter = {
-    id: store.id,
-    name: store.name,
-    description: null,
-    logo_url: null,
-    owner_id: store.owner_id,
-    is_active: true,
-    created_at: store.created_at,
-    updated_at: store.created_at,
-    url_slug: store.slug,
-    phone: null,
-    email: null,
-    address: null,
-    cnpj: null,
-    plan_type: 'basic',
-    monthly_fee: 0,
-    price_model: 'retail'
-  };
-
-  // Render product in catalog template context
+  // Render the complete ProductPage but in public template context
+  // The ProductPage will handle all the conversion elements automatically
   return (
-    <TemplateWrapper
-      templateName={settings?.template_name || 'modern'}
-      store={storeAdapter}
-      catalogType="retail"
-      cartItemsCount={0}
-      wishlistCount={0}
-      storeSettings={settings}
-      onSearch={() => {}}
-      onToggleFilters={() => {}}
-      onCartClick={() => {}}
-    >
-      <div className="container mx-auto px-4 py-8">
-        {/* Back to catalog button */}
-        <div className="mb-6">
+    <div className="min-h-screen bg-gray-50">
+      {/* Back to catalog button - positioned outside template */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-4">
           <Button 
             variant="outline" 
             onClick={handleBackToCatalog}
@@ -211,23 +103,11 @@ const SubdomainProductPage: React.FC = () => {
             Voltar ao Catálogo
           </Button>
         </div>
-
-        {/* Product details modal as full page */}
-        <div className="max-w-7xl mx-auto">
-          <ProductDetailsModalOptimized
-            product={product}
-            isOpen={true}
-            onClose={handleBackToCatalog}
-            onAddToCart={() => console.log('Add to cart')}
-            catalogType="retail"
-            showStock={true}
-            showPrices={true}
-            storeName={store.name}
-            showConversionElements={true}
-          />
-        </div>
       </div>
-    </TemplateWrapper>
+
+      {/* Complete ProductPage with all conversion elements */}
+      <ProductPage isPublicContext={true} storeContext={store} />
+    </div>
   );
 };
 

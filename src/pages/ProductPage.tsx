@@ -48,7 +48,19 @@ import {
   Home,
 } from "lucide-react";
 
-const ProductPage: React.FC = () => {
+interface ProductPageProps {
+  isPublicContext?: boolean;
+  storeContext?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+}
+
+const ProductPage: React.FC<ProductPageProps> = ({ 
+  isPublicContext = false,
+  storeContext = null 
+}) => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -77,7 +89,11 @@ const ProductPage: React.FC = () => {
   useEffect(() => {
     const loadProduct = async () => {
       if (!productId) {
-        navigate('/');
+        if (isPublicContext && storeContext) {
+          window.location.href = `https://${storeContext.slug}.aoseudispor.com.br`;
+        } else {
+          navigate('/');
+        }
         return;
       }
 
@@ -87,21 +103,35 @@ const ProductPage: React.FC = () => {
         console.log("📥 ProductPage - Carregando produto:", productId);
 
         // Buscar produto
-        const { data: productData, error: productError } = await supabase
+        let productQuery = supabase
           .from('products')
           .select('*')
           .eq('id', productId)
-          .eq('is_active', true)
-          .single();
+          .eq('is_active', true);
+
+        // No contexto público, filtrar pela loja específica
+        if (isPublicContext && storeContext) {
+          productQuery = productQuery.eq('store_id', storeContext.id);
+        }
+
+        const { data: productData, error: productError } = await productQuery.single();
 
         if (productError || !productData) {
           console.error("❌ Erro ao buscar produto:", productError);
-          toast({
-            title: "Produto não encontrado",
-            description: "Este produto não está disponível",
-            variant: "destructive",
-          });
-          navigate('/');
+          
+          if (!isPublicContext) {
+            toast({
+              title: "Produto não encontrado",
+              description: "Este produto não está disponível",
+              variant: "destructive",
+            });
+          }
+          
+          if (isPublicContext && storeContext) {
+            window.location.href = `https://${storeContext.slug}.aoseudispor.com.br`;
+          } else {
+            navigate('/');
+          }
           return;
         }
 
@@ -149,6 +179,13 @@ const ProductPage: React.FC = () => {
 
         setProduct(fullProduct);
 
+        // Definir informações da loja baseado no contexto
+        if (isPublicContext && storeContext) {
+          setStoreName(storeContext.name);
+          setCatalogUrl(`https://${storeContext.slug}.aoseudispor.com.br`);
+          console.log("🏪 Contexto público - Loja:", storeContext.name);
+        }
+
         // 📊 Tracking: ViewContent (produto visualizado)
         trackProductView({
           id: fullProduct.id,
@@ -194,7 +231,7 @@ const ProductPage: React.FC = () => {
     };
 
     loadProduct();
-  }, [productId, navigate, toast]);
+  }, [productId, navigate, toast, isPublicContext, storeContext]);
 
   // Calcular preço
   const priceInfo = useProductDisplayPrice({
