@@ -29,14 +29,17 @@ export interface StoreSubscription {
   };
 }
 
-export const useStoreSubscription = () => {
+export const useStoreSubscription = (storeId?: string) => {
   const { profile } = useAuth();
   const [subscription, setSubscription] = useState<StoreSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Usar storeId fornecido ou o do perfil
+  const targetStoreId = storeId || profile?.store_id;
+
   const fetchSubscription = useCallback(async () => {
-    if (!profile?.store_id) {
+    if (!targetStoreId) {
       setLoading(false);
       return;
     }
@@ -61,7 +64,7 @@ export const useStoreSubscription = () => {
             updated_at
           )
         `)
-        .eq('store_id', profile.store_id)
+        .eq('store_id', targetStoreId)
         .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
         .limit(1)
@@ -78,7 +81,7 @@ export const useStoreSubscription = () => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.store_id]);
+  }, [targetStoreId]);
 
   // Calcular dias restantes do trial
   const getTrialDaysLeft = useCallback((): number => {

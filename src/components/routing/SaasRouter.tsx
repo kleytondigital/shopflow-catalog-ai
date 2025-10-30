@@ -19,6 +19,8 @@ import Products from '@/pages/Products';
 import OrdersImproved from '@/pages/OrdersImproved';
 import Customers from '@/pages/Customers';
 import Categories from '@/pages/Categories';
+import Coupons from '@/pages/Coupons';
+import Deliveries from '@/pages/Deliveries';
 import Reports from '@/pages/Reports';
 import ProductPage from '@/pages/ProductPage';
 import OrderTracking from '@/pages/OrderTracking';
@@ -178,6 +180,32 @@ const MainAppRouter: React.FC = () => {
               subtitle="Organize seus produtos em categorias"
             >
               <Categories />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/coupons" 
+        element={
+          <ProtectedRoute>
+            <AppLayout 
+              title="Cupons de Desconto" 
+              subtitle="Gerencie cupons e promoções da sua loja"
+            >
+              <Coupons />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/deliveries" 
+        element={
+          <ProtectedRoute>
+            <AppLayout 
+              title="Gestão de Entregas" 
+              subtitle="Acompanhe e gerencie todas as entregas em andamento"
+            >
+              <Deliveries />
             </AppLayout>
           </ProtectedRoute>
         } 

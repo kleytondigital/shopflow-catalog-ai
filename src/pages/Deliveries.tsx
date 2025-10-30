@@ -13,8 +13,6 @@ import {
   Download,
   Eye
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import AppLayout from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDeliveries } from '@/hooks/useDeliveries';
@@ -22,13 +20,7 @@ import { Loader2 } from 'lucide-react';
 
 const Deliveries = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
   const { deliveries, loading, error, getDeliveryStats } = useDeliveries();
-
-  const breadcrumbs = [
-    { href: '/', label: 'Dashboard' },
-    { label: 'Gestão de Entregas', current: true },
-  ];
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -69,43 +61,26 @@ const Deliveries = () => {
 
   if (loading) {
     return (
-      <AppLayout 
-        title="Gestão de Entregas" 
-        subtitle="Acompanhe e gerencie todas as entregas em andamento"
-        breadcrumbs={breadcrumbs}
-      >
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <AppLayout 
-        title="Gestão de Entregas" 
-        subtitle="Acompanhe e gerencie todas as entregas em andamento"
-        breadcrumbs={breadcrumbs}
-      >
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-red-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro ao carregar entregas</h3>
-          <p className="text-gray-600">{error}</p>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="h-8 w-8 text-red-400" />
         </div>
-      </AppLayout>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro ao carregar entregas</h3>
+        <p className="text-gray-600">{error}</p>
+      </div>
     );
   }
 
   return (
-    <AppLayout 
-      title="Gestão de Entregas" 
-      subtitle="Acompanhe e gerencie todas as entregas em andamento"
-      breadcrumbs={breadcrumbs}
-    >
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div className="flex-1 max-w-md">
@@ -270,8 +245,7 @@ const Deliveries = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AppLayout>
+    </div>
   );
 };
 

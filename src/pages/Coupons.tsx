@@ -4,23 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useNavigate } from 'react-router-dom';
 import CouponForm from '@/components/coupons/CouponForm';
 import CouponsList from '@/components/coupons/CouponsList';
-import AppLayout from '@/components/layout/AppLayout';
 import { useCoupons, Coupon } from '@/hooks/useCoupons';
 import { useToast } from '@/hooks/use-toast';
 
 const Coupons = () => {
   const [showForm, setShowForm] = useState(false);
-  const { coupons, createCoupon, updateCoupon, deleteCoupon } = useCoupons();
+  const { coupons, createCoupon, updateCoupon, deleteCoupon, loading } = useCoupons();
   const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const breadcrumbs = [
-    { href: '/', label: 'Dashboard' },
-    { label: 'Cupons de Desconto', current: true },
-  ];
 
   const handleCreateCoupon = async (data: any) => {
     const { error } = await createCoupon(data);
@@ -77,12 +69,7 @@ const Coupons = () => {
   };
 
   return (
-    <AppLayout 
-      title="Cupons de Desconto" 
-      subtitle="Gerencie cupons e promoções da sua loja"
-      breadcrumbs={breadcrumbs}
-    >
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Action Button */}
         <div className="flex justify-end">
           <Button onClick={() => setShowForm(true)} className="btn-primary">
@@ -117,8 +104,7 @@ const Coupons = () => {
             />
           </DialogContent>
         </Dialog>
-      </div>
-    </AppLayout>
+    </div>
   );
 };
 

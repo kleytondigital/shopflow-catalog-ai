@@ -17,6 +17,7 @@ import TemplateWrapper from "./TemplateWrapper";
 import ProductGrid from "./ProductGrid";
 import FilterSidebar, { FilterState } from "./FilterSidebar";
 import EnhancedCheckout from "./checkout/EnhancedCheckout";
+import DynamicMetaTags from "@/components/seo/DynamicMetaTags";
 import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
 
@@ -307,8 +308,12 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
   const useOptimizedComponents = settings?.conversion_mode === "optimized";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TemplateWrapper
+    <>
+      {/* Meta tags dinâmicas para SEO e compartilhamento */}
+      <DynamicMetaTags storeIdentifier={storeIdentifier} catalogType={catalogType} />
+      
+      <div className="min-h-screen bg-gray-50">
+        <TemplateWrapper
         templateName={settings?.template_name || "modern"}
         store={store}
         catalogType={catalogType}
@@ -444,7 +449,8 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

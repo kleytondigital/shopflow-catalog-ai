@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useCatalog } from "./useCatalog";
 import { useCatalogSettings } from "./useCatalogSettings";
+import { useStoreSubscription } from "./useStoreSubscription";
 
 interface UseDynamicMetaTagsProps {
   storeIdentifier?: string;
@@ -19,26 +20,34 @@ export const useDynamicMetaTags = ({
 }: UseDynamicMetaTagsProps) => {
   const { store } = useCatalog(storeIdentifier);
   const { settings } = useCatalogSettings(storeIdentifier);
+  const { subscription, loading: subscriptionLoading } = useStoreSubscription(store?.id);
 
   useEffect(() => {
-    if (!store) return;
+    if (!store || subscriptionLoading) return;
 
     // Função para atualizar meta tags
     const updateMetaTags = () => {
-      // Título da página
-      const title =
-        customTitle ||
-        settings?.seo_title ||
-        store.name ||
+      // Verificar se o plano é premium
+      const isPremium = subscription?.plan?.type === 'premium';
+
+      console.log('🏷️ Meta tags - Verificação de plano:', {
+        storeId: store.id,
+        storeName: store.name,
+        planType: subscription?.plan?.type,
+        isPremium,
+      });
+
+      // Título da página (com lógica de plano)
+      const title = customTitle || 
+        (isPremium ? (settings?.seo_title || store.name) : null) || 
         "B2X - Catálogos Online";
+      
       document.title = title;
 
-      // Meta description
-      const description =
-        customDescription ||
-        settings?.seo_description ||
-        store.description ||
-        `Catálogo online de ${store.name}`;
+      // Meta description (com lógica de plano)
+      const description = customDescription || 
+        (isPremium ? (settings?.seo_description || store.description) : null) || 
+        "Catálogos online personalizados para sua empresa";
 
       updateMetaTag("description", description);
       updateMetaTag("og:description", description);
@@ -46,8 +55,10 @@ export const useDynamicMetaTags = ({
       // Meta title para Open Graph
       updateMetaTag("og:title", title);
 
-      // Imagem da empresa (logo)
-      const imageUrl = customImage || store.logo_url || "/b2x-logo.png"; // Fallback
+      // Imagem da empresa (logo) - com lógica de plano
+      const imageUrl = customImage || 
+        (isPremium ? store.logo_url : null) || 
+        "/b2x-logo.png";
 
       updateMetaTag("og:image", imageUrl);
       updateMetaTag("twitter:image", imageUrl);
@@ -107,7 +118,7 @@ export const useDynamicMetaTags = ({
 
     // Atualizar meta tags quando os dados da loja estiverem disponíveis
     updateMetaTags();
-  }, [store, settings, customTitle, customDescription, customImage]);
+  }, [store, settings, subscription, subscriptionLoading, customTitle, customDescription, customImage]);
 
   return {
     store,
