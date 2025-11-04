@@ -166,16 +166,31 @@ const ProductCardOptimized: React.FC<ProductCardOptimizedProps> = ({
     if (onViewDetails) {
       onViewDetails(product);
     } else {
-      // Fallback: redirecionar diretamente para página do produto
-      const currentHost = window.location.hostname;
-      const isSubdomain = currentHost.includes('.aoseudispor.com.br') && !currentHost.startsWith('app.');
-      
-      console.log('🔄 ProductCardOptimized - Redirecionando:', { currentHost, isSubdomain });
-      
-      if (isSubdomain) {
-        window.location.href = `/produto/${product.id}`;
-      } else {
-        window.location.href = `/catalog/${(product as any).store_slug || 'default'}/produto/${product.id}`;
+      // Fallback: Tentar usar a função utilitária para gerar URL correta
+      // Se não conseguir, usar modal como última opção
+      try {
+        const { getSubdomainInfo } = require('@/utils/subdomainRouter');
+        const { isSubdomain, subdomain } = getSubdomainInfo();
+        
+        if (isSubdomain && subdomain) {
+          // Em subdomínio, usar rota /produto/:productId
+          console.log('🔄 ProductCardOptimized - Redirecionando para subdomínio:', `/produto/${product.id}`);
+          window.location.href = `/produto/${product.id}`;
+        } else {
+          // Em URL padrão, tentar usar /catalog/:slug/produto/:productId
+          // Mas se não tiver store_slug, melhor não redirecionar para evitar erro
+          const storeSlug = (product as any).store_slug || (product as any).store?.url_slug;
+          if (storeSlug) {
+            console.log('🔄 ProductCardOptimized - Redirecionando para URL padrão:', `/catalog/${storeSlug}/produto/${product.id}`);
+            window.location.href = `/catalog/${storeSlug}/produto/${product.id}`;
+          } else {
+            console.warn('⚠️ ProductCardOptimized - Não foi possível redirecionar: falta store_slug. Use onViewDetails prop.');
+            // Não fazer nada - deixar o componente pai lidar com isso
+          }
+        }
+      } catch (error) {
+        console.error('❌ ProductCardOptimized - Erro ao gerar URL:', error);
+        // Não fazer nada - deixar o componente pai lidar com isso
       }
     }
   };

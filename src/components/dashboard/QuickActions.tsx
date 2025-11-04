@@ -18,6 +18,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanPermissions } from '@/hooks/usePlanPermissions';
 import { useStores } from '@/hooks/useStores';
+import { useCatalogSettings } from '@/hooks/useCatalogSettings';
+import { getCatalogUrlFromSettings } from '@/utils/catalogUrl';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
@@ -30,6 +32,7 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
   const { profile } = useAuth();
   const { hasBenefit, isSuperadmin } = usePlanPermissions();
   const { currentStore } = useStores();
+  const { settings: catalogSettings } = useCatalogSettings();
 
   const handleViewCatalog = () => {
     if (!currentStore) {
@@ -37,13 +40,20 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
       return;
     }
 
-    const storeIdentifier = currentStore.url_slug || currentStore.id;
-    const catalogUrl = `/catalog/${storeIdentifier}`;
+    // Gerar URL do catálogo baseada nas configurações (subdomínio, domínio customizado ou URL padrão)
+    const catalogUrl = getCatalogUrlFromSettings(currentStore, catalogSettings);
+    
+    if (!catalogUrl) {
+      toast.error('Erro ao gerar URL do catálogo');
+      return;
+    }
     
     console.log('QuickActions: Abrindo catálogo:', { 
       storeId: currentStore.id, 
       urlSlug: currentStore.url_slug, 
-      finalIdentifier: storeIdentifier, 
+      domainMode: catalogSettings?.domain_mode,
+      subdomain: catalogSettings?.subdomain,
+      customDomain: catalogSettings?.custom_domain,
       catalogUrl 
     });
     
@@ -56,8 +66,13 @@ const QuickActions = ({ onNewProduct }: QuickActionsProps) => {
       return;
     }
 
-    const storeIdentifier = currentStore.url_slug || currentStore.id;
-    const catalogUrl = `${window.location.origin}/catalog/${storeIdentifier}`;
+    // Gerar URL do catálogo baseada nas configurações (subdomínio, domínio customizado ou URL padrão)
+    const catalogUrl = getCatalogUrlFromSettings(currentStore, catalogSettings);
+    
+    if (!catalogUrl) {
+      toast.error('Erro ao gerar URL do catálogo');
+      return;
+    }
     
     try {
       if (navigator.share) {

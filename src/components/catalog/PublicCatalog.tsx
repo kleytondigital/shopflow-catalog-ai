@@ -20,6 +20,7 @@ import EnhancedCheckout from "./checkout/EnhancedCheckout";
 import DynamicMetaTags from "@/components/seo/DynamicMetaTags";
 import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
+import { generateProductUrl } from "@/utils/catalogUrl";
 
 interface PublicCatalogProps {
   storeIdentifier: string;
@@ -232,8 +233,23 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
 
   const handleProductClick = (product: Product) => {
     console.log("👆 PUBLIC CATALOG - Produto clicado:", product.name);
-    // Redirecionar para página dedicada do produto
-    window.location.href = `/produto/${product.id}`;
+    
+    // Verificar se o produto tem variações
+    const hasVariations = product.variations && product.variations.length > 0;
+    
+    // Se não tiver variações, redirecionar para a página do produto
+    if (!hasVariations) {
+      const productUrl = generateProductUrl(product.id, store, settings);
+      
+      if (productUrl) {
+        console.log('🔄 PUBLIC CATALOG - Redirecionando para página do produto:', productUrl);
+        window.location.href = productUrl;
+        return;
+      }
+    }
+    
+    // Se tiver variações ou não conseguir gerar URL, usar modal
+    handleQuickView(product);
   };
 
   const handleQuickView = (product: Product) => {
