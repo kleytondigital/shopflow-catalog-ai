@@ -55,12 +55,14 @@ export const generateCatalogUrl = (
  * @param productId - ID do produto
  * @param store - Informações da loja (opcional, usado para URL padrão)
  * @param settings - Configurações do catálogo (opcional)
+ * @param storeIdentifier - Identificador da loja como fallback (opcional)
  * @returns URL completa do produto ou null se deve usar modal
  */
 export const generateProductUrl = (
   productId: string,
   store?: StoreInfo | null,
-  settings?: CatalogSettings | null
+  settings?: CatalogSettings | null,
+  storeIdentifier?: string | null
 ): string | null => {
   if (!productId) {
     return null;
@@ -74,12 +76,21 @@ export const generateProductUrl = (
   }
 
   // Se estiver no app principal com URL padrão, usar /catalog/:slug/produto/:productId
+  // Tentar usar store primeiro, depois storeIdentifier como fallback
+  let identifier: string | null = null;
+  
   if (store) {
-    const identifier = store.url_slug || store.id;
+    identifier = store.url_slug || store.id;
+  } else if (storeIdentifier) {
+    identifier = storeIdentifier;
+  }
+
+  if (identifier) {
     return `/catalog/${identifier}/produto/${productId}`;
   }
 
   // Se não tiver informações da loja, retornar null para usar modal
+  console.warn('⚠️ generateProductUrl - Não foi possível gerar URL: falta store ou storeIdentifier');
   return null;
 };
 

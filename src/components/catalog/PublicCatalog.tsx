@@ -234,21 +234,30 @@ const PublicCatalog: React.FC<PublicCatalogProps> = ({ storeIdentifier }) => {
   const handleProductClick = (product: Product) => {
     console.log("👆 PUBLIC CATALOG - Produto clicado:", product.name);
     
-    // Verificar se o produto tem variações
-    const hasVariations = product.variations && product.variations.length > 0;
+    // SEMPRE redirecionar para a página do produto quando clicar
+    // A página do produto tem melhor experiência do que o modal
+    const productUrl = generateProductUrl(product.id, store, settings, storeIdentifier);
     
-    // Se não tiver variações, redirecionar para a página do produto
-    if (!hasVariations) {
-      const productUrl = generateProductUrl(product.id, store, settings);
-      
-      if (productUrl) {
-        console.log('🔄 PUBLIC CATALOG - Redirecionando para página do produto:', productUrl);
-        window.location.href = productUrl;
-        return;
-      }
+    if (productUrl) {
+      console.log('🔄 PUBLIC CATALOG - Redirecionando para página do produto:', {
+        productUrl,
+        productId: product.id,
+        storeId: store?.id,
+        storeSlug: store?.url_slug,
+        storeIdentifier
+      });
+      window.location.href = productUrl;
+      return;
     }
     
-    // Se tiver variações ou não conseguir gerar URL, usar modal
+    // Fallback: se não conseguir gerar URL, usar modal
+    console.warn('⚠️ PUBLIC CATALOG - Não foi possível gerar URL do produto, usando modal como fallback', {
+      productId: product.id,
+      hasStore: !!store,
+      storeId: store?.id,
+      storeSlug: store?.url_slug,
+      storeIdentifier
+    });
     handleQuickView(product);
   };
 
