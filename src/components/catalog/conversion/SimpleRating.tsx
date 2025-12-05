@@ -66,10 +66,10 @@ const SimpleRating: React.FC<SimpleRatingProps> = ({
                   <div key={stars} className="flex items-center gap-2 text-sm">
                     <div className="w-16 text-gray-700">{stars} estrelas</div>
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
+                      {/* <div
                         className="bg-yellow-400 h-2 rounded-full transition-all"
                         style={{ width: `${percentage}%` }}
-                      />
+                      /> */}
                     </div>
                     <div className="w-12 text-gray-600 text-right">{percentage}%</div>
                   </div>
