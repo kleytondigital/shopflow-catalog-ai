@@ -1,4 +1,12 @@
-<!-- 86ad4272-e4b2-4b03-8a15-a8b07191469b c492fec3-dd51-4125-b8d7-cfa84db29f4b -->
+---
+name: "Plano: Geração de Vídeos e Imagens com IA para Produtos"
+overview: ""
+todos:
+  - id: 986c7b1b-bd8e-431e-8421-ea431f94707f
+    content: "Testar fluxo completo: configuração → geração → fila → resultado"
+    status: pending
+---
+
 # Plano: Geração de Vídeos e Imagens com IA para Produtos
 
 ## Visão Geral
@@ -179,19 +187,3 @@ Sistema completo de geração de mídia com IA que permite criar vídeos (Veo 3,
 2. **Tempo**: Vídeos podem levar 30s-2min para gerar
 3. **Qualidade**: Resultado depende muito do prompt e imagem base
 4. **Limitações**: Veo 3 está em preview limitado (pode ter fila de espera)
-
-
-### To-dos
-
-- [ ] Criar migrations para tabelas de IA (ai_providers_config, ai_generation_queue, ai_prompt_templates, tenant_ai_credits)
-- [ ] Implementar geradores de vídeo (Veo 3, Runway, Kling AI) com interface unificada
-- [ ] Implementar gerador de imagens DALL-E 3 para adicionar modelos usando produtos
-- [ ] Criar sistema de templates de prompts editáveis com variáveis dinâmicas
-- [ ] Implementar sistema de fila de geração com Supabase Realtime
-- [ ] Criar sistema de créditos e limites por plano/tenant
-- [ ] Adicionar gestão de API keys individual e global com UI de configuração
-- [ ] Criar componentes de geração (AIVideoGenerator, AIImageEnhancer) na etapa de Imagens
-- [ ] Criar dashboard de status de gerações com tempo real e retry
-- [ ] Criar Supabase Edge Functions para processar gerações em background
-- [ ] Integrar botões de geração IA no formulário de cadastro de produtos
-- [ ] Testar fluxo completo: configuração → geração → fila → resultado

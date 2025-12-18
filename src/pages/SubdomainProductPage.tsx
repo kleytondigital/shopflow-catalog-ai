@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useSubdomainStore } from "@/hooks/useSubdomainStore";
 import { getSubdomainInfo } from "@/utils/subdomainRouter";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -15,9 +15,12 @@ const SubdomainProductPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const { store, loading: storeLoading, error: storeError } = useSubdomainStore();
   const { subdomain } = getSubdomainInfo();
+  const navigate = useNavigate();
 
   const handleBackToCatalog = () => {
-    window.location.href = `https://${subdomain}.aoseudispor.com.br`;
+    // Usa navigate do React Router para manter o contexto do subdomínio
+    // e evitar reload completo que pode causar problemas na detecção do domínio
+    navigate("/");
   };
 
   if (storeLoading) {
